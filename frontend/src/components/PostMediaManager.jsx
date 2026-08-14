@@ -178,24 +178,74 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
         </div>
       ) : <p className="media-empty">还没有绑定媒体。Note 可以只用图片或 Live Photo 发布。</p>}
 
-      <fieldset className="live-photo-uploader" disabled={Boolean(busy)}>
-        <legend>上传 Live Photo</legend>
-        <div className="live-photo-fields">
-          <label>
-            <span>静态图片</span>
-            <input ref={liveImageInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setLiveImage(event.target.files?.[0] || null)} />
-            <small>{liveImage?.name || "JPEG、PNG 或 WebP"}</small>
-          </label>
-          <label>
-            <span>动态视频</span>
-            <input ref={liveVideoInputRef} type="file" accept="video/quicktime,video/mp4,.mov,.mp4" onChange={(event) => setLiveVideo(event.target.files?.[0] || null)} />
-            <small>{liveVideo?.name || "MOV 或 MP4"}</small>
-          </label>
+      <section
+        className="live-photo-uploader"
+        aria-labelledby="live-photo-uploader-title"
+        aria-busy={busy === "live" || undefined}
+      >
+        <div className="live-photo-uploader-header">
+          <div>
+            <h3 id="live-photo-uploader-title">上传 Live Photo</h3>
+            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定到当前内容。</p>
+          </div>
         </div>
-        <button className="btn btn-secondary" type="button" disabled={!liveImage || !liveVideo || Boolean(busy)} onClick={uploadLivePhoto}>
-          {busy === "live" ? "正在上传并配对" : "上传 Live Photo"}
-        </button>
-      </fieldset>
+
+        <div className="live-photo-fields">
+          <div className="live-photo-file-field">
+            <div className="live-photo-file-copy">
+              <span>静态图片</span>
+              <small title={liveImage?.name}>{liveImage?.name || "JPEG、PNG 或 WebP"}</small>
+            </div>
+            <label
+              className={`btn btn-secondary live-photo-file-picker ${busy ? "is-disabled" : ""}`}
+              aria-disabled={Boolean(busy)}
+            >
+              {liveImage ? "更换图片" : "选择图片"}
+              <input
+                ref={liveImageInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={Boolean(busy)}
+                aria-label="选择 Live Photo 静态图片"
+                onChange={(event) => setLiveImage(event.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
+
+          <div className="live-photo-file-field">
+            <div className="live-photo-file-copy">
+              <span>动态视频</span>
+              <small title={liveVideo?.name}>{liveVideo?.name || "MOV 或 MP4"}</small>
+            </div>
+            <label
+              className={`btn btn-secondary live-photo-file-picker ${busy ? "is-disabled" : ""}`}
+              aria-disabled={Boolean(busy)}
+            >
+              {liveVideo ? "更换视频" : "选择视频"}
+              <input
+                ref={liveVideoInputRef}
+                type="file"
+                accept="video/quicktime,video/mp4,.mov,.mp4"
+                disabled={Boolean(busy)}
+                aria-label="选择 Live Photo 动态视频"
+                onChange={(event) => setLiveVideo(event.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="live-photo-actions">
+          <p>两份文件会作为同一组 Live Photo 上传并绑定，媒体仍只通过鉴权接口读取。</p>
+          <button
+            className="btn btn-primary live-photo-upload-button"
+            type="button"
+            disabled={!liveImage || !liveVideo || Boolean(busy)}
+            onClick={uploadLivePhoto}
+          >
+            {busy === "live" ? "正在上传并配对" : "上传并配对"}
+          </button>
+        </div>
+      </section>
 
       <ConfirmDialog
         open={Boolean(removeTarget)}
