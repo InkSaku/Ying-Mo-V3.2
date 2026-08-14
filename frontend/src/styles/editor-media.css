@@ -3,6 +3,10 @@
   gap: 10px;
 }
 
+.editor-field-grid {
+  align-items: start;
+}
+
 .editor-body-toolbar {
   display: flex;
   align-items: end;
@@ -51,6 +55,40 @@
 .editor-mode-tabs button.active {
   background: var(--tag-soft);
   color: var(--brand-link);
+}
+
+.markdown-shortcut-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 84%, var(--page));
+}
+
+.markdown-shortcut-button {
+  min-height: 44px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.35px;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 100ms ease;
+}
+
+.markdown-shortcut-button:hover {
+  border-color: var(--text-4);
+  background: var(--tag-soft);
+  color: var(--brand-link);
+}
+
+.markdown-shortcut-button:active {
+  transform: translateY(1px);
 }
 
 .body-editor-dropzone {
@@ -152,6 +190,17 @@
   .editor-body-toolbar {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .markdown-shortcut-toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .markdown-shortcut-button {
+    flex: 0 0 auto;
   }
 
   .editor-mode-tabs {

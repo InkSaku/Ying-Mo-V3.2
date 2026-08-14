@@ -11,10 +11,20 @@ import {
   mediaIdsInMarkdown,
   removeMediaPlaceholders,
 } from "../lib/internalMedia";
+import { applyMarkdownShortcut } from "../lib/markdownToolbar";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PREVIEW_DELAY = 220;
+const MARKDOWN_SHORTCUTS = [
+  { action: "heading", label: "标题", hint: "插入二级标题" },
+  { action: "bold", label: "加粗", hint: "加粗选中文字" },
+  { action: "quote", label: "引用", hint: "插入引用" },
+  { action: "list", label: "列表", hint: "插入无序列表" },
+  { action: "link", label: "链接", hint: "插入链接" },
+  { action: "code", label: "代码", hint: "插入代码块" },
+  { action: "table", label: "表格", hint: "插入表格模板" },
+];
 
 function toLocalDatetime(value) {
   if (!value) return "";
@@ -279,6 +289,28 @@ export function WritePage() {
     if (!postId) navigate(`/write/${post.id}`, { replace: true });
   };
 
+  const applyMarkdownFormat = (action) => {
+    const textarea = bodyEditorRef.current;
+    const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : form.body.length;
+    const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : selectionStart;
+    let nextSelection = null;
+
+    setForm((current) => {
+      const next = applyMarkdownShortcut(current.body, selectionStart, selectionEnd, action);
+      nextSelection = [next.selectionStart, next.selectionEnd];
+      return { ...current, body: next.value };
+    });
+    setEditorMode("write");
+    setError("");
+    setMessage("");
+    window.requestAnimationFrame(() => {
+      const editor = bodyEditorRef.current;
+      if (!editor || !nextSelection) return;
+      editor.focus();
+      editor.setSelectionRange(nextSelection[0], nextSelection[1]);
+    });
+  };
+
   const insertMediaIntoBody = (mediaId) => {
     const textarea = bodyEditorRef.current;
     const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : null;
@@ -389,7 +421,7 @@ export function WritePage() {
                 <span>摘要</span>
                 <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} />
               </label>
-              <div className="form-grid">
+              <div className="form-grid editor-field-grid">
                 <label>
                   <span>Slug</span>
                   <input value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} aria-invalid={Boolean(form.slug) && !slugPattern.test(form.slug.trim())} />
@@ -406,7 +438,7 @@ export function WritePage() {
               </div>
             </>
           ) : (
-            <div className="form-grid">
+            <div className="form-grid editor-field-grid">
               <label>
                 <span>发生时间</span>
                 <input type="datetime-local" value={form.occurred_at} onChange={set("occurred_at")} />
@@ -430,13 +462,31 @@ export function WritePage() {
             <div className="editor-body-toolbar">
               <div>
                 <span id="editor-body-heading">正文</span>
-                <small>支持 Markdown；图片可以拖入、粘贴或从下方媒体列表插入。</small>
+                <small>支持 Markdown；不熟悉语法时可直接使用快捷按钮，图片也可以拖入或粘贴。</small>
               </div>
               <div className="editor-mode-tabs" role="tablist" aria-label="正文编辑模式">
                 <button type="button" role="tab" aria-selected={editorMode === "write"} className={editorMode === "write" ? "active" : ""} onClick={() => setEditorMode("write")}>编辑</button>
                 <button type="button" role="tab" aria-selected={editorMode === "preview"} className={editorMode === "preview" ? "active" : ""} onClick={() => setEditorMode("preview")}>安全预览</button>
               </div>
             </div>
+
+            {editorMode === "write" ? (
+              <div className="markdown-shortcut-toolbar" role="toolbar" aria-label="Markdown 快捷操作">
+                {MARKDOWN_SHORTCUTS.map((item) => (
+                  <button
+                    key={item.action}
+                    className="markdown-shortcut-button"
+                    type="button"
+                    title={item.hint}
+                    aria-label={`${item.label}：${item.hint}`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => applyMarkdownFormat(item.action)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             {editorMode === "write" ? (
               <div
