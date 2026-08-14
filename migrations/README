@@ -1,0 +1,1 @@
+Single clean V3.2 baseline migration. Run: flask --app run.py db upgrade
