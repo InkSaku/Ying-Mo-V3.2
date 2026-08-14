@@ -30,10 +30,10 @@
 | Article/Note 列表详情 | 筛选、语义排序、分页、Canonical、互动；Article 邻接/相关 | `/posts`, `/posts/:id`, `/slug/:slug` | Post 关系 | 详情、401/404、Slug | 完成/自动化通过 |
 | Archive | 年/月、筛选、语义时间、ACL 后 Facet/count/page | `/archive[/year[/month]]` | SQL extract/group | 隐藏月份与数量不泄漏 | 完成/自动化通过 |
 | Search | Posts/Collections/Users、建议、Category/Tag Facet、精确分页 | `/search`, `/suggestions` | SQL scope before aggregate | secret query total=0 | 完成/自动化通过 |
-| Category/Tag 页面数据 | 仅有权 Post、准确 total 和分页 | `/categories/:slug`, `/tags/:slug` | taxonomy relations | 无权 Tag 404 | 完成/自动化通过 |
+| Category/Tag 页面数据 | 仅有权 Post、准确 total 和分页；写作选项包含未使用的 active Category | `/categories/:slug`, `/categories/options`, `/tags/:slug` | taxonomy relations | 无权 Tag 404、Category options | 完成/自动化通过 |
 | User Profile | 公开资料 + 当前访问者可读内容和准确数量 | `/users/:username` | users/posts/members | Collection Post 泄漏测试 | 完成/自动化通过 |
 | Personal Center | overview/posts/drafts/collections/favorites/comments/notifications/settings | `/users/me/*`, `/posts/me`, interaction/notification APIs | 现有实体聚合 | 私密计数与历史管理 | 完成/自动化通过 |
-| 图片/Thumbnail | 实际解码、大小校验、缩略图、owner/binding | `/uploads/images*`, `/bind` | `media` | 上传、401、404、owner preview | 完成/自动化通过 |
+| 图片/Thumbnail | 实际解码、大小校验、缩略图、owner/binding、前端媒体描述与解绑 | `/uploads/images*`, `/bind` | `media` | 上传、401、404、owner preview、解绑清理引用 | 完成/自动化通过 |
 | Avatar | 仅本人绑定；有效成员可读；游客 401 | `PATCH /users/me`, media proxy | users avatar FK | member/guest ACL | 完成/自动化通过 |
 | Collection Cover | 仅 creator 管理；读取服从 Collection ACL | Collection create/update + media proxy | cover FK/binding | member 200/non-member 404 | 完成/自动化通过 |
 | Live Photo | image+MOV/MP4 配对、真实图片/容器签名、成对绑定和代理 | `/uploads/live-photos*` | pair ID/index | manifest/video ACL | 完成/自动化通过 |

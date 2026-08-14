@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import func
 
 from app.access import readable_post_predicate
-from app.admin.service import record_admin_log
+from app.admin.service import admin_reason, record_admin_log
 from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
@@ -78,7 +78,10 @@ def update_tag(tag_id):
     tag=db.session.get(Tag,tag_id)
     if tag is None:
         return error_response("RESOURCE_NOT_FOUND","Tag 不存在。",404)
-    before=tag.to_dict()
+    allowed={"name","slug","is_active","reason"}
+    if set(data)-allowed:
+        return error_response("VALIDATION_ERROR","包含不支持的字段。",422)
+    before=tag.to_dict(); reason=admin_reason(data,required=False)
     if "name" in data:
         value=data["name"]
         if not isinstance(value,str) or not value.strip() or len(value.strip())>80:
@@ -99,8 +102,10 @@ def update_tag(tag_id):
     if "is_active" in data:
         if not isinstance(data["is_active"],bool):
             return error_response("VALIDATION_ERROR","is_active 不合法。",422)
+        if data["is_active"] != tag.is_active and not reason:
+            return error_response("VALIDATION_ERROR","停用或恢复 Tag 必须填写 reason。",422)
         tag.is_active=data["is_active"]
-    record_admin_log(actor,"tag.update","tag",tag.id,before=before,after=tag.to_dict(),reason=data.get("reason"))
+    record_admin_log(actor,"tag.update","tag",tag.id,before=before,after=tag.to_dict(),reason=reason)
     db.session.commit()
     return success_response(tag.to_dict())
 
@@ -111,10 +116,15 @@ def merge_tag(source_id):
     actor=current_user(); data=request.get_json(silent=True) or {}
     if actor is None or actor.role!=UserRole.SYSTEM_ADMIN.value:
         return error_response("PERMISSION_DENIED","仅系统管理员可操作。",403)
+    if set(data)-{"target_id","reason"}:
+        return error_response("VALIDATION_ERROR","包含不支持的字段。",422)
+    reason=admin_reason(data,required=True)
+    if not reason:
+        return error_response("VALIDATION_ERROR","合并 Tag 必须填写 reason。",422)
     target_id=data.get("target_id")
     source=db.session.get(Tag,source_id)
-    target=db.session.get(Tag,target_id) if isinstance(target_id,int) else None
-    if source is None or target is None or source.id==target.id:
+    target=db.session.get(Tag,target_id) if isinstance(target_id,int) and not isinstance(target_id,bool) else None
+    if source is None or target is None or source.id==target.id or not target.is_active:
         return error_response("VALIDATION_ERROR","源 Tag 或目标 Tag 不合法。",422)
     posts=db.session.scalars(db.select(Post).join(post_tags).where(post_tags.c.tag_id==source.id)).unique().all()
     for post in posts:
@@ -122,10 +132,12 @@ def merge_tag(source_id):
         if all(tag.id!=target.id for tag in post.tags):
             post.tags.append(target)
     source.is_active=False
+    if target.first_used_at is None and source.first_used_at is not None:
+        target.first_used_at=source.first_used_at
     record_admin_log(
         actor,"tag.merge","tag",source.id,
         before={"source":source.to_dict(),"target_id":target.id},
-        after={"source_active":False,"moved_posts":len(posts)},reason=data.get("reason"),
+        after={"source_active":False,"moved_posts":len(posts)},reason=reason,
     )
     db.session.commit()
     return success_response({"source_id":source.id,"target_id":target.id,"moved_posts":len(posts)})

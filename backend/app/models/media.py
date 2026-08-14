@@ -48,8 +48,8 @@ class Media(db.Model):
 
     owner = db.relationship("User", foreign_keys=[owner_id])
 
-    def to_dict(self):
-        return {
+    def to_dict(self, *, include_manage_paths=False):
+        data = {
             "id": self.id,
             "public_id": self.public_id,
             "kind": self.kind,
@@ -64,3 +64,22 @@ class Media(db.Model):
             "deleted_at": isoformat_utc(self.deleted_at),
             "created_at": isoformat_utc(self.created_at),
         }
+        data["read_path"] = f"/api/v1/uploads/images/{self.public_id}"
+        data["thumbnail_path"] = (
+            None
+            if self.kind == MediaKind.LIVE_PHOTO_VIDEO
+            else f"/api/v1/uploads/images/{self.public_id}/thumbnail"
+        )
+        data["live_photo_manifest_path"] = (
+            f"/api/v1/uploads/live-photos/{self.live_photo_pair_id}"
+            if self.live_photo_pair_id
+            else None
+        )
+        if include_manage_paths:
+            data["manage_path"] = f"/api/v1/uploads/manage/images/{self.public_id}"
+            data["manage_thumbnail_path"] = (
+                None
+                if self.kind == MediaKind.LIVE_PHOTO_VIDEO
+                else f"/api/v1/uploads/manage/images/{self.public_id}/thumbnail"
+            )
+        return data

@@ -47,6 +47,13 @@ class Collection(db.Model):
             "slug": self.slug,
             "description": self.description,
             "cover_media_id": self.cover_media_id,
+            "cover_media": (
+                self.cover_media.to_dict()
+                if self.cover_media
+                and self.cover_media.status == "active"
+                and self.cover_media.deleted_at is None
+                else None
+            ),
             "status": self.status,
             "first_shared_at": isoformat_utc(self.first_shared_at),
             "created_at": isoformat_utc(self.created_at),

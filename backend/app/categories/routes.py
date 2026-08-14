@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import func, or_
 
 from app.access import readable_post_predicate
-from app.admin.service import record_admin_log
+from app.admin.service import admin_reason, record_admin_log
 from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
@@ -30,27 +30,47 @@ def list_categories():
     return success_response(result)
 
 
+@bp.get("/options")
+@jwt_required(locations=["headers"])
+def category_options():
+    actor=current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    categories=db.session.scalars(
+        db.select(Category).where(Category.is_active.is_(True)).order_by(
+            Category.sort_order,Category.name,Category.id
+        )
+    ).all()
+    return success_response([category.to_dict() for category in categories])
+
+
 @bp.post("")
 @jwt_required(locations=["headers"])
 def create_category():
     actor=current_user(); data=request.get_json(silent=True) or {}
     if actor is None or actor.role!=UserRole.SYSTEM_ADMIN.value:
         return error_response("PERMISSION_DENIED","仅系统管理员可操作。",403)
+    allowed={"name","slug","description","sort_order","reason"}
+    if set(data)-allowed:
+        return error_response("VALIDATION_ERROR","包含不支持的字段。",422)
     name=data.get("name"); slug=data.get("slug")
-    if not isinstance(name,str) or not name.strip() or not isinstance(slug,str) or not SLUG_RE.fullmatch(slug.strip().lower()):
+    if not isinstance(name,str) or not name.strip() or len(name.strip())>100 or not isinstance(slug,str) or not SLUG_RE.fullmatch(slug.strip().lower()):
         return error_response("VALIDATION_ERROR","Category 名称或 Slug 不合法。",422)
     if db.session.scalar(db.select(Category.id).where(or_(Category.name_normalized==normalize_name(name),Category.slug==slug.strip().lower()))):
         return error_response("DUPLICATE_RESOURCE","Category 已存在。",409)
     description=data.get("description")
     if description is not None and (not isinstance(description,str) or len(description)>500):
         return error_response("VALIDATION_ERROR","description 不合法。",422)
+    sort_order=data.get("sort_order",0)
+    if isinstance(sort_order,bool) or not isinstance(sort_order,int):
+        return error_response("VALIDATION_ERROR","sort_order 不合法。",422)
     c=Category(
         name=name.strip(),name_normalized=normalize_name(name),slug=slug.strip().lower(),
         description=description.strip() if isinstance(description,str) else None,
-        sort_order=data.get("sort_order",0) if isinstance(data.get("sort_order",0),int) else 0,
+        sort_order=sort_order,
     )
     db.session.add(c); db.session.flush()
-    record_admin_log(actor,"category.create","category",c.id,after=c.to_dict(),reason=data.get("reason"))
+    record_admin_log(actor,"category.create","category",c.id,after=c.to_dict(),reason=admin_reason(data,required=False))
     db.session.commit()
     return success_response(c.to_dict(),201)
 
@@ -69,7 +89,7 @@ def update_category(category_id):
     allowed={"name","slug","description","sort_order","is_active","reason"}
     if set(data)-allowed:
         return error_response("VALIDATION_ERROR","包含不支持的字段。",422)
-    before=category.to_dict()
+    before=category.to_dict(); reason=admin_reason(data,required=False)
     if "name" in data:
         value=data["name"]
         if not isinstance(value,str) or not value.strip() or len(value.strip())>100:
@@ -99,8 +119,10 @@ def update_category(category_id):
     if "is_active" in data:
         if not isinstance(data["is_active"],bool):
             return error_response("VALIDATION_ERROR","is_active 不合法。",422)
+        if data["is_active"] != category.is_active and not reason:
+            return error_response("VALIDATION_ERROR","停用或恢复 Category 必须填写 reason。",422)
         category.is_active=data["is_active"]
-    record_admin_log(actor,"category.update","category",category.id,before=before,after=category.to_dict(),reason=data.get("reason"))
+    record_admin_log(actor,"category.update","category",category.id,before=before,after=category.to_dict(),reason=reason)
     db.session.commit()
     return success_response(category.to_dict())
 

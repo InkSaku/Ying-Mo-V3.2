@@ -10,11 +10,23 @@ from app.extensions import db
 from app.common.pagination import pagination_meta, parse_pagination
 from app.models import (
     Collection, CollectionMember, Comment, ContentFavorite, Notification, Post,
-    User, UserStatus,
+    PostVisibility, User, UserStatus,
 )
 from app.posts.service import current_article_slug
 
 bp = Blueprint("users", __name__)
+
+
+def _profile_pagination():
+    try:
+        posts_page = int(request.args.get("posts_page", 1))
+        collections_page = int(request.args.get("collections_page", 1))
+        page_size = int(request.args.get("page_size", 20))
+    except (TypeError, ValueError):
+        return None
+    if posts_page < 1 or collections_page < 1 or page_size < 1 or page_size > 50:
+        return None
+    return posts_page, collections_page, page_size
 
 
 @bp.get("/<username>")
@@ -33,29 +45,30 @@ def profile(username):
     if user is None:
         return error_response("RESOURCE_NOT_FOUND", "用户不存在。", 404)
 
-    posts = db.session.scalars(
-        db.select(Post).where(
-            Post.author_id == user.id,
-            readable_post_predicate(actor.id, include_archived=True),
-        ).order_by(Post.published_at.desc(), Post.id.desc()).limit(20)
-    ).all()
-    visible_post_count = db.session.scalar(db.select(func.count(Post.id)).where(
+    pagination = _profile_pagination()
+    if pagination is None:
+        return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
+    posts_page, collections_page, page_size = pagination
+
+    public_profile_post = or_(
+        Post.collection_id.is_not(None),
+        Post.visibility == PostVisibility.LOGIN_ONLY.value,
+    )
+
+    post_stmt = db.select(Post).where(
         Post.author_id == user.id,
         readable_post_predicate(actor.id, include_archived=True),
-    )) or 0
-    collections = db.session.scalars(
-        db.select(Collection).where(
-            collection_member_predicate(actor.id),
-            or_(
-                Collection.creator_id == user.id,
-                exists().where(
-                    CollectionMember.collection_id == Collection.id,
-                    CollectionMember.user_id == user.id,
-                ),
-            ),
-        ).order_by(Collection.updated_at.desc()).limit(20)
+        public_profile_post,
+    )
+    visible_post_count = db.session.scalar(
+        db.select(func.count()).select_from(post_stmt.order_by(None).subquery())
+    ) or 0
+    posts = db.session.scalars(
+        post_stmt.order_by(Post.published_at.desc(), Post.id.desc())
+        .offset((posts_page - 1) * page_size).limit(page_size)
     ).all()
-    collection_scope = db.select(Collection.id).where(
+
+    collection_stmt = db.select(Collection).where(
         collection_member_predicate(actor.id),
         or_(
             Collection.creator_id == user.id,
@@ -66,8 +79,12 @@ def profile(username):
         ),
     )
     visible_collection_count = db.session.scalar(
-        db.select(func.count()).select_from(collection_scope.subquery())
+        db.select(func.count()).select_from(collection_stmt.order_by(None).subquery())
     ) or 0
+    collections = db.session.scalars(
+        collection_stmt.order_by(Collection.updated_at.desc(), Collection.id.desc())
+        .offset((collections_page - 1) * page_size).limit(page_size)
+    ).all()
 
     serialized_posts = []
     for post in posts:
@@ -81,6 +98,11 @@ def profile(username):
         "collections": [c.to_dict() for c in collections],
         "visible_post_count": visible_post_count,
         "visible_collection_count": visible_collection_count,
+    }, meta={
+        "posts_pagination": pagination_meta(posts_page, page_size, visible_post_count)["pagination"],
+        "collections_pagination": pagination_meta(
+            collections_page, page_size, visible_collection_count
+        )["pagination"],
     })
 
 
@@ -202,7 +224,21 @@ def my_comments():
     )
     total=db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows=db.session.scalars(stmt.order_by(Comment.created_at.desc()).offset((page-1)*size).limit(size)).all()
+    post_ids={row.post_id for row in rows}
+    posts={post.id:post for post in db.session.scalars(
+        db.select(Post).where(Post.id.in_(post_ids))
+    ).all()} if post_ids else {}
     return success_response([{
         "id":c.id,"post_id":c.post_id,"body":"[该评论已删除]" if c.status=="deleted" else c.body,
         "status":c.status,"created_at":isoformat_utc(c.created_at),
+        "post":{
+            "id":posts[c.post_id].id,
+            "post_type":posts[c.post_id].post_type,
+            "title":posts[c.post_id].title,
+            "canonical":(
+                f"/articles/{current_article_slug(posts[c.post_id].id)}"
+                if posts[c.post_id].post_type=="article"
+                else f"/notes/{posts[c.post_id].id}"
+            ),
+        },
     } for c in rows],meta=pagination_meta(page,size,total))

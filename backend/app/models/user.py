@@ -71,6 +71,13 @@ class User(db.Model):
             "bio": self.bio,
             "region": self.region,
             "avatar_media_id": self.avatar_media_id,
+            "avatar_media": (
+                self.avatar_media.to_dict()
+                if self.avatar_media
+                and self.avatar_media.status == "active"
+                and self.avatar_media.deleted_at is None
+                else None
+            ),
         }
 
     def self_dict(self):

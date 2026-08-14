@@ -51,6 +51,7 @@
 - [x] JPG/PNG/WebP 真实解码、15 MB 单文件限制、缩略图、所有权和绑定校验。
 - [x] Live Photo 图片/视频双文件配对、MP4/MOV 容器签名校验、原子绑定和受保护播放代理。
 - [x] Post 图片、Thumbnail、Avatar、Collection Cover 与历史作者媒体管理入口。
+- [x] 前端可消费的媒体描述、Post `bound_media` 管理清单与 owner 安全解绑；解绑封面或头像时同步清理引用。
 - [x] 媒体 ACL 跟随独立 Post 或 Collection；游客 401、登录越权 404、`private, no-store`。
 - [x] 本地私有存储适配器和生产 S3-compatible 私有对象存储适配器；不生成永久公开 URL。
 - [x] Like/Favorite toggle 与唯一约束；Favorite 列表重新应用当前 ACL。
@@ -71,7 +72,7 @@
 
 ## 验证状态
 
-- [x] 完整 pytest：38 passed。
+- [x] 完整 pytest：41 passed。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
 - [x] Alembic 空库 upgrade、legacy visibility upgrade/downgrade、Schema/Model 对齐。
@@ -81,7 +82,7 @@
 - [ ] 真实 MySQL 8 实例执行 migration：当前环境没有可连接的 MySQL 服务。
 - [ ] 真实 S3-compatible bucket 上传/读取与真实 Redis 限流压测：当前环境没有相应外部凭证和服务。
 
-以上三项外部验证未伪造成“已通过”；代码路径、配置校验和本地私有存储集成测试已完成。详细逐项验收见 `docs/P0_ACCEPTANCE.md`，命令记录见 `docs/VALIDATION.md`。
+以上三项外部验证未伪造成“已通过”；代码路径、配置校验和本地私有存储集成测试已完成。详细逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
 
 ## 非 P0
 

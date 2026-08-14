@@ -13,19 +13,27 @@ from app.posts.service import current_article_slug
 bp=Blueprint("notifications",__name__)
 
 
+INACCESSIBLE_COLLECTION_MESSAGES = {
+    "collection_member_added": "一条 Collection 成员通知的目标当前不可访问。",
+    "collection_member_removed": "你已被移出一个 Collection。",
+    "post_removed_from_collection": "你的 Post 已从一个 Collection 移出。",
+}
+
+
 def _safe_notification(item,actor,posts,collections):
     data=item.to_dict()
     data["target_url"]=None
     if item.post_id is not None:
         post=posts.get(item.post_id)
-        if post is not None and can_read_post(actor.id,post,include_archived=True):
+        if post is not None and post.author_id==actor.id and item.kind=="post_removed_from_collection":
+            data["target_url"]=f"/write/{post.id}"
+        elif post is not None and can_read_post(actor.id,post,include_archived=True):
             data["target_url"]=(
                 f"/articles/{current_article_slug(post.id)}" if post.post_type=="article" else f"/notes/{post.id}"
             )
-        elif post is not None and post.author_id==actor.id and item.kind=="post_removed_from_collection":
-            data["target_url"]=f"/write/{post.id}"
         else:
             data["post_id"]=None
+            data["comment_id"]=None
     if item.collection_id is not None:
         collection=collections.get(item.collection_id)
         if collection is not None and is_collection_member(actor.id,collection):
@@ -33,6 +41,7 @@ def _safe_notification(item,actor,posts,collections):
                 data["target_url"]=f"/collections/{collection.slug}"
         else:
             data["collection_id"]=None
+            data["message"]=INACCESSIBLE_COLLECTION_MESSAGES.get(item.kind,data["message"])
     return data
 
 

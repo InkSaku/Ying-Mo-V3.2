@@ -13,7 +13,7 @@ from app.common.validation import parse_iso_datetime, validate_external_url
 from app.extensions import db
 from app.models import (
     ArticleSlug, Category, Collection, Comment, ContentFavorite, ContentLike, Notification,
-    Post, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
+    Media, Post, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
 )
 from app.posts.service import (
     DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
@@ -28,7 +28,7 @@ def utcnow():
 
 
 def _serialize(post, include_body=True, *, actor_id=None, management=False):
-    data = post.to_dict(include_body=include_body)
+    data = post.to_dict(include_body=include_body, include_inactive_taxonomy=management)
     if post.post_type == PostType.ARTICLE.value:
         data["slug"] = current_article_slug(post.id) or post.slug_candidate
     collection_visible = (
@@ -44,6 +44,20 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
         }
     else:
         data["collection"] = None
+    if include_body:
+        media = db.session.scalars(
+            db.select(Media).where(
+                Media.bound_type == "post",
+                Media.bound_id == post.id,
+                Media.status == "active",
+                Media.deleted_at.is_(None),
+            ).order_by(Media.created_at.asc(), Media.id.asc())
+        ).all()
+        data["bound_media"] = [
+            item.to_dict(include_manage_paths=management) for item in media
+        ]
+        if data.get("cover_media") and management:
+            data["cover_media"] = post.cover_media.to_dict(include_manage_paths=True)
     return data
 
 
@@ -453,9 +467,11 @@ def my_posts():
     # 作者管理例外：只返回自己的 Post，不展开无权 Collection 的敏感上下文。
     result = []
     for p in rows:
-        item = p.to_dict(include_body=False)
+        item = p.to_dict(include_body=False, include_inactive_taxonomy=True)
         item["slug"] = current_article_slug(p.id) if p.post_type == PostType.ARTICLE.value else None
         item["collection_id"] = p.collection_id
+        if item.get("cover_media"):
+            item["cover_media"] = p.cover_media.to_dict(include_manage_paths=True)
         item.pop("collection", None)
         result.append(item)
     return success_response(result, meta=pagination_meta(page, size, total))

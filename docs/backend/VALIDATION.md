@@ -7,8 +7,8 @@
 ## 已执行并通过
 
 1. `python -m pytest -q`
-   - 结果：`38 passed`。
-   - 覆盖认证/Session、guest 401、越权 404、独立 private/login_only、Collection creator/member/non-member、成员增删、历史作者管理例外、移动/移出/删除 detach、排序、聚合泄漏、Slug 历史、媒体/Live Photo、评论互动、通知、Admin、HTML 隐私和 migration。
+   - 结果：`41 passed`。
+   - 覆盖认证/Session、guest 401、越权 404、独立 private/login_only、Collection creator/member/non-member、成员增删、历史作者管理例外、移动/移出/删除 detach、排序、聚合泄漏、Slug 历史、媒体描述与解绑、Live Photo、Category 写作选项、评论互动、通知、Admin、HTML 隐私和 migration。
 2. `python -m compileall -q app tests migrations scripts run.py gunicorn.conf.py`
    - 结果：通过。
 3. `python scripts/verify_static.py`

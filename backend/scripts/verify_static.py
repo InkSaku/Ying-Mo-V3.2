@@ -4,6 +4,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = ROOT.parent
 
 if not compileall.compile_dir(ROOT / "app", quiet=1):
     raise SystemExit("Python compile failed")
@@ -21,10 +22,10 @@ required = [
     ROOT / "migrations/versions/20260814_0002_p0_release_schema.py",
     ROOT / "app/models/admin.py",
     ROOT / "app/storage.py",
-    ROOT / "docs/P0_ACCEPTANCE.md",
-    ROOT / "docs/product.md",
+    PROJECT_ROOT / "docs/backend/P0_ACCEPTANCE.md",
+    PROJECT_ROOT / "docs/product.md",
 ]
-missing = [str(p.relative_to(ROOT)) for p in required if not p.exists()]
+missing = [str(p.relative_to(PROJECT_ROOT)) for p in required if not p.exists()]
 if missing:
     raise SystemExit(f"Missing required files: {missing}")
 

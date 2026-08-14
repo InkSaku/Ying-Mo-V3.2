@@ -2,7 +2,7 @@
 
 Ying-Mo V3.2 邀请制朋友记录空间的数据库与后端 Release Candidate。
 
-唯一产品基线是 [docs/product.md](docs/product.md)。逐项验收见 [docs/P0_ACCEPTANCE.md](docs/P0_ACCEPTANCE.md)，真实验证记录见 [docs/VALIDATION.md](docs/VALIDATION.md)。
+唯一产品基线是 [docs/product.md](docs/product.md)。逐项验收见 [docs/backend/P0_ACCEPTANCE.md](docs/backend/P0_ACCEPTANCE.md)，真实验证记录见 [docs/backend/VALIDATION.md](docs/backend/VALIDATION.md)。
 
 ## 核心边界
 
@@ -144,6 +144,7 @@ GET /archive/:year/:month
 GET /search
 GET /search/suggestions
 GET /categories
+GET /categories/options
 GET /categories/:slug
 GET /tags
 GET /tags/:slug
@@ -154,12 +155,15 @@ GET /users/me/comments
 GET /users/me/settings
 ```
 
+用户主页可使用 `posts_page`、`collections_page` 和 `page_size` 独立翻页；响应 `meta` 分别返回 `posts_pagination` 与 `collections_pagination`。用户主页只返回公开资料和当前访问者可见的主页内容，独立 `private` Post 即使作者本人访问主页也只保留在个人管理范围。
+
 ### Media
 
 ```text
 POST /uploads/images
 POST /uploads/live-photos
 POST /uploads/:media_id/bind
+DELETE /uploads/:media_id/bind
 GET  /uploads/images/:public_id
 GET  /uploads/images/:public_id/thumbnail
 GET  /uploads/live-photos/:pair_id
@@ -168,6 +172,11 @@ GET  /uploads/manage/images/:public_id/thumbnail
 ```
 
 普通媒体 URL 始终重新检查 Post/Collection ACL。`manage` 入口只允许媒体 owner，用于草稿和被移除历史作者预览。
+
+Post、Collection 与 User 响应会在对应媒体字段中返回包含 `public_id`、
+`read_path`、`thumbnail_path` 的媒体描述；作者管理详情额外返回 `manage_path`
+和 `manage_thumbnail_path`。Post 详情的 `bound_media` 用于恢复正文图片和 Live Photo
+编辑状态。解绑会同时清理对应的封面或头像外键，但不会立即删除对象存储文件；孤立文件仍由维护命令清理。
 
 ### Comments / Interactions / Notifications
 

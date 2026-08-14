@@ -90,7 +90,7 @@ class Post(db.Model):
             return self.occurred_at or self.published_at
         return self.published_at
 
-    def to_dict(self, *, include_body=True):
+    def to_dict(self, *, include_body=True, include_inactive_taxonomy=False):
         data = {
             "id": self.id,
             "author": self.author.public_dict() if self.author else None,
@@ -100,8 +100,22 @@ class Post(db.Model):
             "summary": self.summary,
             "content_format": self.content_format,
             "cover_media_id": self.cover_media_id,
-            "category": self.category.to_dict() if self.category else None,
-            "tags": [tag.to_dict() for tag in self.tags],
+            "cover_media": (
+                self.cover_media.to_dict()
+                if self.cover_media
+                and self.cover_media.status == "active"
+                and self.cover_media.deleted_at is None
+                else None
+            ),
+            "category": (
+                self.category.to_dict()
+                if self.category and (include_inactive_taxonomy or self.category.is_active)
+                else None
+            ),
+            "tags": [
+                tag.to_dict() for tag in self.tags
+                if include_inactive_taxonomy or tag.is_active
+            ],
             "status": self.status,
             "visibility": self.visibility,
             "moderation_status": self.moderation_status,

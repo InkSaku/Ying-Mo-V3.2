@@ -90,8 +90,8 @@ def _register_document_routes(app):
     protected_rules = (
         "/articles", "/articles/<path:rest>", "/notes", "/notes/<path:rest>",
         "/collections", "/collections/<path:rest>", "/users/<path:rest>",
-        "/archive", "/archive/<path:rest>", "/categories/<path:rest>",
-        "/tags/<path:rest>", "/search", "/write", "/write/<path:rest>",
+        "/archive", "/archive/<path:rest>", "/categories", "/categories/<path:rest>",
+        "/tags", "/tags/<path:rest>", "/search", "/write", "/write/<path:rest>",
         "/me", "/me/<path:rest>", "/admin", "/admin/<path:rest>",
         "/login", "/register", "/forgot-password", "/verify-email/<path:rest>",
     )
