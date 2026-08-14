@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminActionDialog, AdminPageFrame, AdminStatus } from "../components/AdminPanel";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -21,10 +22,10 @@ function PostFilters({ filters, searchValue, loading, onSearchValue, onChange, o
   return (
     <form className="admin-content-filters" role="search" onSubmit={onSubmit}>
       <label className="admin-filter-search"><span>搜索内容</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => onSearchValue(event.target.value)} placeholder="标题、摘要或正文" /></label>
-      <label><span>类型</span><select value={filters.post_type} onChange={(event) => onChange({ post_type: event.target.value })}><option value="">全部类型</option><option value="article">Article</option><option value="note">Note</option></select></label>
-      <label><span>发布状态</span><select value={filters.status} onChange={(event) => onChange({ status: event.target.value })}><option value="">全部状态</option><option value="draft">草稿</option><option value="published">已发布</option><option value="archived">已归档</option></select></label>
-      <label><span>可见性</span><select value={filters.visibility} onChange={(event) => onChange({ visibility: event.target.value })}><option value="">全部可见性</option><option value="login_only">成员可见</option><option value="private">仅作者</option></select></label>
-      <label><span>治理状态</span><select value={filters.moderation_status} onChange={(event) => onChange({ moderation_status: event.target.value })}><option value="">全部治理状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></select></label>
+      <label><span>类型</span><CustomSelect value={filters.post_type} onChange={(event) => onChange({ post_type: event.target.value })}><option value="">全部类型</option><option value="article">Article</option><option value="note">Note</option></CustomSelect></label>
+      <label><span>发布状态</span><CustomSelect value={filters.status} onChange={(event) => onChange({ status: event.target.value })}><option value="">全部状态</option><option value="draft">草稿</option><option value="published">已发布</option><option value="archived">已归档</option></CustomSelect></label>
+      <label><span>可见性</span><CustomSelect value={filters.visibility} onChange={(event) => onChange({ visibility: event.target.value })}><option value="">全部可见性</option><option value="login_only">成员可见</option><option value="private">仅作者</option></CustomSelect></label>
+      <label><span>治理状态</span><CustomSelect value={filters.moderation_status} onChange={(event) => onChange({ moderation_status: event.target.value })}><option value="">全部治理状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
       <button className="btn btn-secondary" type="submit" disabled={loading}>搜索</button>
       <details className="admin-advanced-filters">
         <summary>按关联 ID 筛选</summary>

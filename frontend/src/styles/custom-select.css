@@ -1,0 +1,208 @@
+.custom-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px 11px 9px 12px;
+  font: inherit;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.custom-select-trigger:hover:not(:disabled) {
+  border-color: var(--text-4);
+}
+
+.custom-select[data-open="true"] .custom-select-trigger,
+.custom-select-trigger:focus-visible {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--tag-soft);
+  outline: none;
+}
+
+.custom-select-trigger:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.custom-select-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-value.placeholder {
+  color: var(--text-4);
+}
+
+.custom-select-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+  transition: transform 160ms ease;
+}
+
+.custom-select-chevron path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.custom-select[data-open="true"] .custom-select-chevron {
+  transform: rotate(180deg);
+}
+
+.custom-select-panel {
+  position: fixed;
+  z-index: 2200;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow:
+    0 0 0 1px rgba(20, 20, 19, 0.02),
+    0 12px 32px rgba(20, 20, 19, 0.08);
+  animation: custom-select-enter 140ms ease-out both;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.custom-select-option {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-select-option + .custom-select-option {
+  margin-top: 2px;
+}
+
+.custom-select-option.active:not(.disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.custom-select-option.selected {
+  background: var(--tag-soft);
+  color: var(--brand-link);
+}
+
+.custom-select-option.selected.active {
+  background: var(--tag);
+}
+
+.custom-select-option.disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.custom-select-check {
+  width: 20px;
+  color: var(--brand-link);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+}
+
+.custom-select-option-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.theme-control .custom-select {
+  width: 118px;
+}
+
+.theme-control .custom-select-trigger {
+  min-height: 38px;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.sort-control .custom-select {
+  width: 142px;
+}
+
+.management-search .custom-select {
+  min-width: 142px;
+}
+
+.admin-content-filters .custom-select,
+.admin-user-filters .custom-select,
+.admin-dialog-fields .custom-select,
+.editor-sidebar .custom-select,
+.form-grid .custom-select {
+  width: 100%;
+}
+
+@keyframes custom-select-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .theme-control .custom-select {
+    width: 112px;
+  }
+
+  .custom-select-panel {
+    border-radius: 9px;
+  }
+
+  .custom-select-option {
+    min-height: 46px;
+    font-size: 14px;
+  }
+
+  .management-search .custom-select {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .custom-select-trigger,
+  .custom-select-chevron,
+  .custom-select-panel {
+    transition: none;
+    animation: none;
+  }
+}

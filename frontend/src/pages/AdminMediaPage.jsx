@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminActionDialog, AdminPageFrame, AdminStatus } from "../components/AdminPanel";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
 import { ProtectedImage } from "../components/ProtectedImage";
@@ -102,9 +103,9 @@ export function AdminMediaPage() {
     <AdminPageFrame title="媒体" description="审阅私有媒体、绑定目标与 Live Photo 配对状态。Admin 预览独立审计，普通内容 ACL 不会因此放宽。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 组</span>}>
       <form className="admin-content-filters admin-media-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ owner_id: ownerValue.replace(/\D/g, ""), page: 1 }); }}>
         <label className="admin-filter-search"><span>所有者用户 ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={ownerValue} onChange={(event) => setOwnerValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
-        <label><span>类型</span><select value={filters.kind} onChange={(event) => updateFilters({ kind: event.target.value, page: 1 })}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></select></label>
-        <label><span>状态</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></select></label>
-        <label><span>绑定</span><select value={filters.bound_type} onChange={(event) => updateFilters({ bound_type: event.target.value, page: 1 })}><option value="">全部绑定</option><option value="post">Post</option><option value="collection">Collection</option><option value="avatar">头像</option><option value="unbound">未绑定</option></select></label>
+        <label><span>类型</span><CustomSelect value={filters.kind} onChange={(event) => updateFilters({ kind: event.target.value, page: 1 })}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect></label>
+        <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
+        <label><span>绑定</span><CustomSelect value={filters.bound_type} onChange={(event) => updateFilters({ bound_type: event.target.value, page: 1 })}><option value="">全部绑定</option><option value="post">Post</option><option value="collection">Collection</option><option value="avatar">头像</option><option value="unbound">未绑定</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading || actionBusy}>筛选</button>
       </form>
 

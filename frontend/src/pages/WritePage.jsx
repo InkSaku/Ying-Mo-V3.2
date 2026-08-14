@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { CustomSelect } from "../components/CustomSelect";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -296,11 +297,11 @@ export function WritePage() {
                 </label>
                 <label>
                   <span>Category</span>
-                  <select value={form.category_id} onChange={set("category_id")}>
+                  <CustomSelect value={form.category_id} onChange={set("category_id")}>
                     <option value="">不设置 Category</option>
                     {categoryUnavailable ? <option value={form.category_id}>{savedPost?.category?.name || "当前 Category"}（已停用）</option> : null}
                     {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-                  </select>
+                  </CustomSelect>
                 </label>
               </div>
             </>
@@ -337,11 +338,11 @@ export function WritePage() {
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <label>
             <span>Collection</span>
-            <select value={form.collection_id} onChange={set("collection_id")}>
+            <CustomSelect value={form.collection_id} onChange={set("collection_id")}>
               <option value="">不加入 Collection</option>
               {collectionUnavailable ? <option value={form.collection_id}>原 Collection（当前不可访问）</option> : null}
               {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
-            </select>
+            </CustomSelect>
             {collectionUnavailable
               ? <small className="field-error">你已不在原 Collection 中。仍可编辑，但发布前必须先移出。</small>
               : <small>只能选择你当前有权进入和投稿的 Collection。</small>}
@@ -349,10 +350,10 @@ export function WritePage() {
 
           <label>
             <span>独立内容可见性</span>
-            <select disabled={inCollection} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
+            <CustomSelect disabled={inCollection} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
               <option value="private">仅自己</option>
               <option value="login_only">所有登录成员</option>
-            </select>
+            </CustomSelect>
             {inCollection ? <small>Collection Post 的 visibility 不扩大合集 ACL。</small> : null}
           </label>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminActionDialog, AdminPageFrame, AdminStatus } from "../components/AdminPanel";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -53,7 +54,7 @@ export function AdminCommentsPage() {
     <AdminPageFrame title="评论" description="按状态或目标 Post 审阅评论。V3.2 管理端只提供隐藏与恢复；成员自行删除的评论不可恢复。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <form className="admin-content-filters admin-comment-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ post_id: postValue.replace(/\D/g, ""), page: 1 }); }}>
         <label className="admin-filter-search"><span>目标 Post ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={postValue} onChange={(event) => setPostValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
-        <label><span>状态</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option><option value="deleted">成员已删除</option></select></label>
+        <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option><option value="deleted">成员已删除</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>筛选</button>
       </form>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}

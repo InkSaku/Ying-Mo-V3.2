@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminActionDialog, AdminPageFrame, AdminStatus } from "../components/AdminPanel";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -175,7 +176,7 @@ export function AdminTaxonomyPage({ kind }) {
 
       <form className="admin-content-filters admin-taxonomy-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ q: searchValue.trim() }); }}>
         <label className="admin-filter-search"><span>搜索 {config.title}</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称、Slug 或说明" /></label>
-        <label><span>状态</span><select value={filters.status} onChange={(event) => updateFilters({ status: event.target.value })}><option value="">全部状态</option><option value="active">正常</option><option value="inactive">已停用</option></select></label>
+        <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value })}><option value="">全部状态</option><option value="active">正常</option><option value="inactive">已停用</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>搜索</button>
       </form>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
@@ -220,7 +221,7 @@ export function AdminTaxonomyPage({ kind }) {
         onConfirm={() => { void confirmAction(); }}
         onClose={closeAction}
       >
-        {actionIsMerge ? <label><span>目标 Tag</span><select data-autofocus value={mergeTarget} disabled={actionBusy} onChange={(event) => setMergeTarget(event.target.value)}><option value="">选择目标 Tag</option>{mergeTargets.map((item) => <option key={item.id} value={item.id}>{item.name} · /tags/{item.slug}</option>)}</select><small>只能合并到仍为正常状态的另一个 Tag。</small></label> : null}
+        {actionIsMerge ? <label><span>目标 Tag</span><CustomSelect data-autofocus value={mergeTarget} disabled={actionBusy} onChange={(event) => setMergeTarget(event.target.value)}><option value="">选择目标 Tag</option>{mergeTargets.map((item) => <option key={item.id} value={item.id}>{item.name} · /tags/{item.slug}</option>)}</CustomSelect><small>只能合并到仍为正常状态的另一个 Tag。</small></label> : null}
       </AdminActionDialog>
     </AdminPageFrame>
   );

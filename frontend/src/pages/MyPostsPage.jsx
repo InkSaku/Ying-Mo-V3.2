@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Pagination } from "../components/Pagination";
@@ -166,11 +167,11 @@ export function MyPostsPage() {
         <form className="management-search" role="search" onSubmit={submitSearch}>
           <label className="sr-only" htmlFor="my-posts-search">搜索自己的内容</label>
           <input id="my-posts-search" type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="搜索标题、摘要或正文" />
-          <select aria-label="内容类型" value={postType} onChange={(event) => updateParams({ type: event.target.value, page: "" })}>
+          <CustomSelect aria-label="内容类型" value={postType} onChange={(event) => updateParams({ type: event.target.value, page: "" })}>
             <option value="">全部类型</option>
             <option value="article">Article</option>
             <option value="note">Note</option>
-          </select>
+          </CustomSelect>
           <button className="btn btn-secondary" type="submit">搜索</button>
         </form>
       </div>

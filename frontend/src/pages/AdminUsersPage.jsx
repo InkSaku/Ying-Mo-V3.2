@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
 import { AdminPageFrame, AdminStatus } from "../components/AdminPanel";
@@ -57,20 +58,20 @@ export function AdminUsersPage() {
         </label>
         <label>
           <span>角色</span>
-          <select value={role} onChange={(event) => updateFilters({ role: event.target.value, page: 1 })}>
+          <CustomSelect value={role} onChange={(event) => updateFilters({ role: event.target.value, page: 1 })}>
             <option value="">全部角色</option>
             <option value="user">普通成员</option>
             <option value="system_admin">系统管理员</option>
-          </select>
+          </CustomSelect>
         </label>
         <label>
           <span>状态</span>
-          <select value={status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}>
+          <CustomSelect value={status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}>
             <option value="">全部状态</option>
             <option value="active">正常</option>
             <option value="banned">已封禁</option>
             <option value="deactivated">已停用</option>
-          </select>
+          </CustomSelect>
         </label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>搜索</button>
       </form>

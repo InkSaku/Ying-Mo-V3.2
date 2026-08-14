@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { CustomSelect } from "../components/CustomSelect";
 import { PostCard } from "../components/PostCard";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { Pagination } from "../components/Pagination";
@@ -51,11 +52,11 @@ export function PostsPage({ type }) {
         </div>
         <label className="sort-control">
           <span>排序</span>
-          <select value={sort} onChange={(event) => setParams({ sort: event.target.value, page: "1" })}>
+          <CustomSelect value={sort} onChange={(event) => setParams({ sort: event.target.value, page: "1" })}>
             <option value="newest">最新</option>
             <option value="oldest">最早</option>
             <option value="updated">最近编辑</option>
-          </select>
+          </CustomSelect>
         </label>
       </header>
 

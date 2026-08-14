@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AdminActionDialog, AdminPageFrame } from "../components/AdminPanel";
+import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -106,7 +107,7 @@ export function AdminFeaturedPage() {
 
       <AdminActionDialog open={Boolean(action)} title={titles[action?.type]} description={descriptions[action?.type]} confirmLabel={action?.type === "delete" ? "确认删除" : action?.type === "toggle" ? (action.item.is_active ? "确认停用" : "确认启用") : "确认保存"} reason={reason} busy={busy} error={actionError?.message} confirmDisabled={draftInvalid} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction}>
         {action?.type === "create" ? <div className="admin-dialog-fields">
-          <label><span>目标类型</span><select value={draft.content_type} disabled={busy} onChange={(event) => setDraft({ ...draft, content_type: event.target.value, target_id: "" })}><option value="article">Article</option><option value="collection">Collection</option></select></label>
+          <label><span>目标类型</span><CustomSelect value={draft.content_type} disabled={busy} onChange={(event) => setDraft({ ...draft, content_type: event.target.value, target_id: "" })}><option value="article">Article</option><option value="collection">Collection</option></CustomSelect></label>
           <label><span>{draft.content_type === "article" ? "Article ID" : "Collection ID"}</span><input inputMode="numeric" pattern="[1-9][0-9]*" required value={draft.target_id} disabled={busy} onChange={(event) => setDraft({ ...draft, target_id: event.target.value.replace(/\D/g, "") })} /></label>
         </div> : null}
         {action?.type === "create" || action?.type === "order" ? <label><span>排序值</span><input type="number" step="1" required value={draft.sort_order} disabled={busy} onChange={(event) => setDraft({ ...draft, sort_order: event.target.value })} /><small>整数；数值越小越靠前。</small></label> : null}
