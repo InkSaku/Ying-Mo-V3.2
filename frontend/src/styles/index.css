@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./custom-select.css";
+@import "./editor-media.css";
 
 :root {
   --serif: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", Georgia, serif;

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.access import can_read_post, is_collection_member, readable_post_predicate, semantic_time_expression
 from app.common.auth import current_user
+from app.common.markdown import render_safe_markdown
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import parse_iso_datetime, validate_external_url
@@ -204,6 +205,23 @@ def _apply_patch(post, actor, data):
         if normalized and not SLUG_RE.fullmatch(normalized):
             raise DomainError("VALIDATION_ERROR", "Article Slug 格式不合法。", 422)
         post.slug_candidate = normalized or None
+
+
+@bp.post("/preview")
+@jwt_required(locations=["headers"])
+def preview_markdown():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    body = data.get("body", "")
+    if body is None:
+        body = ""
+    if not isinstance(body, str):
+        return error_response("VALIDATION_ERROR", "body 必须是字符串或 null。", 422)
+    return success_response({"rendered_html": render_safe_markdown(body)})
 
 
 @bp.get("")

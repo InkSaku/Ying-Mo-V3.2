@@ -7,6 +7,7 @@ from PIL import Image, UnidentifiedImageError
 
 from app.access import can_read_post, is_collection_member
 from app.common.auth import current_user
+from app.common.markdown import remove_media_placeholders
 from app.common.responses import error_response, success_response
 from app.extensions import db, limiter
 from app.models import Collection, Media, Post, User
@@ -200,8 +201,10 @@ def unbind(media_id):
 
     if bound_type=="post":
         target=db.session.get(Post,bound_id)
-        if target and target.cover_media_id in media_ids:
-            target.cover_media_id=None
+        if target:
+            target.body=remove_media_placeholders(target.body,media_ids)
+            if target.cover_media_id in media_ids:
+                target.cover_media_id=None
     elif bound_type=="collection":
         target=db.session.get(Collection,bound_id)
         if target and target.cover_media_id in media_ids:

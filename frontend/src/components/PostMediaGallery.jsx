@@ -1,7 +1,8 @@
+import { mediaIdsInMarkdown } from "../lib/internalMedia";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedVideo } from "./ProtectedVideo";
 
-function mediaGroups(media, coverMediaId) {
+function mediaGroups(media, coverMediaId, inlineMediaIds) {
   const rows = [];
   const handledPairs = new Set();
   for (const item of media || []) {
@@ -10,16 +11,17 @@ function mediaGroups(media, coverMediaId) {
       if (handledPairs.has(item.live_photo_pair_id)) continue;
       handledPairs.add(item.live_photo_pair_id);
       const pair = (media || []).filter((candidate) => candidate.live_photo_pair_id === item.live_photo_pair_id);
+      if (pair.some((candidate) => inlineMediaIds.has(Number(candidate.id)))) continue;
       rows.push({ type: "live", id: item.live_photo_pair_id, image: pair.find((candidate) => candidate.kind === "live_photo_image"), video: pair.find((candidate) => candidate.kind === "live_photo_video") });
-    } else if (item.kind !== "live_photo_video") {
+    } else if (item.kind !== "live_photo_video" && !inlineMediaIds.has(Number(item.id))) {
       rows.push({ type: "image", id: item.id, image: item });
     }
   }
   return rows;
 }
 
-export function PostMediaGallery({ media, coverMediaId }) {
-  const groups = mediaGroups(media, coverMediaId);
+export function PostMediaGallery({ media, coverMediaId, body = "" }) {
+  const groups = mediaGroups(media, coverMediaId, mediaIdsInMarkdown(body));
   if (!groups.length) return null;
 
   return (

@@ -7,6 +7,7 @@ import { formatDate, postTypeLabel } from "../lib/format";
 import { PageLoader, ErrorState } from "../components/States";
 import { CommentsPanel } from "../components/CommentsPanel";
 import { ProtectedImage } from "../components/ProtectedImage";
+import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { PostMediaGallery } from "../components/PostMediaGallery";
 import { InteractionBar } from "../components/InteractionBar";
 
@@ -55,10 +56,10 @@ export function PostDetailPage({ type }) {
         <ProtectedImage media={post.cover_media} useOriginal alt="" className="post-detail-cover" />
 
         {post.rendered_html ? (
-          <div className="prose" dangerouslySetInnerHTML={{ __html: post.rendered_html }} />
+          <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} />
         ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null}
 
-        <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} />
+        <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} />
 
         {post.external_video_url ? (
           <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>

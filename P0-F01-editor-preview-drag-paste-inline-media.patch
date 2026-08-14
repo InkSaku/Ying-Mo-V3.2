@@ -1,0 +1,1137 @@
+diff --git a/backend/app/common/markdown.py b/backend/app/common/markdown.py
+index 3c6fb7a93373445fea82d65b8d3f58ce4c385150..011df3f0ef5b9bf6b1cdcf0ba101bc51676af4cd 100644
+--- a/backend/app/common/markdown.py
++++ b/backend/app/common/markdown.py
+@@ -1,5 +1,30 @@
++import re
++from xml.etree import ElementTree as etree
++
+ import bleach
+ import markdown
++from markdown.extensions import Extension
++from markdown.inlinepatterns import InlineProcessor
++
++
++MEDIA_PLACEHOLDER_RE = re.compile(r"\[\[ym-media:(\d+)\]\]")
++
++
++class InternalMediaInlineProcessor(InlineProcessor):
++    def handleMatch(self, match, data):
++        element = etree.Element("img")
++        element.set("data-media-id", match.group(1))
++        element.set("alt", "")
++        return element, match.start(0), match.end(0)
++
++
++class InternalMediaExtension(Extension):
++    def extendMarkdown(self, md):
++        md.inlinePatterns.register(
++            InternalMediaInlineProcessor(MEDIA_PLACEHOLDER_RE.pattern),
++            "ym_internal_media",
++            175,
++        )
+ 
+ 
+ ALLOWED_TAGS = {
+@@ -15,12 +40,30 @@ ALLOWED_ATTRIBUTES = {
+ }
+ 
+ 
++def media_ids_in_markdown(value):
++    if not value:
++        return set()
++    return {int(match.group(1)) for match in MEDIA_PLACEHOLDER_RE.finditer(value)}
++
++
++def remove_media_placeholders(value, media_ids):
++    if not value:
++        return value
++    ids = {int(media_id) for media_id in media_ids}
++    if not ids:
++        return value
++    return MEDIA_PLACEHOLDER_RE.sub(
++        lambda match: "" if int(match.group(1)) in ids else match.group(0),
++        value,
++    )
++
++
+ def render_safe_markdown(value):
+     if not value:
+         return ""
+     rendered = markdown.markdown(
+         value,
+-        extensions=["fenced_code", "tables", "sane_lists", "toc"],
++        extensions=[InternalMediaExtension(), "fenced_code", "tables", "sane_lists", "toc"],
+         extension_configs={"toc": {"permalink": False}},
+         output_format="html5",
+     )
+diff --git a/backend/tests/test_internal_media_markdown.py b/backend/tests/test_internal_media_markdown.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..4b8723c7deeb5b116792ecd904f2d94f95f23582
+--- /dev/null
++++ b/backend/tests/test_internal_media_markdown.py
+@@ -0,0 +1,24 @@
++from app.common.markdown import media_ids_in_markdown, remove_media_placeholders, render_safe_markdown
++
++
++def test_internal_media_placeholder_is_rendered_as_safe_marker():
++    html = render_safe_markdown("before\n\n[[ym-media:42]]\n\nafter")
++
++    assert 'data-media-id="42"' in html
++    assert "[[ym-media:42]]" not in html
++    assert "before" in html
++    assert "after" in html
++
++
++def test_internal_media_helpers_extract_and_remove_selected_ids():
++    body = "[[ym-media:3]] keep [[ym-media:9]]"
++
++    assert media_ids_in_markdown(body) == {3, 9}
++    assert remove_media_placeholders(body, {3}) == " keep [[ym-media:9]]"
++
++
++def test_markdown_preview_still_strips_unsafe_html():
++    html = render_safe_markdown('<script>alert(1)</script>\n\n[[ym-media:2]]')
++
++    assert "<script" not in html
++    assert 'data-media-id="2"' in html
+diff --git a/frontend/src/components/PostMediaGallery.jsx b/frontend/src/components/PostMediaGallery.jsx
+index 791e889870c3e781d50f3a1e77c0e775a5927a81..aa4c0b241d045afbb4e84bb3af43f8238cc002dc 100644
+--- a/frontend/src/components/PostMediaGallery.jsx
++++ b/frontend/src/components/PostMediaGallery.jsx
+@@ -1,7 +1,8 @@
++import { mediaIdsInMarkdown } from "../lib/internalMedia";
+ import { ProtectedImage } from "./ProtectedImage";
+ import { ProtectedVideo } from "./ProtectedVideo";
+ 
+-function mediaGroups(media, coverMediaId) {
++function mediaGroups(media, coverMediaId, inlineMediaIds) {
+   const rows = [];
+   const handledPairs = new Set();
+   for (const item of media || []) {
+@@ -10,16 +11,17 @@ function mediaGroups(media, coverMediaId) {
+       if (handledPairs.has(item.live_photo_pair_id)) continue;
+       handledPairs.add(item.live_photo_pair_id);
+       const pair = (media || []).filter((candidate) => candidate.live_photo_pair_id === item.live_photo_pair_id);
++      if (pair.some((candidate) => inlineMediaIds.has(Number(candidate.id)))) continue;
+       rows.push({ type: "live", id: item.live_photo_pair_id, image: pair.find((candidate) => candidate.kind === "live_photo_image"), video: pair.find((candidate) => candidate.kind === "live_photo_video") });
+-    } else if (item.kind !== "live_photo_video") {
++    } else if (item.kind !== "live_photo_video" && !inlineMediaIds.has(Number(item.id))) {
+       rows.push({ type: "image", id: item.id, image: item });
+     }
+   }
+   return rows;
+ }
+ 
+-export function PostMediaGallery({ media, coverMediaId }) {
+-  const groups = mediaGroups(media, coverMediaId);
++export function PostMediaGallery({ media, coverMediaId, body = "" }) {
++  const groups = mediaGroups(media, coverMediaId, mediaIdsInMarkdown(body));
+   if (!groups.length) return null;
+ 
+   return (
+diff --git a/frontend/src/components/PostMediaManager.jsx b/frontend/src/components/PostMediaManager.jsx
+index 9ffd6cb7592d5df2b2c5e70d53c0a802f99d10a3..92ce892325652bc3e31d6e6cf5dfce2d8b4655a3 100644
+--- a/frontend/src/components/PostMediaManager.jsx
++++ b/frontend/src/components/PostMediaManager.jsx
+@@ -1,4 +1,4 @@
+-import { useMemo, useRef, useState } from "react";
++import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
+ import { api } from "../lib/api";
+ import { ConfirmDialog } from "./ConfirmDialog";
+ import { ProtectedImage } from "./ProtectedImage";
+@@ -26,10 +26,18 @@ function manageableRows(media) {
+   return rows;
+ }
+ 
+-export function PostMediaManager({ post, ensurePost, onPostChange }) {
++export const PostMediaManager = forwardRef(function PostMediaManager({
++  post,
++  ensurePost,
++  onPostChange,
++  onInsertMedia,
++  onRemoveMedia,
++  inlineMediaIds = new Set(),
++}, ref) {
+   const imageInputRef = useRef(null);
+   const liveImageInputRef = useRef(null);
+   const liveVideoInputRef = useRef(null);
++  const busyRef = useRef(false);
+   const [busy, setBusy] = useState("");
+   const [error, setError] = useState("");
+   const [message, setMessage] = useState("");
+@@ -44,34 +52,48 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+     return result.data;
+   };
+ 
+-  const uploadImage = async (event) => {
+-    const file = event.target.files?.[0];
+-    if (!file) return;
++  const uploadImageFile = async (file, { insertIntoBody = true } = {}) => {
++    if (!file || busyRef.current) return null;
+     setError("");
+     setMessage("");
+     if (!imageTypes.has(file.type)) {
+       setError("请选择 JPEG、PNG 或 WebP 图片。");
+-      event.target.value = "";
+-      return;
++      return null;
+     }
++
++    busyRef.current = true;
+     setBusy("image");
+     try {
+       const currentPost = await ensurePost();
+-      if (!currentPost) return;
++      if (!currentPost) return null;
+       const body = new FormData();
+       body.append("file", file);
+       const uploaded = await api.post("/uploads/images", body);
+       await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
+       await refreshPost(currentPost.id);
+-      setMessage("图片已上传并绑定到当前内容。");
++      if (insertIntoBody) onInsertMedia?.(uploaded.data.id);
++      setMessage(insertIntoBody
++        ? "图片已上传、绑定并插入正文。"
++        : "图片已上传并绑定到当前内容。");
++      return uploaded.data;
+     } catch (uploadError) {
+       setError(uploadError.message);
++      return null;
+     } finally {
++      busyRef.current = false;
+       setBusy("");
+-      if (imageInputRef.current) imageInputRef.current.value = "";
+     }
+   };
+ 
++  useImperativeHandle(ref, () => ({ uploadImageFile }));
++
++  const uploadImage = async (event) => {
++    const file = event.target.files?.[0];
++    if (!file) return;
++    await uploadImageFile(file, { insertIntoBody: true });
++    if (imageInputRef.current) imageInputRef.current.value = "";
++  };
++
+   const uploadLivePhoto = async () => {
+     setError("");
+     setMessage("");
+@@ -83,6 +105,9 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+       setError("Live Photo 图片必须是 JPEG、PNG 或 WebP。");
+       return;
+     }
++    if (busyRef.current) return;
++
++    busyRef.current = true;
+     setBusy("live");
+     try {
+       const currentPost = await ensurePost();
+@@ -93,20 +118,23 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+       const uploaded = await api.post("/uploads/live-photos", body);
+       await api.post(`/uploads/${uploaded.data.image.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
+       await refreshPost(currentPost.id);
++      onInsertMedia?.(uploaded.data.image.id);
+       setLiveImage(null);
+       setLiveVideo(null);
+       if (liveImageInputRef.current) liveImageInputRef.current.value = "";
+       if (liveVideoInputRef.current) liveVideoInputRef.current.value = "";
+-      setMessage("Live Photo 已上传并完成配对绑定。");
++      setMessage("Live Photo 已上传、配对并插入正文。");
+     } catch (uploadError) {
+       setError(uploadError.message);
+     } finally {
++      busyRef.current = false;
+       setBusy("");
+     }
+   };
+ 
+   const setCover = async (mediaId) => {
+-    if (!post?.id) return;
++    if (!post?.id || busyRef.current) return;
++    busyRef.current = true;
+     setBusy(`cover-${mediaId || "none"}`);
+     setError("");
+     setMessage("");
+@@ -117,23 +145,27 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+     } catch (coverError) {
+       setError(coverError.message);
+     } finally {
++      busyRef.current = false;
+       setBusy("");
+     }
+   };
+ 
+   const unbind = async () => {
+-    if (!removeTarget || !post?.id) return;
++    if (!removeTarget || !post?.id || busyRef.current) return;
++    busyRef.current = true;
+     setBusy(`remove-${removeTarget.primary.id}`);
+     setError("");
+     setMessage("");
+     try {
+       await api.delete(`/uploads/${removeTarget.primary.id}/bind`);
++      onRemoveMedia?.(removeTarget.items.map((item) => item.id));
+       await refreshPost(post.id);
+-      setMessage(removeTarget.kind === "live_photo" ? "Live Photo 配对已从内容中移除。" : "图片已从内容中移除。");
++      setMessage(removeTarget.kind === "live_photo" ? "Live Photo 已从正文和内容媒体中移除。" : "图片已从正文和内容媒体中移除。");
+       setRemoveTarget(null);
+     } catch (removeError) {
+       setError(removeError.message);
+     } finally {
++      busyRef.current = false;
+       setBusy("");
+     }
+   };
+@@ -143,10 +175,10 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+       <div className="media-manager-header">
+         <div>
+           <h2 id="post-media-heading">图片与 Live Photo</h2>
+-          <p>上传前会先保存当前草稿。媒体只通过鉴权接口读取，不生成公开地址。</p>
++          <p>上传前会先保存当前草稿。上传后自动插入正文，也可以从列表重新插入已有媒体。</p>
+         </div>
+         <label className={`btn btn-secondary file-picker ${busy ? "is-disabled" : ""}`} aria-disabled={Boolean(busy)}>
+-          {busy === "image" ? "正在上传图片" : "上传图片"}
++          {busy === "image" ? "正在上传图片" : "上传并插入图片"}
+           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy)} onChange={uploadImage} />
+         </label>
+       </div>
+@@ -159,6 +191,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+           {rows.map((row) => {
+             const previewPath = row.primary.manage_thumbnail_path || row.primary.thumbnail_path || row.primary.manage_path || row.primary.read_path;
+             const isCover = post?.cover_media_id === row.primary.id;
++            const isInline = row.items.some((item) => inlineMediaIds.has(Number(item.id)));
+             return (
+               <article className="media-management-row" key={row.id}>
+                 <ProtectedImage path={previewPath} alt="已绑定媒体预览" className="media-management-preview" />
+@@ -166,8 +199,14 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+                   <h3>{row.kind === "live_photo" ? "Live Photo" : "图片"}</h3>
+                   <p>{row.kind === "live_photo" ? "图片与视频配对" : `${row.primary.width || "?"} × ${row.primary.height || "?"}`}</p>
+                   {isCover ? <span className="media-cover-state">当前封面</span> : null}
++                  {isInline ? <span className="media-inline-state"> · 已在正文</span> : null}
+                 </div>
+                 <div className="media-management-actions">
++                  {onInsertMedia ? (
++                    <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || isInline} onClick={() => onInsertMedia(row.primary.id)}>
++                      {isInline ? "已插入正文" : "插入正文"}
++                    </button>
++                  ) : null}
+                   {row.kind === "image" && !isCover ? <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={() => setCover(row.primary.id)}>设为封面</button> : null}
+                   {isCover ? <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={() => setCover(null)}>取消封面</button> : null}
+                   <button className="text-button danger-text" type="button" disabled={Boolean(busy)} onClick={() => setRemoveTarget(row)}>移除</button>
+@@ -176,7 +215,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+             );
+           })}
+         </div>
+-      ) : <p className="media-empty">还没有绑定媒体。Note 可以只用图片或 Live Photo 发布。</p>}
++      ) : <p className="media-empty">还没有绑定媒体。可以选择文件，也可以直接拖拽或粘贴图片到正文编辑区。</p>}
+ 
+       <section
+         className="live-photo-uploader"
+@@ -186,7 +225,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+         <div className="live-photo-uploader-header">
+           <div>
+             <h3 id="live-photo-uploader-title">上传 Live Photo</h3>
+-            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定到当前内容。</p>
++            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定并插入当前正文。</p>
+           </div>
+         </div>
+ 
+@@ -235,14 +274,14 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+         </div>
+ 
+         <div className="live-photo-actions">
+-          <p>两份文件会作为同一组 Live Photo 上传并绑定，媒体仍只通过鉴权接口读取。</p>
++          <p>两份文件会作为同一组 Live Photo 上传、绑定并插入正文，媒体仍只通过鉴权接口读取。</p>
+           <button
+             className="btn btn-primary live-photo-upload-button"
+             type="button"
+             disabled={!liveImage || !liveVideo || Boolean(busy)}
+             onClick={uploadLivePhoto}
+           >
+-            {busy === "live" ? "正在上传并配对" : "上传并配对"}
++            {busy === "live" ? "正在上传并配对" : "上传、配对并插入"}
+           </button>
+         </div>
+       </section>
+@@ -250,7 +289,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+       <ConfirmDialog
+         open={Boolean(removeTarget)}
+         title={removeTarget?.kind === "live_photo" ? "移除这组 Live Photo？" : "移除这张图片？"}
+-        description="媒体会与当前内容解除绑定；如果它是封面，封面引用也会同时清除。"
++        description="媒体会与当前内容解除绑定；正文中的内部媒体占位和封面引用也会同步清理。"
+         confirmLabel="确认移除"
+         danger
+         busy={busy.startsWith("remove-")}
+@@ -259,4 +298,4 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
+       />
+     </section>
+   );
+-}
++});
+diff --git a/frontend/src/components/ProtectedMarkdown.jsx b/frontend/src/components/ProtectedMarkdown.jsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..2f8a7a59630d11c68314b491c288d953c46a1eac
+--- /dev/null
++++ b/frontend/src/components/ProtectedMarkdown.jsx
+@@ -0,0 +1,160 @@
++import { createElement, useMemo } from "react";
++import { ProtectedImage } from "./ProtectedImage";
++import { ProtectedVideo } from "./ProtectedVideo";
++
++const ELEMENT_NODE = 1;
++const TEXT_NODE = 3;
++const SAFE_TAGS = new Set([
++  "a", "blockquote", "br", "code", "del", "em", "h1", "h2", "h3", "h4", "h5", "h6",
++  "hr", "img", "li", "ol", "p", "pre", "strong", "table", "tbody", "td", "th", "thead", "tr", "ul",
++]);
++
++function mediaIndex(media) {
++  const byId = new Map();
++  const pairs = new Map();
++
++  for (const item of media || []) {
++    if (item.live_photo_pair_id) {
++      const pair = pairs.get(item.live_photo_pair_id) || [];
++      pair.push(item);
++      pairs.set(item.live_photo_pair_id, pair);
++    }
++  }
++
++  for (const item of media || []) {
++    if (!item.live_photo_pair_id) {
++      byId.set(Number(item.id), { kind: "image", image: item, items: [item] });
++      continue;
++    }
++    const pair = pairs.get(item.live_photo_pair_id) || [];
++    const image = pair.find((candidate) => candidate.kind === "live_photo_image");
++    const video = pair.find((candidate) => candidate.kind === "live_photo_video");
++    const group = { kind: "live_photo", image, video, items: pair };
++    for (const candidate of pair) byId.set(Number(candidate.id), group);
++  }
++
++  return byId;
++}
++
++function imagePath(item, management) {
++  if (!item) return null;
++  return management
++    ? item.manage_path || item.read_path
++    : item.read_path;
++}
++
++function videoPath(item, management) {
++  if (!item) return null;
++  return management
++    ? item.manage_path || item.read_path
++    : item.read_path;
++}
++
++function InlineProtectedMedia({ mediaId, index, management }) {
++  const group = index.get(Number(mediaId));
++  if (!group?.image) {
++    return <span className="inline-media-missing" role="status">这项媒体当前不可用。</span>;
++  }
++
++  if (group.kind === "live_photo") {
++    return (
++      <figure className="inline-protected-media inline-live-photo">
++        <ProtectedImage
++          path={imagePath(group.image, management)}
++          alt="正文中的 Live Photo 静态画面"
++          className="inline-protected-image"
++        />
++        <ProtectedVideo
++          path={videoPath(group.video, management)}
++          label="正文中的 Live Photo 动态片段"
++          className="inline-protected-video"
++        />
++        <figcaption>Live Photo</figcaption>
++      </figure>
++    );
++  }
++
++  return (
++    <figure className="inline-protected-media">
++      <ProtectedImage
++        path={imagePath(group.image, management)}
++        alt="正文图片"
++        className="inline-protected-image"
++      />
++    </figure>
++  );
++}
++
++function renderNode(node, key, index, management) {
++  if (node.nodeType === TEXT_NODE) return node.textContent;
++  if (node.nodeType !== ELEMENT_NODE) return null;
++
++  const tag = node.tagName.toLowerCase();
++  if (!SAFE_TAGS.has(tag)) {
++    return Array.from(node.childNodes).map((child, childIndex) => (
++      renderNode(child, `${key}-${childIndex}`, index, management)
++    ));
++  }
++
++  if (tag === "img" && node.hasAttribute("data-media-id")) {
++    return (
++      <InlineProtectedMedia
++        key={key}
++        mediaId={node.getAttribute("data-media-id")}
++        index={index}
++        management={management}
++      />
++    );
++  }
++
++  if (tag === "p") {
++    const meaningfulChildren = Array.from(node.childNodes).filter((child) => (
++      child.nodeType !== TEXT_NODE || child.textContent.trim()
++    ));
++    const onlyChild = meaningfulChildren.length === 1 ? meaningfulChildren[0] : null;
++    if (onlyChild?.nodeType === ELEMENT_NODE && onlyChild.tagName.toLowerCase() === "img" && onlyChild.hasAttribute("data-media-id")) {
++      return (
++        <InlineProtectedMedia
++          key={key}
++          mediaId={onlyChild.getAttribute("data-media-id")}
++          index={index}
++          management={management}
++        />
++      );
++    }
++  }
++
++  const props = { key };
++  if (tag === "a") {
++    if (node.hasAttribute("href")) props.href = node.getAttribute("href");
++    if (node.hasAttribute("title")) props.title = node.getAttribute("title");
++  } else if (tag === "img") {
++    if (!node.hasAttribute("src")) return null;
++    props.src = node.getAttribute("src");
++    props.alt = node.getAttribute("alt") || "";
++    if (node.hasAttribute("title")) props.title = node.getAttribute("title");
++  } else if (tag === "code" && node.hasAttribute("class")) {
++    props.className = node.getAttribute("class");
++  } else if (/^h[1-6]$/.test(tag) && node.hasAttribute("id")) {
++    props.id = node.getAttribute("id");
++  }
++
++  const children = Array.from(node.childNodes).map((child, childIndex) => (
++    renderNode(child, `${key}-${childIndex}`, index, management)
++  ));
++
++  return createElement(tag, props, ...children);
++}
++
++export function ProtectedMarkdown({ html, media = [], management = false, className = "prose" }) {
++  const index = useMemo(() => mediaIndex(media), [media]);
++  const content = useMemo(() => {
++    if (!html || typeof DOMParser === "undefined") return [];
++    const documentNode = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
++    return Array.from(documentNode.body.childNodes).map((node, nodeIndex) => (
++      renderNode(node, `markdown-${nodeIndex}`, index, management)
++    ));
++  }, [html, index, management]);
++
++  return <div className={className}>{content}</div>;
++}
+diff --git a/frontend/src/lib/internalMedia.js b/frontend/src/lib/internalMedia.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..ea8ad23b0f62c7b43695541f7f22952ddcac8296
+--- /dev/null
++++ b/frontend/src/lib/internalMedia.js
+@@ -0,0 +1,59 @@
++const INTERNAL_MEDIA_RE = /\[\[ym-media:(\d+)\]\]/g;
++
++export function mediaPlaceholder(mediaId) {
++  const id = Number.parseInt(mediaId, 10);
++  if (!Number.isInteger(id) || id <= 0) {
++    throw new TypeError("mediaId must be a positive integer");
++  }
++  return `[[ym-media:${id}]]`;
++}
++
++export function mediaIdsInMarkdown(value) {
++  const ids = new Set();
++  const source = String(value || "");
++  INTERNAL_MEDIA_RE.lastIndex = 0;
++  let match;
++  while ((match = INTERNAL_MEDIA_RE.exec(source))) {
++    ids.add(Number(match[1]));
++  }
++  INTERNAL_MEDIA_RE.lastIndex = 0;
++  return ids;
++}
++
++export function removeMediaPlaceholders(value, mediaIds) {
++  const ids = new Set(Array.from(mediaIds || [], (item) => Number(item)));
++  if (!ids.size) return String(value || "");
++  INTERNAL_MEDIA_RE.lastIndex = 0;
++  const result = String(value || "").replace(INTERNAL_MEDIA_RE, (token, rawId) => (
++    ids.has(Number(rawId)) ? "" : token
++  ));
++  INTERNAL_MEDIA_RE.lastIndex = 0;
++  return result;
++}
++
++function lineBreakBefore(value) {
++  if (!value) return "";
++  if (value.endsWith("\n\n")) return "";
++  if (value.endsWith("\n")) return "\n";
++  return "\n\n";
++}
++
++function lineBreakAfter(value) {
++  if (!value) return "";
++  if (value.startsWith("\n\n")) return "";
++  if (value.startsWith("\n")) return "\n";
++  return "\n\n";
++}
++
++export function insertMediaPlaceholder(value, mediaId, start, end = start) {
++  const source = String(value || "");
++  const safeStart = Math.max(0, Math.min(Number.isInteger(start) ? start : source.length, source.length));
++  const safeEnd = Math.max(safeStart, Math.min(Number.isInteger(end) ? end : safeStart, source.length));
++  const before = source.slice(0, safeStart);
++  const after = source.slice(safeEnd);
++  const insertion = `${lineBreakBefore(before)}${mediaPlaceholder(mediaId)}${lineBreakAfter(after)}`;
++  return {
++    value: `${before}${insertion}${after}`,
++    cursor: before.length + insertion.length,
++  };
++}
+diff --git a/frontend/src/pages/PostDetailPage.jsx b/frontend/src/pages/PostDetailPage.jsx
+index 2be20e89be41902f8dadb0fea92289f1e705287b..10d3411ab69ac71d4b7b04ffaf5a13c8cbe68baa 100644
+--- a/frontend/src/pages/PostDetailPage.jsx
++++ b/frontend/src/pages/PostDetailPage.jsx
+@@ -7,6 +7,7 @@ import { formatDate, postTypeLabel } from "../lib/format";
+ import { PageLoader, ErrorState } from "../components/States";
+ import { CommentsPanel } from "../components/CommentsPanel";
+ import { ProtectedImage } from "../components/ProtectedImage";
++import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
+ import { PostMediaGallery } from "../components/PostMediaGallery";
+ import { InteractionBar } from "../components/InteractionBar";
+ 
+@@ -55,10 +56,10 @@ export function PostDetailPage({ type }) {
+         <ProtectedImage media={post.cover_media} useOriginal alt="" className="post-detail-cover" />
+ 
+         {post.rendered_html ? (
+-          <div className="prose" dangerouslySetInnerHTML={{ __html: post.rendered_html }} />
++          <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} />
+         ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null}
+ 
+-        <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} />
++        <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} />
+ 
+         {post.external_video_url ? (
+           <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
+diff --git a/frontend/src/pages/WritePage.jsx b/frontend/src/pages/WritePage.jsx
+index c6f443d50b98e17700c5cca4bce66b49382badef..252bf0deb54879e38c362f9341edb33568829d44 100644
+--- a/frontend/src/pages/WritePage.jsx
++++ b/frontend/src/pages/WritePage.jsx
+@@ -1,12 +1,20 @@
+-import { useEffect, useMemo, useState } from "react";
++import { useEffect, useMemo, useRef, useState } from "react";
+ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+ import { CustomSelect } from "../components/CustomSelect";
++import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
+ import { ErrorState, PageLoader } from "../components/States";
+ import { PostMediaManager } from "../components/PostMediaManager";
+ import { usePageMeta } from "../hooks/usePageMeta";
+ import { api } from "../lib/api";
++import {
++  insertMediaPlaceholder,
++  mediaIdsInMarkdown,
++  removeMediaPlaceholders,
++} from "../lib/internalMedia";
+ 
+ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
++const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
++const PREVIEW_DELAY = 220;
+ 
+ function toLocalDatetime(value) {
+   if (!value) return "";
+@@ -62,6 +70,13 @@ function validExternalUrl(value) {
+   }
+ }
+ 
++function pastedImages(event) {
++  return Array.from(event.clipboardData?.items || [])
++    .filter((item) => item.kind === "file")
++    .map((item) => item.getAsFile())
++    .filter((file) => file && acceptedInlineImageTypes.has(file.type));
++}
++
+ export function WritePage() {
+   const { postId } = useParams();
+   const [params] = useSearchParams();
+@@ -79,6 +94,11 @@ export function WritePage() {
+   const [savedPost, setSavedPost] = useState(null);
+   const [error, setError] = useState("");
+   const [message, setMessage] = useState("");
++  const [editorMode, setEditorMode] = useState("write");
++  const [preview, setPreview] = useState({ html: "", loading: false, error: "" });
++  const [draggingImage, setDraggingImage] = useState(false);
++  const bodyEditorRef = useRef(null);
++  const mediaManagerRef = useRef(null);
+   usePageMeta(postId ? "编辑记录" : "新建记录");
+ 
+   useEffect(() => {
+@@ -118,9 +138,31 @@ export function WritePage() {
+     return () => { active = false; };
+   }, [postId, reloadKey]);
+ 
++  useEffect(() => {
++    if (editorMode !== "preview") return undefined;
++    const controller = new AbortController();
++    setPreview((current) => ({ ...current, loading: true, error: "" }));
++    const timer = window.setTimeout(async () => {
++      try {
++        const result = await api.post("/posts/preview", { body: form.body || "" }, { signal: controller.signal });
++        setPreview({ html: result.data?.rendered_html || "", loading: false, error: "" });
++      } catch (previewError) {
++        if (previewError?.code !== "REQUEST_ABORTED") {
++          setPreview((current) => ({ ...current, loading: false, error: previewError.message }));
++        }
++      }
++    }, PREVIEW_DELAY);
++
++    return () => {
++      window.clearTimeout(timer);
++      controller.abort();
++    };
++  }, [editorMode, form.body]);
++
+   const isPublished = Boolean(savedPost?.published_at);
+   const inCollection = Boolean(form.collection_id);
+   const title = form.post_type === "article" ? "Article" : "Note";
++  const inlineMediaIds = useMemo(() => mediaIdsInMarkdown(form.body), [form.body]);
+   const collectionUnavailable = Boolean(
+     form.collection_id && !collections.some((collection) => String(collection.id) === form.collection_id)
+   );
+@@ -237,6 +279,64 @@ export function WritePage() {
+     if (!postId) navigate(`/write/${post.id}`, { replace: true });
+   };
+ 
++  const insertMediaIntoBody = (mediaId) => {
++    const textarea = bodyEditorRef.current;
++    const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : null;
++    const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : null;
++    let nextCursor = null;
++    setForm((current) => {
++      const start = selectionStart ?? current.body.length;
++      const end = selectionEnd ?? start;
++      const next = insertMediaPlaceholder(current.body, mediaId, start, end);
++      nextCursor = next.cursor;
++      return { ...current, body: next.value };
++    });
++    setEditorMode("write");
++    setError("");
++    setMessage("媒体已插入正文；保存草稿或发布后会永久保留这个位置。");
++    window.requestAnimationFrame(() => {
++      const editor = bodyEditorRef.current;
++      if (!editor || nextCursor === null) return;
++      editor.focus();
++      editor.setSelectionRange(nextCursor, nextCursor);
++    });
++  };
++
++  const removeMediaFromBody = (mediaIds) => {
++    setForm((current) => ({
++      ...current,
++      body: removeMediaPlaceholders(current.body, mediaIds),
++    }));
++  };
++
++  const uploadInlineImages = async (files) => {
++    for (const file of files) {
++      const manager = mediaManagerRef.current;
++      if (!manager?.uploadImageFile) return;
++      await manager.uploadImageFile(file, { insertIntoBody: true });
++    }
++  };
++
++  const handleBodyDrop = async (event) => {
++    const files = Array.from(event.dataTransfer?.files || []);
++    if (!files.length) return;
++    event.preventDefault();
++    setDraggingImage(false);
++    const images = files.filter((file) => acceptedInlineImageTypes.has(file.type));
++    if (!images.length) {
++      setError("正文拖拽只支持 JPEG、PNG 或 WebP 图片；Live Photo 请使用下方配对上传。");
++      return;
++    }
++    await uploadInlineImages(images);
++  };
++
++  const handleBodyPaste = async (event) => {
++    const images = pastedImages(event);
++    if (!images.length) return;
++    event.preventDefault();
++    await uploadInlineImages(images);
++  };
++
+   if (loading) return <PageLoader label="正在读取草稿" />;
+   if (loadError) return <main className="page-shell narrow-page"><ErrorState error={loadError} onRetry={() => setReloadKey((value) => value + 1)} /></main>;
+ 
+@@ -326,12 +426,75 @@ export function WritePage() {
+             </div>
+           )}
+ 
+-          <label>
+-            <span>正文</span>
+-            <textarea className="body-editor" value={form.body} onChange={set("body")} placeholder="支持 Markdown。" />
+-          </label>
++          <section className="editor-body-section" aria-labelledby="editor-body-heading">
++            <div className="editor-body-toolbar">
++              <div>
++                <span id="editor-body-heading">正文</span>
++                <small>支持 Markdown；图片可以拖入、粘贴或从下方媒体列表插入。</small>
++              </div>
++              <div className="editor-mode-tabs" role="tablist" aria-label="正文编辑模式">
++                <button type="button" role="tab" aria-selected={editorMode === "write"} className={editorMode === "write" ? "active" : ""} onClick={() => setEditorMode("write")}>编辑</button>
++                <button type="button" role="tab" aria-selected={editorMode === "preview"} className={editorMode === "preview" ? "active" : ""} onClick={() => setEditorMode("preview")}>安全预览</button>
++              </div>
++            </div>
++
++            {editorMode === "write" ? (
++              <div
++                className={`body-editor-dropzone ${draggingImage ? "is-dragging" : ""}`}
++                onDragEnter={(event) => {
++                  if (event.dataTransfer?.types?.includes("Files")) setDraggingImage(true);
++                }}
++                onDragOver={(event) => {
++                  if (!event.dataTransfer?.types?.includes("Files")) return;
++                  event.preventDefault();
++                  event.dataTransfer.dropEffect = "copy";
++                  setDraggingImage(true);
++                }}
++                onDragLeave={() => setDraggingImage(false)}
++                onDrop={handleBodyDrop}
++              >
++                <textarea
++                  ref={bodyEditorRef}
++                  className="body-editor"
++                  value={form.body}
++                  onChange={set("body")}
++                  onPaste={handleBodyPaste}
++                  placeholder="支持 Markdown。把图片拖到这里，或直接粘贴截图。"
++                  aria-describedby="editor-body-help"
++                />
++                <div className="body-drop-hint" aria-hidden={!draggingImage}>
++                  松开即可上传并插入图片
++                </div>
++              </div>
++            ) : (
++              <div className="editor-preview" role="tabpanel" aria-live="polite">
++                {preview.loading ? <p className="editor-preview-state">正在生成安全预览…</p> : null}
++                {preview.error ? <div className="inline-error" role="alert">{preview.error}</div> : null}
++                {!preview.loading && !preview.error && preview.html ? (
++                  <ProtectedMarkdown
++                    html={preview.html}
++                    media={savedPost?.bound_media || []}
++                    management
++                    className="prose editor-preview-prose"
++                  />
++                ) : null}
++                {!preview.loading && !preview.error && !preview.html ? (
++                  <p className="editor-preview-state">正文为空，暂无可预览内容。</p>
++                ) : null}
++              </div>
++            )}
++            <small id="editor-body-help" className="editor-body-help">内部媒体使用稳定占位符保存，不会把 Blob URL、签名 URL 或公开 S3 地址写进正文。</small>
++          </section>
+ 
+-          <PostMediaManager post={savedPost} ensurePost={() => persistDraft(false, false)} onPostChange={handleMediaPostChange} />
++          <PostMediaManager
++            ref={mediaManagerRef}
++            post={savedPost}
++            ensurePost={() => persistDraft(false, false)}
++            onPostChange={handleMediaPostChange}
++            onInsertMedia={insertMediaIntoBody}
++            onRemoveMedia={removeMediaFromBody}
++            inlineMediaIds={inlineMediaIds}
++          />
+         </div>
+ 
+         <aside className="editor-sidebar">
+diff --git a/frontend/src/styles/editor-media.css b/frontend/src/styles/editor-media.css
+new file mode 100644
+index 0000000000000000000000000000000000000000..9c0c0f1c33f298457b26fbcbc3cda4745ab06bc1
+--- /dev/null
++++ b/frontend/src/styles/editor-media.css
+@@ -0,0 +1,173 @@
++.editor-body-section {
++  display: grid;
++  gap: 10px;
++}
++
++.editor-body-toolbar {
++  display: flex;
++  align-items: end;
++  justify-content: space-between;
++  gap: 18px;
++}
++
++.editor-body-toolbar > div:first-child {
++  display: grid;
++  gap: 4px;
++}
++
++.editor-body-toolbar > div:first-child > span {
++  color: var(--text-2);
++  font-size: 13px;
++  font-weight: 500;
++}
++
++.editor-body-toolbar small,
++.editor-body-help {
++  color: var(--text-4);
++  font-size: 11px;
++  line-height: 1.45;
++}
++
++.editor-mode-tabs {
++  flex: 0 0 auto;
++  display: inline-flex;
++  padding: 3px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-md);
++  background: var(--surface);
++}
++
++.editor-mode-tabs button {
++  min-height: 36px;
++  padding: 6px 11px;
++  border: 0;
++  border-radius: var(--radius-sm);
++  background: transparent;
++  color: var(--text-3);
++  font-size: 12px;
++  cursor: pointer;
++}
++
++.editor-mode-tabs button.active {
++  background: var(--tag-soft);
++  color: var(--brand-link);
++}
++
++.body-editor-dropzone {
++  position: relative;
++}
++
++.body-editor-dropzone .body-editor {
++  display: block;
++}
++
++.body-editor-dropzone.is-dragging .body-editor {
++  border-color: var(--brand-link);
++  outline: 2px solid color-mix(in srgb, var(--brand-link) 28%, transparent);
++  outline-offset: 1px;
++}
++
++.body-drop-hint {
++  position: absolute;
++  inset: 10px;
++  display: none;
++  place-items: center;
++  border: 1px dashed var(--brand-link);
++  border-radius: var(--radius-md);
++  background: color-mix(in srgb, var(--surface) 90%, var(--tag));
++  color: var(--brand-link);
++  font-size: 13px;
++  font-weight: 500;
++  pointer-events: none;
++}
++
++.body-editor-dropzone.is-dragging .body-drop-hint {
++  display: grid;
++}
++
++.editor-preview {
++  min-height: 460px;
++  padding: 18px 20px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-md);
++  background: var(--surface);
++}
++
++.editor-preview-prose {
++  margin-top: 0;
++}
++
++.editor-preview-state {
++  margin: 0;
++  color: var(--text-4);
++  font-size: 12px;
++}
++
++.inline-protected-media {
++  margin: 1.7em 0;
++}
++
++.inline-protected-image,
++.protected-image-placeholder.inline-protected-image,
++.inline-protected-video,
++.protected-image-placeholder.inline-protected-video {
++  width: 100%;
++  max-height: 680px;
++  border: 1px solid var(--border);
++  border-radius: var(--radius-md);
++  background: var(--surface-2);
++  object-fit: contain;
++}
++
++.inline-live-photo {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
++  gap: 10px;
++}
++
++.inline-live-photo figcaption {
++  grid-column: 1 / -1;
++  margin-top: 2px;
++  color: var(--text-4);
++  font-size: 11px;
++  letter-spacing: 0.6px;
++}
++
++.inline-media-missing {
++  display: block;
++  margin: 1.2em 0;
++  padding: 14px;
++  border: 1px dashed var(--border);
++  border-radius: var(--radius-md);
++  color: var(--text-4);
++  font-size: 12px;
++}
++
++.media-inline-state {
++  color: var(--success);
++  font-size: 11px;
++}
++
++@media (max-width: 719px) {
++  .editor-body-toolbar {
++    align-items: stretch;
++    flex-direction: column;
++  }
++
++  .editor-mode-tabs {
++    align-self: flex-start;
++  }
++
++  .editor-preview {
++    min-height: 360px;
++    padding: 14px;
++  }
++
++  .inline-live-photo {
++    grid-template-columns: 1fr;
++  }
++
++  .inline-live-photo figcaption {
++    grid-column: auto;
++  }
++}
+diff --git a/frontend/tests/internal-media.test.js b/frontend/tests/internal-media.test.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..eccf689c1d9b1b1d6e3788ab7f24ccc1d20e013f
+--- /dev/null
++++ b/frontend/tests/internal-media.test.js
+@@ -0,0 +1,27 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++
++import {
++  insertMediaPlaceholder,
++  mediaIdsInMarkdown,
++  mediaPlaceholder,
++  removeMediaPlaceholders,
++} from "../src/lib/internalMedia.js";
++
++test("media placeholder helpers keep ids stable", () => {
++  assert.equal(mediaPlaceholder(12), "[[ym-media:12]]");
++  assert.deepEqual([...mediaIdsInMarkdown("a [[ym-media:12]] b [[ym-media:12]] [[ym-media:8]]")], [12, 8]);
++});
++
++test("insertMediaPlaceholder inserts a block at the selection", () => {
++  const result = insertMediaPlaceholder("beforeafter", 7, 6, 6);
++  assert.equal(result.value, "before\n\n[[ym-media:7]]\n\nafter");
++  assert.equal(result.cursor, "before\n\n[[ym-media:7]]\n\n".length);
++});
++
++test("removeMediaPlaceholders removes only requested media", () => {
++  assert.equal(
++    removeMediaPlaceholders("[[ym-media:1]] x [[ym-media:2]]", [1]),
++    " x [[ym-media:2]]",
++  );
++});
+diff --git a/backend/app/posts/routes.py b/backend/app/posts/routes.py
+--- a/backend/app/posts/routes.py
++++ b/backend/app/posts/routes.py
+@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
+ 
+ from app.access import can_read_post, is_collection_member, readable_post_predicate, semantic_time_expression
+ from app.common.auth import current_user
++from app.common.markdown import render_safe_markdown
+ from app.common.pagination import pagination_meta, parse_pagination
+ from app.common.responses import error_response, success_response
+ from app.common.validation import parse_iso_datetime, validate_external_url
+@@ -203,6 +204,23 @@ def _apply_patch(post, actor, data):
+             raise DomainError("VALIDATION_ERROR", "Article Slug 格式不合法。", 422)
+         post.slug_candidate = normalized or None
+ 
++
++@bp.post("/preview")
++@jwt_required(locations=["headers"])
++def preview_markdown():
++    actor = current_user()
++    if actor is None:
++        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
++    data = request.get_json(silent=True)
++    if not isinstance(data, dict):
++        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
++    body = data.get("body", "")
++    if body is None:
++        body = ""
++    if not isinstance(body, str):
++        return error_response("VALIDATION_ERROR", "body 必须是字符串或 null。", 422)
++    return success_response({"rendered_html": render_safe_markdown(body)})
++
+ 
+ @bp.get("")
+ @jwt_required(locations=["headers"])
+ def list_posts():
+diff --git a/backend/app/uploads/routes.py b/backend/app/uploads/routes.py
+--- a/backend/app/uploads/routes.py
++++ b/backend/app/uploads/routes.py
+@@ -7,6 +7,7 @@ from PIL import Image, UnidentifiedImageError
+ 
+ from app.access import can_read_post, is_collection_member
+ from app.common.auth import current_user
++from app.common.markdown import remove_media_placeholders
+ from app.common.responses import error_response, success_response
+ from app.extensions import db, limiter
+ from app.models import Collection, Media, Post, User
+@@ -190,8 +191,10 @@ def unbind(media_id):
+ 
+     if bound_type=="post":
+         target=db.session.get(Post,bound_id)
+-        if target and target.cover_media_id in media_ids:
+-            target.cover_media_id=None
++        if target:
++            target.body=remove_media_placeholders(target.body,media_ids)
++            if target.cover_media_id in media_ids:
++                target.cover_media_id=None
+     elif bound_type=="collection":
+         target=db.session.get(Collection,bound_id)
+         if target and target.cover_media_id in media_ids:
+diff --git a/frontend/src/styles/index.css b/frontend/src/styles/index.css
+--- a/frontend/src/styles/index.css
++++ b/frontend/src/styles/index.css
+@@ -1,3 +1,4 @@
+ @import "tailwindcss";
+ @import "./custom-select.css";
++@import "./editor-media.css";
+ 

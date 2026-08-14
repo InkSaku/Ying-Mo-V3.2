@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ProtectedImage } from "./ProtectedImage";
@@ -26,10 +26,18 @@ function manageableRows(media) {
   return rows;
 }
 
-export function PostMediaManager({ post, ensurePost, onPostChange }) {
+export const PostMediaManager = forwardRef(function PostMediaManager({
+  post,
+  ensurePost,
+  onPostChange,
+  onInsertMedia,
+  onRemoveMedia,
+  inlineMediaIds = new Set(),
+}, ref) {
   const imageInputRef = useRef(null);
   const liveImageInputRef = useRef(null);
   const liveVideoInputRef = useRef(null);
+  const busyRef = useRef(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -44,32 +52,46 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
     return result.data;
   };
 
-  const uploadImage = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadImageFile = async (file, { insertIntoBody = true } = {}) => {
+    if (!file || busyRef.current) return null;
     setError("");
     setMessage("");
     if (!imageTypes.has(file.type)) {
       setError("请选择 JPEG、PNG 或 WebP 图片。");
-      event.target.value = "";
-      return;
+      return null;
     }
+
+    busyRef.current = true;
     setBusy("image");
     try {
       const currentPost = await ensurePost();
-      if (!currentPost) return;
+      if (!currentPost) return null;
       const body = new FormData();
       body.append("file", file);
       const uploaded = await api.post("/uploads/images", body);
       await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
       await refreshPost(currentPost.id);
-      setMessage("图片已上传并绑定到当前内容。");
+      if (insertIntoBody) onInsertMedia?.(uploaded.data.id);
+      setMessage(insertIntoBody
+        ? "图片已上传、绑定并插入正文。"
+        : "图片已上传并绑定到当前内容。");
+      return uploaded.data;
     } catch (uploadError) {
       setError(uploadError.message);
+      return null;
     } finally {
+      busyRef.current = false;
       setBusy("");
-      if (imageInputRef.current) imageInputRef.current.value = "";
     }
+  };
+
+  useImperativeHandle(ref, () => ({ uploadImageFile }));
+
+  const uploadImage = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadImageFile(file, { insertIntoBody: true });
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const uploadLivePhoto = async () => {
@@ -83,6 +105,9 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
       setError("Live Photo 图片必须是 JPEG、PNG 或 WebP。");
       return;
     }
+    if (busyRef.current) return;
+
+    busyRef.current = true;
     setBusy("live");
     try {
       const currentPost = await ensurePost();
@@ -93,20 +118,23 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
       const uploaded = await api.post("/uploads/live-photos", body);
       await api.post(`/uploads/${uploaded.data.image.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
       await refreshPost(currentPost.id);
+      onInsertMedia?.(uploaded.data.image.id);
       setLiveImage(null);
       setLiveVideo(null);
       if (liveImageInputRef.current) liveImageInputRef.current.value = "";
       if (liveVideoInputRef.current) liveVideoInputRef.current.value = "";
-      setMessage("Live Photo 已上传并完成配对绑定。");
+      setMessage("Live Photo 已上传、配对并插入正文。");
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
+      busyRef.current = false;
       setBusy("");
     }
   };
 
   const setCover = async (mediaId) => {
-    if (!post?.id) return;
+    if (!post?.id || busyRef.current) return;
+    busyRef.current = true;
     setBusy(`cover-${mediaId || "none"}`);
     setError("");
     setMessage("");
@@ -117,23 +145,27 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
     } catch (coverError) {
       setError(coverError.message);
     } finally {
+      busyRef.current = false;
       setBusy("");
     }
   };
 
   const unbind = async () => {
-    if (!removeTarget || !post?.id) return;
+    if (!removeTarget || !post?.id || busyRef.current) return;
+    busyRef.current = true;
     setBusy(`remove-${removeTarget.primary.id}`);
     setError("");
     setMessage("");
     try {
       await api.delete(`/uploads/${removeTarget.primary.id}/bind`);
+      onRemoveMedia?.(removeTarget.items.map((item) => item.id));
       await refreshPost(post.id);
-      setMessage(removeTarget.kind === "live_photo" ? "Live Photo 配对已从内容中移除。" : "图片已从内容中移除。");
+      setMessage(removeTarget.kind === "live_photo" ? "Live Photo 已从正文和内容媒体中移除。" : "图片已从正文和内容媒体中移除。");
       setRemoveTarget(null);
     } catch (removeError) {
       setError(removeError.message);
     } finally {
+      busyRef.current = false;
       setBusy("");
     }
   };
@@ -143,10 +175,10 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
       <div className="media-manager-header">
         <div>
           <h2 id="post-media-heading">图片与 Live Photo</h2>
-          <p>上传前会先保存当前草稿。媒体只通过鉴权接口读取，不生成公开地址。</p>
+          <p>上传前会先保存当前草稿。上传后自动插入正文，也可以从列表重新插入已有媒体。</p>
         </div>
         <label className={`btn btn-secondary file-picker ${busy ? "is-disabled" : ""}`} aria-disabled={Boolean(busy)}>
-          {busy === "image" ? "正在上传图片" : "上传图片"}
+          {busy === "image" ? "正在上传图片" : "上传并插入图片"}
           <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy)} onChange={uploadImage} />
         </label>
       </div>
@@ -159,6 +191,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
           {rows.map((row) => {
             const previewPath = row.primary.manage_thumbnail_path || row.primary.thumbnail_path || row.primary.manage_path || row.primary.read_path;
             const isCover = post?.cover_media_id === row.primary.id;
+            const isInline = row.items.some((item) => inlineMediaIds.has(Number(item.id)));
             return (
               <article className="media-management-row" key={row.id}>
                 <ProtectedImage path={previewPath} alt="已绑定媒体预览" className="media-management-preview" />
@@ -166,8 +199,14 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
                   <h3>{row.kind === "live_photo" ? "Live Photo" : "图片"}</h3>
                   <p>{row.kind === "live_photo" ? "图片与视频配对" : `${row.primary.width || "?"} × ${row.primary.height || "?"}`}</p>
                   {isCover ? <span className="media-cover-state">当前封面</span> : null}
+                  {isInline ? <span className="media-inline-state"> · 已在正文</span> : null}
                 </div>
                 <div className="media-management-actions">
+                  {onInsertMedia ? (
+                    <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || isInline} onClick={() => onInsertMedia(row.primary.id)}>
+                      {isInline ? "已插入正文" : "插入正文"}
+                    </button>
+                  ) : null}
                   {row.kind === "image" && !isCover ? <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={() => setCover(row.primary.id)}>设为封面</button> : null}
                   {isCover ? <button className="btn btn-secondary" type="button" disabled={Boolean(busy)} onClick={() => setCover(null)}>取消封面</button> : null}
                   <button className="text-button danger-text" type="button" disabled={Boolean(busy)} onClick={() => setRemoveTarget(row)}>移除</button>
@@ -176,7 +215,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
             );
           })}
         </div>
-      ) : <p className="media-empty">还没有绑定媒体。Note 可以只用图片或 Live Photo 发布。</p>}
+      ) : <p className="media-empty">还没有绑定媒体。可以选择文件，也可以直接拖拽或粘贴图片到正文编辑区。</p>}
 
       <section
         className="live-photo-uploader"
@@ -186,7 +225,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
         <div className="live-photo-uploader-header">
           <div>
             <h3 id="live-photo-uploader-title">上传 Live Photo</h3>
-            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定到当前内容。</p>
+            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定并插入当前正文。</p>
           </div>
         </div>
 
@@ -235,14 +274,14 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
         </div>
 
         <div className="live-photo-actions">
-          <p>两份文件会作为同一组 Live Photo 上传并绑定，媒体仍只通过鉴权接口读取。</p>
+          <p>两份文件会作为同一组 Live Photo 上传、绑定并插入正文，媒体仍只通过鉴权接口读取。</p>
           <button
             className="btn btn-primary live-photo-upload-button"
             type="button"
             disabled={!liveImage || !liveVideo || Boolean(busy)}
             onClick={uploadLivePhoto}
           >
-            {busy === "live" ? "正在上传并配对" : "上传并配对"}
+            {busy === "live" ? "正在上传并配对" : "上传、配对并插入"}
           </button>
         </div>
       </section>
@@ -250,7 +289,7 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
       <ConfirmDialog
         open={Boolean(removeTarget)}
         title={removeTarget?.kind === "live_photo" ? "移除这组 Live Photo？" : "移除这张图片？"}
-        description="媒体会与当前内容解除绑定；如果它是封面，封面引用也会同时清除。"
+        description="媒体会与当前内容解除绑定；正文中的内部媒体占位和封面引用也会同步清理。"
         confirmLabel="确认移除"
         danger
         busy={busy.startsWith("remove-")}
@@ -259,4 +298,4 @@ export function PostMediaManager({ post, ensurePost, onPostChange }) {
       />
     </section>
   );
-}
+});

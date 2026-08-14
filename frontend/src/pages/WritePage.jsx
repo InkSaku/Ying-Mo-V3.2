@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
+import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
+import {
+  insertMediaPlaceholder,
+  mediaIdsInMarkdown,
+  removeMediaPlaceholders,
+} from "../lib/internalMedia";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const PREVIEW_DELAY = 220;
 
 function toLocalDatetime(value) {
   if (!value) return "";
@@ -62,6 +70,13 @@ function validExternalUrl(value) {
   }
 }
 
+function pastedImages(event) {
+  return Array.from(event.clipboardData?.items || [])
+    .filter((item) => item.kind === "file")
+    .map((item) => item.getAsFile())
+    .filter((file) => file && acceptedInlineImageTypes.has(file.type));
+}
+
 export function WritePage() {
   const { postId } = useParams();
   const [params] = useSearchParams();
@@ -79,6 +94,11 @@ export function WritePage() {
   const [savedPost, setSavedPost] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [editorMode, setEditorMode] = useState("write");
+  const [preview, setPreview] = useState({ html: "", loading: false, error: "" });
+  const [draggingImage, setDraggingImage] = useState(false);
+  const bodyEditorRef = useRef(null);
+  const mediaManagerRef = useRef(null);
   usePageMeta(postId ? "编辑记录" : "新建记录");
 
   useEffect(() => {
@@ -118,9 +138,31 @@ export function WritePage() {
     return () => { active = false; };
   }, [postId, reloadKey]);
 
+  useEffect(() => {
+    if (editorMode !== "preview") return undefined;
+    const controller = new AbortController();
+    setPreview((current) => ({ ...current, loading: true, error: "" }));
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.post("/posts/preview", { body: form.body || "" }, { signal: controller.signal });
+        setPreview({ html: result.data?.rendered_html || "", loading: false, error: "" });
+      } catch (previewError) {
+        if (previewError?.code !== "REQUEST_ABORTED") {
+          setPreview((current) => ({ ...current, loading: false, error: previewError.message }));
+        }
+      }
+    }, PREVIEW_DELAY);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [editorMode, form.body]);
+
   const isPublished = Boolean(savedPost?.published_at);
   const inCollection = Boolean(form.collection_id);
   const title = form.post_type === "article" ? "Article" : "Note";
+  const inlineMediaIds = useMemo(() => mediaIdsInMarkdown(form.body), [form.body]);
   const collectionUnavailable = Boolean(
     form.collection_id && !collections.some((collection) => String(collection.id) === form.collection_id)
   );
@@ -237,6 +279,64 @@ export function WritePage() {
     if (!postId) navigate(`/write/${post.id}`, { replace: true });
   };
 
+  const insertMediaIntoBody = (mediaId) => {
+    const textarea = bodyEditorRef.current;
+    const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : null;
+    const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : null;
+    let nextCursor = null;
+    setForm((current) => {
+      const start = selectionStart ?? current.body.length;
+      const end = selectionEnd ?? start;
+      const next = insertMediaPlaceholder(current.body, mediaId, start, end);
+      nextCursor = next.cursor;
+      return { ...current, body: next.value };
+    });
+    setEditorMode("write");
+    setError("");
+    setMessage("媒体已插入正文；保存草稿或发布后会永久保留这个位置。");
+    window.requestAnimationFrame(() => {
+      const editor = bodyEditorRef.current;
+      if (!editor || nextCursor === null) return;
+      editor.focus();
+      editor.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const removeMediaFromBody = (mediaIds) => {
+    setForm((current) => ({
+      ...current,
+      body: removeMediaPlaceholders(current.body, mediaIds),
+    }));
+  };
+
+  const uploadInlineImages = async (files) => {
+    for (const file of files) {
+      const manager = mediaManagerRef.current;
+      if (!manager?.uploadImageFile) return;
+      await manager.uploadImageFile(file, { insertIntoBody: true });
+    }
+  };
+
+  const handleBodyDrop = async (event) => {
+    const files = Array.from(event.dataTransfer?.files || []);
+    if (!files.length) return;
+    event.preventDefault();
+    setDraggingImage(false);
+    const images = files.filter((file) => acceptedInlineImageTypes.has(file.type));
+    if (!images.length) {
+      setError("正文拖拽只支持 JPEG、PNG 或 WebP 图片；Live Photo 请使用下方配对上传。");
+      return;
+    }
+    await uploadInlineImages(images);
+  };
+
+  const handleBodyPaste = async (event) => {
+    const images = pastedImages(event);
+    if (!images.length) return;
+    event.preventDefault();
+    await uploadInlineImages(images);
+  };
+
   if (loading) return <PageLoader label="正在读取草稿" />;
   if (loadError) return <main className="page-shell narrow-page"><ErrorState error={loadError} onRetry={() => setReloadKey((value) => value + 1)} /></main>;
 
@@ -326,12 +426,75 @@ export function WritePage() {
             </div>
           )}
 
-          <label>
-            <span>正文</span>
-            <textarea className="body-editor" value={form.body} onChange={set("body")} placeholder="支持 Markdown。" />
-          </label>
+          <section className="editor-body-section" aria-labelledby="editor-body-heading">
+            <div className="editor-body-toolbar">
+              <div>
+                <span id="editor-body-heading">正文</span>
+                <small>支持 Markdown；图片可以拖入、粘贴或从下方媒体列表插入。</small>
+              </div>
+              <div className="editor-mode-tabs" role="tablist" aria-label="正文编辑模式">
+                <button type="button" role="tab" aria-selected={editorMode === "write"} className={editorMode === "write" ? "active" : ""} onClick={() => setEditorMode("write")}>编辑</button>
+                <button type="button" role="tab" aria-selected={editorMode === "preview"} className={editorMode === "preview" ? "active" : ""} onClick={() => setEditorMode("preview")}>安全预览</button>
+              </div>
+            </div>
 
-          <PostMediaManager post={savedPost} ensurePost={() => persistDraft(false, false)} onPostChange={handleMediaPostChange} />
+            {editorMode === "write" ? (
+              <div
+                className={`body-editor-dropzone ${draggingImage ? "is-dragging" : ""}`}
+                onDragEnter={(event) => {
+                  if (event.dataTransfer?.types?.includes("Files")) setDraggingImage(true);
+                }}
+                onDragOver={(event) => {
+                  if (!event.dataTransfer?.types?.includes("Files")) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "copy";
+                  setDraggingImage(true);
+                }}
+                onDragLeave={() => setDraggingImage(false)}
+                onDrop={handleBodyDrop}
+              >
+                <textarea
+                  ref={bodyEditorRef}
+                  className="body-editor"
+                  value={form.body}
+                  onChange={set("body")}
+                  onPaste={handleBodyPaste}
+                  placeholder="支持 Markdown。把图片拖到这里，或直接粘贴截图。"
+                  aria-describedby="editor-body-help"
+                />
+                <div className="body-drop-hint" aria-hidden={!draggingImage}>
+                  松开即可上传并插入图片
+                </div>
+              </div>
+            ) : (
+              <div className="editor-preview" role="tabpanel" aria-live="polite">
+                {preview.loading ? <p className="editor-preview-state">正在生成安全预览…</p> : null}
+                {preview.error ? <div className="inline-error" role="alert">{preview.error}</div> : null}
+                {!preview.loading && !preview.error && preview.html ? (
+                  <ProtectedMarkdown
+                    html={preview.html}
+                    media={savedPost?.bound_media || []}
+                    management
+                    className="prose editor-preview-prose"
+                  />
+                ) : null}
+                {!preview.loading && !preview.error && !preview.html ? (
+                  <p className="editor-preview-state">正文为空，暂无可预览内容。</p>
+                ) : null}
+              </div>
+            )}
+            <small id="editor-body-help" className="editor-body-help">内部媒体使用稳定占位符保存，不会把 Blob URL、签名 URL 或公开 S3 地址写进正文。</small>
+          </section>
+
+          <PostMediaManager
+            ref={mediaManagerRef}
+            post={savedPost}
+            ensurePost={() => persistDraft(false, false)}
+            onPostChange={handleMediaPostChange}
+            onInsertMedia={insertMediaIntoBody}
+            onRemoveMedia={removeMediaFromBody}
+            inlineMediaIds={inlineMediaIds}
+          />
         </div>
 
         <aside className="editor-sidebar">
