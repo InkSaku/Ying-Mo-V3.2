@@ -1,12 +1,13 @@
-# Ying-Mo Backend V3.2
+# Ying-Mo V3.2
 
-Ying-Mo V3.2 邀请制朋友记录空间的数据库与后端 Release Candidate。
+Ying-Mo V3.2 邀请制朋友记录空间。P0 全栈基线、第二十一阶段“创作与长文阅读增强”和第二十二阶段“邮箱可信与账号恢复闭环”已在当前未提交工作区实现。
 
-唯一产品基线是 [docs/product.md](docs/product.md)。逐项验收见 [docs/backend/P0_ACCEPTANCE.md](docs/backend/P0_ACCEPTANCE.md)，真实验证记录见 [docs/backend/VALIDATION.md](docs/backend/VALIDATION.md)。
+唯一产品基线是 [docs/product.md](docs/product.md)。P0 逐项验收见 [docs/backend/P0_ACCEPTANCE.md](docs/backend/P0_ACCEPTANCE.md)，阶段 21/22 验收见 [docs/backend/P1_ACCEPTANCE.md](docs/backend/P1_ACCEPTANCE.md)，真实验证记录见 [docs/backend/VALIDATION.md](docs/backend/VALIDATION.md)。
 
 ## 核心边界
 
 - 注册必须提交服务端配置的邀请码；注册成功即是正常成员。
+- 邮箱未验证不阻断登录、阅读、写作或其他正常成员能力；邮箱验证只把当前邮箱建立为可信恢复通道。
 - 仅有 `user` 和 `system_admin`；没有发布资格、评论资格或内容管理员审批链。
 - Article / Note 共用 Post，Draft 也是 Post；第一次发布后类型锁定。
 - 独立 Post 仅支持 `login_only / private`。
@@ -28,6 +29,7 @@ Ying-Mo V3.2 邀请制朋友记录空间的数据库与后端 Release Candidate�
 - Flask-JWT-Extended / Flask-Limiter / Flask-CORS
 - Pillow / Markdown / Bleach
 - Local private storage（开发）/ S3-compatible private object storage（生产）
+- 内存/Console 邮件适配器（测试与开发）/ SMTP + STARTTLS（生产）
 - Gunicorn / Redis rate-limit storage
 - pytest
 
@@ -64,10 +66,19 @@ MEDIA_STORAGE_BACKEND=s3
 S3_BUCKET=yingmo-private
 S3_REGION=...
 SITE_URL=https://your-frontend.example
+MAIL_BACKEND=smtp
+MAIL_FROM=no-reply@your-domain.example
+SMTP_HOST=smtp.your-provider.example
+SMTP_PORT=587
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+SMTP_USE_TLS=true
 TRUST_PROXY_COUNT=1
 ```
 
 S3 credentials 可以通过环境变量配置，也可以使用运行环境提供的 IAM role。Bucket 必须保持私有；后端只通过鉴权代理传输媒体，不返回永久公开 URL。
+
+生产环境还会强制要求纯 HTTPS origin 的 `SITE_URL`、SMTP 邮件后端、合法 `MAIL_FROM`、`SMTP_HOST` 与 TLS；若配置 SMTP 账号，用户名和密码必须同时提供。测试使用内存 Outbox；开发默认 Console 适配器和邮件失败日志不会输出完整邮箱、完整链接或一次性令牌。
 
 生产启动：
 
@@ -94,9 +105,15 @@ POST   /auth/logout-all
 GET    /auth/me
 GET    /auth/sessions
 DELETE /auth/sessions/:id
+POST   /auth/email-verification/request
+POST   /auth/email-verification/confirm
+POST   /auth/password-reset/request
+POST   /auth/password-reset/confirm
 ```
 
 注册字段：`username`、`nickname`、`email`、`password`、`invite_code`。
+
+邮箱验证与密码重置链接分别进入公开前端路由 `/verify-email`、`/reset-password`；用户从 `/forgot-password` 发起重置。令牌仅放在 URL fragment 中，由页面读取后立即清除；页面也会清除误入 Query 的令牌并使用 `no-referrer`。密码重置申请对已验证、未验证、不存在、受限和冷却中的邮箱统一返回 202，避免账号枚举；重置成功后撤销该账号已有 Refresh Session，并通过不含敏感信息的同源事件立即清理其他标签页的本地会话。
 
 ### Post / Personal content
 
@@ -237,11 +254,13 @@ flask --app run.py db heads
 flask --app run.py db upgrade
 ```
 
-当前 head：`20260814_0002`。
+当前 head：`20260815_0004`。
 
 - `0001`：V3.2 基线业务表。
 - `0002`：P0 Release 支撑 Schema、Admin/Featured/Settings/Logs、Session/Media/Slug 强约束，以及实际 `public → login_only` 数据迁移。
 - `0002` downgrade 只放宽旧 Schema 兼容，不会把 `login_only` 批量改回 `public`。
+- `0003`：为 Post 增加并回填 `edit_version=1` 与正整数约束，支撑草稿自动保存和乐观并发保护。
+- `0004`：为 User 增加 `email_verified_at`，新增只保存令牌摘要的 `account_tokens`，支撑邮箱验证与密码恢复。
 
 ## 测试与静态验证
 
@@ -249,12 +268,16 @@ flask --app run.py db upgrade
 python -m pytest -q
 python -m compileall -q app tests migrations scripts run.py gunicorn.conf.py
 python scripts/verify_static.py
+python scripts/generate_manifest.py --check
 python -m pip check
+
+cd ../frontend
+npm run check
 ```
 
 测试只能使用独立 `TEST_DATABASE_URL`；默认是 SQLite 内存数据库，不连接开发或生产库。
 
-当前外部限制：此工作区没有真实 MySQL 8、Redis 和 S3 bucket，因此真实基础设施 migration/I/O/压测需在部署环境补跑；仓库内 migration、ACL、HTTP、MySQL dialect DDL 和 production 配置加载验证已完成，未把外部验证伪记为通过。
+当前门禁基线为后端 `88/88`、前端 `55/55`，Alembic head 为 `20260815_0004`。当前外部限制：此工作区没有真实 MySQL 8、Redis、S3 bucket 和可投递的 SMTP/TLS/DNS 环境，因此真实基础设施 migration/I/O/压测与邮件投递需在部署环境补跑；仓库内 migration、ACL、账户令牌、内存邮件、SMTP TLS adapter、MySQL dialect DDL 和 production 配置加载验证已完成，未把外部验证伪记为通过。阶段 22 的浏览器运行验收已尝试，但被当前桌面的本地导航安全策略与服务启动权限门禁阻断，因此未计为通过。
 
 ## 维护命令
 

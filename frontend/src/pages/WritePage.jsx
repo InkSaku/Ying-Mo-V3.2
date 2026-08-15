@@ -1,27 +1,38 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
 import {
+  AUTOSAVE_DELAY,
+  autosaveStatusLabel,
+  draftFingerprint,
+  draftPayloadFromForm,
+} from "../lib/draftAutosave";
+import {
   insertMediaPlaceholder,
   mediaIdsInMarkdown,
   removeMediaPlaceholders,
 } from "../lib/internalMedia";
-import { applyMarkdownShortcut } from "../lib/markdownToolbar";
+import { applyMarkdownShortcut, markdownActionForKeyEvent } from "../lib/markdownToolbar";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PREVIEW_DELAY = 220;
 const MARKDOWN_SHORTCUTS = [
   { action: "heading", label: "标题", hint: "插入二级标题" },
-  { action: "bold", label: "加粗", hint: "加粗选中文字" },
+  { action: "bold", label: "加粗", hint: "加粗选中文字（⌘/Ctrl+B）" },
   { action: "quote", label: "引用", hint: "插入引用" },
-  { action: "list", label: "列表", hint: "插入无序列表" },
-  { action: "link", label: "链接", hint: "插入链接" },
+  { action: "list", label: "无序列表", hint: "插入无序列表（⌘/Ctrl+Shift+8）" },
+  { action: "orderedList", label: "有序列表", hint: "插入有序列表（⌘/Ctrl+Shift+7）" },
+  { action: "link", label: "链接", hint: "插入链接（⌘/Ctrl+K）" },
+  { action: "footnote", label: "脚注", hint: "插入脚注引用与定义" },
+  { action: "inlineMath", label: "行内公式", hint: "插入 $...$ 行内公式" },
+  { action: "mathBlock", label: "块公式", hint: "插入 $$...$$ 块公式" },
   { action: "code", label: "代码", hint: "插入代码块" },
   { action: "table", label: "表格", hint: "插入表格模板" },
 ];
@@ -107,12 +118,38 @@ export function WritePage() {
   const [editorMode, setEditorMode] = useState("write");
   const [preview, setPreview] = useState({ html: "", loading: false, error: "" });
   const [draggingImage, setDraggingImage] = useState(false);
+  const [autosave, setAutosave] = useState({ status: "idle", message: "", savedAt: null });
+  const [autosaveRetryKey, setAutosaveRetryKey] = useState(0);
+  const [reloadConflictOpen, setReloadConflictOpen] = useState(false);
   const bodyEditorRef = useRef(null);
+  const pendingEditorSelectionRef = useRef(null);
   const mediaManagerRef = useRef(null);
+  const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
+  const payloadRef = useRef(initialPayload);
+  const savedPostRef = useRef(null);
+  const lastSavedFingerprintRef = useRef(draftFingerprint(initialPayload));
+  const autosaveBlockedRef = useRef(false);
+  const saveQueueRef = useRef(Promise.resolve());
+  const editorGenerationRef = useRef(0);
+  const routeReadyRef = useRef(!postId);
   usePageMeta(postId ? "编辑记录" : "新建记录");
+
+  useLayoutEffect(() => {
+    if (editorMode !== "write") return;
+    const selection = pendingEditorSelectionRef.current;
+    const editor = bodyEditorRef.current;
+    if (!selection || !editor) return;
+
+    pendingEditorSelectionRef.current = null;
+    editor.focus();
+    editor.setSelectionRange(selection[0], selection[1]);
+  }, [editorMode, form.body]);
 
   useEffect(() => {
     let active = true;
+    const generation = editorGenerationRef.current + 1;
+    editorGenerationRef.current = generation;
+    routeReadyRef.current = false;
     setOptionsError("");
 
     Promise.allSettled([
@@ -133,20 +170,43 @@ export function WritePage() {
       api.get(`/posts/me/${postId}`)
         .then((result) => {
           if (!active) return;
+          const loadedForm = formFromPost(result.data);
+          const loadedFingerprint = draftFingerprint(draftPayloadFromForm(loadedForm));
+          const preserveSavedState = savedPostRef.current?.id === result.data.id
+            && lastSavedFingerprintRef.current === loadedFingerprint;
+          savedPostRef.current = result.data;
+          lastSavedFingerprintRef.current = loadedFingerprint;
+          autosaveBlockedRef.current = false;
           setSavedPost(result.data);
-          setForm(formFromPost(result.data));
+          setForm(loadedForm);
+          setAutosave((current) => (
+            preserveSavedState && current.status === "saved"
+              ? current
+              : { status: "idle", message: "", savedAt: null }
+          ));
+          routeReadyRef.current = true;
           setLoading(false);
         })
         .catch((loadFailure) => {
           if (!active) return;
           setLoadError(loadFailure);
+          routeReadyRef.current = true;
           setLoading(false);
         });
     } else {
+      const freshForm = initialForm(requestedType, requestedCollection);
+      const freshFingerprint = draftFingerprint(draftPayloadFromForm(freshForm));
+      savedPostRef.current = null;
+      lastSavedFingerprintRef.current = freshFingerprint;
+      autosaveBlockedRef.current = false;
+      setSavedPost(null);
+      setForm(freshForm);
+      setAutosave({ status: "idle", message: "", savedAt: null });
+      routeReadyRef.current = true;
       setLoading(false);
     }
     return () => { active = false; };
-  }, [postId, reloadKey]);
+  }, [postId, reloadKey, requestedCollection, requestedType]);
 
   useEffect(() => {
     if (editorMode !== "preview") return undefined;
@@ -181,35 +241,90 @@ export function WritePage() {
   );
 
   const payload = useMemo(() => {
-    const tagNames = form.tag_names
-      ? form.tag_names.split(",").map((item) => item.trim()).filter(Boolean)
-      : [];
-    const common = {
-      post_type: form.post_type,
-      body: form.body || null,
-      visibility: inCollection ? "private" : form.visibility,
-      collection_id: form.collection_id ? Number(form.collection_id) : null,
-      tag_names: tagNames,
+    return draftPayloadFromForm(form);
+  }, [form]);
+
+  useEffect(() => {
+    payloadRef.current = payload;
+  }, [payload]);
+
+  useEffect(() => {
+    savedPostRef.current = savedPost;
+  }, [savedPost]);
+
+  const saveDraftSnapshot = useCallback((snapshot, { automatic = false } = {}) => {
+    const fingerprint = draftFingerprint(snapshot);
+    const generation = editorGenerationRef.current;
+    const performSave = async () => {
+      if (generation !== editorGenerationRef.current || !routeReadyRef.current) {
+        return savedPostRef.current;
+      }
+      const currentPost = savedPostRef.current;
+      if (automatic && (autosaveBlockedRef.current || (currentPost && currentPost.status !== "draft"))) {
+        return currentPost;
+      }
+
+      if (automatic) {
+        setAutosave((current) => ({ ...current, status: "saving", message: "" }));
+      }
+
+      try {
+        const result = currentPost
+          ? await api.patch(
+            automatic ? `/posts/${currentPost.id}/autosave` : `/posts/${currentPost.id}`,
+            { ...snapshot, expected_version: currentPost.edit_version },
+          )
+          : await api.post("/posts", snapshot);
+        const saved = result.data;
+        if (generation !== editorGenerationRef.current) return saved;
+        savedPostRef.current = saved;
+        lastSavedFingerprintRef.current = fingerprint;
+        setSavedPost(saved);
+        const currentMatches = draftFingerprint(payloadRef.current) === fingerprint;
+        setAutosave({
+          status: currentMatches ? "saved" : "dirty",
+          message: "",
+          savedAt: currentMatches ? new Date() : null,
+        });
+        if (!currentPost) navigate(`/write/${saved.id}`, { replace: true });
+        return saved;
+      } catch (saveError) {
+        if (generation !== editorGenerationRef.current) throw saveError;
+        const conflict = saveError.code === "EDIT_CONFLICT";
+        if (conflict) autosaveBlockedRef.current = true;
+        if (automatic || conflict) {
+          const collectionFailure = saveError.code === "COLLECTION_UNAVAILABLE";
+          setAutosave({
+            status: conflict ? "conflict" : "error",
+            message: collectionFailure
+              ? "原 Collection 已不可用。正文仍保留在本地，请改选“不加入 Collection”或其他 Collection 后重试。"
+              : saveError.message,
+            savedAt: null,
+          });
+        }
+        throw saveError;
+      }
     };
-    if (form.post_type === "article") {
-      return {
-        ...common,
-        title: form.title || null,
-        summary: form.summary || null,
-        slug: form.slug || null,
-        category_id: form.category_id ? Number(form.category_id) : null,
-      };
-    }
-    return {
-      ...common,
-      title: form.title || null,
-      summary: form.summary || null,
-      occurred_at: form.occurred_at ? new Date(form.occurred_at).toISOString() : null,
-      location: form.location || null,
-      mood: form.mood || null,
-      external_video_url: form.external_video_url || null,
-    };
-  }, [form, inCollection]);
+
+    const queued = saveQueueRef.current.then(performSave, performSave);
+    saveQueueRef.current = queued.catch(() => null);
+    return queued;
+  }, [navigate]);
+
+  const savedPostStatus = savedPost?.status;
+
+  useEffect(() => {
+    if (loading || !routeReadyRef.current || autosaveBlockedRef.current) return undefined;
+    if (savedPostStatus && savedPostStatus !== "draft") return undefined;
+    const fingerprint = draftFingerprint(payload);
+    if (fingerprint === lastSavedFingerprintRef.current) return undefined;
+
+    setAutosave((current) => ({ ...current, status: "dirty", message: "" }));
+    const timer = window.setTimeout(() => {
+      saveDraftSnapshot(payload, { automatic: true }).catch(() => {});
+    }, AUTOSAVE_DELAY);
+    return () => window.clearTimeout(timer);
+  }, [autosaveRetryKey, loading, payload, savedPostStatus, saveDraftSnapshot]);
 
   const set = (key) => (event) => {
     setError("");
@@ -217,23 +332,41 @@ export function WritePage() {
     setForm((current) => ({ ...current, [key]: event.target.value }));
   };
 
-  const persistDraft = async (showMessage = true, navigateCreated = true) => {
+  const persistDraft = async (showMessage = true) => {
     setBusy(true);
     setError("");
     if (showMessage) setMessage("");
     try {
-      const result = savedPost
-        ? await api.patch(`/posts/${savedPost.id}`, payload)
-        : await api.post("/posts", payload);
-      setSavedPost(result.data);
-      if (showMessage) setMessage(savedPost ? "修改已保存。" : "草稿已保存。");
-      if (!savedPost && navigateCreated) {
-        navigate(`/write/${result.data.id}`, { replace: true });
-      }
-      return result.data;
+      const hadPost = Boolean(savedPostRef.current);
+      const result = await saveDraftSnapshot(payloadRef.current);
+      if (showMessage) setMessage(hadPost ? "修改已保存。" : "草稿已保存。");
+      return result;
     } catch (saveError) {
-      setError(saveError.message);
+      if (saveError.code !== "EDIT_CONFLICT") setError(saveError.message);
       return null;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reloadServerDraft = async () => {
+    const currentPost = savedPostRef.current;
+    if (!currentPost) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api.get(`/posts/me/${currentPost.id}`);
+      const loadedForm = formFromPost(result.data);
+      savedPostRef.current = result.data;
+      lastSavedFingerprintRef.current = draftFingerprint(draftPayloadFromForm(loadedForm));
+      autosaveBlockedRef.current = false;
+      setSavedPost(result.data);
+      setForm(loadedForm);
+      setAutosave({ status: "idle", message: "", savedAt: null });
+      setReloadConflictOpen(false);
+      setMessage("已重新载入服务器版本。");
+    } catch (reloadError) {
+      setError(reloadError.message);
     } finally {
       setBusy(false);
     }
@@ -267,24 +400,18 @@ export function WritePage() {
     }
     setBusy(true);
     try {
-      let post = savedPost;
-      if (!post) {
-        const created = await api.post("/posts", payload);
-        post = created.data;
-      } else {
-        const updated = await api.patch(`/posts/${post.id}`, payload);
-        post = updated.data;
-      }
+      const post = await saveDraftSnapshot(payloadRef.current);
       const published = await api.post(`/posts/${post.id}/publish`, form.post_type === "article" ? { slug: form.slug.trim() } : {});
       navigate(published.data.post_type === "article" ? `/articles/${published.data.slug}` : `/notes/${published.data.id}`, { replace: true });
     } catch (publishError) {
-      setError(publishError.message);
+      if (publishError.code !== "EDIT_CONFLICT") setError(publishError.message);
     } finally {
       setBusy(false);
     }
   };
 
   const handleMediaPostChange = (post) => {
+    savedPostRef.current = post;
     setSavedPost(post);
     if (!postId) navigate(`/write/${post.id}`, { replace: true });
   };
@@ -293,45 +420,37 @@ export function WritePage() {
     const textarea = bodyEditorRef.current;
     const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : form.body.length;
     const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : selectionStart;
-    let nextSelection = null;
-
     setForm((current) => {
       const next = applyMarkdownShortcut(current.body, selectionStart, selectionEnd, action);
-      nextSelection = [next.selectionStart, next.selectionEnd];
+      pendingEditorSelectionRef.current = [next.selectionStart, next.selectionEnd];
       return { ...current, body: next.value };
     });
     setEditorMode("write");
     setError("");
     setMessage("");
-    window.requestAnimationFrame(() => {
-      const editor = bodyEditorRef.current;
-      if (!editor || !nextSelection) return;
-      editor.focus();
-      editor.setSelectionRange(nextSelection[0], nextSelection[1]);
-    });
+  };
+
+  const handleBodyKeyDown = (event) => {
+    const action = markdownActionForKeyEvent(event);
+    if (!action) return;
+    event.preventDefault();
+    applyMarkdownFormat(action);
   };
 
   const insertMediaIntoBody = (mediaId) => {
     const textarea = bodyEditorRef.current;
     const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : null;
     const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : null;
-    let nextCursor = null;
     setForm((current) => {
       const start = selectionStart ?? current.body.length;
       const end = selectionEnd ?? start;
       const next = insertMediaPlaceholder(current.body, mediaId, start, end);
-      nextCursor = next.cursor;
+      pendingEditorSelectionRef.current = [next.cursor, next.cursor];
       return { ...current, body: next.value };
     });
     setEditorMode("write");
     setError("");
     setMessage("媒体已插入正文；保存草稿或发布后会永久保留这个位置。");
-    window.requestAnimationFrame(() => {
-      const editor = bodyEditorRef.current;
-      if (!editor || nextCursor === null) return;
-      editor.focus();
-      editor.setSelectionRange(nextCursor, nextCursor);
-    });
   };
 
   const removeMediaFromBody = (mediaIds) => {
@@ -381,7 +500,7 @@ export function WritePage() {
         </div>
         <div className="editor-top-actions">
           <Link className="btn btn-secondary" to="/me/posts">返回我的内容</Link>
-          <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => persistDraft(true, true)}>
+          <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => persistDraft(true)}>
             {busy ? "正在保存" : savedPost ? "保存修改" : "保存草稿"}
           </button>
           <button className="btn btn-primary" type="button" disabled={busy} onClick={publish}>
@@ -392,6 +511,20 @@ export function WritePage() {
 
       {error ? <div className="inline-error editor-feedback" role="alert">{error}</div> : null}
       {message ? <div className="inline-success editor-feedback" role="status">{message}</div> : null}
+      {autosave.status === "error" || autosave.status === "conflict" ? (
+        <div className="inline-error editor-feedback autosave-feedback" role="alert">
+          <span>{autosave.message || autosaveStatusLabel(autosave)}</span>
+          {autosave.status === "conflict" ? (
+            <button className="btn btn-secondary" type="button" onClick={() => setReloadConflictOpen(true)}>
+              重新载入服务器版本
+            </button>
+          ) : (
+            <button className="btn btn-secondary" type="button" onClick={() => setAutosaveRetryKey((value) => value + 1)}>
+              重试自动保存
+            </button>
+          )}
+        </div>
+      ) : null}
 
       <form className="editor-layout" onSubmit={(event) => event.preventDefault()}>
         <div className="editor-main">
@@ -508,6 +641,7 @@ export function WritePage() {
                   className="body-editor"
                   value={form.body}
                   onChange={set("body")}
+                  onKeyDown={handleBodyKeyDown}
                   onPaste={handleBodyPaste}
                   placeholder="支持 Markdown。把图片拖到这里，或直接粘贴截图。"
                   aria-describedby="editor-body-help"
@@ -539,7 +673,7 @@ export function WritePage() {
           <PostMediaManager
             ref={mediaManagerRef}
             post={savedPost}
-            ensurePost={() => persistDraft(false, false)}
+            ensurePost={() => persistDraft(false)}
             onPostChange={handleMediaPostChange}
             onInsertMedia={insertMediaIntoBody}
             onRemoveMedia={removeMediaFromBody}
@@ -580,9 +714,24 @@ export function WritePage() {
             <span>状态</span>
             <strong>{savedPost?.status || "未保存草稿"}</strong>
           </div>
+          <div className={`editor-status editor-save-status is-${autosave.status}`} aria-live="polite">
+            <span>草稿保存</span>
+            <strong>{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</strong>
+          </div>
           {savedPost?.cover_media_id ? <div className="editor-status"><span>封面</span><strong>已设置</strong></div> : null}
         </aside>
       </form>
+
+      <ConfirmDialog
+        open={reloadConflictOpen}
+        title="重新载入服务器版本？"
+        description="这会用服务器中的最新版本替换当前编辑器内容；尚未保存的本地修改将丢失。"
+        confirmLabel="重新载入"
+        danger
+        busy={busy}
+        onConfirm={reloadServerDraft}
+        onClose={() => setReloadConflictOpen(false)}
+      />
     </main>
   );
 }

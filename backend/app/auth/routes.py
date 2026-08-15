@@ -21,7 +21,16 @@ from app.common.auth import current_user
 from app.common.responses import error_response, success_response
 from app.common.validation import USERNAME_RE, normalize_email, normalize_username
 from app.extensions import db, limiter
-from app.models import RefreshSession, User, UserStatus
+from app.models import AccountTokenPurpose, RefreshSession, User, UserStatus
+from app.auth.service import (
+    consume_token_once,
+    find_active_token,
+    issue_account_token,
+    revoke_active_tokens,
+    send_password_changed_email,
+    send_password_reset_email,
+    send_verification_email,
+)
 
 bp = Blueprint("auth", __name__)
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -53,10 +62,50 @@ def _issue_session(user):
     return access, refresh
 
 
-def _session_response(user, access, refresh, status=200):
-    response, actual = success_response({"access_token": access, "user": user.self_dict()}, status)
+def _session_response(user, access, refresh, status=200, *, extra=None):
+    data = {"access_token": access, "user": user.self_dict()}
+    if extra:
+        data.update(extra)
+    response, actual = success_response(data, status)
     set_refresh_cookies(response, refresh)
     return response, actual
+
+
+def _deliver_safely(kind, user, sender, *args):
+    try:
+        sender(user, *args)
+        return True
+    except Exception:
+        # Delivery is an external side effect. Account/token transactions are
+        # deliberately committed first and must never be rolled back here.
+        # Do not log the exception: SMTP/provider errors can echo recipients or
+        # message bodies containing one-time account tokens.
+        current_app.logger.warning("%s email delivery failed user_id=%s", kind, user.id)
+        return False
+
+
+def _strong_password_error(password):
+    if not isinstance(password, str) or not 8 <= len(password) <= 128:
+        return "新密码长度需为 8–128 个字符。"
+    return None
+
+
+def _revoke_undelivered_token(token):
+    if token is not None and token.consumed_at is None and token.revoked_at is None:
+        token.revoked_at = utcnow()
+        db.session.commit()
+
+
+def _unknown_field_error(data, allowed):
+    unknown = sorted(set(data) - set(allowed))
+    if not unknown:
+        return None
+    return error_response(
+        "VALIDATION_ERROR",
+        "包含不支持的字段。",
+        422,
+        details={"fields": unknown},
+    )
 
 
 @bp.post("/register")
@@ -107,11 +156,168 @@ def register():
         db.session.add(user)
         db.session.flush()
         access, refresh = _issue_session(user)
+        _verification_token, raw_verification_token = issue_account_token(
+            user, AccountTokenPurpose.EMAIL_VERIFICATION
+        )
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return error_response("DUPLICATE_RESOURCE", "用户名或邮箱不可用。", 409)
-    return _session_response(user, access, refresh, 201)
+    email_sent = _deliver_safely(
+        "verification", user, send_verification_email, raw_verification_token
+    )
+    if not email_sent:
+        _revoke_undelivered_token(_verification_token)
+    return _session_response(
+        user,
+        access,
+        refresh,
+        201,
+        extra={"verification_email_sent": email_sent},
+    )
+
+
+@bp.post("/email-verification/request")
+@bp.post("/email-verification/resend")
+@jwt_required(locations=["headers"])
+@limiter.limit(lambda: current_app.config["RATE_LIMIT_EMAIL_VERIFICATION"])
+def resend_email_verification():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    unknown = _unknown_field_error(data, set())
+    if unknown:
+        return unknown
+    if actor.email_verified_at is not None:
+        return success_response({"accepted": True, "email_verified": True})
+
+    token, raw_token = issue_account_token(
+        actor,
+        AccountTokenPurpose.EMAIL_VERIFICATION,
+        enforce_cooldown=True,
+    )
+    if raw_token is not None:
+        db.session.commit()
+        if not _deliver_safely("verification", actor, send_verification_email, raw_token):
+            _revoke_undelivered_token(token)
+    else:
+        db.session.rollback()
+    return success_response({"accepted": True, "email_verified": False})
+
+
+@bp.post("/email-verification/confirm")
+@limiter.limit(lambda: current_app.config["RATE_LIMIT_EMAIL_CONFIRM"])
+def confirm_email_verification():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    unknown = _unknown_field_error(data, {"token"})
+    if unknown:
+        return unknown
+    token = find_active_token(data.get("token"), AccountTokenPurpose.EMAIL_VERIFICATION)
+    if token is None or token.user is None or token.user.status != UserStatus.ACTIVE.value:
+        return error_response("INVALID_OR_EXPIRED_TOKEN", "验证链接无效或已过期。", 400)
+
+    now = utcnow()
+    if not consume_token_once(token, now=now):
+        db.session.rollback()
+        return error_response("INVALID_OR_EXPIRED_TOKEN", "验证链接无效或已过期。", 400)
+    if token.user.email_verified_at is None:
+        token.user.email_verified_at = now
+    revoke_active_tokens(
+        token.user_id,
+        AccountTokenPurpose.EMAIL_VERIFICATION,
+        now=now,
+        exclude_id=token.id,
+    )
+    db.session.commit()
+    return success_response({"email_verified": True})
+
+
+@bp.post("/password-reset/request")
+@limiter.limit(lambda: current_app.config["RATE_LIMIT_PASSWORD_RESET"])
+def request_password_reset():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    unknown = _unknown_field_error(data, {"email"})
+    if unknown:
+        return unknown
+    email = normalize_email(data.get("email"))
+    user = None
+    if EMAIL_RE.fullmatch(email):
+        user = db.session.scalar(
+            db.select(User).where(
+                User.email_normalized == email,
+                User.email_verified_at.is_not(None),
+                User.status == UserStatus.ACTIVE.value,
+            )
+        )
+    if user is not None:
+        token, raw_token = issue_account_token(
+            user,
+            AccountTokenPurpose.PASSWORD_RESET,
+            enforce_cooldown=True,
+        )
+        if raw_token is not None:
+            db.session.commit()
+            if not _deliver_safely("password_reset", user, send_password_reset_email, raw_token):
+                _revoke_undelivered_token(token)
+        else:
+            db.session.rollback()
+    # Known, unknown, unverified, restricted and cooldown paths intentionally
+    # share the exact same status and body to prevent account enumeration.
+    return success_response({"accepted": True}, 202)
+
+
+@bp.post("/password-reset/confirm")
+@limiter.limit(lambda: current_app.config["RATE_LIMIT_PASSWORD_RESET_CONFIRM"])
+def confirm_password_reset():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    unknown = _unknown_field_error(data, {"token", "password"})
+    if unknown:
+        return unknown
+    password = data.get("password")
+    password_error = _strong_password_error(password)
+    if password_error:
+        return error_response("VALIDATION_ERROR", password_error, 422)
+
+    token = find_active_token(data.get("token"), AccountTokenPurpose.PASSWORD_RESET)
+    if token is None or token.user is None or token.user.status != UserStatus.ACTIVE.value:
+        return error_response("INVALID_OR_EXPIRED_TOKEN", "重置链接无效或已过期。", 400)
+
+    now = utcnow()
+    if not consume_token_once(token, now=now):
+        db.session.rollback()
+        return error_response("INVALID_OR_EXPIRED_TOKEN", "重置链接无效或已过期。", 400)
+    user = token.user
+    user.set_password(password)
+    revoke_active_tokens(
+        user.id,
+        AccountTokenPurpose.PASSWORD_RESET,
+        now=now,
+        exclude_id=token.id,
+    )
+    db.session.execute(
+        db.update(RefreshSession)
+        .where(
+            RefreshSession.user_id == user.id,
+            RefreshSession.revoked_at.is_(None),
+        )
+        .values(revoked_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    db.session.commit()
+
+    _deliver_safely("password_changed", user, send_password_changed_email)
+    response, status = success_response({"password_reset": True})
+    unset_jwt_cookies(response)
+    return response, status
 
 
 @bp.post("/login")

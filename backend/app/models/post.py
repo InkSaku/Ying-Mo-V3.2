@@ -44,6 +44,7 @@ class Post(db.Model):
         db.CheckConstraint("status IN ('draft', 'published', 'archived')", name="ck_posts_status"),
         db.CheckConstraint("visibility IN ('login_only', 'private')", name="ck_posts_visibility"),
         db.CheckConstraint("moderation_status IN ('active', 'hidden')", name="ck_posts_moderation"),
+        db.CheckConstraint("edit_version >= 1", name="ck_posts_edit_version"),
         db.Index("ix_posts_author_published", "author_id", "published_at"),
         db.Index("ix_posts_type_status_visibility_published", "post_type", "status", "visibility", "published_at"),
         db.Index("ix_posts_collection_published", "collection_id", "published_at"),
@@ -72,7 +73,10 @@ class Post(db.Model):
     collection_sort_order = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    edit_version = db.Column(db.Integer, nullable=False, default=1, server_default="1")
     deleted_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    __mapper_args__ = {"version_id_col": edit_version}
 
     author = db.relationship("User")
     collection = db.relationship("Collection", back_populates="posts")
@@ -129,12 +133,15 @@ class Post(db.Model):
             "collection_sort_order": self.collection_sort_order,
             "created_at": isoformat_utc(self.created_at),
             "updated_at": isoformat_utc(self.updated_at),
+            "edit_version": self.edit_version,
         }
         if include_body:
             data["body"] = self.body
             if self.content_format == "markdown":
-                from app.common.markdown import render_safe_markdown
-                data["rendered_html"] = render_safe_markdown(self.body)
+                from app.common.markdown import render_safe_markdown_document
+                markdown_document = render_safe_markdown_document(self.body)
+                data["rendered_html"] = markdown_document["html"]
+                data["outline"] = markdown_document["outline"] if self.post_type == PostType.ARTICLE.value else []
         return data
 
 

@@ -10,6 +10,7 @@ from .interaction import Comment, ContentLike, ContentFavorite
 from .notification import Notification
 from .session import RefreshSession
 from .admin import AdminLog, FeaturedContent, SiteSetting
+from .account import AccountToken, AccountTokenPurpose
 
 __all__ = [
     "User", "UserRole", "UserStatus",
@@ -21,4 +22,5 @@ __all__ = [
     "Comment", "ContentLike", "ContentFavorite",
     "Notification", "RefreshSession",
     "AdminLog", "FeaturedContent", "SiteSetting",
+    "AccountToken", "AccountTokenPurpose",
 ]

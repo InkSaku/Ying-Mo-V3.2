@@ -1,3 +1,5 @@
+import { publishAuthInvalidation, shouldPublishAuthInvalidation } from "./authInvalidation";
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 
 let accessToken = null;
@@ -28,9 +30,12 @@ export function subscribeAuthInvalidated(listener) {
   return () => authInvalidationListeners.delete(listener);
 }
 
-export function clearLocalAccess(reason = "SESSION_ENDED") {
+export function clearLocalAccess(reason = "SESSION_ENDED", { broadcast = true } = {}) {
   const hadToken = Boolean(accessToken);
   accessToken = null;
+  if (broadcast && shouldPublishAuthInvalidation(reason)) {
+    publishAuthInvalidation(reason);
+  }
   if (hadToken || reason !== "BOOTSTRAP_ANONYMOUS") {
     authInvalidationListeners.forEach((listener) => listener(reason));
   }

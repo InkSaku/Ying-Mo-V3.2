@@ -110,6 +110,7 @@ def test_spa_shell_sitemap_rss_and_retired_routes_do_not_leak(client):
     for path in (
         "/articles/secret-title","/notes/42","/collections/private-trip","/users/alice",
         "/archive/2026","/categories","/tags","/search",
+        "/forgot-password","/verify-email","/reset-password",
     ):
         response=client.get(path)
         assert response.status_code==200
@@ -117,6 +118,7 @@ def test_spa_shell_sitemap_rss_and_retired_routes_do_not_leak(client):
         assert "noindex,nofollow" in text
         assert "secret-title" not in text
         assert response.headers["Cache-Control"]=="private, no-store"
+        assert response.headers["Referrer-Policy"]=="no-referrer"
     sitemap=client.get("/sitemap.xml").get_data(as_text=True)
     assert "/about" in sitemap
     assert not re.search(r"/(?:articles|notes|collections|users)/",sitemap)

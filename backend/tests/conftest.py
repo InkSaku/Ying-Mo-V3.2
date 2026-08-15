@@ -13,6 +13,7 @@ def app(tmp_path):
             "REGISTRATION_INVITE_CODE": "lyx0811",
             "UPLOAD_ROOT": tmp_path / "uploads",
             "RATELIMIT_ENABLED": False,
+            "SITE_URL": "https://trusted.yingmo.test",
         },
     )
     with app.app_context():

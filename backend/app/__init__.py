@@ -35,6 +35,8 @@ def create_app(config_name=None, config_overrides=None):
     init_extensions(app)
     from app.storage import init_storage
     init_storage(app)
+    from app.mail import init_mailer
+    init_mailer(app)
 
     from app import models  # noqa: F401
     from app.blueprints import register_blueprints
@@ -93,7 +95,8 @@ def _register_document_routes(app):
         "/archive", "/archive/<path:rest>", "/categories", "/categories/<path:rest>",
         "/tags", "/tags/<path:rest>", "/search", "/write", "/write/<path:rest>",
         "/me", "/me/<path:rest>", "/admin", "/admin/<path:rest>",
-        "/login", "/register", "/forgot-password", "/verify-email/<path:rest>",
+        "/login", "/register", "/forgot-password", "/verify-email",
+        "/verify-email/<path:rest>", "/reset-password", "/reset-password/<path:rest>",
     )
     for index, rule in enumerate(protected_rules):
         app.add_url_rule(rule, f"spa_shell_{index}", protected_shell, methods=["GET"])
@@ -147,7 +150,7 @@ def _register_request_hooks(app):
         response.headers["X-Request-ID"] = g.request_id
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
         if request.path.startswith("/api/"):
             response.headers["Cache-Control"] = "private, no-store"
@@ -195,6 +198,7 @@ def _register_jwt_handlers():
 
 def _register_error_handlers(app):
     from app.common.responses import error_response
+    from sqlalchemy.orm.exc import StaleDataError
 
     @app.errorhandler(404)
     def not_found(_error):
@@ -207,6 +211,15 @@ def _register_error_handlers(app):
     @app.errorhandler(413)
     def too_large(_error):
         return error_response("PAYLOAD_TOO_LARGE", "上传内容过大。", 413)
+
+    @app.errorhandler(StaleDataError)
+    def concurrent_modification(_error):
+        db.session.rollback()
+        return error_response(
+            "CONCURRENT_MODIFICATION",
+            "资源已被其他操作更新，请刷新后重试。",
+            409,
+        )
 
     @app.errorhandler(Exception)
     def unexpected(error):

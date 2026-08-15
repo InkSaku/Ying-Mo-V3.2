@@ -1,18 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { PersonalNav } from "../components/PersonalNav";
 import { ErrorState, PageLoader } from "../components/States";
 import { AvatarManager } from "../components/AvatarManager";
+import { accountActionMessage, emailVerificationState } from "../lib/accountSecurity";
+import { formatDate } from "../lib/format";
 
 export function SettingsPage() {
   usePageMeta("个人资料");
-  const { refreshMe } = useAuth();
+  const { user, refreshMe } = useAuth();
   const [form, setForm] = useState({ nickname: "", bio: "", region: "" });
-  const [profile, setProfile] = useState({ avatar_media_id: null, avatar_media: null, nickname: "", username: "" });
+  const [profile, setProfile] = useState({
+    avatar_media_id: null,
+    avatar_media: null,
+    nickname: "",
+    username: "",
+    email: "",
+    email_verified: false,
+    email_verified_at: null,
+  });
   const [loadState, setLoadState] = useState({ loading: true, loaded: false, error: null });
   const [action, setAction] = useState({ busy: false, message: "", error: "" });
+  const [verificationAction, setVerificationAction] = useState({ busy: false, message: "", error: "" });
 
   const load = useCallback(async () => {
     setLoadState((current) => ({ ...current, loading: true, error: null }));
@@ -52,6 +64,20 @@ export function SettingsPage() {
       setAction({ busy: false, message: "公开资料已保存。", error: "" });
     } catch (error) {
       setAction({ busy: false, message: "", error: error.message });
+    }
+  };
+
+  const resendVerification = async () => {
+    setVerificationAction({ busy: true, message: "", error: "" });
+    try {
+      const result = await api.post("/auth/email-verification/request", {});
+      setVerificationAction({
+        busy: false,
+        message: accountActionMessage(result.data, "验证邮件已发送。请检查收件箱和垃圾邮件。"),
+        error: "",
+      });
+    } catch (error) {
+      setVerificationAction({ busy: false, message: "", error: error.message });
     }
   };
 
@@ -107,6 +133,35 @@ export function SettingsPage() {
           </button>
         </div>
       </form>
+      <section className="settings-security-section" aria-labelledby="settings-email-title">
+        <header>
+          <div>
+            <p className="section-kicker">账户安全</p>
+            <h2 id="settings-email-title">邮箱验证</h2>
+          </div>
+          <span className={`verification-badge is-${emailVerificationState(profile)}`}>
+            {emailVerificationState(profile) === "verified" ? "已验证" : "待验证"}
+          </span>
+        </header>
+        <p>验证邮箱用于安全找回密码。邮箱地址不能在个人资料页直接修改。</p>
+        <dl className="settings-security-details">
+          <div><dt>账户邮箱</dt><dd>{profile.email || user?.email || "未记录"}</dd></div>
+          <div>
+            <dt>验证时间</dt>
+            <dd>{profile.email_verified_at ? formatDate(profile.email_verified_at, true) : "尚未验证"}</dd>
+          </div>
+        </dl>
+        {verificationAction.error ? <div className="inline-error" role="alert">{verificationAction.error}</div> : null}
+        {verificationAction.message ? <div className="inline-success" role="status">{verificationAction.message}</div> : null}
+        <div className="settings-security-actions" aria-busy={verificationAction.busy || undefined}>
+          {emailVerificationState(profile) !== "verified" ? (
+            <button className="btn btn-primary" type="button" disabled={verificationAction.busy} onClick={resendVerification}>
+              {verificationAction.busy ? "正在发送验证邮件" : verificationAction.message ? "再次发送验证邮件" : "发送验证邮件"}
+            </button>
+          ) : null}
+          <Link className="btn btn-secondary" to="/verify-email">查看验证状态</Link>
+        </div>
+      </section>
     </main>
   );
 }

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
@@ -127,10 +129,14 @@ def merge_tag(source_id):
     if source is None or target is None or source.id==target.id or not target.is_active:
         return error_response("VALIDATION_ERROR","源 Tag 或目标 Tag 不合法。",422)
     posts=db.session.scalars(db.select(Post).join(post_tags).where(post_tags.c.tag_id==source.id)).unique().all()
+    touched_at=datetime.now(timezone.utc)
     for post in posts:
         post.tags=[tag for tag in post.tags if tag.id!=source.id]
         if all(tag.id!=target.id for tag in post.tags):
             post.tags.append(target)
+        # Tag membership is part of the editable Post aggregate. Force a scalar
+        # UPDATE so SQLAlchemy checks and advances Post.edit_version as well.
+        post.updated_at=touched_at
     source.is_active=False
     if target.first_used_at is None and source.first_used_at is not None:
         target.first_used_at=source.first_used_at

@@ -29,7 +29,16 @@ export function AdminLogsPage() {
   const pageNeedsClamp = Boolean(state.data) && clampedPage !== filters.page;
 
   useEffect(() => { if (params.toString() !== canonicalParams) setParams(canonicalParams, { replace: true }); }, [canonicalParams, params, setParams]);
-  useEffect(() => { setDraft({ ...emptyDraft, ...filters }); }, [filters.q, filters.action, filters.target_type, filters.target_id, filters.request_id, filters.operator_id]);
+  useEffect(() => {
+    setDraft({
+      q: filters.q,
+      action: filters.action,
+      target_type: filters.target_type,
+      target_id: filters.target_id,
+      request_id: filters.request_id,
+      operator_id: filters.operator_id,
+    });
+  }, [filters.q, filters.action, filters.target_type, filters.target_id, filters.request_id, filters.operator_id]);
   useEffect(() => { if (pageNeedsClamp) setParams(adminLogSearchParams({ ...filters, page: clampedPage }), { replace: true }); }, [clampedPage, filters, pageNeedsClamp, setParams]);
   const apply = (updates) => setParams(adminLogSearchParams({ ...filters, ...updates, page: updates.page || 1 }));
 

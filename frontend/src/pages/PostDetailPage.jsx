@@ -10,6 +10,7 @@ import { ProtectedImage } from "../components/ProtectedImage";
 import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { PostMediaGallery } from "../components/PostMediaGallery";
 import { InteractionBar } from "../components/InteractionBar";
+import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
 
 export function PostDetailPage({ type }) {
   const params = useParams();
@@ -29,10 +30,34 @@ export function PostDetailPage({ type }) {
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   if (!post) return null;
 
+  const renderedBody = post.rendered_html ? (
+    <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} />
+  ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null;
+  const postContent = (
+    <>
+      {renderedBody}
+
+      <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} />
+
+      {post.external_video_url ? (
+        <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
+      ) : null}
+
+      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} />
+
+      {post.post_type === "article" && (post.previous || post.next) ? (
+        <nav className="article-nav" aria-label="相邻文章">
+          <div>{post.previous ? <Link to={`/articles/${post.previous.slug}`}>上一篇：{post.previous.title}</Link> : null}</div>
+          <div>{post.next ? <Link to={`/articles/${post.next.slug}`}>下一篇：{post.next.title}</Link> : null}</div>
+        </nav>
+      ) : null}
+    </>
+  );
+
   return (
-    <main className="page-shell reading-page">
-      <article className="post-detail">
-        <header className="post-detail-header">
+    <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools" : ""}`}>
+      <article className={`post-detail ${post.post_type === "article" ? "post-detail-with-tools" : ""}`}>
+        <header className={`post-detail-header ${post.post_type === "article" ? "article-reading-width" : ""}`}>
           <div className="post-detail-meta">
             <span>{postTypeLabel(post.post_type)}</span>
             <time dateTime={post.semantic_time || post.published_at}>{formatDate(post.semantic_time || post.published_at, true)}</time>
@@ -53,26 +78,16 @@ export function PostDetailPage({ type }) {
           ) : null}
         </header>
 
-        <ProtectedImage media={post.cover_media} useOriginal alt="" className="post-detail-cover" />
+        <ProtectedImage
+          media={post.cover_media}
+          useOriginal
+          alt=""
+          className={`post-detail-cover ${post.post_type === "article" ? "article-reading-width" : ""}`}
+        />
 
-        {post.rendered_html ? (
-          <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} />
-        ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null}
-
-        <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} />
-
-        {post.external_video_url ? (
-          <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
-        ) : null}
-
-        <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} />
-
-        {post.post_type === "article" && (post.previous || post.next) ? (
-          <nav className="article-nav" aria-label="相邻文章">
-            <div>{post.previous ? <Link to={`/articles/${post.previous.slug}`}>上一篇：{post.previous.title}</Link> : null}</div>
-            <div>{post.next ? <Link to={`/articles/${post.next.slug}`}>下一篇：{post.next.title}</Link> : null}</div>
-          </nav>
-        ) : null}
+        {post.post_type === "article" ? (
+          <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
+        ) : postContent}
       </article>
 
       <CommentsPanel key={post.id} postId={post.id} />

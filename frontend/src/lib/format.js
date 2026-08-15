@@ -27,6 +27,6 @@ export function visibilityLabel(value) {
 
 export function excerpt(post) {
   const raw = post?.summary || post?.body || "";
-  const compact = String(raw).replace(/[#>*_`\[\]()]/g, " ").replace(/\s+/g, " ").trim();
+  const compact = String(raw).replace(/[[\]#>*_`()]/g, " ").replace(/\s+/g, " ").trim();
   return compact.length > 120 ? `${compact.slice(0, 120)}...` : compact;
 }

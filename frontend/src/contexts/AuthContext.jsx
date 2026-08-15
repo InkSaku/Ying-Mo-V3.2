@@ -8,6 +8,7 @@ import {
   subscribeAuthInvalidated,
 } from "../lib/api";
 import { revokeAllProtectedMedia } from "../lib/protectedMedia";
+import { AUTH_INVALIDATION_STORAGE_KEY, authInvalidationReason } from "../lib/authInvalidation";
 
 const AuthContext = createContext(null);
 
@@ -24,6 +25,12 @@ export function AuthProvider({ children }) {
       setStatus("anonymous");
     };
     const unsubscribe = subscribeAuthInvalidated(endLocalSession);
+    const handleStorage = (event) => {
+      if (event.key !== AUTH_INVALIDATION_STORAGE_KEY) return;
+      const reason = authInvalidationReason(event);
+      if (reason) clearLocalAccess(`REMOTE_${reason}`, { broadcast: false });
+    };
+    window.addEventListener("storage", handleStorage);
 
     async function bootstrap() {
       try {
@@ -47,6 +54,7 @@ export function AuthProvider({ children }) {
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 

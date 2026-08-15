@@ -55,7 +55,7 @@ export function InteractionBar({ postId, initialState }) {
       mounted.current = false;
       requestVersion.current += 1;
     };
-  }, [postId, syncState]);
+  }, [initialState, postId, syncState]);
 
   const toggle = async (kind) => {
     const isLike = kind === "like";

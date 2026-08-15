@@ -5,6 +5,7 @@ import { PublicHeader } from "../components/PublicHeader";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { fieldErrorsFrom } from "../lib/api";
+import { needsEmailVerification } from "../lib/accountSecurity";
 
 const REGISTER_FEATURES = [
   { icon: "lock", title: "邀请加入", description: "仅限受邀成员" },
@@ -34,8 +35,8 @@ export function RegisterPage() {
     setError("");
     setFieldErrors({});
     try {
-      await register(form);
-      navigate("/home", { replace: true });
+      const user = await register(form);
+      navigate(needsEmailVerification(user) ? "/verify-email?registered=1" : "/home", { replace: true });
     } catch (err) {
       setError(err.message);
       setFieldErrors(fieldErrorsFrom(err));
@@ -102,7 +103,7 @@ export function RegisterPage() {
             </label>
 
             <button className="btn btn-primary btn-wide auth-primary-action" type="submit" disabled={busy}>
-              {busy ? "正在注册" : "注册并进入"}
+              {busy ? "正在注册" : "注册并发送验证邮件"}
             </button>
 
             <p className="auth-foot">已经是成员？<Link to="/login">直接登录</Link></p>

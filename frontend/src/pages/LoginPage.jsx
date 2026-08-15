@@ -69,17 +69,24 @@ export function LoginPage() {
               />
             </label>
 
-            <label className="auth-field">
-              <span>密码</span>
+            <div className="auth-field">
+              <div className="auth-label-row">
+                <label htmlFor="login-password">密码</label>
+                <Link to="/forgot-password">忘记密码？</Link>
+              </div>
               <input
+                id="login-password"
                 required
                 type="password"
                 autoComplete="current-password"
                 placeholder="请输入密码"
                 value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                onChange={(event) => {
+                  setForm({ ...form, password: event.target.value });
+                  setError("");
+                }}
               />
-            </label>
+            </div>
 
             <button className="btn btn-primary btn-wide auth-primary-action" type="submit" disabled={busy}>
               {busy ? "登录中" : "登录"}

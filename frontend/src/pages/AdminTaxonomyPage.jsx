@@ -73,7 +73,10 @@ export function AdminTaxonomyPage({ kind }) {
   const [message, setMessage] = useState("");
   const state = useAsyncData(() => api.get(config.listPath), [config.listPath]);
   const canonicalParams = adminTaxonomySearchParams(filters).toString();
-  const filteredItems = useMemo(() => filterAdminTaxonomy(state.data, filters), [filters.q, filters.status, state.data]);
+  const filteredItems = useMemo(
+    () => filterAdminTaxonomy(state.data, { q: filters.q, status: filters.status }),
+    [filters.q, filters.status, state.data],
+  );
 
   useEffect(() => setSearchValue(filters.q), [filters.q]);
   useEffect(() => {

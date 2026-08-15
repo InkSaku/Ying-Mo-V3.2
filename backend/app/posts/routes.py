@@ -4,10 +4,11 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.access import can_read_post, is_collection_member, readable_post_predicate, semantic_time_expression
 from app.common.auth import current_user
-from app.common.markdown import render_safe_markdown
+from app.common.markdown import render_safe_markdown_document
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import parse_iso_datetime, validate_external_url
@@ -64,6 +65,61 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
 
 def _handle_domain(error):
     return error_response(error.code, error.message, error.status, details=error.details)
+
+
+def _edit_conflict(post, expected_version=None):
+    details = {
+        "expected_version": expected_version,
+        "current_version": post.edit_version,
+        "updated_at": post.to_dict(include_body=False)["updated_at"],
+    }
+    return error_response(
+        "EDIT_CONFLICT",
+        "内容已在其他窗口更新，本地修改仍保留。请重新载入服务器版本后再继续编辑。",
+        409,
+        details=details,
+    )
+
+
+def _extract_expected_version(data, *, required=False):
+    payload = dict(data)
+    expected_version = payload.pop("expected_version", None)
+    if expected_version is None and required:
+        raise DomainError("VALIDATION_ERROR", "自动保存必须提供 expected_version。", 422)
+    if expected_version is not None and (
+        isinstance(expected_version, bool)
+        or not isinstance(expected_version, int)
+        or expected_version < 1
+    ):
+        raise DomainError("VALIDATION_ERROR", "expected_version 必须是正整数。", 422)
+    return payload, expected_version
+
+
+def _apply_versioned_patch(post, actor, data, *, require_version=False):
+    payload, expected_version = _extract_expected_version(data, required=require_version)
+    if expected_version is not None and expected_version != post.edit_version:
+        return _edit_conflict(post, expected_version)
+    if require_version and payload.get("collection_id") is not None:
+        collection = db.session.get(Collection, payload["collection_id"])
+        if collection is None or not is_collection_member(actor.id, collection):
+            raise DomainError(
+                "COLLECTION_UNAVAILABLE",
+                "原 Collection 已不可用。请改为独立草稿或选择其他 Collection。",
+                409,
+            )
+    _apply_patch(post, actor, payload)
+    # A relationship-only edit (for example Tags) must still advance the version.
+    post.updated_at = utcnow()
+    try:
+        db.session.commit()
+    except StaleDataError:
+        post_id = post.id
+        db.session.rollback()
+        current = db.session.get(Post, post_id)
+        if current is None:
+            return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+        return _edit_conflict(current, expected_version)
+    return success_response(_serialize(post, actor_id=actor.id, management=True))
 
 
 def _detail(post,actor):
@@ -221,7 +277,11 @@ def preview_markdown():
         body = ""
     if not isinstance(body, str):
         return error_response("VALIDATION_ERROR", "body 必须是字符串或 null。", 422)
-    return success_response({"rendered_html": render_safe_markdown(body)})
+    markdown_document = render_safe_markdown_document(body)
+    return success_response({
+        "rendered_html": markdown_document["html"],
+        "outline": markdown_document["outline"],
+    })
 
 
 @bp.get("")
@@ -351,14 +411,35 @@ def update_post(post_id):
     if not isinstance(data, dict):
         return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
     try:
-        _apply_patch(post, actor, data)
-        db.session.commit()
+        return _apply_versioned_patch(post, actor, data)
     except (DomainError, IntegrityError) as error:
         db.session.rollback()
         if isinstance(error, IntegrityError):
             return error_response("DUPLICATE_RESOURCE", "资源与现有数据冲突。", 409)
         return _handle_domain(error)
-    return success_response(_serialize(post, actor_id=actor.id, management=True))
+
+
+@bp.patch("/<int:post_id>/autosave")
+@jwt_required(locations=["headers"])
+def autosave_post(post_id):
+    actor = current_user()
+    post = db.session.get(Post, post_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if post.status != PostStatus.DRAFT.value:
+        return error_response("AUTOSAVE_NOT_ALLOWED", "自动保存仅适用于草稿；已发布内容请手动保存。", 409)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    try:
+        return _apply_versioned_patch(post, actor, data, require_version=True)
+    except (DomainError, IntegrityError) as error:
+        db.session.rollback()
+        if isinstance(error, IntegrityError):
+            return error_response("DUPLICATE_RESOURCE", "资源与现有数据冲突。", 409)
+        return _handle_domain(error)
 
 
 @bp.post("/<int:post_id>/publish")

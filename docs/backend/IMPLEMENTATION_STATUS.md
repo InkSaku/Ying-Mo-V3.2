@@ -1,8 +1,8 @@
 # Ying-Mo V3.2 后端实现状态
 
-更新时间：2026-08-14
+更新时间：2026-08-15
 
-当前状态：**P0 后端 Release Candidate**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
+当前状态：**P0 基线、第二十一阶段“创作与长文阅读增强”、第二十二阶段“邮箱可信与账号恢复闭环”均已在未提交工作区实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
 
 ## P0 已实现
 
@@ -66,24 +66,47 @@
 - [x] 通用无数据 SPA Shell、内容/认证/Admin `noindex,nofollow`、私密缓存。
 - [x] Sitemap 仅 `/` 与 `/about`；RSS 404；旧 Life/Game/Guide 路由 404。
 - [x] 运行时无 Game、Guide、旧 Life、Reports、发布资格、评论资格、Collection 审核与投稿策略代码。
-- [x] 两个 Alembic migration；空库可升级到 17 张业务表；模型与迁移列集合一致。
+- [x] 四个 Alembic migration；空库可升级到 18 张业务表；模型与迁移列集合一致。
 - [x] `public → login_only` 有实际数据迁移、数量输出和不会重新公开的安全 downgrade。
 - [x] Gunicorn 生产配置、MySQL 8 URL 校验、S3 私有存储和 Redis 限流依赖。
 
+## 第二十一阶段：创作与长文阅读增强
+
+- [x] Markdown 工具栏覆盖标题、引用、无序/有序列表、代码块、脚注及行内/块公式，重复触发和选区恢复有回归保护。
+- [x] 安全预览与保存后正文共用 Markdown 渲染链；表格、脚注、公式占位、代码与 XSS 白名单行为一致。
+- [x] 草稿在真实变更后自动创建/保存；自动保存、手动保存和发布前保存串行化，失败保留本地正文。
+- [x] `edit_version` 前置版本和 SQLAlchemy version column 双层防覆盖，冲突返回 409，服务端最新正文不会被旧窗口覆盖。
+- [x] Article Outline、稳定标题 ID、目录、阅读进度、按需语法高亮和宽内容局部滚动完成；Note 不展示目录和阅读进度。
+
+## 第二十二阶段：邮箱可信与账号恢复闭环
+
+- [x] 邀请码注册仍立即获得完整成员能力；注册同时生成邮箱验证令牌，邮件发送失败不会回滚账号或留下不可重试的有效令牌。
+- [x] 验证与重置原始令牌只通过邮件 URL fragment 传递；数据库仅保存以服务端密钥 HMAC 的摘要，并校验用途、目标邮箱快照、过期、撤销和单次消费。
+- [x] 验证邮件申请需要当前登录身份，并具有重复请求冷却；邮箱验证成功写入 `email_verified_at`，旧验证令牌同时失效。
+- [x] 密码重置仅向 active 且邮箱已验证的账号发信；未知、未验证、受限和冷却路径与有效路径统一返回 202，避免账号枚举。
+- [x] 重置密码继续使用 8–128 字符策略；成功后消费令牌、撤销其他重置令牌和全部 Refresh Session，并清除当前 Refresh Cookie。
+- [x] 测试/开发/生产邮件后端分别支持 memory、console、SMTP + STARTTLS；生产配置强制 SMTP、TLS、HTTPS `SITE_URL` 和必要发件参数。
+- [x] Console 与邮件失败日志不输出完整邮箱、完整链接或原始令牌；账户页使用 `no-referrer`，误入 Query 的令牌也会清除。
+- [x] 密码重置成功通过无敏感数据的同源事件使其他标签页立即结束本地会话并释放受保护媒体。
+
 ## 验证状态
 
-- [x] 完整 pytest：41 passed。
+- [x] 完整 pytest：88/88 passed。
+- [x] 前端 `npm run check`：ESLint、55/55 Node 回归、生产构建和包体预算全部通过。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
-- [x] Alembic 空库 upgrade、legacy visibility upgrade/downgrade、Schema/Model 对齐。
-- [x] MySQL dialect 对 17 张模型表和索引完成 DDL 编译。
-- [x] Production 配置加载验证（MySQL URL、S3 adapter、Redis limiter）。
+- [x] `MANIFEST.sha256` 已按当前后端源码重建，并由静态门禁执行可重复校验；旧重构路径不再冒充当前发布清单。
+- [x] Alembic 空库 upgrade 到 `20260815_0004`、legacy visibility upgrade/downgrade、`0002 → 0003` Post 版本回填/回退/重升与 Schema/Model 对齐。
+- [x] MySQL dialect 对 18 张模型表和索引完成 DDL 编译。
+- [x] Production 配置加载验证（MySQL URL、S3 adapter、Redis limiter、SMTP/TLS/HTTPS 邮件配置约束）。
 - [x] Gunicorn 配置检查、进程启动、Health 和受保护 HTML Shell HTTP smoke。
 - [ ] 真实 MySQL 8 实例执行 migration：当前环境没有可连接的 MySQL 服务。
 - [ ] 真实 S3-compatible bucket 上传/读取与真实 Redis 限流压测：当前环境没有相应外部凭证和服务。
+- [ ] 真实 SMTP 服务上的 STARTTLS 握手、投递、退信与 SPF/DKIM/DMARC/DNS：当前环境没有可投递域名和凭证。
+- [ ] 阶段 22 真实浏览器运行验收：已按 Browser Skill 尝试，但当前桌面策略拒绝本地 HTTP 导航，隔离服务启动权限也不可用；未绕过、未记为通过。
 
-以上三项外部验证未伪造成“已通过”；代码路径、配置校验和本地私有存储集成测试已完成。详细逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
+以上外部验证未伪造成“已通过”；代码路径、配置校验、本地私有存储和内存邮件集成测试已完成。P0 逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，阶段 21/22 见 `docs/backend/P1_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
 
-## 非 P0
+## 后续 P1 / 非本次范围
 
-尚未实现且不计入本次 P0：邮箱验证、找回密码、自动保存/ETag、Explore、数学公式、脚注、往年今日、阅读统计、Revision、举报、多对多 Collection、关注、私信、实时协作、推荐算法和 creator 转让。
+尚未实现且不计入本次阶段 21/22：Explore、往年今日、阅读统计、Revision、举报、多对多 Collection、关注、私信、实时协作、推荐算法和 creator 转让。邮箱验证、找回密码、草稿自动保存/版本冲突、数学公式、脚注和发布页长文阅读增强已实现，不再列入未完成范围。

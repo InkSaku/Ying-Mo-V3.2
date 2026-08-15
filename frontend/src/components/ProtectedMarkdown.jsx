@@ -1,12 +1,21 @@
-import { createElement, useMemo } from "react";
+import { createElement, lazy, Suspense, useMemo } from "react";
+import { isIgnorableMarkdownWhitespace } from "../lib/markdownRender";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedVideo } from "./ProtectedVideo";
+
+const ProtectedMath = lazy(() => import("./ProtectedMath").then((module) => ({
+  default: module.ProtectedMath,
+})));
+const ProtectedCodeBlock = lazy(() => import("./ProtectedCodeBlock").then((module) => ({
+  default: module.ProtectedCodeBlock,
+})));
 
 const ELEMENT_NODE = 1;
 const TEXT_NODE = 3;
 const SAFE_TAGS = new Set([
-  "a", "blockquote", "br", "code", "del", "em", "h1", "h2", "h3", "h4", "h5", "h6",
-  "hr", "img", "li", "ol", "p", "pre", "strong", "table", "tbody", "td", "th", "thead", "tr", "ul",
+  "a", "blockquote", "br", "code", "del", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "img", "li", "ol", "p", "pre", "span", "strong", "sup", "table", "tbody", "td", "th",
+  "thead", "tr", "ul",
 ]);
 
 function mediaIndex(media) {
@@ -85,14 +94,17 @@ function InlineProtectedMedia({ mediaId, index, management }) {
   );
 }
 
-function renderNode(node, key, index, management) {
-  if (node.nodeType === TEXT_NODE) return node.textContent;
+function renderNode(node, key, index, management, parentTag = "") {
+  if (node.nodeType === TEXT_NODE) {
+    if (isIgnorableMarkdownWhitespace(node.textContent, parentTag)) return null;
+    return node.textContent;
+  }
   if (node.nodeType !== ELEMENT_NODE) return null;
 
   const tag = node.tagName.toLowerCase();
   if (!SAFE_TAGS.has(tag)) {
     return Array.from(node.childNodes).map((child, childIndex) => (
-      renderNode(child, `${key}-${childIndex}`, index, management)
+      renderNode(child, `${key}-${childIndex}`, index, management, parentTag)
     ));
   }
 
@@ -104,6 +116,28 @@ function renderNode(node, key, index, management) {
         index={index}
         management={management}
       />
+    );
+  }
+
+  const mathClass = node.getAttribute("class");
+  if (
+    node.hasAttribute("data-math")
+    && ((tag === "span" && mathClass === "math-inline") || (tag === "div" && mathClass === "math-block"))
+  ) {
+    return (
+      <Suspense
+        key={key}
+        fallback={createElement(
+          tag,
+          { className: `math-loading ${tag === "div" ? "math-block" : "math-inline"}` },
+          node.getAttribute("data-math"),
+        )}
+      >
+        <ProtectedMath
+          expression={node.getAttribute("data-math")}
+          displayMode={tag === "div"}
+        />
+      </Suspense>
     );
   }
 
@@ -124,10 +158,27 @@ function renderNode(node, key, index, management) {
     }
   }
 
+  if (tag === "pre") {
+    const meaningfulChildren = Array.from(node.childNodes).filter((child) => (
+      child.nodeType !== TEXT_NODE || child.textContent.trim()
+    ));
+    const onlyChild = meaningfulChildren.length === 1 ? meaningfulChildren[0] : null;
+    if (onlyChild?.nodeType === ELEMENT_NODE && onlyChild.tagName.toLowerCase() === "code") {
+      const className = onlyChild.getAttribute("class") || "";
+      const code = onlyChild.textContent || "";
+      return (
+        <Suspense key={key} fallback={<pre><code className={className}>{code}</code></pre>}>
+          <ProtectedCodeBlock code={code} className={className} />
+        </Suspense>
+      );
+    }
+  }
+
   const props = { key };
   if (tag === "a") {
     if (node.hasAttribute("href")) props.href = node.getAttribute("href");
     if (node.hasAttribute("title")) props.title = node.getAttribute("title");
+    if (node.hasAttribute("class")) props.className = node.getAttribute("class");
   } else if (tag === "img") {
     if (!node.hasAttribute("src")) return null;
     props.src = node.getAttribute("src");
@@ -135,12 +186,16 @@ function renderNode(node, key, index, management) {
     if (node.hasAttribute("title")) props.title = node.getAttribute("title");
   } else if (tag === "code" && node.hasAttribute("class")) {
     props.className = node.getAttribute("class");
+  } else if (tag === "div" && node.hasAttribute("class")) {
+    props.className = node.getAttribute("class");
+  } else if ((tag === "li" || tag === "sup") && node.hasAttribute("id")) {
+    props.id = node.getAttribute("id");
   } else if (/^h[1-6]$/.test(tag) && node.hasAttribute("id")) {
     props.id = node.getAttribute("id");
   }
 
   const children = Array.from(node.childNodes).map((child, childIndex) => (
-    renderNode(child, `${key}-${childIndex}`, index, management)
+    renderNode(child, `${key}-${childIndex}`, index, management, tag)
   ));
 
   return createElement(tag, props, ...children);

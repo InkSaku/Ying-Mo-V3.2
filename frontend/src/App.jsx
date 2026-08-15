@@ -12,6 +12,9 @@ const LandingPage = lazyNamed(() => import("./pages/LandingPage"), "LandingPage"
 const AboutPage = lazyNamed(() => import("./pages/AboutPage"), "AboutPage");
 const LoginPage = lazyNamed(() => import("./pages/LoginPage"), "LoginPage");
 const RegisterPage = lazyNamed(() => import("./pages/RegisterPage"), "RegisterPage");
+const ForgotPasswordPage = lazyNamed(() => import("./pages/ForgotPasswordPage"), "ForgotPasswordPage");
+const ResetPasswordPage = lazyNamed(() => import("./pages/ResetPasswordPage"), "ResetPasswordPage");
+const VerifyEmailPage = lazyNamed(() => import("./pages/VerifyEmailPage"), "VerifyEmailPage");
 const HomePage = lazyNamed(() => import("./pages/HomePage"), "HomePage");
 const PostsPage = lazyNamed(() => import("./pages/PostsPage"), "PostsPage");
 const PostDetailPage = lazyNamed(() => import("./pages/PostDetailPage"), "PostDetailPage");
@@ -55,6 +58,9 @@ export function App() {
       <Route path="/about" element={<AboutPage />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/register" element={<PublicOnlyRoute><RegisterPage /></PublicOnlyRoute>} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/home" element={<HomePage />} />

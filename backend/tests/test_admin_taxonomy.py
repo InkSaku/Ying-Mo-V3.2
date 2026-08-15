@@ -66,6 +66,10 @@ def test_admin_categories_and_tags_lifecycle_merge_acl_and_audit(client, app):
         source_id, target_id = source.id, target.id
         assert source.first_used_at is not None
         assert target.first_used_at is None
+        versions_before_merge = {
+            article["id"]: db.session.get(Post, article["id"]).edit_version,
+            draft["id"]: db.session.get(Post, draft["id"]).edit_version,
+        }
 
     category_list = client.get("/api/v1/admin/categories", headers=auth(admin_token)).get_json()["data"]
     tag_list = client.get("/api/v1/admin/tags", headers=auth(admin_token)).get_json()["data"]
@@ -167,6 +171,8 @@ def test_admin_categories_and_tags_lifecycle_merge_acl_and_audit(client, app):
         assert target.first_used_at is not None
         assert [tag.id for tag in article_row.tags] == [target_id]
         assert [tag.id for tag in draft_row.tags] == [target_id]
+        assert article_row.edit_version == versions_before_merge[article["id"]] + 1
+        assert draft_row.edit_version == versions_before_merge[draft["id"]] + 1
 
     after_merge = client.get("/api/v1/admin/tags", headers=auth(admin_token)).get_json()["data"]
     counts = {item["id"]: item["post_count"] for item in after_merge}

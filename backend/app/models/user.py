@@ -50,6 +50,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     last_login_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    email_verified_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     avatar_media = db.relationship("Media", foreign_keys=[avatar_media_id])
 
@@ -89,5 +90,7 @@ class User(db.Model):
             "created_at": isoformat_utc(self.created_at),
             "updated_at": isoformat_utc(self.updated_at),
             "last_login_at": isoformat_utc(self.last_login_at),
+            "email_verified": self.email_verified_at is not None,
+            "email_verified_at": isoformat_utc(self.email_verified_at),
         })
         return data

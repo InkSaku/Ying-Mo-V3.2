@@ -19,6 +19,13 @@ def _db_url(name, default):
     return os.getenv(name, default).strip()
 
 
+def _env_bool(name, default=False):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class BaseConfig:
     APP_ENV = "development"
     DEBUG = False
@@ -46,6 +53,10 @@ class BaseConfig:
     RATE_LIMIT_REFRESH = os.getenv("RATE_LIMIT_REFRESH", "30 per minute")
     RATE_LIMIT_COMMENT = os.getenv("RATE_LIMIT_COMMENT", "30 per minute")
     RATE_LIMIT_UPLOAD = os.getenv("RATE_LIMIT_UPLOAD", "20 per hour")
+    RATE_LIMIT_EMAIL_VERIFICATION = os.getenv("RATE_LIMIT_EMAIL_VERIFICATION", "5 per hour")
+    RATE_LIMIT_EMAIL_CONFIRM = os.getenv("RATE_LIMIT_EMAIL_CONFIRM", "30 per hour")
+    RATE_LIMIT_PASSWORD_RESET = os.getenv("RATE_LIMIT_PASSWORD_RESET", "5 per hour")
+    RATE_LIMIT_PASSWORD_RESET_CONFIRM = os.getenv("RATE_LIMIT_PASSWORD_RESET_CONFIRM", "10 per hour")
 
     REGISTRATION_INVITE_CODE = os.getenv("REGISTRATION_INVITE_CODE", "").strip()
     UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", BASE_DIR / "uploads")).expanduser()
@@ -60,6 +71,23 @@ class BaseConfig:
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(32 * 1024 * 1024)))
     SITE_URL = os.getenv("SITE_URL", "http://localhost:5173").rstrip("/")
     TRUST_PROXY_COUNT = int(os.getenv("TRUST_PROXY_COUNT", "0"))
+    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "console").strip().lower()
+    MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@yingmo.local").strip()
+    SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
+    SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+    SMTP_USE_TLS = _env_bool("SMTP_USE_TLS", True)
+    SMTP_TIMEOUT_SECONDS = int(os.getenv("SMTP_TIMEOUT_SECONDS", "10"))
+    EMAIL_VERIFICATION_TOKEN_EXPIRES_HOURS = int(
+        os.getenv("EMAIL_VERIFICATION_TOKEN_EXPIRES_HOURS", "24")
+    )
+    PASSWORD_RESET_TOKEN_EXPIRES_MINUTES = int(
+        os.getenv("PASSWORD_RESET_TOKEN_EXPIRES_MINUTES", "30")
+    )
+    ACCOUNT_TOKEN_REQUEST_COOLDOWN_SECONDS = int(
+        os.getenv("ACCOUNT_TOKEN_REQUEST_COOLDOWN_SECONDS", "60")
+    )
 
     @classmethod
     def database_uri(cls):
@@ -76,6 +104,7 @@ class TestingConfig(BaseConfig):
     TESTING = True
     JWT_COOKIE_CSRF_PROTECT = False
     SQLALCHEMY_ENGINE_OPTIONS = {}
+    MAIL_BACKEND = "memory"
 
     @classmethod
     def database_uri(cls):
@@ -88,6 +117,8 @@ class ProductionConfig(BaseConfig):
     SECRET_KEY = os.getenv("SECRET_KEY")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     REGISTRATION_INVITE_CODE = os.getenv("REGISTRATION_INVITE_CODE", "").strip()
+    MAIL_BACKEND = os.getenv("MAIL_BACKEND", "").strip().lower()
+    MAIL_FROM = os.getenv("MAIL_FROM", "").strip()
 
     @classmethod
     def database_uri(cls):
@@ -118,6 +149,45 @@ class ProductionConfig(BaseConfig):
             problems.append("MEDIA_STORAGE_BACKEND must be s3 in production")
         elif not app.config.get("S3_BUCKET"):
             problems.append("S3_BUCKET is required when MEDIA_STORAGE_BACKEND=s3")
+        if app.config.get("MAIL_BACKEND") != "smtp":
+            problems.append("MAIL_BACKEND must be smtp in production")
+        if not str(app.config.get("MAIL_FROM", "")).strip():
+            problems.append("MAIL_FROM is required in production")
+        elif "\n" in app.config["MAIL_FROM"] or "\r" in app.config["MAIL_FROM"] or "@" not in app.config["MAIL_FROM"]:
+            problems.append("MAIL_FROM must be a valid single email address")
+        if not str(app.config.get("SMTP_HOST", "")).strip():
+            problems.append("SMTP_HOST is required in production")
+        smtp_port = app.config.get("SMTP_PORT")
+        if isinstance(smtp_port, bool) or not isinstance(smtp_port, int) or not 1 <= smtp_port <= 65535:
+            problems.append("SMTP_PORT must be between 1 and 65535")
+        username = str(app.config.get("SMTP_USERNAME", ""))
+        password = str(app.config.get("SMTP_PASSWORD", ""))
+        if bool(username) != bool(password):
+            problems.append("SMTP_USERNAME and SMTP_PASSWORD must be configured together")
+        if not app.config.get("SMTP_USE_TLS"):
+            problems.append("SMTP_USE_TLS must be enabled in production")
+        smtp_timeout = app.config.get("SMTP_TIMEOUT_SECONDS")
+        if isinstance(smtp_timeout, bool) or not isinstance(smtp_timeout, int) or smtp_timeout <= 0:
+            problems.append("SMTP_TIMEOUT_SECONDS must be a positive integer")
+        site_url = urlsplit(str(app.config.get("SITE_URL", "")))
+        if site_url.scheme.lower() != "https" or not site_url.netloc:
+            problems.append("SITE_URL must be an absolute https URL in production")
+        elif (
+            site_url.username
+            or site_url.password
+            or site_url.query
+            or site_url.fragment
+            or site_url.path not in ("", "/")
+        ):
+            problems.append("SITE_URL must be a credential-free https origin")
+        for key in (
+            "EMAIL_VERIFICATION_TOKEN_EXPIRES_HOURS",
+            "PASSWORD_RESET_TOKEN_EXPIRES_MINUTES",
+            "ACCOUNT_TOKEN_REQUEST_COOLDOWN_SECONDS",
+        ):
+            value = app.config.get(key)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                problems.append(f"{key} must be a positive integer")
         if problems:
             raise RuntimeError("Invalid production configuration: " + "; ".join(problems))
 

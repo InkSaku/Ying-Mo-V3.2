@@ -1,12 +1,12 @@
 # Frontend Integration Baseline
 
-更新时间：2026-08-14
+更新时间：2026-08-15
 
 当前阶段、剩余任务和下一次启动步骤见 `docs/frontend/DEVELOPMENT_HANDOFF.md`。
 
 ## 基线约定
 
-- 业务与后端基线：`8273a531e55eda363f3b1164a08924c6a83f2aca`。
+- 最初业务与后端基线：`8273a531e55eda363f3b1164a08924c6a83f2aca`；当前工作区 Git 基线已推进到 `4d206aa9991f52698a04f56bb38bbeb574eb8d59`，阶段 21/22 仍为未提交修改。
 - 前端起点：本地工作区在“前端功能全覆盖与完整联调”任务开始前已经存在的 `frontend/`。
 - 用户已明确要求保留该本地前端作为后续开发基线；不得删除重建或用模板覆盖。
 - 第一阶段只处理阻塞前端联调的后端契约，不修改现有前端页面。
@@ -398,3 +398,115 @@
 - 临时服务已停止，`/tmp/yingmo-stage20.*` 数据库与上传目录已删除；没有连接或写入仓库开发数据库，也没有使用仓库上传目录。
 - 已验证：代码与契约审查、Loading/Empty/Error/Success/busy/disabled 实现、无障碍语义静态审查、路由拆包、体积预算、自动化回归、生产构建、真实多账号 HTTP、ACL 和全量后端测试。
 - 受环境限制未验证：当前会话没有 Browser Skill 所需的浏览器控制运行工具，因此未执行真实浏览器逐路由点按、DevTools Console、浅/深色视觉对比、实际 `<768px` 视口、键盘 Tab/对话框焦点和 reduced-motion 运行时测试；这些项目不计为已通过。
+
+## 第二十一阶段：创作与长文阅读增强
+
+本阶段由五个连续工作流组成，分别完成编辑输入、自动保存、脚注、公式和发布后长文阅读闭环。各工作流下方保留其当时的真实验证快照；历史测试数量用于追踪增量，当前权威门禁统一为前端 `55/55`、后端 `88/88`。
+
+### 工作流一：Markdown 快捷操作与渲染完整性
+
+- Markdown 工具栏将原“列表”明确为“无序列表”，新增“有序列表”；有序列表支持多行连续编号、已有编号取消和混合内容重新编号。键盘补齐 `Command/Ctrl + Shift + 7` 有序列表与 `Command/Ctrl + Shift + 8` 无序列表，继续保留加粗与链接组合键。
+- 加粗、标题、引用、无序列表、有序列表和代码块在重复触发时不会继续嵌套；格式变化后正文焦点与选区在 React 提交后可靠恢复。代码围栏会避开选中内容中的连续反引号。
+- Markdown 有序列表恢复十进制序号并补齐嵌套间距；表格增加表头、单元格、隔行背景和内部横向滚动。编辑器 Grid 子项显式允许收缩，四列表格在 390px 视口内不再把整页撑宽。
+- 代码块西文改用 Charter / Georgia / Palatino / Times 栈，行内代码和后台结构化数据仍使用等宽字体，避免扩大本次字体调整范围。
+- `ProtectedMarkdown` 过滤 `table/thead/tbody/tr` 内由后端格式化换行产生的纯空白文本节点，保留段落和行内元素之间的有效空格，消除 React 表格结构警告。
+- 后端新增 P0 Markdown 矩阵，覆盖标题、段落、无序/有序列表、引用、链接、图片、表格、代码块、站内媒体占位和 XSS；另行锁定 `/posts/preview` 与保存后 Post 使用同一安全渲染结果。
+
+### 工作流一验证
+
+- `frontend`: `npm run check` 通过，共 31 项 Node 回归；Vite 生产构建转换 118 个模块，包体校验返回 `BUNDLE_VERIFY_OK`，WritePage 首次路由 `94.14 KiB gzip`，低于预算。
+- `backend`: `.venv/bin/python -m pytest -q` 通过，共 61 项；`.venv/bin/python scripts/verify_static.py` 返回 `STATIC_VERIFY_OK`；`git diff --check` 通过。
+- 使用隔离 SQLite、独立上传目录、后端 `18151` 与前端 `5183` 完成真实浏览器回归：macOS 有序列表组合键得到 `1. 甲 / 2. 乙`，再次触发恢复原文；工具栏点按后 textarea 仍为焦点且完整格式选区被保留。
+- 安全预览和最终 Article 均实际渲染十进制列表、表格及西文代码字体；恶意 `<script>` 不进入 DOM。390px 视口下工具栏为内部横向滚动，四列表格 `clientWidth=328 / scrollWidth=541`，页面 `clientWidth=390 / scrollWidth=390`。
+- 浅色与深色渲染均完成视觉复核；深色表头、正文和代码块保持可读。修复表格纯空白节点后，在全新浏览器标签中分别复测安全预览和最终 Article，Console `error/warn` 均为空。
+- 临时服务已停止，隔离目录已移入系统废纸篓且可恢复；没有连接或写入仓库开发数据库和上传目录。
+
+### 工作流二：草稿自动保存与版本冲突保护
+
+- Post 新增持久化 `edit_version`，由 SQLAlchemy 乐观锁在每次更新时递增；迁移 `20260815_0003` 为既有 Post 回填版本 1，并增加正整数约束。管理响应同时返回 `edit_version`，供编辑器提交前置版本。
+- 新增专用 `PATCH /posts/:id/autosave`：仅接受 draft、强制 `expected_version`，已发布或归档内容返回 `AUTOSAVE_NOT_ALLOWED`。普通手动 PATCH 也可携带相同前置版本，避免显式保存与后台保存互相覆盖。
+- 版本不一致返回 409 `EDIT_CONFLICT` 和当前版本元数据；数据库提交阶段仍由 version column 的条件 UPDATE 兜底真实并发。旧请求失败后不会写入正文，也不会把服务器正文回填到编辑器。
+- 编辑器在表单发生变化 1200 ms 后自动保存，所有自动/手动/发布前保存进入同一串行队列。状态覆盖“有未保存修改、正在自动保存、已自动保存、失败、冲突”；失败保留本地内容并可重试，冲突停止后续后台请求。
+- 冲突恢复提供显式“重新载入服务器版本”操作，并在覆盖本地内容前展示危险确认对话框；取消对话框不会改变编辑器正文。
+- Collection 成员权限变化返回专门的 `COLLECTION_UNAVAILABLE`，编辑器明确提示切换为独立草稿或其他 Collection；失败请求不修改数据库正文。改选有效归属后，后续本地变化可以重新触发保存。
+- 新草稿只有发生真实表单变化后才会自动创建；创建成功后 URL replace 到 `/write/:id` 并保留“已自动保存”状态。从已有编辑页切换到新建 Article/Note 会重置 route generation，旧页面的排队请求不能污染新编辑器。
+- 已发布内容完全停止后台自动保存，侧栏明确显示“已发布内容仅手动保存”；发布操作先串行保存当前编辑器快照，再调用发布端点。
+- 自动保存错误提示在窄屏断点改为纵向按钮布局；代码块继续使用系统西文衬线栈，未因本阶段状态 UI 回退。
+
+### 工作流二验证
+
+- `backend`: `pytest -q backend/tests` 通过，共 65 项；新增专项回归覆盖版本递增、旧正文拒绝、自动保存必填版本、发布状态拒绝、手动保存前置版本和 Collection 撤权后正文不变。空库 Alembic 升级与模型列一致性通过，`verify_static.py` 返回 `STATIC_VERIFY_OK`。
+- `frontend`: `npm run check --prefix frontend` 通过，共 34 项 Node 回归；Vite 生产构建转换 119 个模块，包体校验返回 `BUNDLE_VERIFY_OK`，WritePage 首次路由 `95.30 KiB gzip`。
+- 使用隔离 SQLite、独立上传目录、后端 `8011` 与前端 `5181` 完成真实浏览器联调。新 Note 输入后自动创建为 `/write/2`，页面最终显示“已自动保存”；从已发布编辑页进入新建路由时，类型和正文正确重置。
+- 两个浏览器标签从同一版本开始编辑：标签 A 自动保存“服务器最新正文”成功；标签 B 随后提交旧版本得到 409 并保留“旧窗口试图覆盖”，第三个标签回读仍为“服务器最新正文”。冲突确认框打开后选择取消，本地旧窗口正文保持不变。
+- Article 发布后在编辑器修改正文并等待超过自动保存延迟，服务端回读仍是发布时正文，侧栏显示“已发布内容仅手动保存”。最终 Article 的代码块计算字体为 `Charter, Georgia, Palatino, Times New Roman, serif`。
+- 自动创建、双窗口冲突、发布后编辑和路由切换全程浏览器 Console error/warn 为空。临时服务已停止，隔离目录已移入系统废纸篓且可恢复；没有连接或写入仓库开发数据库和上传目录。
+
+### 工作流三：Markdown 脚注
+
+- 后端 Markdown 渲染链启用 Python-Markdown `footnotes` 扩展，支持 `[^id]` 引用、`[^id]: 定义`、同一脚注多次引用、定义内加粗与链接；安全预览、草稿管理响应和最终 Post 继续共用唯一 `render_safe_markdown`。
+- Sanitization 只增加脚注实际需要的 `div` 与 `sup` 标签，并通过属性回调精确限制 `footnote/footnote-ref/footnote-backref` 类、`fn/fnref` ID、锚点属性与 fenced-code language class；事件、style、伪造 class 和 `javascript:` 链接仍会被清除。
+- `ProtectedMarkdown` 增加对应安全节点和属性映射，正文引用可跳转到脚注定义，脚注返回链接可跳回每个引用位置；返回链接 title 本地化为“返回正文中的脚注 N”。
+- Markdown 工具栏新增“脚注”。无选区时插入可读引用占位与定义，选中文字时保留正文文字并紧跟引用；定义使用下一个未占用的数字 ID，插入后焦点移动到脚注内容并选中占位文字，方便直接输入。
+- 脚注区使用较小字号、分隔线和品牌色链接；正文引用与定义均设置 sticky header 对应的 scroll margin，目标获得轻量高亮。长 URL 或连续文本使用 `overflow-wrap:anywhere`，不扩大页面宽度；移动端继续复用工具栏内部横向滚动。
+
+### 工作流三验证
+
+- `backend`: `pytest -q backend/tests` 通过，共 68 项；专项回归覆盖重复引用、两个返回链接、嵌套 Markdown、中文返回 title、危险属性/链接清理，以及脚注安全预览与保存后 HTML 完全一致。`verify_static.py` 返回 `STATIC_VERIFY_OK`。
+- `frontend`: `npm run check --prefix frontend` 通过，共 36 项 Node 回归；脚注快捷操作覆盖选中文字、定义选区和已有编号递增。Vite 生产构建转换 119 个模块，`BUNDLE_VERIFY_OK`，WritePage 首次路由 `95.50 KiB gzip`。
+- 使用隔离 SQLite、独立上传目录、后端 `8012` 与前端 `5182` 完成真实浏览器验证。工具栏实际插入引用与定义后 textarea 仍为 active，选区精确落在“脚注内容”。
+- 安全预览实际生成 `fnref:1/fnref2:1`、两个 `footnote-ref` 和两个 `footnote-backref`；点击引用后 URL fragment 为 `#fn:1`，点击返回链接后为 `#fnref:1`。脚注容器 `overflow-wrap=anywhere`，当前内容区 `clientWidth/scrollWidth=742/742`。
+- 发布后的 Article 保留与预览相同的引用、重复返回链接、加粗和安全外链，DOM 中没有 `script`；浏览器 Console error/warn 为空。临时服务已停止，隔离目录已移入系统废纸篓且可恢复；没有连接或写入仓库开发数据库和上传目录。
+
+### 工作流四：Markdown 数学公式
+
+- 编辑器支持 `$...$` 行内公式、单行 `$$...$$` 与独占多行 `$$` 块公式。后端先保护 fenced code、行内代码和缩进代码，再识别公式；货币金额 `$5`、包含边界空格的歧义写法和未闭合定界符保持普通文本，避免误解析正文。
+- 后端不直接生成公式 HTML，而是输出经过 Bleach 精确白名单约束的 `span.math-inline` / `div.math-block` 占位，只允许 class 和实体转义后的 `data-math`。安全预览、草稿管理响应与最终 Post 继续共用同一 Markdown 渲染链。
+- 前端按公式节点懒加载 KaTeX 及字体资源，正常页面不会提前加载公式引擎。输出同时包含可视 HTML 与 MathML；渲染固定关闭 trust，并限制宏展开、尺寸和输入长度。非法公式不吞掉正文，而是显示原始 TeX 错误占位。
+- Markdown 工具栏新增“行内公式”和“块公式”。行内操作支持 `$...$` 包裹/取消，块操作支持 `$$` 围栏包裹/取消；触发后继续恢复 textarea 焦点并选中公式正文，便于直接替换。
+- 行内公式随正文排版；块公式居中并拥有独立横向滚动区域。超宽公式只扩大自身 `scrollWidth`，不会撑宽预览容器、最终文章或整个页面。
+
+### 工作流四验证
+
+- `backend`: `pytest -q backend/tests` 通过，共 72 项；专项回归覆盖行内/块公式、代码保护、货币与歧义定界符、属性转义、伪造公式标记清理，以及安全预览与保存后 HTML 完全一致。`verify_static.py` 返回 `STATIC_VERIFY_OK`。
+- `frontend`: `npm run check --prefix frontend` 通过，共 40 项 Node 回归；覆盖工具栏选区、有效/无效公式、超长输入和不可信链接命令。Vite 生产构建转换 123 个模块，`BUNDLE_VERIFY_OK`；KaTeX 被拆为按需异步公式块，常规共享块没有吸收其体积。
+- 使用隔离 SQLite、独立上传目录、后端 `8013` 与前端 `5184` 完成真实浏览器验证。预览实际生成 3 个 KaTeX 节点、1 个 display 节点与 3 个 MathML 节点；货币文本和行内代码原样保留，非法公式显示错误占位，不可信链接没有生成可点击 URL 或外部资源请求。
+- 80 项超宽块公式在预览中为 `clientWidth/scrollWidth=740/3103`，预览容器保持 `742/742`，页面保持 `1280/1280`；发布后公式区为 `758/3103`，页面仍为 `1280/1280`。浏览器 Console error/warn 为空。临时服务已停止，隔离目录已移入系统废纸篓且可恢复；没有连接或写入仓库开发数据库和上传目录。
+
+### 工作流五：发布页长文阅读增强
+
+- 后端将安全 HTML 与 Article Outline 合并为同一次 Markdown 转换结果，避免目录再次解析正文而产生 ID 漂移。TOC 使用 Unicode 友好的稳定 Slug，重复标题自动获得唯一后缀；只返回正文 `h2-h4` 的 ID、层级和纯文本标签，Note 明确返回空 Outline。
+- 发布页只在有效标题不少于两个时显示目录。桌面端目录位于正文右侧并随页面吸顶，滚动时高亮当前章节；窄屏目录位于文章标题之后、正文之前，默认折叠，展示章节数，展开后选择章节会自动收起。
+- 目录链接保留标准 URL Hash，可以复制、刷新、前进和后退；异步数据加载后的直接 Hash 仍会重新定位。标题设置 sticky header 对应的 scroll margin，并对亚像素边界保留容差，避免落点停在上一节。
+- Article 增加固定阅读进度条，进度以正文可阅读区间计算并限制在 `0-100`；滚动、窗口变化、Hash 变化和代码/公式异步块引起的正文尺寸变化都会重新计算。Note 不增加目录或阅读进度。
+- 代码块使用 Highlight.js core 并仅注册 Bash、C/C++、CSS、HTML/XML、Java、JavaScript、JSON、Markdown、Python、Rust、SQL、TypeScript 和 YAML；常用别名被规范化，未知语言或超过 50,000 字符的代码安全回退为纯文本，不进行自动猜测。
+- 语法高亮组件按代码块懒加载，生成的 token HTML 来自已转义的代码文本；主题色使用站点浅色/深色变量。代码正文继续使用 Charter / Georgia / Palatino / Times 西文衬线栈，没有恢复为 Q 版字体；代码块继续内部横向滚动且不扩大页面。
+
+### 工作流五验证
+
+- `backend`: `pytest -q` 通过，共 74 项；新增回归覆盖 Unicode/重复标题稳定 ID、`h2-h4` 层级过滤、预览与 Article Outline 一致以及 Note Outline 为空。`verify_static.py` 返回 `STATIC_VERIFY_OK`。
+- `frontend`: `npm run check` 通过，共 47 项 Node 回归；新增回归覆盖 Outline 规范化、少于两个标题隐藏目录、阅读进度边界、章节跟随、语言别名、高亮转义、未知语言和超长代码回退。Vite 生产构建转换 143 个模块，`BUNDLE_VERIFY_OK`；代码高亮独立异步块为 `26.30 KiB gzip`，PostDetail 页面块为 `5.93 KiB gzip`。
+- 使用全新迁移后的隔离 SQLite、独立上传目录、后端 `8014` 与前端 `5185` 发布真实长 Article。1280px 页面正文宽 760px、页面 `clientWidth/scrollWidth=1280/1280`，右侧目录为 sticky；四个目录项与正文 ID 精确对应 `起点/中段-代码之后/深入一层/终点`。
+- 点击“中段”后标题落在视口顶部 96px，URL Hash 与当前高亮同步，阅读进度为 38%；直接打开 `#终点` 后标题仍落在 96px，当前章节为“终点”，阅读进度为 100%。Python 代码实际生成 6 个高亮 token，计算字体为 `Charter, Georgia, Palatino, Times New Roman, serif`。
+- 深色模式下代码背景、正文、关键字和目录均使用可读主题色。通过同源 390×844 真实 iframe 运行窄视口媒体查询，内部页面 `clientWidth/scrollWidth=390/390`，目录默认折叠且切换按钮可见，展开和章节跳转后恢复折叠；代码块 `clientWidth/scrollWidth=356/356`，未撑宽页面。直接应用标签页 Console error/warn 为空。临时验收页面已删除，服务已停止，隔离目录已移入系统废纸篓且可恢复；没有连接或写入仓库开发数据库和上传目录。
+
+## 第二十二阶段：邮箱可信与账号恢复闭环
+
+- 注册继续要求服务端邀请码，成功后立即登录并拥有正常成员能力；邮箱是否已验证只决定该邮箱能否作为恢复通道，不参与内容 ACL 或成员能力判断。
+- 注册会创建邮箱验证令牌并尝试投递，响应带 `verification_email_sent` 供页面反馈；邮件失败发生在账户事务提交之后，不回滚已创建账号，未投递令牌会撤销以允许立即重试。
+- 登录成员可从设置页或 `/verify-email` 重新申请验证邮件；后端对重复请求设置冷却。确认成功写入 `email_verified_at` 并撤销同用途旧令牌，页面可展示验证状态和时间。
+- `/forgot-password` 只收集邮箱并始终展示相同受理反馈；后端对存在、未知、未验证、受限和冷却中的邮箱统一返回 202，只有 active 且邮箱已验证的账号会产生重置邮件。
+- `/reset-password` 沿用 8–128 字符密码策略。成功后前端结束本地认证状态并释放受保护媒体 Blob URL；后端消费令牌、撤销其他重置令牌和该账号全部 Refresh Session，并清除 Refresh Cookie。
+- 原始邮箱验证/密码重置令牌只出现在邮件 URL fragment。页面只从 `#token=...` 读取并立即通过 History API 清除，不读取 query 或 path；数据库只保存服务端 HMAC 摘要，不保存原始令牌。
+- 页面和后端 Shell 统一使用 `no-referrer`；误入 Query 的令牌会被主动清除但不被消费。Console 适配器及邮件失败日志只记录脱敏事件，不输出完整邮箱、完整链接或原始令牌。
+- 密码重置完成后，前端以不含令牌、邮箱或内容的同源存储事件通知其他标签页立即结束本地会话并释放受保护媒体；后端会话撤销仍是最终安全边界。
+- 新增统一账户安全页面框架和三个公开 lazy route；登录页增加忘记密码入口，注册完成按验证状态导航，个人设置显示验证状态、验证时间、重发反馈和状态入口。
+- 邮件层提供测试 memory Outbox、开发 console 和生产 SMTP + STARTTLS adapter；生产配置强制 HTTPS `SITE_URL`、SMTP、TLS、发件地址与主机。真实外部 SMTP 投递不在本地自动化结论内。
+
+## 第二十二阶段验证
+
+- `frontend`: `npm run check` 通过；ESLint、Node 回归 `55/55`、Vite 生产构建与 `BUNDLE_VERIFY_OK` 全部通过。新增回归覆盖精确公开路由、账户 API 路径、fragment-only 令牌、Fragment/Query 清理、`no-referrer`、统一防枚举反馈和无敏感信息的跨标签页失效事件。
+- `backend`: `.venv/bin/python -m pytest -q` 通过，共 `88/88`；`compileall`、`scripts/verify_static.py`、依赖检查和 Alembic head `20260815_0004` 验证通过。
+- 后端专项覆盖注册发信、令牌 HMAC 摘要/用途绑定/轮换/过期/单次消费、目标邮箱快照、配置 URL 抵抗 Host 注入、防枚举统一响应、冷却、投递失败、日志脱敏、SMTP TLS adapter、密码更新、旧 Access/Refresh Session 失效和 production 配置拒绝不安全邮件设置。
+- 已按 Browser Skill 尝试 `/forgot-password`、`/verify-email`、`/reset-password` 运行验收，但当前桌面安全策略拒绝本地 HTTP 导航，隔离后端/前端服务的启动权限也不可用；按策略未绕过。页面点按、真实 Console、浅/深色和移动端运行验证未计为通过。
+- 当前环境没有真实 SMTP 账号、可投递域名或 DNS 控制权，因此 STARTTLS 握手、实际到信、退信、垃圾邮件评分及 SPF/DKIM/DMARC 未验证；真实 MySQL 8 migration、S3 I/O 和 Redis 分布式限流也仍属于部署环境门禁。
