@@ -1,5 +1,6 @@
 from io import BytesIO
 from pathlib import Path, PurePosixPath
+from botocore.config import Config
 
 from flask import current_app
 
@@ -48,6 +49,11 @@ class S3PrivateStorage:
             region_name=app.config.get("S3_REGION") or None,
             aws_access_key_id=app.config.get("S3_ACCESS_KEY_ID") or None,
             aws_secret_access_key=app.config.get("S3_SECRET_ACCESS_KEY") or None,
+            config=Config(
+                s3={
+                    "addressing_style": "virtual",
+                }
+            ),
         )
 
     def _key(self, key):

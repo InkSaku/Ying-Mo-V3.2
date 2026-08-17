@@ -13,3 +13,4 @@ bleach>=6.2,<7
 boto3>=1.40,<2
 gunicorn>=23,<24
 redis>=5,<7
+cryptography>=43,<46

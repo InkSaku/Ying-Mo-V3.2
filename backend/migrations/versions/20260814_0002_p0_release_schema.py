@@ -49,7 +49,12 @@ def upgrade():
         batch.add_column(sa.Column("ip_hash", sa.String(length=64), nullable=True))
     op.execute(sa.text("UPDATE refresh_sessions SET last_used_at = created_at WHERE last_used_at IS NULL"))
     with op.batch_alter_table("refresh_sessions") as batch:
-        batch.alter_column("last_used_at", nullable=False)
+        batch.alter_column(
+            "last_used_at",
+            existing_type=sa.DateTime(timezone=True),
+            existing_nullable=True,
+            nullable=False,
+        )
 
     with op.batch_alter_table("media") as batch:
         batch.add_column(sa.Column("live_photo_pair_id", sa.String(length=36), nullable=True))
