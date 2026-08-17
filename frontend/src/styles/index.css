@@ -3,9 +3,9 @@
 @import "./editor-media.css";
 
 :root {
-  --serif: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", Georgia, serif;
-  --western-serif: Charter, Georgia, Palatino, "Times New Roman", serif;
-  --mono: "JetBrains Mono", "SF Mono", "Fira Code", Consolas, Monaco, "TsangerJinKai02", "Source Han Serif SC", monospace;
+  --serif: "Noto Serif SC Variable", serif;
+  --western-serif: "Noto Serif SC Variable", serif;
+  --mono: "JetBrains Mono Variable", "Noto Serif SC Variable", monospace;
 
   --page: #f5f4ed;
   --surface: #faf9f5;
@@ -59,9 +59,12 @@
 }
 
 html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   background: var(--page);
   color: var(--text);
   font-family: var(--serif);
+  font-optical-sizing: auto;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
