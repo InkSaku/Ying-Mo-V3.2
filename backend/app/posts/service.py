@@ -87,9 +87,13 @@ def apply_category(post, category_id):
 
 def apply_collection(post, actor_id, collection_id):
     if collection_id is None:
+        was_in_collection = post.collection_id is not None
         post.collection = None
         post.collection_sort_order = None
-        post.visibility = PostVisibility.PRIVATE.value
+        # 只有真正从 Collection 脱离时才安全回退为 private。
+        # 原本就是独立 Post 时，保留作者明确选择的 visibility。
+        if was_in_collection:
+            post.visibility = PostVisibility.PRIVATE.value
         return
     collection = db.session.get(Collection, collection_id)
     if collection is None or not is_collection_member(actor_id, collection):

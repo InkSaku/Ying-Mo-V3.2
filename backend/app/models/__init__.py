@@ -7,6 +7,7 @@ from .post import (
     ArticleSlug, post_tags,
 )
 from .interaction import Comment, ContentLike, ContentFavorite
+from .reading import PostReadEvent
 from .notification import Notification
 from .session import RefreshSession
 from .admin import AdminLog, FeaturedContent, SiteSetting
@@ -19,7 +20,7 @@ __all__ = [
     "Collection", "CollectionMember", "CollectionStatus",
     "Post", "PostType", "PostStatus", "PostVisibility", "PostModerationStatus",
     "ArticleSlug", "post_tags",
-    "Comment", "ContentLike", "ContentFavorite",
+    "Comment", "ContentLike", "ContentFavorite", "PostReadEvent",
     "Notification", "RefreshSession",
     "AdminLog", "FeaturedContent", "SiteSetting",
     "AccountToken", "AccountTokenPurpose",

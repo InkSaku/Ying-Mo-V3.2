@@ -11,6 +11,7 @@ import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { PostMediaGallery } from "../components/PostMediaGallery";
 import { InteractionBar } from "../components/InteractionBar";
 import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
+import { installVisibleReadTracker } from "../lib/readingStats";
 
 export function PostDetailPage({ type }) {
   const params = useParams();
@@ -18,6 +19,7 @@ export function PostDetailPage({ type }) {
   const path = type === "article" ? `/posts/slug/${encodeURIComponent(params.slug)}` : `/posts/${params.id}`;
   const state = useAsyncData(() => api.get(path), [path]);
   const post = state.data?.redirect ? null : state.data;
+  const postId = post?.id;
   usePageMeta(post?.title || (type === "article" ? "文章" : "随记"));
 
   useEffect(() => {
@@ -25,6 +27,14 @@ export function PostDetailPage({ type }) {
       navigate(state.data.canonical, { replace: true });
     }
   }, [state.data, navigate]);
+
+  useEffect(() => {
+    if (!postId) return undefined;
+    return installVisibleReadTracker({
+      postId,
+      onRead: (readPostId) => api.post(`/posts/${readPostId}/read`, {}).catch(() => undefined),
+    });
+  }, [postId]);
 
   if (state.loading || state.data?.redirect) return <PageLoader />;
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;

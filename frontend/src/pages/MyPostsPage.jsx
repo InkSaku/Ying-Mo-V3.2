@@ -191,6 +191,14 @@ export function MyPostsPage() {
                 </div>
                 <h2>{post.title || (post.post_type === "note" ? "未命名随记" : "未命名文章")}</h2>
                 <p>更新于 {formatDate(post.updated_at, true)}{post.published_at ? ` · 首次发布于 ${formatDate(post.published_at, true)}` : ""}</p>
+                {post.published_at ? (
+                  <p>
+                    阅读 {post.reading_stats?.views ?? 0}
+                    {" · "}{post.reading_stats?.unique_readers ?? 0} 位读者
+                    {" · "}近 7 天 {post.reading_stats?.views_7d ?? 0}
+                    {" · "}近 30 天 {post.reading_stats?.views_30d ?? 0}
+                  </p>
+                ) : null}
               </div>
               <div className="post-management-actions" aria-label={`${post.title || "未命名内容"}的操作`}>
                 {(post.status === "published" || post.status === "archived") ? (

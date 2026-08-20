@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -15,7 +15,7 @@ from app.common.validation import parse_iso_datetime, validate_external_url
 from app.extensions import db
 from app.models import (
     ArticleSlug, Category, Collection, Comment, ContentFavorite, ContentLike, Notification,
-    Media, Post, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
+    Media, Post, PostReadEvent, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
 )
 from app.posts.service import (
     DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
@@ -24,9 +24,57 @@ from app.posts.service import (
 
 bp = Blueprint("posts", __name__)
 
+READ_DEDUPE_MINUTES = 30
+
 
 def utcnow():
     return datetime.now(timezone.utc)
+
+
+def _empty_reading_stats():
+    return {
+        "views": 0,
+        "unique_readers": 0,
+        "views_7d": 0,
+        "views_30d": 0,
+    }
+
+
+def _reading_stats_for_posts(post_ids, *, now=None):
+    ids = list(dict.fromkeys(post_ids))
+    result = {post_id: _empty_reading_stats() for post_id in ids}
+    if not ids:
+        return result
+
+    current_time = now or utcnow()
+    cutoff_7d = current_time - timedelta(days=7)
+    cutoff_30d = current_time - timedelta(days=30)
+    rows = db.session.execute(
+        db.select(
+            PostReadEvent.post_id,
+            func.count(PostReadEvent.id).label("views"),
+            func.count(func.distinct(PostReadEvent.reader_id)).label("unique_readers"),
+            func.coalesce(
+                func.sum(case((PostReadEvent.created_at >= cutoff_7d, 1), else_=0)),
+                0,
+            ).label("views_7d"),
+            func.coalesce(
+                func.sum(case((PostReadEvent.created_at >= cutoff_30d, 1), else_=0)),
+                0,
+            ).label("views_30d"),
+        )
+        .where(PostReadEvent.post_id.in_(ids))
+        .group_by(PostReadEvent.post_id)
+    ).all()
+
+    for row in rows:
+        result[row.post_id] = {
+            "views": int(row.views or 0),
+            "unique_readers": int(row.unique_readers or 0),
+            "views_7d": int(row.views_7d or 0),
+            "views_30d": int(row.views_30d or 0),
+        }
+    return result
 
 
 def _serialize(post, include_body=True, *, actor_id=None, management=False):
@@ -376,6 +424,64 @@ def get_by_slug(slug):
     return success_response(_detail(row.post,actor))
 
 
+@bp.post("/<int:post_id>/read")
+@jwt_required(locations=["headers"])
+def record_read(post_id):
+    actor = current_user()
+    post = db.session.get(Post, post_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if not can_read_post(actor.id, post, include_archived=True):
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if post.author_id == actor.id:
+        return success_response({"recorded": False})
+
+    now = utcnow()
+    recent = db.session.scalar(
+        db.select(PostReadEvent.id)
+        .where(
+            PostReadEvent.post_id == post.id,
+            PostReadEvent.reader_id == actor.id,
+            PostReadEvent.created_at >= now - timedelta(minutes=READ_DEDUPE_MINUTES),
+        )
+        .limit(1)
+    )
+    if recent is not None:
+        return success_response({"recorded": False})
+
+    bucket_start = now.replace(
+        minute=(now.minute // READ_DEDUPE_MINUTES) * READ_DEDUPE_MINUTES,
+        second=0,
+        microsecond=0,
+    )
+    db.session.add(PostReadEvent(
+        post_id=post.id,
+        reader_id=actor.id,
+        bucket_start=bucket_start,
+        created_at=now,
+    ))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # The unique bucket constraint makes concurrent duplicate reports harmless.
+        db.session.rollback()
+        return success_response({"recorded": False})
+    return success_response({"recorded": True})
+
+
+@bp.get("/<int:post_id>/reading-stats")
+@jwt_required(locations=["headers"])
+def reading_stats(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    post = db.session.get(Post, post_id)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    stats = _reading_stats_for_posts([post.id])[post.id]
+    return success_response({"post_id": post.id, **stats})
+
+
 @bp.post("")
 @jwt_required(locations=["headers"])
 def create_post():
@@ -563,6 +669,7 @@ def my_posts():
     rows = db.session.scalars(
         stmt.order_by(Post.updated_at.desc(), Post.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
+    stats_by_post = _reading_stats_for_posts([p.id for p in rows])
     # 作者管理例外：只返回自己的 Post，不展开无权 Collection 的敏感上下文。
     result = []
     for p in rows:
@@ -572,6 +679,7 @@ def my_posts():
         if item.get("cover_media"):
             item["cover_media"] = p.cover_media.to_dict(include_manage_paths=True)
         item.pop("collection", None)
+        item["reading_stats"] = stats_by_post[p.id]
         result.append(item)
     return success_response(result, meta=pagination_meta(page, size, total))
 
