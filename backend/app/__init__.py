@@ -67,6 +67,9 @@ def _shell(indexable=False):
   <meta name="description" content="Ying-Mo 是一个邀请制的朋友记录空间。">
   <meta property="og:title" content="Ying-Mo">
   <meta property="og:description" content="写字，也和朋友一起记录生活。">
+  <link rel="icon" type="image/png" sizes="256x256" href="/favicon.png">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.png">
   <title>Ying-Mo</title>
 </head>
 <body><div id="root" aria-busy="true"></div></body>

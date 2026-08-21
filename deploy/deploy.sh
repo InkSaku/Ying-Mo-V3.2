@@ -278,6 +278,22 @@ fi
 
 
 
+if [ ! -f "$FRONTEND_DIR/dist/favicon.png" ] || [ ! -f "$FRONTEND_DIR/dist/favicon.ico" ]; then
+
+    fail "Frontend favicon assets missing"
+
+fi
+
+
+
+if ! grep -q 'href="/favicon.png"' "$FRONTEND_DIR/dist/index.html"; then
+
+    fail "Frontend favicon metadata missing"
+
+fi
+
+
+
 success "Frontend build completed"
 
 
