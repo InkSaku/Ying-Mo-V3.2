@@ -31,8 +31,8 @@ const MARKDOWN_SHORTCUTS = [
   { action: "orderedList", label: "有序列表", hint: "插入有序列表（⌘/Ctrl+Shift+7）" },
   { action: "link", label: "链接", hint: "插入链接（⌘/Ctrl+K）" },
   { action: "footnote", label: "脚注", hint: "插入脚注引用与定义" },
-  { action: "inlineMath", label: "行内公式", hint: "插入 $...$ 行内公式" },
-  { action: "mathBlock", label: "块公式", hint: "插入 $$...$$ 块公式" },
+  { action: "inlineMath", label: "行内公式", hint: "插入 $...$ 行内公式，也兼容 \\(...\\)" },
+  { action: "mathBlock", label: "块公式", hint: "插入 $$...$$ 块公式，也兼容 \\[...\\]" },
   { action: "code", label: "代码", hint: "插入代码块" },
   { action: "table", label: "表格", hint: "插入表格模板" },
 ];

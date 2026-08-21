@@ -13,6 +13,22 @@ test("renders inline and display expressions with MathML accessibility output", 
   assert.match(display.html, /class="katex-display"/);
 });
 
+test("renders converted optimization, cases, intervals, and boxed expressions", () => {
+  const expressions = [
+    "y'=f(x;\\theta)",
+    "\\min_\\theta L(y,y')",
+    "\\begin{cases}-1,&y'<y\\\\1,&y'>y\\end{cases}",
+    "[-1,1]",
+    "\\boxed{Loss = -\\log(\\text{似然})}",
+  ];
+
+  for (const expression of expressions) {
+    const rendered = renderMathExpression(expression, true);
+    assert.equal(rendered.error, false, expression);
+    assert.match(rendered.html, /class="katex-display"/);
+  }
+});
+
 test("rejects invalid or trusted HTML commands without returning injectable markup", () => {
   const invalid = renderMathExpression("\\frac{");
   const untrusted = renderMathExpression("\\href{javascript:alert(1)}{x}");

@@ -172,6 +172,44 @@ def test_inline_math_does_not_consume_currency_or_ambiguous_spaced_delimiters():
     assert "$ x $" in html
 
 
+def test_latex_delimiters_and_pandoc_raw_tex_are_normalized():
+    html = render_safe_markdown(
+        "行内 \\( E = mc^2 \\)。\n\n"
+        r"\[ y'=f(x;`\theta`{=tex}) \]" "\n\n"
+        r"\[ `\min`{=tex}\_`\theta `{=tex}L(y,y') \]" "\n\n"
+        "\\[ L=\n"
+        "```{=tex}\n"
+        "\\begin{cases}\n-1,&y'<y\\\\\n1,&y'>y\n\\end{cases}\n"
+        "```\n"
+        "\\]\n\n"
+        r"范围 \[ \[-1,1\] \]。"
+    )
+
+    assert '<span class="math-inline" data-math="E = mc^2">' in html
+    assert r'data-math="y&#x27;=f(x;\theta)"' in html
+    assert r'data-math="\min_\theta L(y,y&#x27;)"' in html
+    assert "\\begin{cases}" in html
+    assert 'data-math="[-1,1]"' in html
+    assert "{=tex}" not in html
+    assert "language-tex" not in html
+
+
+def test_latex_compatibility_does_not_consume_code_spans_or_fences():
+    html = render_safe_markdown(
+        r"`\(not math\)`" "\n\n"
+        "```text\n"
+        r"\[not math\]" "\n"
+        r"`\theta`{=tex}" "\n"
+        "```"
+    )
+
+    assert 'class="math-inline"' not in html
+    assert 'class="math-block"' not in html
+    assert "\\(not math\\)" in html
+    assert "\\[not math\\]" in html
+    assert "{=tex}" in html
+
+
 def test_math_placeholder_escapes_formula_attributes_and_rejects_fake_markup():
     html = render_safe_markdown(
         '$x &lt; y$\n\n'
