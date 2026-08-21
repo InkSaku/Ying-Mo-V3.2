@@ -4,6 +4,7 @@ import { ThemeControl } from "./ThemeControl";
 
 const navItems = [
   ["/home", "首页"],
+  ["/explore", "漫游"],
   ["/articles", "文章"],
   ["/notes", "随记"],
   ["/collections", "合集"],

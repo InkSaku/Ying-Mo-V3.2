@@ -16,6 +16,8 @@ const ForgotPasswordPage = lazyNamed(() => import("./pages/ForgotPasswordPage"),
 const ResetPasswordPage = lazyNamed(() => import("./pages/ResetPasswordPage"), "ResetPasswordPage");
 const VerifyEmailPage = lazyNamed(() => import("./pages/VerifyEmailPage"), "VerifyEmailPage");
 const HomePage = lazyNamed(() => import("./pages/HomePage"), "HomePage");
+const OnThisDayPage = lazyNamed(() => import("./pages/OnThisDayPage"), "OnThisDayPage");
+const ExplorePage = lazyNamed(() => import("./pages/ExplorePage"), "ExplorePage");
 const PostsPage = lazyNamed(() => import("./pages/PostsPage"), "PostsPage");
 const PostDetailPage = lazyNamed(() => import("./pages/PostDetailPage"), "PostDetailPage");
 const CollectionsPage = lazyNamed(() => import("./pages/CollectionsPage"), "CollectionsPage");
@@ -28,6 +30,7 @@ const UserProfilePage = lazyNamed(() => import("./pages/UserProfilePage"), "User
 const WritePage = lazyNamed(() => import("./pages/WritePage"), "WritePage");
 const MePage = lazyNamed(() => import("./pages/MePage"), "MePage");
 const MyPostsPage = lazyNamed(() => import("./pages/MyPostsPage"), "MyPostsPage");
+const PostRevisionsPage = lazyNamed(() => import("./pages/PostRevisionsPage"), "PostRevisionsPage");
 const FavoritesPage = lazyNamed(() => import("./pages/FavoritesPage"), "FavoritesPage");
 const NotificationsPage = lazyNamed(() => import("./pages/NotificationsPage"), "NotificationsPage");
 const SettingsPage = lazyNamed(() => import("./pages/SettingsPage"), "SettingsPage");
@@ -64,6 +67,8 @@ export function App() {
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/home" element={<HomePage />} />
+        <Route path="/on-this-day" element={<OnThisDayPage />} />
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/articles" element={<PostsPage type="article" />} />
         <Route path="/articles/:slug" element={<PostDetailPage type="article" />} />
         <Route path="/notes" element={<PostsPage type="note" />} />
@@ -83,6 +88,7 @@ export function App() {
         <Route path="/write/:postId" element={<WritePage />} />
         <Route path="/me" element={<MePage />} />
         <Route path="/me/posts" element={<MyPostsPage />} />
+        <Route path="/me/posts/:postId/revisions" element={<PostRevisionsPage />} />
         <Route path="/me/collections" element={<MyCollectionsPage />} />
         <Route path="/me/favorites" element={<FavoritesPage />} />
         <Route path="/me/comments" element={<MyCommentsPage />} />

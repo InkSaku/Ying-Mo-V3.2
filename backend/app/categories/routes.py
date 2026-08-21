@@ -10,7 +10,7 @@ from app.common.responses import error_response, success_response
 from app.common.validation import SLUG_RE, normalize_name
 from app.extensions import db
 from app.models import Category, Post, UserRole
-from app.posts.service import current_article_slug
+from app.posts.browsing import serialize_browse_posts
 
 bp=Blueprint("categories",__name__)
 
@@ -146,11 +146,7 @@ def category_detail(slug):
         )
     total=db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     posts=db.session.scalars(stmt.order_by(Post.published_at.desc(),Post.id.desc()).offset((page-1)*size).limit(size)).all()
-    items=[]
-    for post in posts:
-        item=post.to_dict(include_body=False)
-        if post.post_type=="article": item["slug"]=current_article_slug(post.id)
-        items.append(item)
+    items=serialize_browse_posts(posts,actor_id=actor.id)
     return success_response({
         "category":category.to_dict(),
         "posts":items,

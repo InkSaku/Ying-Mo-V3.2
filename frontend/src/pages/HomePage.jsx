@@ -6,6 +6,8 @@ import { PageLoader, ErrorState, EmptyState } from "../components/States";
 import { PostCard } from "../components/PostCard";
 import { CollectionCard } from "../components/CollectionCard";
 import { SectionHeader } from "../components/SectionHeader";
+import { MemoryCard } from "../components/MemoryCard";
+import { memoryDayLabel } from "../lib/onThisDay";
 
 export function HomePage() {
   usePageMeta("首页");
@@ -27,6 +29,24 @@ export function HomePage() {
           <Link className="btn btn-primary" to="/write">新建记录</Link>
           <Link className="btn btn-secondary" to="/collections/new">创建合集</Link>
         </div>
+      </section>
+
+      <section className="content-section home-memory-section">
+        <SectionHeader
+          title="往年今日"
+          description={`${memoryDayLabel(data.on_this_day)}，重新遇见过去的记录。`}
+          actions={<Link to="/on-this-day">查看全部</Link>}
+        />
+        {data.on_this_day?.items?.length ? (
+          <div className="memory-grid home-memory-grid">
+            {data.on_this_day.items.map((item) => <MemoryCard key={item.id} post={item} />)}
+          </div>
+        ) : (
+          <div className="home-memory-empty">
+            <p>今天暂时没有旧日记录。</p>
+            <Link to="/archive">翻阅时间归档</Link>
+          </div>
+        )}
       </section>
 
       {data.featured_articles?.length ? (

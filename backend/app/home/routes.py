@@ -5,10 +5,12 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.access import collection_member_predicate, readable_post_predicate
 from app.common.auth import current_user
+from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import Collection, FeaturedContent, Post, PostStatus, PostType
-from app.posts.service import current_article_slug
+from app.posts.browsing import serialize_browse_posts
+from app.home.on_this_day import on_this_day_data
 
 bp=Blueprint("home",__name__)
 
@@ -26,13 +28,7 @@ def _post_items(actor_id,post_type,limit=6):
             Post.id.desc(),
         ).limit(limit)
     ).all()
-    items=[]
-    for p in rows:
-        item=p.to_dict(include_body=False)
-        if p.post_type==PostType.ARTICLE.value:
-            item["slug"]=current_article_slug(p.id)
-        items.append(item)
-    return items
+    return serialize_browse_posts(rows,actor_id=actor_id)
 
 
 @bp.get("")
@@ -66,14 +62,28 @@ def home():
             collection_member_predicate(actor.id),
         ).order_by(FeaturedContent.sort_order.asc(),FeaturedContent.id.asc()).limit(6)
     ).all()
-    featured_article_items=[]
-    for post in featured_articles:
-        item=post.to_dict(include_body=False); item["slug"]=current_article_slug(post.id)
-        featured_article_items.append(item)
+    featured_article_items=serialize_browse_posts(featured_articles,actor_id=actor.id)
+    on_this_day, on_this_day_total = on_this_day_data(actor.id, page=1, size=4)
+    on_this_day["total"] = on_this_day_total
     return success_response({
         "featured_articles":featured_article_items,
         "featured_collections":[c.to_dict() for c in featured_collections],
         "recent_articles":_post_items(actor.id,PostType.ARTICLE.value),
         "recent_notes":_post_items(actor.id,PostType.NOTE.value),
         "collections":[c.to_dict() for c in collections],
+        "on_this_day":on_this_day,
     })
+
+
+@bp.get("/on-this-day")
+@jwt_required(locations=["headers"])
+def on_this_day():
+    actor = current_user()
+    args = parse_pagination(default_size=20, max_size=50)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if not args:
+        return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
+    page, size = args
+    data, total = on_this_day_data(actor.id, page=page, size=size)
+    return success_response(data, meta=pagination_meta(page, size, total))

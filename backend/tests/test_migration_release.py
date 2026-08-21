@@ -182,3 +182,54 @@ def test_account_recovery_migration_preserves_existing_users_and_downgrades_clea
     assert "email_verified_at" not in {column["name"] for column in inspector.get_columns("users")}
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT COUNT(*) FROM users WHERE id=1")) == 1
+
+
+def test_post_revision_migration_round_trip_preserves_posts(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    database = tmp_path / "post-revisions.db"
+    url = f"sqlite+pysqlite:///{database}"
+    env = {**os.environ, "DATABASE_URL": url, "REGISTRATION_INVITE_CODE": "lyx0811"}
+
+    def flask_db(*args):
+        result = subprocess.run(
+            [sys.executable, "-m", "flask", "--app", "run.py", "db", *args],
+            cwd=root, env=env, text=True, capture_output=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+
+    flask_db("upgrade", "20260817_0005")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        connection.execute(text("""
+            INSERT INTO users
+              (id,username,username_normalized,email,email_normalized,password_hash,nickname,role,status,created_at,updated_at)
+            VALUES
+              (1,'revision','revision','revision@example.com','revision@example.com','hash','Revision','user','active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """))
+        connection.execute(text("""
+            INSERT INTO posts
+              (id,author_id,post_type,title,body,content_format,status,visibility,moderation_status,edit_version,created_at,updated_at)
+            VALUES
+              (1,1,'article','Existing','Body','markdown','published','login_only','active',2,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+        """))
+
+    flask_db("upgrade", "20260821_0006")
+    inspector = inspect(engine)
+    assert "post_revisions" in inspector.get_table_names()
+    with engine.begin() as connection:
+        connection.execute(text("""
+            INSERT INTO post_revisions
+              (post_id,author_id,source_edit_version,reason,snapshot,changed_fields,created_at)
+            VALUES
+              (1,1,2,'manual_edit','{"title":"Existing"}','["title"]',CURRENT_TIMESTAMP)
+        """))
+        assert connection.scalar(text("SELECT COUNT(*) FROM post_revisions")) == 1
+
+    flask_db("downgrade", "20260817_0005")
+    inspector = inspect(engine)
+    assert "post_revisions" not in inspector.get_table_names()
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT title FROM posts WHERE id=1")) == "Existing"
+
+    flask_db("upgrade")
+    assert "post_revisions" in inspect(engine).get_table_names()

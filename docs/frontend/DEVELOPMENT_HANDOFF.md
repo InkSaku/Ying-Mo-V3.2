@@ -1,10 +1,10 @@
 # Ying-Mo V3.2 前端开发交接
 
-更新时间：2026-08-15
+更新时间：2026-08-21
 
-当前阶段：第二十一阶段“创作与长文阅读增强”和第二十二阶段“邮箱可信与账号恢复闭环”已在未提交工作区实现
+当前阶段：第二十一至第二十七阶段均已在未提交工作区实现；最新完成“相关阅读增强”
 
-下次起点：在允许本地页面导航的桌面环境补做第二十二阶段浏览器运行验收，或进入下一项 P1 大阶段/提交部署准备
+下次起点：阶段 27 已完成登录态视觉与完整 HTTP 验收，可进入提交部署准备
 
 ## 1. 使用说明
 
@@ -26,7 +26,7 @@
 - 业务与原后端基线：同上。
 - 当前开发尚未提交，HEAD 没有随阶段开发移动。
 - 工作区存在大量已修改和未跟踪文件，这是当前开发成果，不是可清理的临时内容。
-- 阶段 21/22 与此前成果均在当前未提交修改中；不得通过 reset、checkout、clean 或重新脚手架化来“恢复”。
+- 阶段 21–27 与此前成果均在当前未提交修改中；不得通过 reset、checkout、clean 或重新脚手架化来“恢复”。
 - `backend/app/uploads/` 包含本轮需要保留的后端源码；不要把它当成运行时上传文件删除。
 - 不得覆盖或回滚与当前任务无关的本地修改。
 
@@ -40,7 +40,7 @@ git rev-parse HEAD
 
 ## 3. 已完成范围
 
-完整实现说明和逐阶段验证数据位于 `docs/frontend/INTEGRATION_BASELINE.md`。当前已完成以下二十二阶段：
+完整实现说明和逐阶段验证数据位于 `docs/frontend/INTEGRATION_BASELINE.md`。当前已完成以下二十六阶段：
 
 | 阶段 | 状态 | 已完成范围 |
 | --- | --- | --- |
@@ -66,6 +66,11 @@ git rev-parse HEAD
 | 20. 全功能回归与最终联调 | 完成 | 路由级拆包与体积预算、全列表页码收敛、11 类核心流程与完整 Admin 多账号真实 HTTP 串行验收 |
 | 21. 创作与长文阅读增强 | 完成 | Markdown 快捷操作与表格、草稿自动保存/版本冲突、脚注、数学公式、Article 目录/阅读进度/语法高亮 |
 | 22. 邮箱可信与账号恢复闭环 | 实现与自动化完成；浏览器环境阻断 | 邮箱验证、密码重置、防枚举、令牌单次消费、会话撤销、日志脱敏、跨标签页退出、邮件适配器与三个公开账户页面 |
+| 23. 内容浏览完整化 | 完成 | Article/Note 组合筛选、信息卡片、详情元信息、Note 自动缩略图与 Archive 查询器 |
+| 24. 内容版本历史与恢复 | 完成 | 作者专属 Revision 时间线、安全历史预览、并发保护、恢复前留版与失效关联降级 |
+| 25. 往年今日 | 完成 | semantic time 同日查询、ACL 年份聚合、首页预览、独立分页页面、年份分组与响应式空状态 |
+| 26. Explore 朋友内容漫游 | 完成 | 稳定随机 Article/Note、ACL 精选合集、往年今日、Tag 漫游、最近成员、换一批和响应式区块 |
+| 27. 相关阅读增强 | 完成 | Article 详情最多 4 篇 ACL 安全静态关联、明确原因、响应式卡片，不足不补 |
 
 当前前端已有的主要路由包括：
 
@@ -73,13 +78,13 @@ git rev-parse HEAD
 - 内容：`/articles`、`/articles/:slug`、`/notes`、`/notes/:id`
 - 写作与作者管理：`/write`、`/write/:postId`、`/me/posts`
 - Collection：`/collections`、`/collections/new`、`/collections/:slug`、`/collections/:slug/manage`
-- 发现：`/search`、`/archive`、`/categories`、`/categories/:slug`、`/tags`、`/tags/:slug`
+- 发现：`/search`、`/archive`、`/on-this-day`、`/explore`、`/categories`、`/categories/:slug`、`/tags`、`/tags/:slug`
 - 用户与个人中心：`/users/:username`、`/me`、`/me/collections`、`/me/favorites`、`/me/comments`、`/me/notifications`、`/me/settings`、`/me/sessions`
 - Admin：`/admin`、`/admin/users`、`/admin/posts`、`/admin/collections`、`/admin/comments`、`/admin/categories`、`/admin/tags`、`/admin/media`、`/admin/featured`、`/admin/settings`、`/admin/notifications`、`/admin/logs` 已完成。
 
 ## 4. 最近一次验证基线
 
-阶段 22 收口时的当前权威门禁为：
+阶段 27 收口时的当前权威门禁为：
 
 ```bash
 cd /Users/hannn/Desktop/Ying-Mo-V3.2/frontend
@@ -95,8 +100,8 @@ git diff --check
 
 结果：
 
-- `npm run check` 中 ESLint、前端 Node 回归 `55/55`、Vite 生产构建和包体预算全部通过。
-- 后端测试 `88/88` 通过，Alembic head 为 `20260815_0004`。
+- `npm run check` 中 ESLint、前端 Node 回归 `67/67`、Vite 生产构建和包体预算全部通过。
+- 后端测试 `102/102` 通过，Alembic head 为 `20260821_0006`。
 - 静态文档与安全约束检查返回 `STATIC_VERIFY_OK`。
 - `git diff --check` 通过。
 - 阶段 20 的全模块真实 HTTP 脚本仍保持 `FULL_HTTP_VERIFY_OK` 历史记录；阶段 21 各创作/阅读工作流已有隔离浏览器联调记录。
@@ -104,27 +109,27 @@ git diff --check
 
 ## 5. 当前已知未完成或部分完成项
 
-阶段 21/22 的代码和自动化门禁已完成。当前仍需补齐或在部署环境执行：
+阶段 21–27 的代码和自动化门禁已完成。当前仍需补齐或在部署环境执行：
 
 - 阶段 22 真实浏览器页面状态、Hash 清理、前进/后退、Console、浅/深色和移动端视觉验收：当前桌面本地导航安全策略与服务启动权限阻断；需在允许本地页面访问的环境补跑。
 - 真实 SMTP/STARTTLS、实际投递/退信与 SPF/DKIM/DMARC/DNS 尚未验证。
 - 真实 MySQL 8 migration、真实 S3 I/O 和真实 Redis 分布式限流仍需在目标基础设施补跑。
-- Explore、往年今日、阅读统计和 Revision 等后续 P1 能力尚未实现。
+- Explore、阅读统计、Revision、往年今日与静态相关阅读已完成；阶段 27 隔离浏览器和完整 HTTP 回归已通过，相关阅读不扩展为推荐算法、热门流或个性化 Feed。
 
 代码审查、生产构建和自动回归已验证；上述浏览器或外部基础设施项目在得到真实结果前不得改写为已通过。
 
 ## 6. 后续开发顺序
 
-阶段 21/22 收口后的建议顺序：
+阶段 21–27 收口后的建议顺序：
 
 1. 若具备允许本地页面导航的 Browser 环境，补做阶段 22 运行验收并把真实结果回填到本文件与 `INTEGRATION_BASELINE.md`。
 2. 重新执行 `npm run check`、后端全量测试、静态验证、`git diff --check` 和隔离 HTTP 验收。
-3. 若继续产品开发，按 PRD 从 Explore/往年今日、阅读统计或 Revision 中选择下一项完整大阶段，不把单个零散控件包装成阶段完成。
+3. 若继续产品开发，先由维护者确定新的 P1 范围；阶段 27 不继续扩张为推荐算法、热门排序或个性化 Feed。
 4. 由维护者确认工作区既有大量修改的提交边界，再进入提交、发布或部署流程；不要擅自清理或拆分用户成果。
 
 ## 7. 下一次开发的第一步
 
-下一次不要重新开发阶段 21/22。先读取当前工作区和浏览器验收记录：
+下一次不要重新开发阶段 21–27。先读取当前工作区和浏览器验收记录：
 
 1. 若运行环境已解除阶段 22 的浏览器策略阻断，直接完成第 5 节验收并只修复实际发现的问题。
 2. 若浏览器验收已回填，先重新跑权威门禁，再按产品优先级进入下一项完整 P1 大阶段。

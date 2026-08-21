@@ -13,6 +13,7 @@ def register_blueprints(app):
     from app.tags.routes import bp as tags_bp
     from app.admin.routes import bp as admin_bp
     from app.uploads.routes import bp as uploads_bp
+    from app.explore.routes import bp as explore_bp
 
     for blueprint, prefix in (
         (auth_bp, "/api/v1/auth"),
@@ -29,5 +30,6 @@ def register_blueprints(app):
         (tags_bp, "/api/v1/tags"),
         (admin_bp, "/api/v1/admin"),
         (uploads_bp, "/api/v1/uploads"),
+        (explore_bp, "/api/v1/explore"),
     ):
         app.register_blueprint(blueprint, url_prefix=prefix)

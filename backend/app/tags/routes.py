@@ -12,7 +12,7 @@ from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.common.validation import SLUG_RE, normalize_name
 from app.models import Post, Tag, UserRole, post_tags
-from app.posts.service import current_article_slug
+from app.posts.browsing import serialize_browse_posts
 
 bp=Blueprint("tags",__name__)
 
@@ -57,11 +57,7 @@ def tag_detail(slug):
     if total==0:
         return error_response("RESOURCE_NOT_FOUND","Tag 不存在。",404)
     posts=db.session.scalars(stmt.order_by(Post.published_at.desc(),Post.id.desc()).offset((page-1)*size).limit(size)).all()
-    items=[]
-    for post in posts:
-        item=post.to_dict(include_body=False)
-        if post.post_type=="article": item["slug"]=current_article_slug(post.id)
-        items.append(item)
+    items=serialize_browse_posts(posts,actor_id=actor.id)
     return success_response({
         "tag":tag.to_dict(),
         "posts":items,

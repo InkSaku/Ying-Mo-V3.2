@@ -8,7 +8,7 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import Category, Collection, Post, Tag, User, UserStatus, post_tags
-from app.posts.service import current_article_slug
+from app.posts.browsing import serialize_browse_posts
 
 bp = Blueprint("search", __name__)
 
@@ -24,13 +24,6 @@ def _post_search(actor_id, query):
         readable_post_predicate(actor_id, include_archived=True),
         or_(Post.title.ilike(like), Post.summary.ilike(like), Post.body.ilike(like)),
     )
-
-
-def _post_item(post):
-    item = post.to_dict(include_body=False)
-    if post.post_type == "article":
-        item["slug"] = current_article_slug(post.id)
-    return item
 
 
 @bp.get("")
@@ -86,7 +79,7 @@ def search():
         ).group_by(Tag.id, Tag.name, Tag.slug).order_by(func.count(Post.id).desc()).limit(20)
     ).all()
     return success_response({
-        "posts": [_post_item(post) for post in posts],
+        "posts": serialize_browse_posts(posts, actor_id=actor.id),
         "collections": [collection.to_dict() for collection in collections],
         "users": [user.public_dict() for user in users],
         "category_facets": [dict(row._mapping) for row in category_rows],

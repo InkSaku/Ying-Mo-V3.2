@@ -14,6 +14,7 @@ import {
   readArchiveSelection,
 } from "../lib/archive";
 import { clampPageToTotal } from "../lib/pagination";
+import { PostFilters } from "../components/PostFilters";
 
 const PAGE_SIZE = 20;
 
@@ -25,6 +26,7 @@ export function ArchivePage() {
   const canonicalParams = archiveSearchParams(selection).toString();
   const path = archiveApiPath(selection, PAGE_SIZE);
   const state = useAsyncData(() => api.get(path), [path]);
+  const optionState = useAsyncData(() => api.get("/posts/filter-options"), []);
   const pagination = state.meta?.pagination || {};
   const total = pagination.total || 0;
   const totalPages = pagination.total_pages || 0;
@@ -40,13 +42,14 @@ export function ArchivePage() {
 
   useEffect(() => {
     if (pageNeedsClamp) {
-      setParams(archiveSearchParams({ year, month, page: clampedPage }), { replace: true });
+      setParams(archiveSearchParams({ ...selection, page: clampedPage }), { replace: true });
     }
-  }, [clampedPage, month, pageNeedsClamp, setParams, year]);
+  }, [clampedPage, pageNeedsClamp, selection, setParams]);
 
   const selectRange = (nextYear = "", nextMonth = "") => {
-    setParams(archiveSearchParams({ year: nextYear, month: nextMonth, page: 1 }));
+    setParams(archiveSearchParams({ ...selection, year: nextYear, month: nextMonth, page: 1 }));
   };
+  const changeFilter = (key, value) => setParams(archiveSearchParams({ ...selection, [key]: value, page: 1 }));
 
   if (state.loading && !state.data) return <PageLoader label="正在整理归档" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
@@ -60,6 +63,8 @@ export function ArchivePage() {
           <p>Article 使用发布时间，Note 优先使用记录发生时间。</p>
         </div>
       </header>
+
+      <PostFilters filters={{ ...selection, sort: "newest" }} options={optionState.data || {}} loading={optionState.loading} showSort={false} onChange={changeFilter} onClear={() => setParams(archiveSearchParams({ year, month, page: 1 }))} />
 
       <div className="archive-layout">
         <aside className="archive-facets" aria-label="归档年份与月份">
@@ -125,7 +130,7 @@ export function ArchivePage() {
             totalPages={totalPages}
             disabled={state.loading || pageNeedsClamp}
             onChange={(nextPage) => {
-              setParams(archiveSearchParams({ year, month, page: nextPage }));
+              setParams(archiveSearchParams({ ...selection, page: nextPage }));
             }}
           />
         </section>

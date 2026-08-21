@@ -510,3 +510,40 @@
 - 后端专项覆盖注册发信、令牌 HMAC 摘要/用途绑定/轮换/过期/单次消费、目标邮箱快照、配置 URL 抵抗 Host 注入、防枚举统一响应、冷却、投递失败、日志脱敏、SMTP TLS adapter、密码更新、旧 Access/Refresh Session 失效和 production 配置拒绝不安全邮件设置。
 - 已按 Browser Skill 尝试 `/forgot-password`、`/verify-email`、`/reset-password` 运行验收，但当前桌面安全策略拒绝本地 HTTP 导航，隔离后端/前端服务的启动权限也不可用；按策略未绕过。页面点按、真实 Console、浅/深色和移动端运行验证未计为通过。
 - 当前环境没有真实 SMTP 账号、可投递域名或 DNS 控制权，因此 STARTTLS 握手、实际到信、退信、垃圾邮件评分及 SPF/DKIM/DMARC 未验证；真实 MySQL 8 migration、S3 I/O 和 Redis 分布式限流也仍属于部署环境门禁。
+
+## 第二十三至第二十五阶段增量
+
+### 第二十三阶段：内容浏览完整化
+
+- Article/Note 列表接入 URL 驱动的作者、Tag、Collection 与类型专属筛选；Article 增加 Category 和发布/更新排序，Note 继续按 `occurred_at ?? published_at` 排列。
+- `PostCard`、详情页与 Archive 补齐类型专属元信息；Note 无封面时使用第一张有效图片或 Live Photo 静态图作为浏览缩略图。
+- Archive 的结果、年月 Facet、筛选项和总数统一在 ACL 后使用 semantic time 聚合。
+
+### 第二十四阶段：内容版本历史与恢复
+
+- `/me/posts/:postId/revisions` 提供作者专属时间线、历史 Markdown/媒体预览、变更摘要和确认恢复；“我的内容”对曾发布 Post 提供入口。
+- 恢复携带当前 `edit_version`，恢复前自动留存当前版本；失效 Category、Tag、封面或 Collection 以最小权限方式降级并显示明确反馈。
+- 版本页已通过 ESLint、生产构建和辅助逻辑回归；隔离浏览器没有可复用的已登录会话，因此桌面/390px 真实点按没有记为通过。
+
+### 第二十五阶段：往年今日
+
+- 首页增加最多四条 ACL 安全的“往年今日”预览；无匹配记录时只显示克制空状态和 Archive 入口。
+- 新增受保护 `/on-this-day` lazy route，按年份展示 Article/Note 混合记忆卡片、距今年数、年份摘要、URL 分页和越界页收敛。
+- 后端 `/api/v1/home/on-this-day` 只匹配往年同月同日；Article 使用 `published_at`，Note 使用 `occurred_at ?? published_at`，并允许当前仍可读的 archived 内容进入回忆。
+- 当前权威自动化：后端 `100/100`、前端 `64/64`、ESLint、Vite 生产构建、`BUNDLE_VERIFY_OK` 和静态清单均通过；真实登录态视觉验收仍需在可安全复用本地会话的环境补跑。
+
+### 第二十六阶段：Explore 朋友内容漫游
+
+- 新增受保护 `/explore` lazy route 与主导航入口，包含随机 Article、随机 Note、精选 Collection、往年今日、Tag 漫游和最近成员六个区块。
+- 默认每日 seed 保持结果稳定；“换一批”生成 URL-safe seed 并写入地址，可刷新和分享，不采集用户行为或建立画像。
+- Post 候选、Tag 数量与精选 Collection 在抽取前应用后端 ACL；随机区只使用 published，往年今日继续复用 archived 安全规则。
+- 最近成员只渲染公开头像、昵称、用户名、简介和地区；不返回邮箱、状态、加入时间、登录时间或贡献统计。
+- 当前权威自动化：后端 `101/101`、前端 `66/66`、ESLint、Vite 生产构建、Explore 独立页面块 `2.16 KiB gzip`、`BUNDLE_VERIFY_OK` 和 ACL 专项均通过；真实登录态视觉验收仍待补跑。
+
+### 第二十七阶段：相关阅读增强
+
+- Article 详情在正文与相邻文章导航后展示最多 4 篇相关阅读卡片；无结果时不渲染区块，少于 4 篇时不以无关内容补齐。
+- 卡片复用既有 Article 浏览结构，并增加真实命中关系说明：同 Collection、同 Category、共同 Tag 和同作者。
+- 后端先应用统一 ACL，再按严格分层的静态关系与 `published_at DESC, id DESC` 稳定排序；不使用任何阅读、互动、热门、画像或 AI 信号。
+- 当前权威自动化：后端 `102/102`、前端 `67/67`、ESLint、Vite 生产构建与 `BUNDLE_VERIFY_OK` 通过；专项覆盖 ACL、草稿/隐藏/删除排除、4 篇上限、分层排序、关联原因，以及紧凑卡片不误隐藏原因文本。
+- 隔离浏览器验收覆盖 0/1/2/4 篇、真实卡片跳转、无权 Collection 不泄露、深色模式、1280px/390px 无横向溢出和 Console；验收中发现并修复紧凑卡片旧摘要规则误隐藏原因文本。

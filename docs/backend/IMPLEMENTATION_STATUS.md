@@ -1,8 +1,8 @@
 # Ying-Mo V3.2 后端实现状态
 
-更新时间：2026-08-15
+更新时间：2026-08-21
 
-当前状态：**P0 基线、第二十一阶段“创作与长文阅读增强”、第二十二阶段“邮箱可信与账号恢复闭环”均已在未提交工作区实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
+当前状态：**P0 基线与第二十一至第二十七阶段均已实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
 
 ## P0 已实现
 
@@ -89,24 +89,42 @@
 - [x] Console 与邮件失败日志不输出完整邮箱、完整链接或原始令牌；账户页使用 `no-referrer`，误入 Query 的令牌也会清除。
 - [x] 密码重置成功通过无敏感数据的同源事件使其他标签页立即结束本地会话并释放受保护媒体。
 
+## 第二十三阶段：内容浏览完整化
+
+- [x] Article 列表支持作者、Category、Tag、Collection 与发布/更新排序；Note 列表支持作者、Tag、Collection 与发生时间/更新时间排序，全部状态写入可分享 URL。
+- [x] 新增 ACL 感知、按 Article/Note 类型裁剪的筛选选项；筛选、总数、分页与越界回退保持一致。
+- [x] 统一公开 Post 浏览序列化；Article 卡片补齐发布、更新、Category、Tags、Collection 与阅读时间，Note 卡片补齐发生时间、地点、心情、Tags、Collection 与影像入口。
+- [x] Note 无显式封面时，批量选取按绑定时间和 ID 排序的第一张有效图片或 Live Photo 静态图片，隐藏/删除媒体不会成为缩略图。
+- [x] Article 详情明确展示发布、更新和阅读时间；Note 详情明确区分记录时间与发布时间，并展示地点、心情、媒体、标签和合集。
+- [x] Archive 前端接通作者、Category、Tag、Collection 筛选；年月 Facet 和结果继续统一使用 Article `published_at`、Note `occurred_at ?? published_at`。
+
+## 第二十七阶段：相关阅读增强
+
+- [x] Article 详情页最多展示 4 篇相关阅读；不足时按真实数量展示，无结果时不渲染区块。
+- [x] 候选在关系计算前应用统一 Post / Collection ACL，排除草稿、隐藏、删除和无权 Collection 内容；当前仍可读的 archived Article 保持可发现。
+- [x] 静态关系严格按 Collection、Category、共同 Tag 数量、同作者轻量加分排序；同分按发布时间与 Post ID 稳定排序。
+- [x] 同作者不能单独构成候选资格；不使用阅读、点赞、收藏、热度、画像、AI 相似度或个性化信号。
+- [x] 卡片展示由实际命中规则生成的合集、分类、共同标签和同作者原因，不以无关最新内容补位。
+
 ## 验证状态
 
-- [x] 完整 pytest：88/88 passed。
-- [x] 前端 `npm run check`：ESLint、55/55 Node 回归、生产构建和包体预算全部通过。
+- [x] 完整 pytest：102/102 passed。
+- [x] 前端 `npm run check`：ESLint、67/67 Node 回归、生产构建和包体预算全部通过。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
 - [x] `MANIFEST.sha256` 已按当前后端源码重建，并由静态门禁执行可重复校验；旧重构路径不再冒充当前发布清单。
-- [x] Alembic 空库 upgrade 到 `20260815_0004`、legacy visibility upgrade/downgrade、`0002 → 0003` Post 版本回填/回退/重升与 Schema/Model 对齐。
+- [x] Alembic 空库 upgrade 到 `20260821_0006`、legacy visibility upgrade/downgrade、Post 版本回填，以及 Revision `0006` 降级/重升与 Schema/Model 对齐。
 - [x] MySQL dialect 对 18 张模型表和索引完成 DDL 编译。
 - [x] Production 配置加载验证（MySQL URL、S3 adapter、Redis limiter、SMTP/TLS/HTTPS 邮件配置约束）。
 - [x] Gunicorn 配置检查、进程启动、Health 和受保护 HTML Shell HTTP smoke。
 - [ ] 真实 MySQL 8 实例执行 migration：当前环境没有可连接的 MySQL 服务。
 - [ ] 真实 S3-compatible bucket 上传/读取与真实 Redis 限流压测：当前环境没有相应外部凭证和服务。
 - [ ] 真实 SMTP 服务上的 STARTTLS 握手、投递、退信与 SPF/DKIM/DMARC/DNS：当前环境没有可投递域名和凭证。
-- [ ] 阶段 22 真实浏览器运行验收：已按 Browser Skill 尝试，但当前桌面策略拒绝本地 HTTP 导航，隔离服务启动权限也不可用；未绕过、未记为通过。
+- [x] 阶段 27 隔离浏览器验收：0/1/2/4 篇、原因文本、卡片跳转、ACL 不泄露、浅深色、1280px/390px 与 Console 均通过；验收中发现并修复紧凑卡片误隐藏原因文本。
+- [ ] 阶段 22 真实浏览器运行验收：此前尝试时桌面策略拒绝本地 HTTP 导航；阶段 27 已可在当前环境运行，但尚未倒推补验阶段 22 的账户恢复流程。
 
-以上外部验证未伪造成“已通过”；代码路径、配置校验、本地私有存储和内存邮件集成测试已完成。P0 逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，阶段 21/22 见 `docs/backend/P1_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
+以上外部验证未伪造成“已通过”；代码路径、配置校验、本地私有存储和内存邮件集成测试已完成。P0 逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，阶段 21–27 见 `docs/backend/P1_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
 
 ## 后续 P1 / 非本次范围
 
-尚未实现且不计入本次阶段 21/22：Explore、往年今日、阅读统计、Revision、举报、多对多 Collection、关注、私信、实时协作、推荐算法和 creator 转让。邮箱验证、找回密码、草稿自动保存/版本冲突、数学公式、脚注和发布页长文阅读增强已实现，不再列入未完成范围。
+尚未实现且不计入阶段 21–27：举报、多对多 Collection、关注、私信、实时协作、推荐算法和 creator 转让。邮箱验证、找回密码、草稿自动保存/版本冲突、数学公式、脚注、阅读统计、内容浏览筛选、Revision、往年今日、Explore 和静态相关阅读已实现，不再列入未完成范围。

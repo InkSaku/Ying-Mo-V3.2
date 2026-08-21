@@ -2009,6 +2009,8 @@ Sitemap 只允许包含无动态内容的首页和 About，不得包含 Article�
 /archive                        归档
 /archive/:year                  年归档
 /archive/:year/:month           月归档
+/on-this-day                    往年今日
+/explore                        朋友内容漫游
 
 /categories/:slug               Category 页面
 /tags/:slug                     Tag 页面
@@ -2034,7 +2036,7 @@ Sitemap 只允许包含无动态内容的首页和 About，不得包含 Article�
 /admin                          管理后台
 ```
 
-游客可直接访问的前端路由仅包括 `/`、`/login`、`/register`、`/forgot-password`、`/verify-email`、`/reset-password` 和 `/about`。Article、Note、Collection、用户主页、Category、Tag、Archive、Search、互动、个人中心、创作与后台路由全部要求先确认有效登录；认证状态尚未确认时只显示加载状态，不提前请求内容。
+游客可直接访问的前端路由仅包括 `/`、`/login`、`/register`、`/forgot-password`、`/verify-email`、`/reset-password` 和 `/about`。Article、Note、Collection、用户主页、Category、Tag、Archive、往年今日、Explore、Search、互动、个人中心、创作与后台路由全部要求先确认有效登录；认证状态尚未确认时只显示加载状态，不提前请求内容。
 
 旧 `/life/*`、`/games/*` 和 `/guide/*` 不属于最终路由。
 
@@ -2053,6 +2055,7 @@ Sitemap 只允许包含无动态内容的首页和 About，不得包含 Article�
 ```text
 /auth
 /home
+/explore
 /users
 /posts
 /collections
@@ -3049,10 +3052,45 @@ flask db upgrade
 - 往年今日；
 - 阅读统计；
 - Tag 合并工具；
-- 更完整相关文章；
+- 静态相关阅读；
 - 内容编辑 Revision。
 
-当前实现进度：草稿自动保存、邮箱验证、找回密码、数学公式、脚注、Tag 合并工具和阅读统计已完成；Explore、往年今日和内容编辑 Revision 仍待后续阶段。相关文章已具备 ACL 过滤后的基础实现，更完整的相关性策略仍属于 P1。
+当前实现进度：草稿自动保存、邮箱验证、找回密码、数学公式、脚注、Tag 合并工具、阅读统计、内容编辑 Revision、往年今日、Explore 和静态相关阅读已完成。
+
+### P1 Explore 实现口径
+
+- 聚合随机 Article、随机 Note、精选 Collection、往年今日、Tag 漫游和最近加入成员；
+- 所有 Post 候选、Tag 计数和 Collection 必须先通过当前访问者 ACL，再参与抽取或返回；
+- 默认使用每日稳定 seed，同一 seed 返回稳定顺序；成员可通过“换一批”生成 URL-safe seed，不记录用户画像；
+- 随机 Post 仅使用 published 内容，往年今日继续按自身规则允许有权 archived 内容；
+- 最近成员只返回公开资料，不返回邮箱、账号状态、加入时间、登录信息或内容贡献统计；
+- 禁止使用阅读量、点赞、收藏、发文量或互动量排序，不建设热门榜、创作者排名、Feed 或个性化推荐。
+
+### P1 往年今日实现口径
+
+- Article 按 `published_at`、Note 按 `occurred_at ?? published_at` 匹配往年同月同日，不纳入当前年份；
+- published 与 archived 内容均可成为回忆，但必须在候选、计数、年份聚合和分页之前应用当前访问者 ACL；
+- 首页只提供少量预览，独立 `/on-this-day` 页面按年份从近到远组织并支持稳定分页；
+- 回忆卡片复用 Article/Note 的完整浏览信息与 Note 自动缩略图，不复制内容或媒体；
+- 第一版不发送“往年今日”通知，不建设推荐、Feed、排行榜、自动分享或历史互动提醒。
+
+### P1 内容编辑 Revision 实现口径
+
+- 仅对已发布或曾发布的 Article/Note 在成功修改前保存不可变快照；草稿自动保存不产生历史版本；
+- 快照覆盖内容、分类、标签、合集关联、可见性、Note 发生信息、封面、外部视频与 Article Slug，不复制二进制媒体；
+- 版本列表、详情与恢复只对 Post 作者本人开放，历史 Collection 名称继续服从当前成员权限；
+- 恢复必须提交当前 `edit_version`，冲突时不覆盖；恢复成功前先保存当前状态，使恢复操作本身也可逆；
+- 已失效或失权的 Category、Tag、Collection、封面按最小权限原则清除、跳过或回退为 private，并把降级结果明确返回给作者；
+- Article Slug 恢复继续走全局唯一约束和旧 Slug 重定向链，不允许历史版本绕过占用检查；
+- 第一版不提供多人协同编辑、逐字符 diff、分支版本、自动定时快照或媒体二进制复制。
+
+### P1 相关阅读实现口径
+
+- 仅在 Article 详情页展示最多 4 篇相关阅读；不足时按实际数量展示，没有合格候选时隐藏整个区块；
+- 候选必须先应用当前访问者的统一 Post / Collection ACL，并排除当前文章、草稿、隐藏和删除内容；
+- 关系使用可解释的静态层级：同 Collection、同 Category、共同 Tag 数量、同作者轻量加分；同作者不能单独构成候选资格；
+- 同分按 `published_at DESC, id DESC` 稳定排序，卡片展示由真实命中关系生成的合集、分类、共同标签和同作者原因；
+- 不使用阅读量、点赞、收藏、热度、用户画像、AI 相似度或个性化信号，不以无关内容补位，不建设无限 Feed。
 
 ### P1 阅读统计实现口径
 

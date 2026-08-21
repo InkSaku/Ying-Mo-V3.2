@@ -5,6 +5,7 @@ from flask_jwt_extended import jwt_required
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy.orm import aliased
 
 from app.access import can_read_post, is_collection_member, readable_post_predicate, semantic_time_expression
 from app.common.auth import current_user
@@ -15,12 +16,18 @@ from app.common.validation import parse_iso_datetime, validate_external_url
 from app.extensions import db
 from app.models import (
     ArticleSlug, Category, Collection, Comment, ContentFavorite, ContentLike, Notification,
-    Media, Post, PostReadEvent, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
+    Media, Post, PostReadEvent, PostRevision, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
 )
 from app.posts.service import (
     DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
     publish_post, update_article_slug,
 )
+from app.posts.browsing import estimate_reading_minutes, first_display_media, serialize_browse_post
+from app.posts.revisions import (
+    changed_snapshot_fields, create_revision, restore_revision_snapshot,
+    revision_detail, snapshot_post,
+)
+from app.posts.related import related_articles
 
 bp = Blueprint("posts", __name__)
 
@@ -108,6 +115,10 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
         ]
         if data.get("cover_media") and management:
             data["cover_media"] = post.cover_media.to_dict(include_manage_paths=True)
+        data["reading_minutes"] = (
+            estimate_reading_minutes(post.body)
+            if post.post_type == PostType.ARTICLE.value else None
+        )
     return data
 
 
@@ -155,10 +166,18 @@ def _apply_versioned_patch(post, actor, data, *, require_version=False):
                 "原 Collection 已不可用。请改为独立草稿或选择其他 Collection。",
                 409,
             )
-    _apply_patch(post, actor, payload)
-    # A relationship-only edit (for example Tags) must still advance the version.
-    post.updated_at = utcnow()
+    source_edit_version = post.edit_version
+    before = snapshot_post(post) if post.was_published else None
     try:
+        _apply_patch(post, actor, payload)
+        if before is not None:
+            changed_fields = changed_snapshot_fields(before, snapshot_post(post))
+            create_revision(
+                post, before, changed_fields, reason="manual_edit",
+                source_edit_version=source_edit_version,
+            )
+        # A relationship-only edit (for example Tags) must still advance the version.
+        post.updated_at = utcnow()
         db.session.commit()
     except StaleDataError:
         post_id = post.id
@@ -198,16 +217,7 @@ def _detail(post,actor):
         def nav(item):
             return {"id":item.id,"title":item.title,"slug":current_article_slug(item.id)} if item else None
         data["previous"]=nav(previous); data["next"]=nav(following)
-        related_filter=[]
-        if post.category_id is not None: related_filter.append(Post.category_id==post.category_id)
-        tag_ids=[tag.id for tag in post.tags]
-        if tag_ids: related_filter.append(Post.tags.any(Tag.id.in_(tag_ids)))
-        if related_filter:
-            related=db.session.scalars(db.select(Post).where(
-                readable_post_predicate(actor.id,include_archived=True),
-                Post.post_type==PostType.ARTICLE.value,Post.id!=post.id,or_(*related_filter),
-            ).order_by(Post.published_at.desc(),Post.id.desc()).limit(5)).all()
-            data["related"]=[{"id":item.id,"title":item.title,"slug":current_article_slug(item.id)} for item in related]
+        data["related"] = related_articles(post, actor.id)
     return data
 
 
@@ -357,10 +367,13 @@ def list_posts():
             stmt = stmt.join(User, User.id == Post.author_id).where(User.username_normalized == author.lower())
     collection = request.args.get("collection")
     if collection:
+        collection_filter = aliased(Collection)
         if collection.isdigit():
             stmt = stmt.where(Post.collection_id == int(collection))
         else:
-            stmt = stmt.join(Collection, Collection.id == Post.collection_id).where(Collection.slug == collection)
+            stmt = stmt.join(collection_filter, collection_filter.id == Post.collection_id).where(
+                collection_filter.slug == collection
+            )
     category = request.args.get("category")
     if category:
         if category.isdigit():
@@ -388,7 +401,56 @@ def list_posts():
         stmt.order_by(*order)
         .offset((page - 1) * size).limit(size)
     ).all()
-    return success_response([_serialize(p, include_body=False, actor_id=actor.id) for p in rows], meta=pagination_meta(page, size, total))
+    display_media = first_display_media(rows)
+    return success_response(
+        [serialize_browse_post(p, actor_id=actor.id, display_media=display_media) for p in rows],
+        meta=pagination_meta(page, size, total),
+    )
+
+
+@bp.get("/filter-options")
+@jwt_required(locations=["headers"])
+def filter_options():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    post_type = request.args.get("post_type")
+    if post_type is not None and post_type not in {PostType.ARTICLE.value, PostType.NOTE.value}:
+        return error_response("VALIDATION_ERROR", "post_type 不合法。", 422)
+
+    scope_filters = [readable_post_predicate(actor.id, include_archived=True)]
+    if post_type is not None:
+        scope_filters.append(Post.post_type == post_type)
+    scope = db.select(Post.id).where(*scope_filters).subquery()
+    authors = db.session.scalars(
+        db.select(User).join(Post, Post.author_id == User.id).join(scope, scope.c.id == Post.id)
+        .distinct().order_by(User.nickname.asc(), User.id.asc())
+    ).all()
+    collections = db.session.scalars(
+        db.select(Collection).join(Post, Post.collection_id == Collection.id).join(scope, scope.c.id == Post.id)
+        .distinct().order_by(Collection.name.asc(), Collection.id.asc())
+    ).all()
+    tags = db.session.scalars(
+        db.select(Tag).join(post_tags, post_tags.c.tag_id == Tag.id)
+        .join(scope, scope.c.id == post_tags.c.post_id)
+        .where(Tag.is_active.is_(True)).distinct().order_by(Tag.name.asc(), Tag.id.asc())
+    ).all()
+    categories = []
+    if post_type != PostType.NOTE.value:
+        categories = db.session.scalars(
+            db.select(Category).join(Post, Post.category_id == Category.id).join(scope, scope.c.id == Post.id)
+            .where(Category.is_active.is_(True)).distinct()
+            .order_by(Category.sort_order.asc(), Category.name.asc(), Category.id.asc())
+        ).all()
+    return success_response({
+        "authors": [user.public_dict() for user in authors],
+        "categories": [category.to_dict() for category in categories],
+        "tags": [tag.to_dict() for tag in tags],
+        "collections": [
+            {"id": collection.id, "name": collection.name, "slug": collection.slug}
+            for collection in collections
+        ],
+    })
 
 
 @bp.get("/<int:post_id>")
@@ -463,7 +525,7 @@ def record_read(post_id):
     try:
         db.session.commit()
     except IntegrityError:
-        # The unique bucket constraint makes concurrent duplicate reports harmless.
+        # The unique bucket constraint makes concurrent duplicate read attempts harmless.
         db.session.rollback()
         return success_response({"recorded": False})
     return success_response({"recorded": True})
@@ -598,7 +660,15 @@ def move_collection(post_id):
     if "collection_id" not in data:
         return error_response("VALIDATION_ERROR", "collection_id 为必填项。", 422)
     try:
+        source_edit_version = post.edit_version
+        before = snapshot_post(post) if post.was_published else None
         apply_collection(post, actor.id, data["collection_id"])
+        if before is not None:
+            create_revision(
+                post, before, changed_snapshot_fields(before, snapshot_post(post)),
+                reason="collection_change", source_edit_version=source_edit_version,
+            )
+        post.updated_at = utcnow()
         db.session.commit()
     except DomainError as error:
         db.session.rollback()
@@ -615,9 +685,17 @@ def remove_from_collection(post_id):
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    source_edit_version = post.edit_version
+    before = snapshot_post(post) if post.was_published else None
     post.collection_id = None
     post.collection_sort_order = None
     post.visibility = PostVisibility.PRIVATE.value
+    if before is not None:
+        create_revision(
+            post, before, changed_snapshot_fields(before, snapshot_post(post)),
+            reason="collection_change", source_edit_version=source_edit_version,
+        )
+    post.updated_at = utcnow()
     db.session.commit()
     return success_response(_serialize(post, actor_id=actor.id, management=True))
 
@@ -694,3 +772,91 @@ def my_post_detail(post_id):
     if post is None or post.author_id!=actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
     return success_response(_serialize(post,actor_id=actor.id,management=True))
+
+
+@bp.get("/me/<int:post_id>/revisions")
+@jwt_required(locations=["headers"])
+def my_post_revisions(post_id):
+    actor = current_user()
+    post = db.session.get(Post, post_id)
+    args = parse_pagination(default_size=20, max_size=50)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if not args:
+        return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
+    page, size = args
+    stmt = db.select(PostRevision).where(PostRevision.post_id == post.id)
+    total = db.session.scalar(db.select(func.count()).select_from(stmt.subquery())) or 0
+    rows = db.session.scalars(
+        stmt.order_by(PostRevision.created_at.desc(), PostRevision.id.desc())
+        .offset((page - 1) * size).limit(size)
+    ).all()
+    return success_response(
+        [revision.summary_dict() for revision in rows],
+        meta=pagination_meta(page, size, total),
+    )
+
+
+@bp.get("/me/<int:post_id>/revisions/<int:revision_id>")
+@jwt_required(locations=["headers"])
+def my_post_revision_detail(post_id, revision_id):
+    actor = current_user()
+    post = db.session.get(Post, post_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    revision = db.session.get(PostRevision, revision_id)
+    if revision is None or revision.post_id != post.id:
+        return error_response("RESOURCE_NOT_FOUND", "历史版本不存在。", 404)
+    return success_response(revision_detail(revision, actor.id))
+
+
+@bp.post("/me/<int:post_id>/revisions/<int:revision_id>/restore")
+@jwt_required(locations=["headers"])
+def restore_post_revision(post_id, revision_id):
+    actor = current_user()
+    post = db.session.get(Post, post_id)
+    data = request.get_json(silent=True)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    revision = db.session.get(PostRevision, revision_id)
+    if revision is None or revision.post_id != post.id:
+        return error_response("RESOURCE_NOT_FOUND", "历史版本不存在。", 404)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    try:
+        payload, expected_version = _extract_expected_version(data, required=True)
+        if payload:
+            raise DomainError("VALIDATION_ERROR", "恢复操作仅接受 expected_version。", 422)
+        if expected_version != post.edit_version:
+            return _edit_conflict(post, expected_version)
+        source_edit_version = post.edit_version
+        before = snapshot_post(post)
+        warnings = restore_revision_snapshot(post, revision, actor)
+        changed_fields = changed_snapshot_fields(before, snapshot_post(post))
+        if not changed_fields:
+            db.session.rollback()
+            return error_response("REVISION_NO_CHANGES", "当前内容已经与该历史版本一致。", 409)
+        create_revision(
+            post, before, changed_fields, reason="restore",
+            source_edit_version=source_edit_version,
+        )
+        post.updated_at = utcnow()
+        db.session.commit()
+    except (DomainError, IntegrityError, StaleDataError) as error:
+        db.session.rollback()
+        if isinstance(error, StaleDataError):
+            current = db.session.get(Post, post_id)
+            return _edit_conflict(current, data.get("expected_version"))
+        if isinstance(error, IntegrityError):
+            return error_response("EDIT_CONFLICT", "内容版本已经变化，请重新载入后再恢复。", 409)
+        return _handle_domain(error)
+    return success_response({
+        "post": _serialize(post, actor_id=actor.id, management=True),
+        "warnings": warnings,
+    })

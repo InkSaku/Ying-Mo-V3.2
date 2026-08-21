@@ -1,6 +1,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import extract, func
+from sqlalchemy.orm import aliased
 
 from app.access import readable_post_predicate, semantic_time_expression
 from app.common.auth import current_user
@@ -8,7 +9,7 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import Category, Collection, Post, Tag, User, post_tags
-from app.posts.service import current_article_slug
+from app.posts.browsing import first_display_media, serialize_browse_post
 
 bp = Blueprint("archive", __name__)
 
@@ -31,18 +32,12 @@ def _scoped_statement(actor_id):
         stmt = stmt.where(Tag.id == int(tag)) if tag.isdigit() else stmt.where(Tag.slug == tag)
     collection = request.args.get("collection")
     if collection:
-        stmt = stmt.join(Collection, Collection.id == Post.collection_id)
-        stmt = stmt.where(Collection.id == int(collection)) if collection.isdigit() else stmt.where(
-            Collection.slug == collection
+        collection_filter = aliased(Collection)
+        stmt = stmt.join(collection_filter, collection_filter.id == Post.collection_id)
+        stmt = stmt.where(collection_filter.id == int(collection)) if collection.isdigit() else stmt.where(
+            collection_filter.slug == collection
         )
     return stmt
-
-
-def _serialize(post):
-    item = post.to_dict(include_body=False)
-    if post.post_type == "article":
-        item["slug"] = current_article_slug(post.id)
-    return item
 
 
 def _archive_response(actor_id, year=None, month=None):
@@ -62,6 +57,7 @@ def _archive_response(actor_id, year=None, month=None):
     rows = db.session.scalars(
         stmt.order_by(time_expr.desc(), Post.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
+    display_media = first_display_media(rows)
 
     facet_base = _scoped_statement(actor_id).with_only_columns(
         extract("year", time_expr).label("year"),
@@ -76,7 +72,7 @@ def _archive_response(actor_id, year=None, month=None):
         if row.year is not None and row.month is not None
     ]
     return success_response(
-        {"items": [_serialize(post) for post in rows], "month_facets": facets},
+        {"items": [serialize_browse_post(post, actor_id=actor_id, display_media=display_media) for post in rows], "month_facets": facets},
         meta=pagination_meta(page, size, total),
     )
 

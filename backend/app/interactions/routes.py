@@ -9,6 +9,7 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import ContentFavorite, ContentLike, Post
+from app.posts.browsing import serialize_browse_posts
 
 bp=Blueprint("interactions",__name__)
 
@@ -84,10 +85,5 @@ def favorites():
         )
     total=db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows=db.session.scalars(stmt.order_by(ContentFavorite.created_at.desc()).offset((page-1)*size).limit(size)).all()
-    from app.posts.service import current_article_slug
-    items=[]
-    for post in rows:
-        item=post.to_dict(include_body=False)
-        if post.post_type=="article": item["slug"]=current_article_slug(post.id)
-        items.append(item)
+    items=serialize_browse_posts(rows,actor_id=actor.id)
     return success_response(items,meta=pagination_meta(page,size,total))

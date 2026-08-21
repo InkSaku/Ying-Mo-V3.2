@@ -207,6 +207,7 @@ export function MyPostsPage() {
                   </button>
                 ) : null}
                 <Link className="btn btn-secondary" to={`/write/${post.id}`}>编辑</Link>
+                {post.published_at ? <Link className="btn btn-secondary" to={`/me/posts/${post.id}/revisions`}>版本历史</Link> : null}
                 {post.status === "draft" ? <button className="btn btn-primary" type="button" onClick={() => beginAction("publish", post)}>发布</button> : null}
                 {post.status === "published" ? <button className="btn btn-secondary" type="button" onClick={() => beginAction("archive", post)}>归档</button> : null}
                 {post.collection_id ? <button className="text-button" type="button" onClick={() => beginAction("detach", post)}>移出合集</button> : null}

@@ -13,6 +13,7 @@ from app.models import (
     PostVisibility, User, UserStatus,
 )
 from app.posts.service import current_article_slug
+from app.posts.browsing import serialize_browse_posts
 
 bp = Blueprint("users", __name__)
 
@@ -86,12 +87,7 @@ def profile(username):
         .offset((collections_page - 1) * page_size).limit(page_size)
     ).all()
 
-    serialized_posts = []
-    for post in posts:
-        item = post.to_dict(include_body=False)
-        if post.post_type == "article":
-            item["slug"] = current_article_slug(post.id)
-        serialized_posts.append(item)
+    serialized_posts = serialize_browse_posts(posts, actor_id=actor.id)
     return success_response({
         "user": user.public_dict(),
         "posts": serialized_posts,

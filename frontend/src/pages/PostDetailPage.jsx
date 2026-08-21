@@ -11,6 +11,7 @@ import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { PostMediaGallery } from "../components/PostMediaGallery";
 import { InteractionBar } from "../components/InteractionBar";
 import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
+import { PostCard } from "../components/PostCard";
 import { installVisibleReadTracker } from "../lib/readingStats";
 
 export function PostDetailPage({ type }) {
@@ -61,6 +62,20 @@ export function PostDetailPage({ type }) {
           <div>{post.next ? <Link to={`/articles/${post.next.slug}`}>下一篇：{post.next.title}</Link> : null}</div>
         </nav>
       ) : null}
+
+      {post.post_type === "article" && post.related?.length ? (
+        <section className="related-articles" aria-labelledby="related-articles-title">
+          <div className="section-header">
+            <div>
+              <h2 id="related-articles-title">相关阅读</h2>
+              <p>根据合集、分类与标签的明确关联整理</p>
+            </div>
+          </div>
+          <div className="related-articles-grid">
+            {post.related.map((item) => <PostCard key={item.id} post={item} compact />)}
+          </div>
+        </section>
+      ) : null}
     </>
   );
 
@@ -70,7 +85,6 @@ export function PostDetailPage({ type }) {
         <header className={`post-detail-header ${post.post_type === "article" ? "article-reading-width" : ""}`}>
           <div className="post-detail-meta">
             <span>{postTypeLabel(post.post_type)}</span>
-            <time dateTime={post.semantic_time || post.published_at}>{formatDate(post.semantic_time || post.published_at, true)}</time>
             {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
           </div>
           <h1>{post.title || (post.post_type === "note" ? "随记" : "未命名文章")}</h1>
@@ -80,12 +94,22 @@ export function PostDetailPage({ type }) {
             {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
             {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
           </div>
-          {post.post_type === "note" && (post.location || post.mood) ? (
-            <div className="note-context">
-              {post.location ? <span>地点：{post.location}</span> : null}
-              {post.mood ? <span>心情：{post.mood}</span> : null}
-            </div>
-          ) : null}
+          <dl className="post-facts">
+            {post.post_type === "article" ? (
+              <>
+                <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
+                <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
+                {post.reading_minutes ? <div><dt>阅读时间</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
+              </>
+            ) : (
+              <>
+                <div><dt>记录时间</dt><dd><time dateTime={post.semantic_time}>{formatDate(post.semantic_time, true)}</time></dd></div>
+                <div><dt>发布时间</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
+                {post.location ? <div><dt>地点</dt><dd>{post.location}</dd></div> : null}
+                {post.mood ? <div><dt>心情</dt><dd>{post.mood}</dd></div> : null}
+              </>
+            )}
+          </dl>
         </header>
 
         <ProtectedImage

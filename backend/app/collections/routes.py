@@ -13,7 +13,8 @@ from app.common.responses import error_response, success_response
 from app.common.validation import SLUG_RE
 from app.extensions import db
 from app.models import Collection, CollectionMember, Media, Notification, Post, PostVisibility, User, UserStatus
-from app.posts.service import DomainError, current_article_slug
+from app.posts.service import DomainError
+from app.posts.browsing import serialize_browse_posts
 
 bp = Blueprint("collections", __name__)
 
@@ -66,12 +67,7 @@ def get_collection(slug):
         )
     ).all()
     data = collection.to_dict(include_members=True)
-    data["posts"] = []
-    for post in posts:
-        item = post.to_dict(include_body=False)
-        if post.post_type == "article":
-            item["slug"] = current_article_slug(post.id)
-        data["posts"].append(item)
+    data["posts"] = serialize_browse_posts(posts, actor_id=actor.id)
     return success_response(data)
 
 

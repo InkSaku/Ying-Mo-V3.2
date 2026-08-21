@@ -83,6 +83,7 @@ class Post(db.Model):
     cover_media = db.relationship("Media", foreign_keys=[cover_media_id])
     category = db.relationship("Category")
     tags = db.relationship("Tag", secondary=post_tags)
+    revisions = db.relationship("PostRevision", back_populates="post", cascade="all, delete-orphan")
 
     @property
     def was_published(self):

@@ -13,23 +13,38 @@ export function readArchiveSelection(params) {
   return {
     year,
     month,
+    author: (params.get("author") || "").trim(),
+    category: (params.get("category") || "").trim(),
+    tag: (params.get("tag") || "").trim(),
+    collection: (params.get("collection") || "").trim(),
     page: positiveInteger(params.get("page")),
   };
 }
 
-export function archiveSearchParams({ year = "", month = "", page = 1 }) {
+export function archiveSearchParams({ year = "", month = "", author = "", category = "", tag = "", collection = "", page = 1 }) {
   const params = new URLSearchParams();
   if (year) params.set("year", String(year));
   if (year && month) params.set("month", String(month));
+  if (author) params.set("author", author);
+  if (category) params.set("category", category);
+  if (tag) params.set("tag", tag);
+  if (collection) params.set("collection", collection);
   if (page > 1) params.set("page", String(page));
   return params;
 }
 
-export function archiveApiPath({ year = "", month = "", page = 1 }, pageSize = 20) {
+export function archiveApiPath(selection, pageSize = 20) {
+  const { year = "", month = "", page = 1 } = selection;
   const route = year
     ? month ? `/archive/${year}/${month}` : `/archive/${year}`
     : "/archive";
-  return `${route}?page=${page}&page_size=${pageSize}`;
+  const params = new URLSearchParams();
+  for (const key of ["author", "category", "tag", "collection"]) {
+    if (selection[key]) params.set(key, selection[key]);
+  }
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  return `${route}?${params.toString()}`;
 }
 
 export function groupArchiveFacets(facets = []) {
