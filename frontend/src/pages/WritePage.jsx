@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
+import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -91,13 +91,6 @@ function validExternalUrl(value) {
   }
 }
 
-function pastedImages(event) {
-  return Array.from(event.clipboardData?.items || [])
-    .filter((item) => item.kind === "file")
-    .map((item) => item.getAsFile())
-    .filter((file) => file && acceptedInlineImageTypes.has(file.type));
-}
-
 export function WritePage() {
   const { postId } = useParams();
   const [params] = useSearchParams();
@@ -115,14 +108,22 @@ export function WritePage() {
   const [savedPost, setSavedPost] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [editorMode, setEditorMode] = useState("write");
+  const [bodyEditorOpen, setBodyEditorOpen] = useState(false);
+  const [editorBody, setEditorBody] = useState("");
+  const [editorBaseline, setEditorBaseline] = useState("");
+  const [editorSaving, setEditorSaving] = useState(false);
+  const [editorUploading, setEditorUploading] = useState(false);
+  const [editorError, setEditorError] = useState("");
+  const [editorMessage, setEditorMessage] = useState("");
+  const [editorExitConfirmOpen, setEditorExitConfirmOpen] = useState(false);
   const [preview, setPreview] = useState({ html: "", loading: false, error: "" });
-  const [draggingImage, setDraggingImage] = useState(false);
   const [autosave, setAutosave] = useState({ status: "idle", message: "", savedAt: null });
   const [autosaveRetryKey, setAutosaveRetryKey] = useState(0);
   const [reloadConflictOpen, setReloadConflictOpen] = useState(false);
   const bodyEditorRef = useRef(null);
+  const editorBodyRef = useRef("");
   const pendingEditorSelectionRef = useRef(null);
+  const pendingMediaInsertionRef = useRef(null);
   const mediaManagerRef = useRef(null);
   const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
   const payloadRef = useRef(initialPayload);
@@ -135,7 +136,7 @@ export function WritePage() {
   usePageMeta(postId ? "编辑记录" : "新建记录");
 
   useLayoutEffect(() => {
-    if (editorMode !== "write") return;
+    if (!bodyEditorOpen) return;
     const selection = pendingEditorSelectionRef.current;
     const editor = bodyEditorRef.current;
     if (!selection || !editor) return;
@@ -143,7 +144,7 @@ export function WritePage() {
     pendingEditorSelectionRef.current = null;
     editor.focus();
     editor.setSelectionRange(selection[0], selection[1]);
-  }, [editorMode, form.body]);
+  }, [bodyEditorOpen, editorBody]);
 
   useEffect(() => {
     let active = true;
@@ -209,12 +210,12 @@ export function WritePage() {
   }, [postId, reloadKey, requestedCollection, requestedType]);
 
   useEffect(() => {
-    if (editorMode !== "preview") return undefined;
+    if (!bodyEditorOpen) return undefined;
     const controller = new AbortController();
     setPreview((current) => ({ ...current, loading: true, error: "" }));
     const timer = window.setTimeout(async () => {
       try {
-        const result = await api.post("/posts/preview", { body: form.body || "" }, { signal: controller.signal });
+        const result = await api.post("/posts/preview", { body: editorBody || "" }, { signal: controller.signal });
         setPreview({ html: result.data?.rendered_html || "", loading: false, error: "" });
       } catch (previewError) {
         if (previewError?.code !== "REQUEST_ABORTED") {
@@ -227,12 +228,15 @@ export function WritePage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [editorMode, form.body]);
+  }, [bodyEditorOpen, editorBody]);
 
   const isPublished = Boolean(savedPost?.published_at);
   const inCollection = Boolean(form.collection_id);
   const title = form.post_type === "article" ? "Article" : "Note";
-  const inlineMediaIds = useMemo(() => mediaIdsInMarkdown(form.body), [form.body]);
+  const inlineMediaIds = useMemo(
+    () => mediaIdsInMarkdown(bodyEditorOpen ? editorBody : form.body),
+    [bodyEditorOpen, editorBody, form.body],
+  );
   const collectionUnavailable = Boolean(
     form.collection_id && !collections.some((collection) => String(collection.id) === form.collection_id)
   );
@@ -314,7 +318,7 @@ export function WritePage() {
   const savedPostStatus = savedPost?.status;
 
   useEffect(() => {
-    if (loading || !routeReadyRef.current || autosaveBlockedRef.current) return undefined;
+    if (loading || bodyEditorOpen || !routeReadyRef.current || autosaveBlockedRef.current) return undefined;
     if (savedPostStatus && savedPostStatus !== "draft") return undefined;
     const fingerprint = draftFingerprint(payload);
     if (fingerprint === lastSavedFingerprintRef.current) return undefined;
@@ -324,7 +328,7 @@ export function WritePage() {
       saveDraftSnapshot(payload, { automatic: true }).catch(() => {});
     }, AUTOSAVE_DELAY);
     return () => window.clearTimeout(timer);
-  }, [autosaveRetryKey, loading, payload, savedPostStatus, saveDraftSnapshot]);
+  }, [autosaveRetryKey, bodyEditorOpen, loading, payload, savedPostStatus, saveDraftSnapshot]);
 
   const set = (key) => (event) => {
     setError("");
@@ -347,6 +351,67 @@ export function WritePage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const openBodyEditor = () => {
+    const body = form.body || "";
+    editorBodyRef.current = body;
+    setEditorBody(body);
+    setEditorBaseline(body);
+    setEditorError("");
+    setEditorMessage("");
+    setPreview({ html: "", loading: false, error: "" });
+    setBodyEditorOpen(true);
+  };
+
+  const updateEditorBody = (value) => {
+    editorBodyRef.current = value;
+    setEditorBody(value);
+    setEditorError("");
+    setEditorMessage("");
+  };
+
+  const saveEditorBody = async ({ close = false, showMessage = true, allowWhileUploading = false } = {}) => {
+    if (editorSaving || (editorUploading && !allowWhileUploading)) return null;
+    const body = editorBodyRef.current;
+    const snapshot = { ...payloadRef.current, body: body || null };
+    payloadRef.current = snapshot;
+    setForm((current) => ({ ...current, body }));
+    setEditorSaving(true);
+    setEditorError("");
+    if (showMessage) setEditorMessage("");
+    try {
+      const result = await saveDraftSnapshot(snapshot);
+      setEditorBaseline(body);
+      if (showMessage) setEditorMessage("草稿已保存，可以继续编辑。");
+      if (close) setBodyEditorOpen(false);
+      return result;
+    } catch (saveError) {
+      setEditorError(saveError.code === "EDIT_CONFLICT" ? "检测到其他窗口的修改，请先处理版本冲突。" : saveError.message);
+      return null;
+    } finally {
+      setEditorSaving(false);
+    }
+  };
+
+  const requestBodyEditorClose = () => {
+    if (editorSaving || editorUploading) return;
+    if (editorBodyRef.current !== editorBaseline) {
+      setEditorExitConfirmOpen(true);
+      return;
+    }
+    setBodyEditorOpen(false);
+  };
+
+  const discardBodyEditorChanges = () => {
+    const body = editorBaseline;
+    const snapshot = { ...payloadRef.current, body: body || null };
+    editorBodyRef.current = body;
+    payloadRef.current = snapshot;
+    setEditorBody(body);
+    setForm((current) => ({ ...current, body }));
+    setEditorExitConfirmOpen(false);
+    setBodyEditorOpen(false);
   };
 
   const reloadServerDraft = async () => {
@@ -418,16 +483,15 @@ export function WritePage() {
 
   const applyMarkdownFormat = (action) => {
     const textarea = bodyEditorRef.current;
-    const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : form.body.length;
-    const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : selectionStart;
-    setForm((current) => {
-      const next = applyMarkdownShortcut(current.body, selectionStart, selectionEnd, action);
-      pendingEditorSelectionRef.current = [next.selectionStart, next.selectionEnd];
-      return { ...current, body: next.value };
-    });
-    setEditorMode("write");
-    setError("");
-    setMessage("");
+    const source = editorBodyRef.current;
+    const selectionStart = textarea ? textarea.selectionStart : source.length;
+    const selectionEnd = textarea ? textarea.selectionEnd : selectionStart;
+    const next = applyMarkdownShortcut(source, selectionStart, selectionEnd, action);
+    editorBodyRef.current = next.value;
+    pendingEditorSelectionRef.current = [next.selectionStart, next.selectionEnd];
+    setEditorBody(next.value);
+    setEditorError("");
+    setEditorMessage("");
   };
 
   const handleBodyKeyDown = (event) => {
@@ -439,21 +503,37 @@ export function WritePage() {
 
   const insertMediaIntoBody = (mediaId) => {
     const textarea = bodyEditorRef.current;
-    const selectionStart = editorMode === "write" && textarea ? textarea.selectionStart : null;
-    const selectionEnd = editorMode === "write" && textarea ? textarea.selectionEnd : null;
-    setForm((current) => {
-      const start = selectionStart ?? current.body.length;
+    const pendingInsertion = pendingMediaInsertionRef.current;
+    const selectionStart = pendingInsertion?.[0] ?? (bodyEditorOpen && textarea ? textarea.selectionStart : null);
+    const selectionEnd = pendingInsertion?.[1] ?? (bodyEditorOpen && textarea ? textarea.selectionEnd : null);
+    if (bodyEditorOpen) {
+      const source = editorBodyRef.current;
+      const start = selectionStart ?? source.length;
       const end = selectionEnd ?? start;
-      const next = insertMediaPlaceholder(current.body, mediaId, start, end);
+      const next = insertMediaPlaceholder(source, mediaId, start, end);
+      editorBodyRef.current = next.value;
       pendingEditorSelectionRef.current = [next.cursor, next.cursor];
+      if (pendingInsertion) pendingMediaInsertionRef.current = [next.cursor, next.cursor];
+      setEditorBody(next.value);
+      setEditorError("");
+      setEditorMessage("图片已插入正文；取消编辑不会删除已经上传的媒体。");
+      return;
+    }
+    setForm((current) => {
+      const start = current.body.length;
+      const next = insertMediaPlaceholder(current.body, mediaId, start, start);
       return { ...current, body: next.value };
     });
-    setEditorMode("write");
     setError("");
     setMessage("媒体已插入正文；保存草稿或发布后会永久保留这个位置。");
   };
 
   const removeMediaFromBody = (mediaIds) => {
+    if (bodyEditorOpen) {
+      const nextBody = removeMediaPlaceholders(editorBodyRef.current, mediaIds);
+      editorBodyRef.current = nextBody;
+      setEditorBody(nextBody);
+    }
     setForm((current) => ({
       ...current,
       body: removeMediaPlaceholders(current.body, mediaIds),
@@ -461,31 +541,38 @@ export function WritePage() {
   };
 
   const uploadInlineImages = async (files) => {
-    for (const file of files) {
-      const manager = mediaManagerRef.current;
-      if (!manager?.uploadImageFile) return;
-      await manager.uploadImageFile(file, { insertIntoBody: true });
-    }
-  };
-
-  const handleBodyDrop = async (event) => {
-    const files = Array.from(event.dataTransfer?.files || []);
-    if (!files.length) return;
-    event.preventDefault();
-    setDraggingImage(false);
     const images = files.filter((file) => acceptedInlineImageTypes.has(file.type));
     if (!images.length) {
-      setError("正文拖拽只支持 JPEG、PNG 或 WebP 图片；Live Photo 请使用下方配对上传。");
+      setEditorError("只支持 JPEG、PNG 或 WebP 图片；Live Photo 请使用页面下方的配对上传。");
       return;
     }
-    await uploadInlineImages(images);
-  };
-
-  const handleBodyPaste = async (event) => {
-    const images = pastedImages(event);
-    if (!images.length) return;
-    event.preventDefault();
-    await uploadInlineImages(images);
+    setEditorUploading(true);
+    setEditorError("");
+    setEditorMessage("");
+    const textarea = bodyEditorRef.current;
+    pendingMediaInsertionRef.current = bodyEditorOpen && textarea
+      ? [textarea.selectionStart, textarea.selectionEnd]
+      : null;
+    try {
+      const manager = mediaManagerRef.current;
+      if (!manager?.uploadImageFile) throw new Error("图片上传组件尚未准备好，请稍后重试。");
+      const currentPost = bodyEditorOpen
+        ? await saveEditorBody({ showMessage: false, allowWhileUploading: true })
+        : await persistDraft(false);
+      if (!currentPost) return;
+      for (const file of images) {
+        await manager.uploadImageFile(file, {
+          insertIntoBody: true,
+          rethrow: true,
+          postOverride: currentPost,
+        });
+      }
+    } catch (uploadError) {
+      setEditorError(uploadError.message || "图片上传失败，请重试。");
+    } finally {
+      pendingMediaInsertionRef.current = null;
+      setEditorUploading(false);
+    }
   };
 
   if (loading) return <PageLoader label="正在读取草稿" />;
@@ -595,85 +682,26 @@ export function WritePage() {
             <div className="editor-body-toolbar">
               <div>
                 <span id="editor-body-heading">正文</span>
-                <small>支持 Markdown；不熟悉语法时可直接使用快捷按钮，图片也可以拖入或粘贴。</small>
+                <small>点击正文区域，进入左右分栏的 Markdown 实时预览编辑器。</small>
               </div>
-              <div className="editor-mode-tabs" role="tablist" aria-label="正文编辑模式">
-                <button type="button" role="tab" aria-selected={editorMode === "write"} className={editorMode === "write" ? "active" : ""} onClick={() => setEditorMode("write")}>编辑</button>
-                <button type="button" role="tab" aria-selected={editorMode === "preview"} className={editorMode === "preview" ? "active" : ""} onClick={() => setEditorMode("preview")}>安全预览</button>
-              </div>
+              <button className="btn btn-secondary" type="button" onClick={openBodyEditor}>展开编辑</button>
             </div>
-
-            {editorMode === "write" ? (
-              <div className="markdown-shortcut-toolbar" role="toolbar" aria-label="Markdown 快捷操作">
-                {MARKDOWN_SHORTCUTS.map((item) => (
-                  <button
-                    key={item.action}
-                    className="markdown-shortcut-button"
-                    type="button"
-                    title={item.hint}
-                    aria-label={`${item.label}：${item.hint}`}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => applyMarkdownFormat(item.action)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {editorMode === "write" ? (
-              <div
-                className={`body-editor-dropzone ${draggingImage ? "is-dragging" : ""}`}
-                onDragEnter={(event) => {
-                  if (event.dataTransfer?.types?.includes("Files")) setDraggingImage(true);
-                }}
-                onDragOver={(event) => {
-                  if (!event.dataTransfer?.types?.includes("Files")) return;
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "copy";
-                  setDraggingImage(true);
-                }}
-                onDragLeave={() => setDraggingImage(false)}
-                onDrop={handleBodyDrop}
-              >
-                <textarea
-                  ref={bodyEditorRef}
-                  className="body-editor"
-                  value={form.body}
-                  onChange={set("body")}
-                  onKeyDown={handleBodyKeyDown}
-                  onPaste={handleBodyPaste}
-                  placeholder="支持 Markdown。把图片拖到这里，或直接粘贴截图。"
-                  aria-describedby="editor-body-help"
-                />
-                <div className="body-drop-hint" aria-hidden={!draggingImage}>
-                  松开即可上传并插入图片
-                </div>
-              </div>
-            ) : (
-              <div className="editor-preview" role="tabpanel" aria-live="polite">
-                {preview.loading ? <p className="editor-preview-state">正在生成安全预览…</p> : null}
-                {preview.error ? <div className="inline-error" role="alert">{preview.error}</div> : null}
-                {!preview.loading && !preview.error && preview.html ? (
-                  <ProtectedMarkdown
-                    html={preview.html}
-                    media={savedPost?.bound_media || []}
-                    management
-                    className="prose editor-preview-prose"
-                  />
-                ) : null}
-                {!preview.loading && !preview.error && !preview.html ? (
-                  <p className="editor-preview-state">正文为空，暂无可预览内容。</p>
-                ) : null}
-              </div>
-            )}
+            <button
+              className="markdown-editor-launcher"
+              type="button"
+              aria-haspopup="dialog"
+              onClick={openBodyEditor}
+            >
+              {form.body ? <span>{form.body}</span> : <span className="is-placeholder">点击这里编写 Markdown 正文…</span>}
+              <small>点击打开沉浸式编辑器</small>
+            </button>
             <small id="editor-body-help" className="editor-body-help">内部媒体使用稳定占位符保存，不会把 Blob URL、签名 URL 或公开 S3 地址写进正文。</small>
           </section>
 
           <PostMediaManager
             ref={mediaManagerRef}
             post={savedPost}
-            ensurePost={() => persistDraft(false)}
+            ensurePost={() => (bodyEditorOpen ? saveEditorBody({ showMessage: false }) : persistDraft(false))}
             onPostChange={handleMediaPostChange}
             onInsertMedia={insertMediaIntoBody}
             onRemoveMedia={removeMediaFromBody}
@@ -721,6 +749,38 @@ export function WritePage() {
           {savedPost?.cover_media_id ? <div className="editor-status"><span>封面</span><strong>已设置</strong></div> : null}
         </aside>
       </form>
+
+      <MarkdownEditorDialog
+        open={bodyEditorOpen}
+        value={editorBody}
+        dirty={editorBody !== editorBaseline}
+        saving={editorSaving}
+        uploading={editorUploading}
+        error={editorError}
+        message={editorMessage}
+        preview={preview}
+        media={savedPost?.bound_media || []}
+        textareaRef={bodyEditorRef}
+        shortcuts={MARKDOWN_SHORTCUTS}
+        interactionBlocked={editorExitConfirmOpen}
+        onChange={(event) => updateEditorBody(event.target.value)}
+        onKeyDown={handleBodyKeyDown}
+        onFormat={applyMarkdownFormat}
+        onUploadImages={uploadInlineImages}
+        onSave={() => saveEditorBody()}
+        onSaveAndClose={() => saveEditorBody({ close: true })}
+        onRequestClose={requestBodyEditorClose}
+      />
+
+      <ConfirmDialog
+        open={editorExitConfirmOpen}
+        title="放弃未保存的正文修改？"
+        description="正文会恢复到最近一次成功保存的内容；已经上传的图片仍会保留在当前内容的媒体列表中。"
+        confirmLabel="放弃修改"
+        danger
+        onConfirm={discardBodyEditorChanges}
+        onClose={() => setEditorExitConfirmOpen(false)}
+      />
 
       <ConfirmDialog
         open={reloadConflictOpen}

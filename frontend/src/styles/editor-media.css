@@ -144,6 +144,351 @@
   font-size: 12px;
 }
 
+.markdown-editor-launcher {
+  width: 100%;
+  min-height: 190px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+  cursor: text;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.markdown-editor-launcher:hover,
+.markdown-editor-launcher:focus-visible {
+  border-color: var(--brand-link);
+  background: color-mix(in srgb, var(--surface) 94%, var(--tag));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-link) 14%, transparent);
+  outline: 0;
+}
+
+.markdown-editor-launcher > span {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+}
+
+.markdown-editor-launcher .is-placeholder {
+  color: var(--text-4);
+}
+
+.markdown-editor-launcher small {
+  color: var(--brand-link);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+}
+
+.markdown-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--text) 54%, transparent);
+}
+
+.markdown-editor-dialog {
+  width: min(100%, 1560px);
+  height: min(calc(100dvh - 32px), 1000px);
+  min-height: 620px;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 90px rgba(20, 20, 19, 0.28);
+}
+
+.markdown-editor-dialog-header {
+  grid-row: 1;
+  padding: 18px 22px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-editor-dialog-header h2 {
+  margin: 1px 0 2px;
+  font-size: 22px;
+}
+
+.markdown-editor-dialog-header p {
+  margin: 0;
+}
+
+.markdown-editor-dialog-header p:last-child {
+  color: var(--text-4);
+  font-size: 11px;
+}
+
+.markdown-editor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.markdown-editor-dirty-state {
+  color: var(--text-4);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.markdown-editor-dirty-state.is-dirty {
+  color: var(--brand-link);
+}
+
+.markdown-editor-close {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 25px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.markdown-editor-close:hover {
+  border-color: var(--text-4);
+  background: var(--surface-2);
+}
+
+.markdown-editor-close:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.markdown-editor-shortcuts {
+  grid-row: 3;
+  padding: 8px 14px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  scrollbar-width: thin;
+}
+
+.markdown-editor-shortcuts .markdown-shortcut-button {
+  min-height: 34px;
+  padding: 5px 10px;
+  flex: 0 0 auto;
+}
+
+.markdown-editor-image-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.markdown-editor-image-picker.is-disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.markdown-editor-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.markdown-editor-feedback {
+  margin: 10px 14px 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.markdown-editor-feedback-slot:empty {
+  min-height: 0;
+  height: 0;
+}
+
+.markdown-editor-feedback-slot {
+  grid-row: 4;
+}
+
+.markdown-editor-workspace {
+  grid-row: 5;
+  --markdown-editor-split: 50%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, var(--markdown-editor-split)) 10px minmax(320px, 1fr);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.markdown-editor-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.markdown-editor-write-pane {
+  display: grid;
+}
+
+.markdown-editor-textarea-wrap {
+  position: relative;
+  min-height: 0;
+  display: grid;
+}
+
+.markdown-editor-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 24px 26px 56px;
+  resize: none;
+  border: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface) 96%, var(--page));
+  color: var(--text-1);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.72;
+  tab-size: 2;
+}
+
+.markdown-editor-textarea:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand-link) 28%, transparent);
+}
+
+.markdown-editor-textarea-wrap.is-dragging .markdown-editor-textarea {
+  background: color-mix(in srgb, var(--surface) 88%, var(--tag));
+  box-shadow: inset 0 0 0 2px var(--brand-link);
+}
+
+.markdown-editor-drop-hint {
+  position: absolute;
+  inset: 18px;
+  display: none;
+  place-items: center;
+  border: 1px dashed var(--brand-link);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--surface) 90%, var(--tag));
+  color: var(--brand-link);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.markdown-editor-textarea-wrap.is-dragging .markdown-editor-drop-hint {
+  display: grid;
+}
+
+.markdown-editor-resizer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.markdown-editor-resizer span {
+  width: 2px;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--text-4);
+}
+
+.markdown-editor-resizer:hover,
+.markdown-editor-resizer:focus-visible {
+  background: var(--tag-soft);
+  outline: 0;
+}
+
+.markdown-editor-preview-pane {
+  position: relative;
+  padding: 24px 28px 70px;
+  background: var(--surface);
+}
+
+.markdown-editor-preview-prose {
+  min-width: 0;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.markdown-editor-preview-state {
+  margin: 0;
+  color: var(--text-4);
+  font-size: 12px;
+}
+
+.markdown-editor-preview-updating {
+  position: sticky;
+  bottom: 12px;
+  float: right;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-4);
+  font-size: 10px;
+}
+
+.markdown-editor-dialog-footer {
+  grid-row: 6;
+  min-height: 68px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.markdown-editor-dialog-footer > p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--text-4);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.markdown-editor-dialog-footer > div {
+  display: flex;
+  gap: 9px;
+}
+
+.markdown-editor-mobile-tabs {
+  grid-row: 2;
+  display: none;
+}
+
 .inline-protected-media {
   margin: 1.7em 0;
 }
@@ -190,6 +535,116 @@
 }
 
 @media (max-width: 719px) {
+  .markdown-editor-backdrop {
+    padding: 0;
+  }
+
+  .markdown-editor-dialog {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .markdown-editor-dialog-header {
+    padding: 12px 14px;
+  }
+
+  .markdown-editor-dialog-header .hero-kicker,
+  .markdown-editor-dialog-header p:last-child,
+  .markdown-editor-dirty-state {
+    display: none;
+  }
+
+  .markdown-editor-dialog-header h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .markdown-editor-mobile-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 6px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .markdown-editor-mobile-tabs button {
+    min-height: 38px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-3);
+  }
+
+  .markdown-editor-mobile-tabs button.active {
+    background: var(--tag-soft);
+    color: var(--brand-link);
+  }
+
+  .markdown-editor-shortcuts {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .markdown-editor-feedback {
+    margin-right: 8px;
+    margin-left: 8px;
+  }
+
+  .markdown-editor-workspace {
+    display: block;
+  }
+
+  .markdown-editor-pane {
+    display: none;
+    width: 100%;
+    height: 100%;
+  }
+
+  .markdown-editor-pane.is-mobile-active {
+    display: block;
+  }
+
+  .markdown-editor-write-pane.is-mobile-active,
+  .markdown-editor-write-pane.is-mobile-active .markdown-editor-textarea-wrap {
+    display: grid;
+  }
+
+  .markdown-editor-resizer {
+    display: none;
+  }
+
+  .markdown-editor-textarea {
+    padding: 18px 16px 48px;
+    font-size: 13px;
+  }
+
+  .markdown-editor-preview-pane {
+    padding: 20px 16px 54px;
+  }
+
+  .markdown-editor-dialog-footer {
+    padding: 9px 10px calc(9px + env(safe-area-inset-bottom));
+  }
+
+  .markdown-editor-dialog-footer > p {
+    display: none;
+  }
+
+  .markdown-editor-dialog-footer > div {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 0.8fr 0.8fr 1.35fr;
+  }
+
+  .markdown-editor-dialog-footer .btn {
+    width: 100%;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
   .editor-body-toolbar {
     align-items: stretch;
     flex-direction: column;

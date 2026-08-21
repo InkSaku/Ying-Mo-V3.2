@@ -52,7 +52,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
     return result.data;
   };
 
-  const uploadImageFile = async (file, { insertIntoBody = true } = {}) => {
+  const uploadImageFile = async (file, { insertIntoBody = true, rethrow = false, postOverride = null } = {}) => {
     if (!file || busyRef.current) return null;
     setError("");
     setMessage("");
@@ -64,7 +64,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
     busyRef.current = true;
     setBusy("image");
     try {
-      const currentPost = await ensurePost();
+      const currentPost = postOverride || await ensurePost();
       if (!currentPost) return null;
       const body = new FormData();
       body.append("file", file);
@@ -78,6 +78,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       return uploaded.data;
     } catch (uploadError) {
       setError(uploadError.message);
+      if (rethrow) throw uploadError;
       return null;
     } finally {
       busyRef.current = false;
