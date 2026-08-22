@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { collectionMemberSettingsPayload } from "../lib/collectionMembership";
 
 export function CreateCollectionPage() {
   usePageMeta("创建合集");
@@ -10,6 +11,7 @@ export function CreateCollectionPage() {
   const [selected, setSelected] = useState([]);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
   const [selectAll, setSelectAll] = useState(false);
+  const [autoAddFutureMembers, setAutoAddFutureMembers] = useState(false);
   const [status, setStatus] = useState({ busy: false, error: "" });
   const [memberState, setMemberState] = useState({ loading: true, error: "", reload: 0 });
 
@@ -43,7 +45,7 @@ export function CreateCollectionPage() {
         name: form.name,
         slug: form.slug,
         description: form.description || null,
-        ...(selectAll ? { select_all_members: true } : { member_ids: selected }),
+        ...collectionMemberSettingsPayload({ selectAll, selected, autoAddFutureMembers }),
       });
       navigate(`/collections/${result.data.slug}`, { replace: true });
     } catch (error) {
@@ -90,6 +92,10 @@ export function CreateCollectionPage() {
               if (event.target.checked) setSelected([]);
             }} />
             <span>选择当前所有其他成员</span>
+          </label>
+          <label className="check-row">
+            <input type="checkbox" checked={autoAddFutureMembers} onChange={(event) => setAutoAddFutureMembers(event.target.checked)} />
+            <span>自动邀请未来加入映墨的成员 <small>新注册成员将可阅读并向此 Collection 投稿</small></span>
           </label>
           {!selectAll ? (
             <div className="member-options">

@@ -689,6 +689,7 @@ def remove_from_collection(post_id):
     before = snapshot_post(post) if post.was_published else None
     post.collection_id = None
     post.collection_sort_order = None
+    post.collection_highlight_order = None
     post.visibility = PostVisibility.PRIVATE.value
     if before is not None:
         create_revision(

@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
+import { unreadBadgeText } from "../lib/notificationCount";
 import { ThemeControl } from "./ThemeControl";
 
 const navItems = [
@@ -25,6 +27,9 @@ function NavLinks({ onNavigate }) {
 export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount, toastDelta, dismissToast } = useUnreadNotifications(user?.id);
+  const badgeText = unreadBadgeText(unreadCount);
+  const notificationLabel = unreadCount ? `通知，${unreadCount} 条未读` : "通知";
 
   const handleLogout = async () => {
     await logout();
@@ -46,18 +51,29 @@ export function AppShell() {
           <div className="header-actions desktop-actions">
             <Link className="btn btn-primary btn-small" to="/write">写作</Link>
             {user?.role === "system_admin" ? <Link className="user-link" to="/admin">管理</Link> : null}
+            <Link className={`notification-link${unreadCount ? " has-unread" : ""}`} to="/me/notifications" aria-label={notificationLabel}>
+              <span>通知</span>
+              {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
+            </Link>
             <Link className="user-link" to="/me">{user?.nickname || user?.username}</Link>
             <ThemeControl />
             <button className="text-button" type="button" onClick={handleLogout}>退出</button>
           </div>
 
           <details className="mobile-menu">
-            <summary>菜单</summary>
+            <summary aria-label={unreadCount ? `菜单，${unreadCount} 条未读通知` : "菜单"}>
+              <span>菜单</span>
+              {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
+            </summary>
             <div className="mobile-menu-panel">
               <nav aria-label="移动端成员导航">
                 <NavLinks onNavigate={(event) => event.currentTarget.closest("details")?.removeAttribute("open")} />
                 <Link to="/write">写作</Link>
                 <Link to="/me">我的空间</Link>
+                <Link className="mobile-notification-link" to="/me/notifications" onClick={(event) => event.currentTarget.closest("details")?.removeAttribute("open")}>
+                  <span>通知</span>
+                  {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
+                </Link>
                 {user?.role === "system_admin" ? <Link to="/admin">管理</Link> : null}
               </nav>
               <div className="mobile-menu-foot">
@@ -68,6 +84,14 @@ export function AppShell() {
           </details>
         </div>
       </header>
+
+      {toastDelta ? (
+        <div className="notification-toast" role="status" aria-live="polite" aria-atomic="true">
+          <span>你有 {toastDelta} 条新通知</span>
+          <Link to="/me/notifications" onClick={dismissToast}>查看</Link>
+          <button type="button" onClick={dismissToast} aria-label="关闭新通知提示">×</button>
+        </div>
+      ) : null}
 
       <Outlet />
 

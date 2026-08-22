@@ -6,6 +6,7 @@ import { ErrorState, PageLoader } from "../components/States";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
+import { collectionMemberSettingsPayload } from "../lib/collectionMembership";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 
 function memberIds(members) {
@@ -21,7 +22,9 @@ export function CollectionManagePage() {
   const [options, setOptions] = useState([]);
   const [selected, setSelected] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [autoAddFutureMembers, setAutoAddFutureMembers] = useState(false);
   const [orderedPosts, setOrderedPosts] = useState([]);
+  const [highlightIds, setHighlightIds] = useState([]);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -42,7 +45,9 @@ export function CollectionManagePage() {
         const current = result.data;
         setCollection(current);
         setOrderedPosts(current.posts || []);
+        setHighlightIds((current.highlights || []).map((post) => post.id));
         setForm({ name: current.name || "", slug: current.slug || "", description: current.description || "" });
+        setAutoAddFutureMembers(Boolean(current.auto_add_future_members));
         if (current.creator.id !== user.id) {
           setLoading(false);
           return;
@@ -122,7 +127,10 @@ export function CollectionManagePage() {
     setMessage("");
     setError("");
     try {
-      const result = await api.put(`/collections/${collection.id}/members`, selectAll ? { select_all_members: true } : { member_ids: selected });
+      const result = await api.put(
+        `/collections/${collection.id}/members`,
+        collectionMemberSettingsPayload({ selectAll, selected, autoAddFutureMembers }),
+      );
       const nextCollection = result.data.collection;
       setCollection((current) => ({ ...current, ...nextCollection, posts: current.posts }));
       setMembers(nextCollection.members || []);
@@ -165,6 +173,45 @@ export function CollectionManagePage() {
     }
   };
 
+  const toggleHighlight = (postId) => {
+    setError("");
+    setMessage("");
+    setHighlightIds((current) => {
+      if (current.includes(postId)) return current.filter((id) => id !== postId);
+      if (current.length >= 6) {
+        setError("关键记录最多选择 6 条。");
+        return current;
+      }
+      return [...current, postId];
+    });
+  };
+
+  const moveHighlight = (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= highlightIds.length) return;
+    setHighlightIds((current) => {
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const saveHighlights = async () => {
+    setBusy("highlights");
+    setMessage("");
+    setError("");
+    try {
+      const result = await api.put(`/collections/${collection.id}/highlights`, { post_ids: highlightIds });
+      setHighlightIds(result.data.post_ids || []);
+      setCollection((current) => ({ ...current, highlights: result.data.highlights || [] }));
+      setMessage("关键记录已保存。它们只影响 Collection 回忆入口，不改变正文与作者归属。");
+    } catch (highlightError) {
+      setError(highlightError.message);
+    } finally {
+      setBusy("");
+    }
+  };
+
   const removePost = async () => {
     const post = confirm?.post;
     if (!post) return;
@@ -174,6 +221,7 @@ export function CollectionManagePage() {
     try {
       await api.post(`/collections/${collection.id}/remove-post`, { post_id: post.id });
       setOrderedPosts((current) => current.filter((item) => item.id !== post.id));
+      setHighlightIds((current) => current.filter((id) => id !== post.id));
       setCollection((current) => ({ ...current, posts: current.posts.filter((item) => item.id !== post.id) }));
       setConfirm(null);
       setMessage("Post 已移出 Collection，并恢复为作者私有内容。");
@@ -238,6 +286,22 @@ export function CollectionManagePage() {
 
           <section className="collection-manage-section">
             <div className="section-header">
+              <div><h2>关键记录</h2><p>最多选择 6 条共同片段，并用上下移动确定展示顺序。</p></div>
+              <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveHighlights}>{busy === "highlights" ? "正在保存" : "保存关键记录"}</button>
+            </div>
+            {orderedPosts.length ? <div className="collection-highlight-picker">
+              {orderedPosts.map((post) => {
+                const highlightIndex = highlightIds.indexOf(post.id);
+                return <article key={post.id} className={highlightIndex >= 0 ? "selected" : ""}>
+                  <label className="check-row"><input type="checkbox" checked={highlightIndex >= 0} disabled={Boolean(busy)} onChange={() => toggleHighlight(post.id)} /><span>{post.title || (post.post_type === "note" ? "未命名随记" : "未命名文章")} <small>{post.author?.nickname}</small></span></label>
+                  {highlightIndex >= 0 ? <div className="collection-order-actions"><span className="collection-order-number tabular">{String(highlightIndex + 1).padStart(2, "0")}</span><button className="btn btn-secondary" type="button" disabled={highlightIndex === 0 || Boolean(busy)} onClick={() => moveHighlight(highlightIndex, -1)}>上移</button><button className="btn btn-secondary" type="button" disabled={highlightIndex === highlightIds.length - 1 || Boolean(busy)} onClick={() => moveHighlight(highlightIndex, 1)}>下移</button></div> : null}
+                </article>;
+              })}
+            </div> : <div className="collection-manage-empty">发布共同内容后，可以从这里挑选关键记录。</div>}
+          </section>
+
+          <section className="collection-manage-section">
+            <div className="section-header">
               <div><h2>共同成员</h2><p>成员关系同时决定阅读权和投稿权。</p></div>
               <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={requestMemberSave}>{busy === "members" ? "正在保存" : "保存成员"}</button>
             </div>
@@ -249,6 +313,14 @@ export function CollectionManagePage() {
                   if (!event.target.checked) setSelected(memberIds(members).filter((id) => activeOptionIds.includes(id)));
                 }} />
                 <span>保存时选择当前所有有效成员</span>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={autoAddFutureMembers} onChange={(event) => {
+                  setAutoAddFutureMembers(event.target.checked);
+                  setMessage("");
+                  setError("");
+                }} />
+                <span>自动邀请未来加入映墨的成员 <small>开启后，新注册成员可阅读并投稿；关闭不会移除已加入成员</small></span>
               </label>
               <div className="member-options">
                 {displayedOptions.map((member) => (

@@ -1,8 +1,8 @@
-# Ying-Mo V3.2 后端实现状态
+# Ying-Mo V3.4 后端实现状态
 
-更新时间：2026-08-21
+更新时间：2026-08-22
 
-当前状态：**P0 基线与第二十一至第二十七阶段均已实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
+当前状态：**P0、P1 阶段 21–27、V3.3 Collection 时间轴与 V3.4 未来成员自动加入均已实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
 
 ## P0 已实现
 
@@ -106,14 +106,40 @@
 - [x] 同作者不能单独构成候选资格；不使用阅读、点赞、收藏、热度、画像、AI 相似度或个性化信号。
 - [x] 卡片展示由实际命中规则生成的合集、分类、共同标签和同作者原因，不以无关最新内容补位。
 
+## V3.3：Collection 时间轴与共同回忆
+
+- [x] Collection 时间轴按 Article `published_at`、Note `occurred_at ?? published_at` 统一语义时间倒序展示。
+- [x] 年份、作者、Article / Note 筛选、稳定分页、年份 Facet 和作者选项均在 Collection ACL 后计算。
+- [x] 共同影像墙仅返回当前 Collection 有效 Post 绑定的 active 图片与 Live Photo 静态画面，并保留原 Post、作者和受保护媒体路径。
+- [x] Creator 可选择并排序最多 6 条关键记录；member 无权修改，Post 移出或移动时自动清除关键状态。
+- [x] 非成员及被移除成员访问 Collection 时间轴或媒体墙统一 404，不泄露年份、作者、数量和媒体存在性。
+- [x] Alembic `20260822_0007` 增加关键记录排序字段、约束与索引，并覆盖降级和重升。
+
+## V3.4：未来成员自动加入
+
+- [x] Collection 创建与管理支持默认关闭的 `auto_add_future_members` 开关，只有 creator 可修改。
+- [x] 新用户注册事务内批量加入开启该设置的正常 Collection，并立即获得与手动成员相同的阅读和投稿权限。
+- [x] 现有成员不补加；关闭开关不会移除既有自动成员，被手动移除的成员不会在登录时重新加入。
+- [x] 成员关系记录 `manual / future_member_auto` 来源，自动加入产生明确说明读写权限的站内通知。
+- [x] Alembic `20260822_0008` 为既有 Collection 和成员安全回填默认值，并覆盖降级、重升与数据保留。
+
+## V3.4：全局通知感知增强
+
+- [x] 新增只返回当前用户未读总数的轻量接口；未认证与受限账号继续服从统一认证规则。
+- [x] 桌面导航、移动菜单和菜单按钮显示未读数量，超过 99 时收敛为 `99+`。
+- [x] 首次读取不弹历史通知；会话内新增通知通过 60 秒轮询、窗口焦点和页面恢复触发轻量 Toast。
+- [x] 单条与全部已读操作会触发角标更新；计数失败不阻断页面，Toast 可关闭并具有无障碍状态播报。
+- [x] 用户停留在通知中心时，会话内新通知事件同步刷新当前列表。
+- [x] 通知中心以背景、未读标签、边线和字重共同区分状态，移动菜单跳转后自动收起。
+
 ## 验证状态
 
-- [x] 完整 pytest：102/102 passed。
-- [x] 前端 `npm run check`：ESLint、67/67 Node 回归、生产构建和包体预算全部通过。
+- [x] 完整 pytest：111/111 passed。
+- [x] 前端 `npm run check`：ESLint、73/73 Node 回归、生产构建和包体预算全部通过。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
 - [x] `MANIFEST.sha256` 已按当前后端源码重建，并由静态门禁执行可重复校验；旧重构路径不再冒充当前发布清单。
-- [x] Alembic 空库 upgrade 到 `20260821_0006`、legacy visibility upgrade/downgrade、Post 版本回填，以及 Revision `0006` 降级/重升与 Schema/Model 对齐。
+- [x] Alembic 空库 upgrade 到 `20260822_0008`、legacy visibility upgrade/downgrade、Post 版本回填，以及 Revision `0006`、Collection Memories `0007`、Future Members `0008` 降级/重升与 Schema/Model 对齐。
 - [x] MySQL dialect 对 18 张模型表和索引完成 DDL 编译。
 - [x] Production 配置加载验证（MySQL URL、S3 adapter、Redis limiter、SMTP/TLS/HTTPS 邮件配置约束）。
 - [x] Gunicorn 配置检查、进程启动、Health 和受保护 HTML Shell HTTP smoke。
@@ -121,6 +147,7 @@
 - [ ] 真实 S3-compatible bucket 上传/读取与真实 Redis 限流压测：当前环境没有相应外部凭证和服务。
 - [ ] 真实 SMTP 服务上的 STARTTLS 握手、投递、退信与 SPF/DKIM/DMARC/DNS：当前环境没有可投递域名和凭证。
 - [x] 阶段 27 隔离浏览器验收：0/1/2/4 篇、原因文本、卡片跳转、ACL 不泄露、浅深色、1280px/390px 与 Console 均通过；验收中发现并修复紧凑卡片误隐藏原因文本。
+- [x] V3.4 通知感知隔离浏览器验收：桌面角标、390px 菜单角标、未读/已读视觉层级、全部已读角标回落和移动菜单收起均通过。
 - [ ] 阶段 22 真实浏览器运行验收：此前尝试时桌面策略拒绝本地 HTTP 导航；阶段 27 已可在当前环境运行，但尚未倒推补验阶段 22 的账户恢复流程。
 
 以上外部验证未伪造成“已通过”；代码路径、配置校验、本地私有存储和内存邮件集成测试已完成。P0 逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，阶段 21–27 见 `docs/backend/P1_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。

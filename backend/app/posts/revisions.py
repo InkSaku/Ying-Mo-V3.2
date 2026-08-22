@@ -125,6 +125,7 @@ def restore_revision_snapshot(post, revision, actor):
     post.collection = collection
     if previous_collection_id != (collection.id if collection is not None else None):
         post.collection_sort_order = None
+        post.collection_highlight_order = None
     if collection is not None:
         post.visibility = PostVisibility.PRIVATE.value
     else:

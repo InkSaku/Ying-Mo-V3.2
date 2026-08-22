@@ -29,6 +29,9 @@ def test_notification_kinds_targets_acl_read_state_and_pagination(client, app):
     assert member_notice["kind"] == "collection_member_added"
     assert member_notice["target_url"] == "/collections/notification-secret-room"
     assert "Notification Secret Room" in member_notice["message"]
+    assert client.get(
+        "/api/v1/notifications/unread-count", headers=auth(bob_token)
+    ).get_json()["data"]["unread_count"] == 1
 
     note = client.post("/api/v1/posts", headers=auth(bob_token), json={
         "post_type": "note",
@@ -111,6 +114,9 @@ def test_notification_kinds_targets_acl_read_state_and_pagination(client, app):
     overview = client.get("/api/v1/users/me/overview", headers=auth(charlie_token)).get_json()["data"]
     assert overview["counts"]["unread_notifications"] == 20
     assert client.post("/api/v1/notifications/read-all", headers=auth(charlie_token)).status_code == 200
+    assert client.get(
+        "/api/v1/notifications/unread-count", headers=auth(charlie_token)
+    ).get_json()["data"]["unread_count"] == 0
     overview = client.get("/api/v1/users/me/overview", headers=auth(charlie_token)).get_json()["data"]
     assert overview["counts"]["unread_notifications"] == 0
 

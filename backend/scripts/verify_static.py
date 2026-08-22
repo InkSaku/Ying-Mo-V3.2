@@ -23,6 +23,8 @@ required = [
     ROOT / "migrations/versions/20260814_0002_p0_release_schema.py",
     ROOT / "migrations/versions/20260815_0003_post_edit_version.py",
     ROOT / "migrations/versions/20260815_0004_account_trust_recovery.py",
+    ROOT / "migrations/versions/20260822_0007_collection_memories.py",
+    ROOT / "migrations/versions/20260822_0008_collection_future_members.py",
     ROOT / "app/models/admin.py",
     ROOT / "app/models/account.py",
     ROOT / "app/auth/service.py",
@@ -87,6 +89,8 @@ for required_manifest_path in (
     "app/mail.py",
     "app/uploads/routes.py",
     "migrations/versions/20260815_0004_account_trust_recovery.py",
+    "migrations/versions/20260822_0007_collection_memories.py",
+    "migrations/versions/20260822_0008_collection_future_members.py",
 ):
     if f"  {required_manifest_path}\n" not in manifest_text:
         raise SystemExit(f"Backend manifest missing: {required_manifest_path}")

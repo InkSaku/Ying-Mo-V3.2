@@ -90,6 +90,7 @@ def apply_collection(post, actor_id, collection_id):
         was_in_collection = post.collection_id is not None
         post.collection = None
         post.collection_sort_order = None
+        post.collection_highlight_order = None
         # 只有真正从 Collection 脱离时才安全回退为 private。
         # 原本就是独立 Post 时，保留作者明确选择的 visibility。
         if was_in_collection:
@@ -98,6 +99,9 @@ def apply_collection(post, actor_id, collection_id):
     collection = db.session.get(Collection, collection_id)
     if collection is None or not is_collection_member(actor_id, collection):
         raise DomainError("RESOURCE_NOT_FOUND", "目标 Collection 不存在或不可访问。", 404)
+    if post.collection_id != collection.id:
+        post.collection_sort_order = None
+        post.collection_highlight_order = None
     post.collection = collection
     post.visibility = PostVisibility.PRIVATE.value
 

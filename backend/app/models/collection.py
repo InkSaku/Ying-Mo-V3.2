@@ -29,6 +29,7 @@ class Collection(db.Model):
     description = db.Column(db.Text, nullable=True)
     cover_media_id = db.Column(db.Integer, db.ForeignKey("media.id", ondelete="SET NULL"), nullable=True)
     status = db.Column(db.String(20), nullable=False, default=CollectionStatus.ACTIVE.value, server_default=CollectionStatus.ACTIVE.value)
+    auto_add_future_members = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     first_shared_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
@@ -55,6 +56,7 @@ class Collection(db.Model):
                 else None
             ),
             "status": self.status,
+            "auto_add_future_members": self.auto_add_future_members,
             "first_shared_at": isoformat_utc(self.first_shared_at),
             "created_at": isoformat_utc(self.created_at),
             "updated_at": isoformat_utc(self.updated_at),
@@ -69,11 +71,16 @@ class CollectionMember(db.Model):
     __table_args__ = (
         db.UniqueConstraint("collection_id", "user_id", name="uq_collection_members_collection_user"),
         db.Index("ix_collection_members_user_collection", "user_id", "collection_id"),
+        db.CheckConstraint(
+            "join_source IN ('manual', 'future_member_auto')",
+            name="ck_collection_members_join_source",
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     collection_id = db.Column(db.Integer, db.ForeignKey("collections.id", ondelete="CASCADE"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    join_source = db.Column(db.String(30), nullable=False, default="manual", server_default="manual")
     added_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     collection = db.relationship("Collection", back_populates="member_links")

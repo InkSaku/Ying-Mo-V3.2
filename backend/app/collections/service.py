@@ -79,6 +79,7 @@ def delete_collection(collection):
     for post in posts:
         post.collection_id = None
         post.collection_sort_order = None
+        post.collection_highlight_order = None
         post.visibility = PostVisibility.PRIVATE.value
 
     if not posts and collection.first_shared_at is None:

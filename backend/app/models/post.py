@@ -45,9 +45,14 @@ class Post(db.Model):
         db.CheckConstraint("visibility IN ('login_only', 'private')", name="ck_posts_visibility"),
         db.CheckConstraint("moderation_status IN ('active', 'hidden')", name="ck_posts_moderation"),
         db.CheckConstraint("edit_version >= 1", name="ck_posts_edit_version"),
+        db.CheckConstraint(
+            "collection_highlight_order IS NULL OR collection_highlight_order >= 0",
+            name="ck_posts_collection_highlight_order",
+        ),
         db.Index("ix_posts_author_published", "author_id", "published_at"),
         db.Index("ix_posts_type_status_visibility_published", "post_type", "status", "visibility", "published_at"),
         db.Index("ix_posts_collection_published", "collection_id", "published_at"),
+        db.Index("ix_posts_collection_highlight", "collection_id", "collection_highlight_order"),
         db.Index("ix_posts_category_published", "category_id", "published_at"),
     )
 
@@ -71,6 +76,7 @@ class Post(db.Model):
     external_video_url = db.Column(db.String(1000), nullable=True)
     slug_candidate = db.Column(db.String(180), nullable=True)
     collection_sort_order = db.Column(db.Integer, nullable=True)
+    collection_highlight_order = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
     edit_version = db.Column(db.Integer, nullable=False, default=1, server_default="1")
@@ -132,6 +138,7 @@ class Post(db.Model):
             "external_video_url": self.external_video_url,
             "slug_candidate": self.slug_candidate if not self.was_published else None,
             "collection_sort_order": self.collection_sort_order,
+            "collection_highlight_order": self.collection_highlight_order,
             "created_at": isoformat_utc(self.created_at),
             "updated_at": isoformat_utc(self.updated_at),
             "edit_version": self.edit_version,

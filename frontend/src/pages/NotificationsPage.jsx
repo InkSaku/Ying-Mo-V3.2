@@ -22,6 +22,7 @@ export function NotificationsPage() {
   const [params, setParams] = useSearchParams();
   const page = cleanPage(params.get("page"));
   const state = useAsyncData(() => api.get(`/notifications?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  const reloadNotifications = state.reload;
   const [busy, setBusy] = useState(null);
   const [actionError, setActionError] = useState("");
   const [message, setMessage] = useState("");
@@ -32,6 +33,12 @@ export function NotificationsPage() {
   useEffect(() => {
     if (pageNeedsClamp) setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
   }, [clampedPage, pageNeedsClamp, setParams]);
+
+  useEffect(() => {
+    const handleNewNotifications = () => { void reloadNotifications(); };
+    window.addEventListener("yingmo:new-notifications", handleNewNotifications);
+    return () => window.removeEventListener("yingmo:new-notifications", handleNewNotifications);
+  }, [reloadNotifications]);
 
   const announceNotificationChange = () => {
     window.dispatchEvent(new CustomEvent("yingmo:notifications-changed"));
@@ -80,8 +87,11 @@ export function NotificationsPage() {
         <div className="notification-list">
           {state.data.map((item) => (
             <article key={item.id} className={item.is_read ? "" : "unread"}>
-              <div>
-                <p>{item.message}</p>
+              <div className="notification-copy">
+                <div className="notification-message-row">
+                  {!item.is_read ? <span className="notification-unread-label">未读</span> : null}
+                  <p>{item.message}</p>
+                </div>
                 <time dateTime={item.created_at}>{formatDate(item.created_at, true)}</time>
               </div>
               <div className="notification-actions">

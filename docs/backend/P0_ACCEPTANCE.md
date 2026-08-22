@@ -18,7 +18,7 @@
 | Category | Admin CRUD/停用/排序/Slug 锁 | `/categories`, `/admin/categories` | `categories` | ACL 页面、计数 | 完成/自动化通过 |
 | Tag | 标准化创建、并发去重、停用/更正/合并 | `/tags`, `/admin/tags` | `tags`, `post_tags` 唯一 | Tag ACL 与隐藏 Facet | 完成/自动化通过 |
 | Collection creator/members | 单一 creator，正式成员表，creator 不重复 | `/collections` | `collections`, `collection_members` | creator/member/non-member | 完成/自动化通过 |
-| 一键全选当前成员 | `select_all_members` 展开为当前 active user IDs，不保存永久模式 | create/update members | 逐条 membership | 后注册用户不自动加入 | 完成/自动化通过 |
+| 一键全选当前成员 | `select_all_members` 展开为当前 active user IDs，不保存永久模式 | create/update members | 逐条 membership | 后注册用户仅在 creator 另行开启未来成员自动加入时加入 | 完成/自动化通过 |
 | Collection ACL | creator OR member = read = contribute；统一 predicate | Collection/Post/aggregate APIs | SQL EXISTS scope | 全入口非成员泄漏矩阵 | 完成/自动化通过 |
 | Post 加入/移动 | 仅作者；目标必须当前成员；事务提交 | `/posts/:id/move-collection` | `posts.collection_id` | A→B、非 creator 排序拒绝 | 完成/自动化通过 |
 | 作者主动移出 | 作者可解除；变独立 private | `/posts/:id/remove-from-collection` | FK 清空 | 历史作者主动移出 | 完成/自动化通过 |

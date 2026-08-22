@@ -64,6 +64,19 @@ def list_notifications():
     return success_response([_safe_notification(n,actor,posts,collections) for n in rows],meta=pagination_meta(page,size,total))
 
 
+@bp.get("/unread-count")
+@jwt_required(locations=["headers"])
+def unread_count():
+    actor=current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    count=db.session.scalar(db.select(func.count(Notification.id)).where(
+        Notification.user_id==actor.id,
+        Notification.is_read.is_(False),
+    )) or 0
+    return success_response({"unread_count":count})
+
+
 @bp.post("/<int:notification_id>/read")
 @jwt_required(locations=["headers"])
 def mark_read(notification_id):

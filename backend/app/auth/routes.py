@@ -21,7 +21,10 @@ from app.common.auth import current_user
 from app.common.responses import error_response, success_response
 from app.common.validation import USERNAME_RE, normalize_email, normalize_username
 from app.extensions import db, limiter
-from app.models import AccountTokenPurpose, RefreshSession, User, UserStatus
+from app.models import (
+    AccountTokenPurpose, Collection, CollectionMember, CollectionStatus,
+    Notification, RefreshSession, User, UserStatus,
+)
 from app.auth.service import (
     consume_token_once,
     find_active_token,
@@ -155,6 +158,31 @@ def register():
     try:
         db.session.add(user)
         db.session.flush()
+        auto_collections = db.session.scalars(
+            db.select(Collection)
+            .join(User, User.id == Collection.creator_id)
+            .where(
+                Collection.auto_add_future_members.is_(True),
+                Collection.status == CollectionStatus.ACTIVE.value,
+                Collection.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE.value,
+            )
+            .order_by(Collection.id.asc())
+        ).all()
+        for collection in auto_collections:
+            db.session.add(CollectionMember(
+                collection_id=collection.id,
+                user_id=user.id,
+                join_source="future_member_auto",
+            ))
+            db.session.add(Notification(
+                user_id=user.id,
+                actor_id=collection.creator_id,
+                kind="collection_member_added",
+                target_type="collection",
+                collection_id=collection.id,
+                message=f"你已自动加入 Collection「{collection.name}」，现在可以阅读并投稿。",
+            ))
         access, refresh = _issue_session(user)
         _verification_token, raw_verification_token = issue_account_token(
             user, AccountTokenPurpose.EMAIL_VERIFICATION
