@@ -108,6 +108,17 @@ export function adminCollectionsApiPath(filters, pageSize = 20) {
   return `/admin/collections?${params}`;
 }
 
+export function adminFeaturedCandidatesApiPath({ contentType = "article", q = "", page = 1 }, pageSize = 8) {
+  const params = new URLSearchParams({
+    content_type: contentType === "collection" ? "collection" : "article",
+    page: String(positivePage(page)),
+    page_size: String(pageSize),
+  });
+  const query = q.trim().slice(0, 100);
+  if (query) params.set("q", query);
+  return `/admin/featured/candidates?${params}`;
+}
+
 export function readAdminCommentFilters(params) {
   const status = params.get("status") || "";
   return {

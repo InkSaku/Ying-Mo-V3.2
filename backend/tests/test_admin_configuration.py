@@ -38,6 +38,28 @@ def test_admin_featured_context_order_lifecycle_home_acl_and_audit(client, app):
 
     assert client.get("/api/v1/admin/featured").status_code == 401
     assert client.get("/api/v1/admin/featured", headers=auth(alice_token)).status_code == 403
+    assert client.get("/api/v1/admin/featured/candidates", headers=auth(alice_token), query_string={
+        "content_type": "article",
+    }).status_code == 403
+    assert client.get("/api/v1/admin/featured/candidates", headers=auth(admin_token)).status_code == 422
+    candidate_response = client.get(
+        "/api/v1/admin/featured/candidates", headers=auth(admin_token),
+        query_string={"content_type": "article", "q": "featurealice", "page": 1, "page_size": 8},
+    )
+    assert candidate_response.status_code == 200
+    assert candidate_response.get_json()["meta"]["pagination"]["total"] == 1
+    article_candidate = candidate_response.get_json()["data"][0]
+    assert article_candidate["id"] == article["id"]
+    assert article_candidate["title"] == "Featured ACL Paper"
+    assert article_candidate["author"]["id"] == alice["id"]
+    assert article_candidate["featured"] is None
+
+    collection_candidates = client.get(
+        "/api/v1/admin/featured/candidates", headers=auth(admin_token),
+        query_string={"content_type": "collection", "q": "featured-room"},
+    ).get_json()["data"]
+    assert [item["id"] for item in collection_candidates] == [collection["id"]]
+    assert collection_candidates[0]["creator"]["id"] == alice["id"]
     assert client.post("/api/v1/admin/featured", headers=auth(admin_token), json={
         "content_type": "article", "post_id": article["id"], "sort_order": 20,
     }).status_code == 422
@@ -61,6 +83,13 @@ def test_admin_featured_context_order_lifecycle_home_acl_and_audit(client, app):
     assert article_item["target"]["title"] == "Featured ACL Paper"
     assert article_item["target"]["author"]["id"] == alice["id"]
     assert article_item["created_by"]["id"] == admin["id"]
+    selected_candidate = client.get(
+        "/api/v1/admin/featured/candidates", headers=auth(admin_token),
+        query_string={"content_type": "article", "q": "Featured ACL"},
+    ).get_json()["data"][0]
+    assert selected_candidate["featured"] == {
+        "id": article_item["id"], "is_active": True, "sort_order": 20,
+    }
     assert client.post("/api/v1/admin/featured", headers=auth(admin_token), json={
         "content_type": "article", "post_id": article["id"], "reason": "duplicate",
     }).status_code == 409

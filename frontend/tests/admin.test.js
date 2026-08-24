@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   adminCollectionSearchParams,
   adminCollectionsApiPath,
+  adminFeaturedCandidatesApiPath,
   adminCommentSearchParams,
   adminCommentsApiPath,
   adminPostSearchParams,
@@ -120,6 +122,25 @@ test("normalizes Collection and comment governance filters", () => {
 
   assert.deepEqual(readAdminCollectionFilters(new URLSearchParams("status=deleted&page=-1")), { q: "", status: "", page: 1 });
   assert.deepEqual(readAdminCommentFilters(new URLSearchParams("status=review&post_id=0&page=no")), { status: "", post_id: "", page: 1 });
+});
+
+test("builds searchable featured candidate paths without exposing raw ID input", () => {
+  assert.equal(
+    adminFeaturedCandidatesApiPath({ contentType: "article", q: "  paper walk  ", page: 2 }),
+    "/admin/featured/candidates?content_type=article&page=2&page_size=8&q=paper+walk",
+  );
+  assert.equal(
+    adminFeaturedCandidatesApiPath({ contentType: "collection", q: "", page: 0 }, 12),
+    "/admin/featured/candidates?content_type=collection&page=1&page_size=12",
+  );
+});
+
+test("featured creation uses a searchable star picker instead of a raw target ID field", () => {
+  const page = readFileSync(new URL("../src/pages/AdminFeaturedPage.jsx", import.meta.url), "utf8");
+  assert.match(page, /admin-featured-search/);
+  assert.match(page, /admin-featured-star/);
+  assert.match(page, /选为精选/);
+  assert.doesNotMatch(page, />Article ID<|>Collection ID</);
 });
 
 test("normalizes and applies Admin taxonomy URL filters", () => {

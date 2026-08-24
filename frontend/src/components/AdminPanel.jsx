@@ -59,6 +59,8 @@ export function AdminActionDialog({
   reason,
   busy,
   error,
+  danger = true,
+  wide = false,
   onReasonChange,
   onConfirm,
   onClose,
@@ -72,7 +74,8 @@ export function AdminActionDialog({
       title={title}
       description={description}
       confirmLabel={confirmLabel}
-      danger
+      danger={danger}
+      wide={wide}
       busy={busy}
       confirmDisabled={!reason?.trim() || confirmDisabled}
       onConfirm={onConfirm}

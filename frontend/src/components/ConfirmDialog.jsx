@@ -17,6 +17,7 @@ export function ConfirmDialog({
   confirmLabel = "确认",
   cancelLabel = "取消",
   danger = false,
+  wide = false,
   busy = false,
   confirmDisabled = false,
   children,
@@ -83,7 +84,7 @@ export function ConfirmDialog({
       }}
     >
       <section
-        className="dialog-panel"
+        className={`dialog-panel${wide ? " dialog-panel-wide" : ""}`}
         ref={panelRef}
         role="dialog"
         aria-modal="true"

@@ -607,6 +607,95 @@ def featured_list():
     return success_response([_featured_dict(item) for item in rows])
 
 
+@bp.get("/featured/candidates")
+@jwt_required(locations=["headers"])
+def featured_candidates():
+    if _admin() is None:
+        return error_response("PERMISSION_DENIED", "仅系统管理员可访问。", 403)
+    content_type = (request.args.get("content_type") or "").strip()
+    if content_type not in {"article", "collection"}:
+        return error_response("VALIDATION_ERROR", "content_type 不合法。", 422)
+    q = (request.args.get("q") or "").strip()
+    if len(q) > 100:
+        return error_response("VALIDATION_ERROR", "q 长度不得超过 100。", 422)
+
+    if content_type == "article":
+        stmt = db.select(Post).join(User, Post.author_id == User.id).where(
+            Post.post_type == PostType.ARTICLE.value,
+            Post.status == PostStatus.PUBLISHED.value,
+            Post.moderation_status == PostModerationStatus.ACTIVE.value,
+            Post.deleted_at.is_(None),
+        )
+        if q:
+            like = f"%{q}%"
+            stmt = stmt.where(or_(
+                Post.title.ilike(like), Post.summary.ilike(like),
+                User.username_normalized.ilike(like), User.nickname.ilike(like),
+            ))
+        result = _page(stmt, (Post.updated_at.desc(), Post.id.desc()))
+    else:
+        stmt = db.select(Collection).join(User, Collection.creator_id == User.id).where(
+            Collection.status == CollectionStatus.ACTIVE.value,
+            Collection.deleted_at.is_(None),
+        )
+        if q:
+            like = f"%{q}%"
+            stmt = stmt.where(or_(
+                Collection.name.ilike(like), Collection.slug.ilike(like),
+                Collection.description.ilike(like), User.username_normalized.ilike(like),
+                User.nickname.ilike(like),
+            ))
+        result = _page(stmt, (Collection.updated_at.desc(), Collection.id.desc()))
+    if result is None:
+        return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
+
+    rows, meta = result
+    target_ids = [item.id for item in rows]
+    existing = {}
+    if target_ids:
+        target_column = FeaturedContent.post_id if content_type == "article" else FeaturedContent.collection_id
+        existing = {
+            (item.post_id if content_type == "article" else item.collection_id): item
+            for item in db.session.scalars(
+                db.select(FeaturedContent).where(target_column.in_(target_ids))
+            ).all()
+        }
+
+    candidates = []
+    for item in rows:
+        featured = existing.get(item.id)
+        base = {
+            "id": item.id,
+            "content_type": content_type,
+            "featured": ({
+                "id": featured.id,
+                "is_active": featured.is_active,
+                "sort_order": featured.sort_order,
+            } if featured else None),
+            "updated_at": isoformat_utc(item.updated_at),
+        }
+        if content_type == "article":
+            candidates.append({
+                **base,
+                "title": item.title,
+                "summary": item.summary,
+                "author": item.author.public_dict() if item.author else None,
+                "visibility": item.visibility,
+                "published_at": isoformat_utc(item.published_at),
+            })
+        else:
+            candidates.append({
+                **base,
+                "name": item.name,
+                "slug": item.slug,
+                "description": item.description,
+                "creator": item.creator.public_dict() if item.creator else None,
+                "member_count": len(item.member_links),
+                "post_count": len([post for post in item.posts if post.deleted_at is None]),
+            })
+    return success_response(candidates, meta=meta)
+
+
 def _featured_target(item):
     if item.content_type=="article":
         post=item.post
