@@ -35,9 +35,13 @@ class Media(db.Model):
     kind = db.Column(db.String(40), nullable=False, default=MediaKind.IMAGE)
     mime_type = db.Column(db.String(100), nullable=False)
     byte_size = db.Column(db.Integer, nullable=False)
+    content_sha256 = db.Column(db.String(64), nullable=True, index=True)
+    original_filename = db.Column(db.String(255), nullable=True)
+    alt_text = db.Column(db.String(300), nullable=True)
     width = db.Column(db.Integer, nullable=True)
     height = db.Column(db.Integer, nullable=True)
     storage_key = db.Column(db.String(500), nullable=False, unique=True)
+    display_key = db.Column(db.String(500), nullable=True, unique=True)
     thumbnail_key = db.Column(db.String(500), nullable=True)
     live_photo_pair_id = db.Column(db.String(36), nullable=True, index=True)
     bound_type = db.Column(db.String(30), nullable=True)
@@ -55,8 +59,10 @@ class Media(db.Model):
             "kind": self.kind,
             "mime_type": self.mime_type,
             "byte_size": self.byte_size,
+            "alt_text": self.alt_text,
             "width": self.width,
             "height": self.height,
+            "display_key_ready": bool(self.display_key),
             "live_photo_pair_id": self.live_photo_pair_id,
             "bound_type": self.bound_type,
             "bound_id": self.bound_id,
@@ -65,6 +71,7 @@ class Media(db.Model):
             "created_at": isoformat_utc(self.created_at),
         }
         data["read_path"] = f"/api/v1/uploads/images/{self.public_id}"
+        data["display_path"] = data["read_path"]
         data["thumbnail_path"] = (
             None
             if self.kind == MediaKind.LIVE_PHOTO_VIDEO
@@ -76,10 +83,13 @@ class Media(db.Model):
             else None
         )
         if include_manage_paths:
+            data["content_sha256"] = self.content_sha256
+            data["original_filename"] = self.original_filename
             data["manage_path"] = f"/api/v1/uploads/manage/images/{self.public_id}"
             data["manage_thumbnail_path"] = (
                 None
                 if self.kind == MediaKind.LIVE_PHOTO_VIDEO
                 else f"/api/v1/uploads/manage/images/{self.public_id}/thumbnail"
             )
+            data["original_download_path"] = f"/api/v1/uploads/manage/images/{self.public_id}/original"
         return data

@@ -74,6 +74,48 @@ def replace_members(collection, creator_id, member_ids, actor_id):
     return {"added": sorted(added), "removed": sorted(removed)}
 
 
+def transfer_creator(collection_id, actor_id, new_creator_id):
+    if isinstance(new_creator_id, bool) or not isinstance(new_creator_id, int) or new_creator_id <= 0:
+        raise DomainError("VALIDATION_ERROR", "new_creator_id 必须是正整数。", 422)
+    if new_creator_id == actor_id:
+        raise DomainError("VALIDATION_ERROR", "不能将 Collection 转让给自己。", 422)
+
+    collection = db.session.scalar(
+        db.select(Collection).where(Collection.id == collection_id).with_for_update()
+    )
+    if collection is None or collection.deleted_at is not None or collection.creator_id != actor_id:
+        raise DomainError("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+
+    target = db.session.get(User, new_creator_id)
+    target_link = db.session.scalar(db.select(CollectionMember).where(
+        CollectionMember.collection_id == collection.id,
+        CollectionMember.user_id == new_creator_id,
+    ))
+    if target is None or target.status != UserStatus.ACTIVE.value or target_link is None:
+        raise DomainError("VALIDATION_ERROR", "新创建者必须是当前有效成员。", 422)
+
+    db.session.delete(target_link)
+    db.session.flush()
+    updated = db.session.execute(
+        db.update(Collection).where(
+            Collection.id == collection.id,
+            Collection.creator_id == actor_id,
+            Collection.deleted_at.is_(None),
+        ).values(creator_id=new_creator_id, updated_at=utcnow()),
+        execution_options={"synchronize_session": False},
+    )
+    if updated.rowcount != 1:
+        raise DomainError("EDIT_CONFLICT", "Collection 创建者已发生变化，请刷新后重试。", 409)
+    db.session.add(CollectionMember(
+        collection_id=collection.id,
+        user_id=actor_id,
+        join_source="manual",
+    ))
+    db.session.flush()
+    db.session.expire(collection)
+    return collection, target
+
+
 def delete_collection(collection):
     posts = list(collection.posts)
     for post in posts:

@@ -14,9 +14,10 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import parse_iso_datetime, validate_external_url
 from app.extensions import db
+from app.interactions.service import reaction_summary
 from app.models import (
-    ArticleSlug, Category, Collection, Comment, ContentFavorite, ContentLike, Notification,
-    Media, Post, PostReadEvent, PostRevision, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
+    ArticleSlug, Category, Collection, Comment, ContentFavorite, Notification,
+    Media, Post, PostReaction, PostReadEvent, PostRevision, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
 )
 from app.posts.service import (
     DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
@@ -193,10 +194,17 @@ def _detail(post,actor):
     data=_serialize(post,actor_id=actor.id)
     data["canonical"]=(f"/articles/{current_article_slug(post.id)}" if post.post_type=="article" else f"/notes/{post.id}")
     data["interactions"]={
-        "like_count":db.session.scalar(db.select(func.count(ContentLike.id)).where(ContentLike.post_id==post.id)) or 0,
+        "like_count":db.session.scalar(db.select(func.count(PostReaction.id)).where(
+            PostReaction.post_id==post.id,PostReaction.kind=="heart",
+        )) or 0,
         "comment_count":db.session.scalar(db.select(func.count(Comment.id)).where(Comment.post_id==post.id,Comment.status.in_(("active","deleted")))) or 0,
-        "liked":db.session.scalar(db.select(ContentLike.id).where(ContentLike.post_id==post.id,ContentLike.user_id==actor.id)) is not None,
+        "liked":db.session.scalar(db.select(PostReaction.id).where(
+            PostReaction.post_id==post.id,PostReaction.user_id==actor.id,PostReaction.kind=="heart",
+        )) is not None,
         "favorited":db.session.scalar(db.select(ContentFavorite.id).where(ContentFavorite.post_id==post.id,ContentFavorite.user_id==actor.id)) is not None,
+        "reactions":reaction_summary(
+            PostReaction,PostReaction.post_id,post.id,actor_id=actor.id,
+        ),
     }
     data["previous"]=None; data["next"]=None; data["related"]=[]
     if post.post_type==PostType.ARTICLE.value and post.published_at is not None:

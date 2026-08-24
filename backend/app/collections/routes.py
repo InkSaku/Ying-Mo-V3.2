@@ -6,13 +6,18 @@ from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
 
 from app.access import collection_member_predicate, is_collection_member, semantic_time_expression
-from app.collections.service import delete_collection, replace_members, resolve_member_ids
+from app.admin.service import record_admin_log
+from app.collections.service import delete_collection, replace_members, resolve_member_ids, transfer_creator
 from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import SLUG_RE
 from app.extensions import db
-from app.models import Collection, CollectionMember, Media, Notification, Post, PostVisibility, User, UserStatus
+from app.models import (
+    Collection, CollectionMember, CollectionNotificationPreference, Media, Notification,
+    Post, PostVisibility, User, UserStatus,
+)
+from app.media_memory import logical_media_item
 from app.posts.service import DomainError
 from app.posts.browsing import serialize_browse_post, serialize_browse_posts
 
@@ -185,17 +190,25 @@ def collection_media(slug):
         post_scope, filters = _timeline_filters(post_scope)
     except DomainError as error:
         return _handle(error)
+    media_kind = request.args.get("media_kind", "").strip().lower()
+    if media_kind not in {"", "image", "live_photo"}:
+        return error_response("VALIDATION_ERROR", "media_kind 不合法。", 422)
+    filters["media_kind"] = media_kind
     post_ids = post_scope.with_only_columns(Post.id)
-    stmt = db.select(Media).where(
+    stmt = db.select(Media).join(Post, Post.id == Media.bound_id).where(
         Media.bound_type == "post",
         Media.bound_id.in_(post_ids),
         Media.kind.in_(("image", "live_photo_image")),
         Media.status == "active",
         Media.deleted_at.is_(None),
     )
+    if media_kind == "image":
+        stmt = stmt.where(Media.kind == "image")
+    elif media_kind == "live_photo":
+        stmt = stmt.where(Media.kind == "live_photo_image")
     total = db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     media_rows = db.session.scalars(
-        stmt.order_by(Media.created_at.desc(), Media.id.desc())
+        stmt.order_by(semantic_time_expression().desc(), Media.id.desc())
         .offset((page - 1) * size).limit(size)
     ).all()
     posts_by_id = {
@@ -208,22 +221,52 @@ def collection_media(slug):
         post = posts_by_id.get(media.bound_id)
         if not post:
             continue
-        items.append({
-            "media": media.to_dict(),
-            "post": serialize_browse_post(post, actor_id=actor.id),
-        })
-    facet_scope = base.with_only_columns(
+        item = logical_media_item(actor, media, post=post)
+        if item:
+            items.append(item)
+
+    facet_posts = base
+    if filters["author"]:
+        facet_posts = facet_posts.join(User, User.id == Post.author_id).where(
+            User.username_normalized == filters["author"]
+        )
+    if filters["post_type"]:
+        facet_posts = facet_posts.where(Post.post_type == filters["post_type"])
+    facet_post_ids = facet_posts.with_only_columns(Post.id)
+    facet_scope = db.select(
         func.extract("year", semantic_time_expression()).label("year"),
-        func.count(Post.id).label("count"),
-    ).group_by(func.extract("year", semantic_time_expression()))
+        func.count(Media.id).label("count"),
+    ).join(Post, Post.id == Media.bound_id).where(
+        Media.bound_type == "post",
+        Media.bound_id.in_(facet_post_ids),
+        Media.kind.in_(("image", "live_photo_image")),
+        Media.status == "active",
+        Media.deleted_at.is_(None),
+    )
+    if media_kind == "image":
+        facet_scope = facet_scope.where(Media.kind == "image")
+    elif media_kind == "live_photo":
+        facet_scope = facet_scope.where(Media.kind == "live_photo_image")
+    facet_scope = facet_scope.group_by(func.extract("year", semantic_time_expression()))
     year_facets = [
         {"year": int(row.year), "count": row.count}
         for row in db.session.execute(facet_scope).all() if row.year is not None
     ]
     year_facets.sort(key=lambda item: item["year"], reverse=True)
     author_rows = db.session.execute(
-        base.with_only_columns(User.id, User.username, User.nickname, func.count(Post.id).label("count"))
-        .join(User, User.id == Post.author_id)
+        db.select(User.id, User.username, User.nickname, func.count(Media.id).label("count"))
+        .join(Post, User.id == Post.author_id)
+        .join(Media, Media.bound_id == Post.id)
+        .where(
+            Post.collection_id == collection.id,
+            Post.deleted_at.is_(None),
+            Post.moderation_status == "active",
+            Post.status.in_(("published", "archived")),
+            Media.bound_type == "post",
+            Media.kind.in_(("image", "live_photo_image")),
+            Media.status == "active",
+            Media.deleted_at.is_(None),
+        )
         .group_by(User.id, User.username, User.nickname)
         .order_by(User.nickname.asc(), User.id.asc())
     ).all()
@@ -391,6 +434,99 @@ def put_members(collection_id):
         db.session.rollback()
         return _handle(error)
     return success_response({"changes": changes, "collection": collection.to_dict(include_members=True)})
+
+
+@bp.get("/<int:collection_id>/notification-preference")
+@jwt_required(locations=["headers"])
+def get_notification_preference(collection_id):
+    actor = current_user()
+    collection = db.session.get(Collection, collection_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if collection is None or not is_collection_member(actor.id, collection):
+        return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+    preference = db.session.scalar(db.select(CollectionNotificationPreference).where(
+        CollectionNotificationPreference.collection_id == collection.id,
+        CollectionNotificationPreference.user_id == actor.id,
+    ))
+    return success_response({"collection_id": collection.id, "level": preference.level if preference else "all"})
+
+
+@bp.put("/<int:collection_id>/notification-preference")
+@jwt_required(locations=["headers"])
+def put_notification_preference(collection_id):
+    actor = current_user()
+    collection = db.session.get(Collection, collection_id)
+    data = request.get_json(silent=True)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if collection is None or not is_collection_member(actor.id, collection):
+        return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+    if not isinstance(data, dict) or set(data) != {"level"} or data.get("level") not in {"all", "important", "muted"}:
+        return error_response("VALIDATION_ERROR", "level 只能是 all、important 或 muted。", 422)
+    preference = db.session.scalar(db.select(CollectionNotificationPreference).where(
+        CollectionNotificationPreference.collection_id == collection.id,
+        CollectionNotificationPreference.user_id == actor.id,
+    ))
+    if preference is None:
+        preference = CollectionNotificationPreference(
+            collection_id=collection.id,
+            user_id=actor.id,
+        )
+        db.session.add(preference)
+    preference.level = data["level"]
+    db.session.commit()
+    return success_response({"collection_id": collection.id, "level": preference.level})
+
+
+@bp.post("/<int:collection_id>/transfer-creator")
+@jwt_required(locations=["headers"])
+def transfer_collection_creator(collection_id):
+    actor = current_user()
+    data = request.get_json(silent=True)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if not isinstance(data, dict):
+        return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    if set(data) != {"new_creator_id"}:
+        return error_response("VALIDATION_ERROR", "仅支持 new_creator_id 字段。", 422)
+    try:
+        collection, new_creator = transfer_creator(
+            collection_id, actor.id, data.get("new_creator_id")
+        )
+        db.session.add(Notification(
+            user_id=new_creator.id,
+            actor_id=actor.id,
+            kind="collection_creator_received",
+            target_type="collection",
+            collection_id=collection.id,
+            message=f"你已成为 Collection「{collection.name}」的新创建者。",
+        ))
+        db.session.add(Notification(
+            user_id=actor.id,
+            actor_id=new_creator.id,
+            kind="collection_creator_transferred",
+            target_type="collection",
+            collection_id=collection.id,
+            message=f"你已将 Collection「{collection.name}」转让给 {new_creator.nickname}。",
+        ))
+        record_admin_log(
+            actor,
+            "collection.creator_transfer",
+            "collection",
+            collection.id,
+            before={"creator_id": actor.id},
+            after={"creator_id": new_creator.id},
+            reason="creator_initiated_transfer",
+        )
+        db.session.commit()
+    except DomainError as error:
+        db.session.rollback()
+        return _handle(error)
+    except IntegrityError:
+        db.session.rollback()
+        return error_response("EDIT_CONFLICT", "Collection 创建者转让发生冲突，请刷新后重试。", 409)
+    return success_response(collection.to_dict(include_members=True))
 
 
 @bp.get("/member-options")

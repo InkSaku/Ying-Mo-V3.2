@@ -1,5 +1,6 @@
 const VIEWS = new Set(["overview", "timeline", "media"]);
 const TYPES = new Set(["article", "note"]);
+const MEDIA_KINDS = new Set(["image", "live_photo"]);
 
 function positiveInteger(value, fallback = 1) {
   const parsed = Number.parseInt(value || "", 10);
@@ -15,6 +16,7 @@ export function readCollectionMemoryState(params) {
     year: /^\d{4}$/.test(rawYear) ? rawYear : "",
     author: (params.get("author") || "").trim().toLowerCase(),
     type: TYPES.has(rawType) ? rawType : "",
+    mediaKind: MEDIA_KINDS.has(params.get("media_kind")) ? params.get("media_kind") : "",
     page: positiveInteger(params.get("page")),
   };
 }
@@ -25,6 +27,7 @@ export function collectionMemorySearchParams(state) {
   if (state.year) params.set("year", state.year);
   if (state.author) params.set("author", state.author);
   if (state.type) params.set("type", state.type);
+  if (state.mediaKind) params.set("media_kind", state.mediaKind);
   if (state.page > 1) params.set("page", String(state.page));
   return params;
 }
@@ -34,6 +37,7 @@ export function collectionMemoryApiPath(slug, state, pageSize) {
   if (state.year) params.set("year", state.year);
   if (state.author) params.set("author", state.author);
   if (state.type) params.set("post_type", state.type);
+  if (state.mediaKind && state.view === "media") params.set("media_kind", state.mediaKind);
   params.set("page", String(state.page || 1));
   params.set("page_size", String(pageSize));
   const resource = state.view === "media" ? "media" : "timeline";

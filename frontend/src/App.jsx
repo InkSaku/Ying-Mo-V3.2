@@ -17,6 +17,7 @@ const ResetPasswordPage = lazyNamed(() => import("./pages/ResetPasswordPage"), "
 const VerifyEmailPage = lazyNamed(() => import("./pages/VerifyEmailPage"), "VerifyEmailPage");
 const HomePage = lazyNamed(() => import("./pages/HomePage"), "HomePage");
 const OnThisDayPage = lazyNamed(() => import("./pages/OnThisDayPage"), "OnThisDayPage");
+const YearReviewPage = lazyNamed(() => import("./pages/YearReviewPage"), "YearReviewPage");
 const ExplorePage = lazyNamed(() => import("./pages/ExplorePage"), "ExplorePage");
 const PostsPage = lazyNamed(() => import("./pages/PostsPage"), "PostsPage");
 const PostDetailPage = lazyNamed(() => import("./pages/PostDetailPage"), "PostDetailPage");
@@ -37,6 +38,8 @@ const SettingsPage = lazyNamed(() => import("./pages/SettingsPage"), "SettingsPa
 const SessionsPage = lazyNamed(() => import("./pages/SessionsPage"), "SessionsPage");
 const MyCommentsPage = lazyNamed(() => import("./pages/MyCommentsPage"), "MyCommentsPage");
 const MyCollectionsPage = lazyNamed(() => import("./pages/MyCollectionsPage"), "MyCollectionsPage");
+const MyMediaPage = lazyNamed(() => import("./pages/MyMediaPage"), "MyMediaPage");
+const DataExportPage = lazyNamed(() => import("./pages/DataExportPage"), "DataExportPage");
 const TaxonomyPage = lazyNamed(() => import("./pages/TaxonomyPage"), "TaxonomyPage");
 const TaxonomyIndexPage = lazyNamed(() => import("./pages/TaxonomyIndexPage"), "TaxonomyIndexPage");
 const AdminPage = lazyNamed(() => import("./pages/AdminPage"), "AdminPage");
@@ -68,6 +71,7 @@ export function App() {
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/home" element={<HomePage />} />
         <Route path="/on-this-day" element={<OnThisDayPage />} />
+        <Route path="/year-in-review" element={<YearReviewPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/articles" element={<PostsPage type="article" />} />
         <Route path="/articles/:slug" element={<PostDetailPage type="article" />} />
@@ -93,6 +97,8 @@ export function App() {
         <Route path="/me/favorites" element={<FavoritesPage />} />
         <Route path="/me/comments" element={<MyCommentsPage />} />
         <Route path="/me/notifications" element={<NotificationsPage />} />
+        <Route path="/me/media" element={<MyMediaPage />} />
+        <Route path="/me/data" element={<DataExportPage />} />
         <Route path="/me/settings" element={<SettingsPage />} />
         <Route path="/me/sessions" element={<SessionsPage />} />
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />

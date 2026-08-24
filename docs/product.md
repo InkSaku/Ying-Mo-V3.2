@@ -1,8 +1,8 @@
-# 映墨 Ying-Mo 产品需求文档（PRD V3.4 Collection 长期治理修订）
+# 映墨 Ying-Mo 产品需求文档（PRD V3.6 长期保存能力修订）
 
-> 版本：V3.4
+> 版本：V3.6
 > 状态：邀请制朋友记录空间与 Collection 长期治理权威基线
-> 更新时间：2026-08-22
+> 更新时间：2026-08-24
 > 产品形态：小规模、邀请码准入、登录后阅读的多人博客与朋友生活记录空间  
 > 前端：React + Vite  
 > 后端：Flask App Factory + Blueprint + RESTful API  
@@ -416,7 +416,7 @@ Collection 创建者是资源级身份，不是独立站点角色。
 - 可以将任意 Post 从 Collection 中移除关联；
 - 不能编辑、删除、改写署名或修改其他作者正文。
 
-创建者不支持从自己的 Collection 中移除自己。V3.2 不建设 Collection 所有权转让和账号停用后的 creator 接管流程。
+创建者不支持从自己的 Collection 中移除自己。V3.5 支持 creator 主动将所有权转让给当前 active member；不建设账号停用后的自动接管流程。
 
 ## 3.4 Collection 成员
 
@@ -989,7 +989,7 @@ collection_members
 - creator 可以移除 member；
 - creator 自己不出现在可取消勾选的 member 列表中；
 - creator 不支持移除自己；
-- V3.2 不建设 creator 转让。
+- creator 可以按 9.17 的规则将所有权转让给当前 active member。
 
 ## 9.6 统一阅读与投稿 ACL
 
@@ -1165,6 +1165,68 @@ Collection creator 可选择是否让未来成功注册的 Ying-Mo 成员自动�
 - 非 creator 不得修改设置，非成员不得借接口探测该设置或 Collection 是否存在。
 
 验收必须覆盖默认关闭、开启后读写、关闭后历史成员保留、现有成员不补加、多个 Collection、非法值、非 creator、注册事务和成员唯一约束。
+
+## 9.17 V3.5 Collection Creator 转让
+
+当前 creator 可以把 Collection 所有权主动转让给一名当前 active member。转让只改变 Collection 管理责任，不改变任何 Post 的真实作者、正文、互动、媒体或既有可见性。
+
+- 目标必须是该 Collection 当前成员、状态为 active，不能是 creator 自己或非成员；
+- 转让成功后，目标成员从 `collection_members` 移除并成为唯一 creator；
+- 原 creator 自动写入 `collection_members`，继续拥有普通阅读与投稿权；
+- 新 creator 立即获得资料、封面、成员、自动加入开关、内容排序、关键记录、移出 Post 和删除 Collection 等管理能力；
+- 原 creator 立即失去上述管理能力，但仍只能编辑和删除自己的 Post；
+- 转让必须在单一数据库事务中原子完成，并以条件更新防止重复提交或并发请求产生双 creator、无 creator 或成员关系冲突；
+- 前端必须使用二次确认，明确展示新旧 creator 及双方权限变化；
+- 新旧 creator 均收到站内通知，通知目标继续服从当前 Collection ACL；
+- 转让写入结构化操作日志，记录操作者、request ID、Collection、转让前后 creator ID 和时间；
+- Creator 转让不改变 `auto_add_future_members`、成员名单、Post 顺序、关键记录或 Collection Slug 生命周期；
+- 第一版不支持转让给非成员、受限账号、批量转让、管理员强制接管或账号停用自动转移。
+
+验收必须覆盖成功转让、旧 creator 保留读写、新 creator 管理权、非 creator、非成员、受限成员、自转让、重复请求、并发请求、通知脱敏、审计记录及转让后全部 ACL。
+
+## 9.18 V3.6 长期保存能力
+
+V3.6 在既有邀请制、成员 ACL 和真实作者归属不变的前提下补齐五项长期使用能力：
+
+- 成员可导出本人资料、本人创作的 Article / Note、互动清单与本人拥有的原始媒体；导出包采用 ZIP，正文使用带元数据的 Markdown，关系清单使用 JSON，不能借导出绕过当前 ACL；
+- 运维人员可通过 CLI 创建、校验并恢复数据库业务表与私有媒体的完整备份；备份必须包含 SHA-256 校验和，恢复要求显式确认，备份文件按敏感数据处理；
+- 每名 Collection 当前成员可设置独立通知级别：全部、仅重要或静音；新 Post 属于可静音广播，成员加入/移除和 creator 转让等直接治理通知始终送达；
+- 编辑器按用户与 Post 范围在浏览器保存版本化离线副本；网络中断或页面意外关闭后可以恢复或丢弃，服务器成功保存同一内容后清除本地副本；
+- 年度回顾只聚合当前用户本人仍可读取的已发布/已归档内容，展示月份、类型、Collection、地点、媒体和精选记录，不生成公开榜单或成员画像；
+- 媒体管理只允许所有者查看管理清单、下载原文件、维护 ALT、按内容哈希识别重复文件以及批量隐藏/恢复；已绑定内容的媒体不能被批量隐藏，读取仍服从 Post / Collection ACL。
+
+验收必须覆盖越权导出、通知级别与直接通知、离线副本隔离和清理、年度边界与 ACL 撤销、媒体所有权/重复文件/绑定保护，以及备份创建、篡改校验和隔离恢复。
+
+## 9.19 V3.7 轻量互动
+
+V3.7 在不建设 Feed、聊天、关注或复杂社交图谱的前提下增强已有评论与通知链路：
+
+- Post 与 active 评论支持 `heart / like / laugh / celebrate / wow / support` 六种固定回应；数据库保存语义键，界面渲染固定 Emoji；每名成员对同一目标同时最多保留一种回应，选择另一种即替换，再次选择当前回应即取消；
+- 既有 Post Like 数据迁移为 `heart` 回应，Favorite 继续独立；回应不产生逐条通知，也不形成热榜或推荐信号；
+- 评论仍只有一级评论和扁平一级回复；回复任何评论都归入其一级根评论，并通过 `reply_to_comment_id` 展示引用作者和当前可见摘要，不产生无限嵌套；
+- 评论创建携带 UUID 请求标识并按作者唯一，支持前端立即插入临时评论、成功替换和失败回滚，避免网络重试产生重复内容；回应写接口使用幂等的“设为某种/清除”语义；
+- `@成员` 使用结构化 `comment_mentions` 关系；候选接口只查询当前 active 且有权读取目标 Post 的成员，提交时后端再次裁决；未通过选择器绑定的普通 `@文本` 不发送通知；
+- 通知中心直接展示 active 评论的纯文本短摘要，Article / Note 链接携带评论 ID 和锚点；评论上下文接口计算目标一级评论所在页，支持精确定位分页后的回复；
+- Collection 通知偏好继续生效：`all` 接收全部，`important` 接收评论本人、回复、提及和治理通知，`muted` 只保留成员变化、creator 转让等直接治理通知；
+- 全局新通知同步继续使用约 60 秒轻轮询、窗口焦点和页面恢复刷新，不引入 SSE 长连接、聊天室、在线状态或已读回执；
+- Post、评论、回应、提及候选与评论上下文的所有读取和写入均先由后端裁决当前 ACL；成员被移出 Collection 后相关资源接口立即统一返回 404；通知历史只保留脱敏通用说明，不返回目标、评论摘要、Collection 名称或可用深链。
+
+验收必须覆盖 Like 数据迁移、六种回应约束与并发幂等、评论乐观回滚、回复压平与引用、提及候选和提交再鉴权、通知摘要及跨分页深链、三档 Collection 通知偏好、删除/隐藏评论，以及成员移除后的全接口 404 和通知脱敏。
+
+## 9.20 媒体记忆与沉浸灯箱
+
+媒体浏览以“逻辑媒体记忆”为统一对象，灯箱只是展示容器，不把各页面的图片入口实现成彼此割裂的预览组件：
+
+- Post 正文、封面、Collection 影像墙、年度回顾、我的媒体和往年今日复用同一灯箱；支持前后切换、键盘、移动端滑动、双击/双指缩放、背景关闭、焦点恢复和无障碍对话框语义；
+- 当前媒体写入 `?media=<public_id>`，保留页面已有筛选参数；刷新或复制地址后由后端重新解析媒体和 ACL，无权、删除或成员已被移除时统一返回 404，界面不泄露标题、作者或 Collection；
+- Collection 影像墙按年份、成员和图片/Live Photo 筛选并分页；灯箱序列只使用当前筛选结果，返回时保留页面、筛选和滚动状态，并可跳回原 Post；
+- Live Photo 的静态图片和配对视频构成一个逻辑条目；默认显示静态图，桌面点击、移动端长按才播放，静音且 `playsInline`，动态片段失败时必须保留静态回退；
+- 时间优先使用 Note `occurred_at`，其他内容使用语义发布时间；地点只使用 Post 已确认的 `location`，不直接向成员暴露原图 EXIF GPS；
+- 列表只读取缩略图，灯箱读取去除 EXIF 的授权展示衍生图，并短时预加载相邻静态图片；原文件只通过所有者接口下载，不生成永久公开对象存储 URL；
+- 受保护 Blob 只在当前会话短时缓存，退出、会话失效或切换账号立即释放；后端每次新读取仍重新执行 Post / Collection ACL；
+- 图片上传生成限定尺寸的 WebP 展示图和缩略图；Live Photo 动态片段优先转换为适合浏览器播放的无元数据 H.264 MP4，转换不可用或播放失败时不影响静态照片。
+
+验收必须覆盖多入口复用、深链接刷新、筛选序列和分页边界、Live Photo 单条计数与静态回退、桌面/移动端手势、焦点恢复、会话缓存清理、展示图元数据移除、原件所有权，以及成员移除后解析、列表和文件读取统一 404。
 
 ---
 
@@ -1805,17 +1867,20 @@ Article 时间使用 `published_at`，Note 可展示 `occurred_at ?? published_a
 
 ## 19.1 目标类型
 
-V3.2 互动目标统一为：
+V3.2 初始互动目标为 Post；V3.7 的固定回应扩展到：
 
 ```text
 post
+comment
 ```
 
 P0 多态值注册表至少覆盖：
 
 ```text
-comments.target_type
-content_likes.target_type
+comments.post_id / reply_to_comment_id
+post_reactions.post_id
+comment_reactions.comment_id
+comment_mentions.comment_id
 content_favorites.target_type
 notifications.target_type
 featured_content.target_type
@@ -2240,6 +2305,7 @@ PATCH  /collections/:id
 GET    /collections/:id/members
 PUT    /collections/:id/members
 POST   /collections/:id/remove-post
+POST   /collections/:id/transfer-creator
 DELETE /collections/:id
 ```
 
@@ -2250,6 +2316,7 @@ DELETE /collections/:id
 - `POST /collections` 自动使用当前用户为 creator；
 - 创建时可提交 `member_ids[]`；
 - `PUT /collections/:id/members` 仅 creator；
+- `POST /collections/:id/transfer-creator` 仅当前 creator，目标必须是当前 active member；成功后目标成为唯一 creator，旧 creator 转为普通 member；
 - creator 不允许出现在待移除 member 集合；
 - `remove-post` 仅 creator，且只解除关联不删除 Post；
 - 删除 Collection 时所有 Post 原子脱离并变为 `private`；
@@ -3180,7 +3247,15 @@ flask db upgrade
 
 V3.3 当前开发范围：Collection 时间轴、共同回忆媒体墙和 Creator 关键记录，按 9.12–9.15 的边界实现。
 
-V3.4 已实现范围：未来成员自动加入，按 9.16 的边界实现。Collection creator 转让仍是后续独立任务。
+V3.4 已实现范围：未来成员自动加入，按 9.16 的边界实现。
+
+V3.5 当前开发范围：Collection creator 转让，按 9.17 的边界实现。
+
+V3.6 已实现范围：数据导出与备份恢复、Collection 通知偏好、离线草稿恢复、年度回顾与媒体长期管理，按 9.18 的边界实现。
+
+V3.7 已实现范围：固定回应、扁平引用回复、ACL 安全提及、通知摘要与评论深链、乐观更新和轻量通知同步，按 9.19 的边界实现。
+
+媒体记忆与沉浸灯箱已实现范围：统一逻辑媒体、全局灯箱、Collection 筛选相册、Live Photo、展示衍生图、深链接、短时预加载与 ACL 撤销，按 9.20 的边界实现。
 
 - 举报系统；
 - Post 与 Collection 多对多；
@@ -3191,7 +3266,6 @@ V3.4 已实现范围：未来成员自动加入，按 9.16 的边界实现。Col
 - 原生 App；
 - 站内视频上传；
 - 多作者团队空间；
-- Collection creator 转让；
 - 只读 Collection 成员或更复杂 ACL。
 
 P2 不能改变“邀请码准入、现实朋友共同记录、非开放流量社区”的 V3.2 核心边界，除非另行更新权威 PRD。

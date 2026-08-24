@@ -23,6 +23,7 @@
 - **Collection 是共同记录空间**：由一个创建者和指定成员共同阅读、共同投稿。
 - **权限由后端统一执行**：前端隐藏按钮不是权限边界，真正的 ACL 判断始终发生在服务端。
 - **长期记录优先**：支持 Markdown、图片、Live Photo、公式、脚注、代码、归档、搜索与个人内容管理。
+- **数据可带走、可恢复**：成员可导出自己的内容与原始媒体，站点维护者可创建、校验并恢复完整备份。
 
 ---
 
@@ -60,6 +61,7 @@
 - 图片拖拽上传
 - 剪贴板图片粘贴
 - 正文内部媒体占位符
+- 浏览器离线副本与意外关闭后的草稿恢复
 
 ---
 
@@ -120,6 +122,17 @@ Collection Members
 浏览器不会获得永久公开对象存储 URL。  
 媒体读取仍会经过后端，并重新检查对应 Post / Collection 的访问权限。
 
+Post、Collection 影像墙、年度回顾、我的媒体和往年今日复用同一套沉浸灯箱。图片以逻辑媒体记忆浏览，Live Photo 的静态图和动态片段只计为一个条目；灯箱支持深链接、键盘/滑动切换、缩放、焦点恢复和原 Post 跳转。列表读取缩略图，灯箱读取去除 EXIF 的授权 WebP 展示图并短时预加载相邻图片，只有媒体所有者可以下载原文件。生产环境建议安装 `ffmpeg`，用于把 Live Photo 动态片段转换为无元数据、浏览器友好的 H.264 MP4；转换或播放失败时仍显示静态照片。
+
+成员可在「我的媒体」中检索图片、维护 ALT 文本、下载原文件、识别重复文件并批量隐藏或恢复未绑定媒体；所有管理操作仍校验媒体所有权。
+
+### 长期保存与回顾
+
+- Collection 成员可独立选择「全部 / 仅重要 / 静音」通知；成员变化和所有权变更等直接通知不被静音吞掉。
+- 「年度回顾」按当前访问权限汇总自己的发布内容、月份、类型、Collection、地点和媒体，不保存额外画像或公开榜单。
+- 「数据导出」生成包含 Markdown、JSON 清单和本人原始媒体的 ZIP，不包含其他成员无权导出的数据。
+- 运维备份覆盖数据库业务表和私有媒体，并在恢复前校验结构与文件校验和。
+
 ---
 
 ### 成员与互动
@@ -133,10 +146,10 @@ Collection Members
 - 按年月归档浏览
 - 浏览 Category / Tag
 - 查看成员主页
-- 点赞
+- 使用 6 种固定表情回应 Post 和评论
 - 收藏
-- 评论与回复
-- 接收站内通知
+- 评论、一级引用回复与 `@` 当前可访问成员
+- 接收带回复摘要和评论精确跳转的站内通知
 - 管理自己的内容、评论、收藏与 Collection
 
 ---
@@ -536,6 +549,7 @@ flask --app run.py db upgrade
 - `public → login_only` 数据迁移
 - Post `edit_version`
 - 邮箱可信与账号恢复相关 Schema
+- 长期保存、轻量互动与媒体展示衍生图 Schema（当前 head：`20260825_0011`）
 
 生产环境部署新版本前，应先备份数据库，再执行 migration。
 
@@ -685,6 +699,21 @@ flask --app run.py cleanup-orphan-media --delete
 ```bash
 flask --app run.py purge-expired-sessions
 ```
+
+创建并校验完整备份：
+
+```bash
+flask --app run.py backup-create --output /secure/path/ying-mo-backup.zip
+flask --app run.py backup-verify --input /secure/path/ying-mo-backup.zip
+```
+
+恢复会覆盖当前数据库业务数据和媒体目录，必须先在隔离环境验证，并显式确认：
+
+```bash
+flask --app run.py backup-restore --input /secure/path/ying-mo-backup.zip --confirm RESTORE
+```
+
+备份含密码哈希、账户资料及私有内容。生成文件权限会收紧为仅所有者可读写，但仍应存放在加密、受访问控制的目录或备份系统中。
 
 ---
 

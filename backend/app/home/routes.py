@@ -1,4 +1,6 @@
-from flask import Blueprint
+from datetime import datetime, timezone
+
+from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, selectinload
@@ -11,6 +13,7 @@ from app.extensions import db
 from app.models import Collection, FeaturedContent, Post, PostStatus, PostType
 from app.posts.browsing import serialize_browse_posts
 from app.home.on_this_day import on_this_day_data
+from app.home.year_review import year_review_data
 
 bp=Blueprint("home",__name__)
 
@@ -87,3 +90,20 @@ def on_this_day():
     page, size = args
     data, total = on_this_day_data(actor.id, page=page, size=size)
     return success_response(data, meta=pagination_meta(page, size, total))
+
+
+@bp.get("/year-in-review")
+@jwt_required(locations=["headers"])
+def year_in_review():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    current = datetime.now(timezone.utc).year
+    raw_year = request.args.get("year", str(current)).strip()
+    try:
+        year = int(raw_year)
+    except ValueError:
+        return error_response("VALIDATION_ERROR", "year 不合法。", 422)
+    if year < 2000 or year > current:
+        return error_response("VALIDATION_ERROR", "year 不合法。", 422)
+    return success_response(year_review_data(actor.id, year))

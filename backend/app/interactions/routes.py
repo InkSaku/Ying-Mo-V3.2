@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +8,8 @@ from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import ContentFavorite, ContentLike, Post
+from app.models import Comment, CommentReaction, ContentFavorite, Post, PostReaction
+from app.interactions.service import reaction_summary, set_reaction, valid_reaction_kind
 from app.posts.browsing import serialize_browse_posts
 
 bp=Blueprint("interactions",__name__)
@@ -39,8 +40,18 @@ def toggle_like(post_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if not can_read_post(actor.id,post):
         return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
-    active=_toggle(ContentLike,actor.id,post.id)
-    count=db.session.scalar(db.select(func.count(ContentLike.id)).where(ContentLike.post_id==post.id)) or 0
+    existing=db.session.scalar(db.select(PostReaction).where(
+        PostReaction.user_id==actor.id,PostReaction.post_id==post.id,
+    ))
+    active=existing is None or existing.kind!="heart"
+    set_reaction(
+        PostReaction,PostReaction.post_id,target_id=post.id,user_id=actor.id,
+        kind="heart" if active else None,
+    )
+    db.session.commit()
+    count=db.session.scalar(db.select(func.count(PostReaction.id)).where(
+        PostReaction.post_id==post.id,PostReaction.kind=="heart",
+    )) or 0
     return success_response({"liked":active,"like_count":count})
 
 
@@ -64,10 +75,114 @@ def state(post_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if not can_read_post(actor.id,post):
         return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
-    liked=db.session.scalar(db.select(ContentLike.id).where(ContentLike.user_id==actor.id,ContentLike.post_id==post.id)) is not None
+    liked=db.session.scalar(db.select(PostReaction.id).where(
+        PostReaction.user_id==actor.id,PostReaction.post_id==post.id,PostReaction.kind=="heart",
+    )) is not None
     fav=db.session.scalar(db.select(ContentFavorite.id).where(ContentFavorite.user_id==actor.id,ContentFavorite.post_id==post.id)) is not None
-    count=db.session.scalar(db.select(func.count(ContentLike.id)).where(ContentLike.post_id==post.id)) or 0
+    count=db.session.scalar(db.select(func.count(PostReaction.id)).where(
+        PostReaction.post_id==post.id,PostReaction.kind=="heart",
+    )) or 0
     return success_response({"liked":liked,"favorited":fav,"like_count":count})
+
+
+def _reaction_kind_from_request():
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict) or set(data)!={"kind"}:
+        return None,error_response("VALIDATION_ERROR","仅支持 kind 字段。",422)
+    if data["kind"] is None:
+        return None,None
+    kind=valid_reaction_kind(data["kind"])
+    if kind is None:
+        return None,error_response("VALIDATION_ERROR","回应类型不受支持。",422)
+    return kind,None
+
+
+@bp.get("/posts/<int:post_id>/reactions")
+@jwt_required(locations=["headers"])
+def post_reactions(post_id):
+    actor=current_user(); post=db.session.get(Post,post_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    if not can_read_post(actor.id,post):
+        return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
+    return success_response(reaction_summary(
+        PostReaction,PostReaction.post_id,post.id,actor_id=actor.id,
+    ))
+
+
+@bp.put("/posts/<int:post_id>/reaction")
+@jwt_required(locations=["headers"])
+def set_post_reaction(post_id):
+    actor=current_user(); post=db.session.get(Post,post_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    if not can_read_post(actor.id,post):
+        return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
+    kind,error=_reaction_kind_from_request()
+    if error:
+        return error
+    set_reaction(PostReaction,PostReaction.post_id,target_id=post.id,user_id=actor.id,kind=kind)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        set_reaction(PostReaction,PostReaction.post_id,target_id=post.id,user_id=actor.id,kind=kind)
+        db.session.commit()
+    return success_response(reaction_summary(
+        PostReaction,PostReaction.post_id,post.id,actor_id=actor.id,
+    ))
+
+
+def _readable_active_comment(actor_id,comment_id):
+    comment=db.session.get(Comment,comment_id)
+    if comment is None or comment.status!="active":
+        return None
+    post=db.session.get(Post,comment.post_id)
+    return comment if can_read_post(actor_id,post) else None
+
+
+@bp.get("/comments/<int:comment_id>/reactions")
+@jwt_required(locations=["headers"])
+def comment_reactions(comment_id):
+    actor=current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    comment=_readable_active_comment(actor.id,comment_id)
+    if comment is None:
+        return error_response("RESOURCE_NOT_FOUND","评论不存在。",404)
+    return success_response(reaction_summary(
+        CommentReaction,CommentReaction.comment_id,comment.id,actor_id=actor.id,
+    ))
+
+
+@bp.put("/comments/<int:comment_id>/reaction")
+@jwt_required(locations=["headers"])
+def set_comment_reaction(comment_id):
+    actor=current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
+    comment=_readable_active_comment(actor.id,comment_id)
+    if comment is None:
+        return error_response("RESOURCE_NOT_FOUND","评论不存在。",404)
+    kind,error=_reaction_kind_from_request()
+    if error:
+        return error
+    set_reaction(
+        CommentReaction,CommentReaction.comment_id,
+        target_id=comment.id,user_id=actor.id,kind=kind,
+    )
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        set_reaction(
+            CommentReaction,CommentReaction.comment_id,
+            target_id=comment.id,user_id=actor.id,kind=kind,
+        )
+        db.session.commit()
+    return success_response(reaction_summary(
+        CommentReaction,CommentReaction.comment_id,comment.id,actor_id=actor.id,
+    ))
 
 
 @bp.get("/favorites")

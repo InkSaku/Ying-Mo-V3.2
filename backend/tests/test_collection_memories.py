@@ -116,8 +116,12 @@ def test_collection_timeline_filters_facets_media_and_acl(client, app):
         headers=auth(member_token),
     )
     assert wall.status_code == 200, wall.get_json()
-    assert wall.get_json()["data"]["items"][0]["media"]["id"] == media["id"]
-    assert wall.get_json()["data"]["items"][0]["post"]["id"] == note_2024["id"]
+    wall_item = wall.get_json()["data"]["items"][0]
+    assert wall_item["id"] == media["public_id"]
+    assert wall_item["kind"] == "image"
+    assert wall_item["image"]["id"] == media["id"]
+    assert wall_item["post"]["id"] == note_2024["id"]
+    assert wall_item["occurred_at"].startswith("2024-07-12")
 
     removed = client.put(
         f"/api/v1/collections/{collection['id']}/members",

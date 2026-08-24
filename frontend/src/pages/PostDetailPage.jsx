@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -13,6 +13,9 @@ import { InteractionBar } from "../components/InteractionBar";
 import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
 import { PostCard } from "../components/PostCard";
 import { installVisibleReadTracker } from "../lib/readingStats";
+import { logicalMediaFromRaw } from "../lib/mediaGallery";
+import { MediaOpenButton } from "../components/MediaOpenButton";
+import { useMediaLightbox } from "../contexts/MediaLightboxContext";
 
 export function PostDetailPage({ type }) {
   const params = useParams();
@@ -20,6 +23,8 @@ export function PostDetailPage({ type }) {
   const path = type === "article" ? `/posts/slug/${encodeURIComponent(params.slug)}` : `/posts/${params.id}`;
   const state = useAsyncData(() => api.get(path), [path]);
   const post = state.data?.redirect ? null : state.data;
+  const galleryItems = useMemo(() => logicalMediaFromRaw(post?.bound_media, post), [post]);
+  const { hydrateGallery } = useMediaLightbox();
   const postId = post?.id;
   usePageMeta(post?.title || (type === "article" ? "文章" : "随记"));
 
@@ -37,18 +42,23 @@ export function PostDetailPage({ type }) {
     });
   }, [postId]);
 
+  useEffect(() => {
+    if (galleryItems.length) hydrateGallery({ items: galleryItems, context: "post" });
+  }, [galleryItems, hydrateGallery]);
+
   if (state.loading || state.data?.redirect) return <PageLoader />;
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   if (!post) return null;
+  const coverGalleryItem = galleryItems.find((item) => item.id === post.cover_media?.public_id);
 
   const renderedBody = post.rendered_html ? (
-    <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} />
+    <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} />
   ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null;
   const postContent = (
     <>
       {renderedBody}
 
-      <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} />
+      <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} galleryItems={galleryItems} />
 
       {post.external_video_url ? (
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
@@ -112,12 +122,12 @@ export function PostDetailPage({ type }) {
           </dl>
         </header>
 
-        <ProtectedImage
+        {post.cover_media ? <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面"><ProtectedImage
           media={post.cover_media}
           useOriginal
           alt=""
           className={`post-detail-cover ${post.post_type === "article" ? "article-reading-width" : ""}`}
-        />
+        /></MediaOpenButton> : null}
 
         {post.post_type === "article" ? (
           <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>

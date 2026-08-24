@@ -2,6 +2,7 @@ import { createElement, lazy, Suspense, useMemo } from "react";
 import { isIgnorableMarkdownWhitespace } from "../lib/markdownRender";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedVideo } from "./ProtectedVideo";
+import { MediaOpenButton } from "./MediaOpenButton";
 
 const ProtectedMath = lazy(() => import("./ProtectedMath").then((module) => ({
   default: module.ProtectedMath,
@@ -59,20 +60,21 @@ function videoPath(item, management) {
     : item.read_path;
 }
 
-function InlineProtectedMedia({ mediaId, index, management }) {
+function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
   const group = index.get(Number(mediaId));
   if (!group?.image) {
     return <span className="inline-media-missing" role="status">这项媒体当前不可用。</span>;
   }
 
   if (group.kind === "live_photo") {
+    const galleryItem = galleryItems.find((item) => item.id === group.image?.public_id);
     return (
       <figure className="inline-protected-media inline-live-photo">
-        <ProtectedImage
+        <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
           path={imagePath(group.image, management)}
           alt="正文中的 Live Photo 静态画面"
           className="inline-protected-image"
-        />
+        /></MediaOpenButton>
         <ProtectedVideo
           path={videoPath(group.video, management)}
           label="正文中的 Live Photo 动态片段"
@@ -83,18 +85,19 @@ function InlineProtectedMedia({ mediaId, index, management }) {
     );
   }
 
+  const galleryItem = galleryItems.find((item) => item.id === group.image?.public_id);
   return (
     <figure className="inline-protected-media">
-      <ProtectedImage
+      <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
         path={imagePath(group.image, management)}
         alt="正文图片"
         className="inline-protected-image"
-      />
+      /></MediaOpenButton>
     </figure>
   );
 }
 
-function renderNode(node, key, index, management, parentTag = "") {
+function renderNode(node, key, index, management, galleryItems, parentTag = "") {
   if (node.nodeType === TEXT_NODE) {
     if (isIgnorableMarkdownWhitespace(node.textContent, parentTag)) return null;
     return node.textContent;
@@ -104,7 +107,7 @@ function renderNode(node, key, index, management, parentTag = "") {
   const tag = node.tagName.toLowerCase();
   if (!SAFE_TAGS.has(tag)) {
     return Array.from(node.childNodes).map((child, childIndex) => (
-      renderNode(child, `${key}-${childIndex}`, index, management, parentTag)
+      renderNode(child, `${key}-${childIndex}`, index, management, galleryItems, parentTag)
     ));
   }
 
@@ -115,6 +118,7 @@ function renderNode(node, key, index, management, parentTag = "") {
         mediaId={node.getAttribute("data-media-id")}
         index={index}
         management={management}
+        galleryItems={galleryItems}
       />
     );
   }
@@ -153,6 +157,7 @@ function renderNode(node, key, index, management, parentTag = "") {
           mediaId={onlyChild.getAttribute("data-media-id")}
           index={index}
           management={management}
+          galleryItems={galleryItems}
         />
       );
     }
@@ -195,21 +200,21 @@ function renderNode(node, key, index, management, parentTag = "") {
   }
 
   const children = Array.from(node.childNodes).map((child, childIndex) => (
-    renderNode(child, `${key}-${childIndex}`, index, management, tag)
+    renderNode(child, `${key}-${childIndex}`, index, management, galleryItems, tag)
   ));
 
   return createElement(tag, props, ...children);
 }
 
-export function ProtectedMarkdown({ html, media = [], management = false, className = "prose" }) {
+export function ProtectedMarkdown({ html, media = [], management = false, galleryItems = [], className = "prose" }) {
   const index = useMemo(() => mediaIndex(media), [media]);
   const content = useMemo(() => {
     if (!html || typeof DOMParser === "undefined") return [];
     const documentNode = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
     return Array.from(documentNode.body.childNodes).map((node, nodeIndex) => (
-      renderNode(node, `markdown-${nodeIndex}`, index, management)
+      renderNode(node, `markdown-${nodeIndex}`, index, management, galleryItems)
     ));
-  }, [html, index, management]);
+  }, [galleryItems, html, index, management]);
 
   return <div className={className}>{content}</div>;
 }

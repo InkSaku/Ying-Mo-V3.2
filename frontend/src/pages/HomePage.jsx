@@ -28,6 +28,7 @@ export function HomePage() {
         <div className="member-hero-actions">
           <Link className="btn btn-primary" to="/write">新建记录</Link>
           <Link className="btn btn-secondary" to="/collections/new">创建合集</Link>
+          <Link className="btn btn-secondary" to="/year-in-review">年度回顾</Link>
         </div>
       </section>
 

@@ -25,6 +25,7 @@ required = [
     ROOT / "migrations/versions/20260815_0004_account_trust_recovery.py",
     ROOT / "migrations/versions/20260822_0007_collection_memories.py",
     ROOT / "migrations/versions/20260822_0008_collection_future_members.py",
+    ROOT / "migrations/versions/20260823_0009_long_term_ownership.py",
     ROOT / "app/models/admin.py",
     ROOT / "app/models/account.py",
     ROOT / "app/auth/service.py",
@@ -67,7 +68,7 @@ for retired in ("games", "guides", "life", "reports"):
 
 required_tables = {
     "account_tokens", "featured_content", "site_settings", "admin_logs",
-    "collection_members", "article_slugs",
+    "collection_members", "collection_notification_preferences", "article_slugs",
 }
 model_text = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "app/models").glob("*.py"))
 for table in required_tables:
@@ -91,6 +92,7 @@ for required_manifest_path in (
     "migrations/versions/20260815_0004_account_trust_recovery.py",
     "migrations/versions/20260822_0007_collection_memories.py",
     "migrations/versions/20260822_0008_collection_future_members.py",
+    "migrations/versions/20260823_0009_long_term_ownership.py",
 ):
     if f"  {required_manifest_path}\n" not in manifest_text:
         raise SystemExit(f"Backend manifest missing: {required_manifest_path}")

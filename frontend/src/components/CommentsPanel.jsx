@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
+import {
+  insertOptimisticComment,
+  removeOptimisticComment,
+  replaceOptimisticComment,
+} from "../lib/commentOptimistic";
 import { formatDate } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pagination } from "./Pagination";
+import { ReactionPicker } from "./ReactionPicker";
 import { EmptyState, ErrorState } from "./States";
 
 const PAGE_SIZE = 10;
@@ -16,18 +23,65 @@ function limitUnicode(value, maxLength) {
   return Array.from(value).slice(0, maxLength).join("");
 }
 
+function requestId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (token) => {
+    const value = Math.floor(Math.random() * 16);
+    return (token === "x" ? value : (value & 0x3) | 0x8).toString(16);
+  });
+}
+
+function mentionQuery(value) {
+  const match = value.match(/(?:^|\s)@([a-z0-9_-]{0,32})$/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+function excerpt(value, limit = 100) {
+  const text = (value || "").trim();
+  return Array.from(text).length <= limit
+    ? text
+    : `${Array.from(text).slice(0, limit).join("")}…`;
+}
+
+function CommentBody({ comment }) {
+  const mentions = new Map((comment.mentions || []).map((user) => [user.username, user]));
+  const body = comment.body || "";
+  const parts = [];
+  const pattern = /@([a-z0-9_-]{3,32})/gi;
+  let cursor = 0;
+  let match;
+  while ((match = pattern.exec(body)) !== null) {
+    if (match.index > cursor) parts.push(body.slice(cursor, match.index));
+    const user = mentions.get(match[1].toLowerCase());
+    parts.push(user
+      ? <Link key={`${match.index}-${user.id}`} className="comment-mention" to={`/users/${user.username}`}>@{user.username}</Link>
+      : match[0]);
+    cursor = pattern.lastIndex;
+  }
+  if (cursor < body.length) parts.push(body.slice(cursor));
+  return <p>{parts}</p>;
+}
+
 export function CommentsPanel({ postId }) {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const focusCommentParam = searchParams.get("comment");
   const textareaRef = useRef(null);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState([]);
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState(null);
+  const [selectedMentions, setSelectedMentions] = useState([]);
+  const [mentionCandidates, setMentionCandidates] = useState([]);
   const [state, setState] = useState({ loading: true, error: null, pagination: null });
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
   const [message, setMessage] = useState("");
+  const [focusTarget, setFocusTarget] = useState(null);
+  const [focusedComment, setFocusedComment] = useState(null);
+  const activeMentionQuery = mentionQuery(body);
 
   const load = useCallback(async (targetPage = page) => {
     setState((current) => ({ ...current, loading: true, error: null }));
@@ -43,8 +97,53 @@ export function CommentsPanel({ postId }) {
   }, [page, postId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
+
+  useEffect(() => {
+    if (activeMentionQuery === null || submitting) {
+      setMentionCandidates([]);
+      return undefined;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void api.get(`/comments/mentionable?post_id=${postId}&q=${encodeURIComponent(activeMentionQuery)}`)
+        .then((result) => {
+          if (active) setMentionCandidates(result.data || []);
+        })
+        .catch(() => {
+          if (active) setMentionCandidates([]);
+        });
+    }, 160);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [activeMentionQuery, postId, submitting]);
+
+  useEffect(() => {
+    const commentId = Number.parseInt(focusCommentParam || "", 10);
+    if (!Number.isFinite(commentId) || commentId <= 0) return undefined;
+    let active = true;
+    void api.get(`/comments/${commentId}/context?page_size=${PAGE_SIZE}`).then((result) => {
+      if (!active) return;
+      setFocusTarget(result.data.comment_id);
+      setPage(result.data.page);
+    }).catch((error) => {
+      if (active) setActionError(`无法定位评论：${error.message}`);
+    });
+    return () => { active = false; };
+  }, [focusCommentParam, postId]);
+
+  useEffect(() => {
+    if (!focusTarget || state.loading) return;
+    const node = document.getElementById(`comment-${focusTarget}`);
+    if (!node) return;
+    setFocusedComment(focusTarget);
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+    node.focus({ preventScroll: true });
+  }, [focusTarget, items, state.loading]);
 
   const beginReply = (comment) => {
     setReplyTo(comment);
@@ -53,33 +152,98 @@ export function CommentsPanel({ postId }) {
     window.requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
+  const selectMention = (candidate) => {
+    setBody((current) => current.replace(/@([a-z0-9_-]{0,32})$/i, `@${candidate.username} `));
+    setSelectedMentions((current) => current.some((item) => item.id === candidate.id)
+      ? current
+      : [...current, candidate]);
+    setMentionCandidates([]);
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     const content = body.trim();
     if (!content) return;
+    const idempotencyKey = requestId();
+    const parentId = replyTo ? (replyTo.parent_id || replyTo.id) : null;
+    const temporaryId = `temp-${idempotencyKey}`;
+    const optimistic = {
+      id: temporaryId,
+      post_id: postId,
+      author: user,
+      body: content,
+      status: "active",
+      parent_id: parentId,
+      reply_to_comment_id: replyTo?.id || null,
+      reply_to_user: replyTo?.author || null,
+      quoted_comment: replyTo ? {
+        id: replyTo.id,
+        author: replyTo.author,
+        body: excerpt(replyTo.body),
+        status: replyTo.status,
+      } : null,
+      mentions: selectedMentions,
+      reactions: null,
+      can_delete: false,
+      created_at: new Date().toISOString(),
+      optimistic: true,
+    };
+    const draft = { body, replyTo, mentions: selectedMentions };
+    const wasReply = Boolean(replyTo);
+    setItems((current) => insertOptimisticComment(current, optimistic));
+    if (!wasReply) {
+      setState((current) => ({
+        ...current,
+        pagination: current.pagination
+          ? { ...current.pagination, total: (current.pagination.total || 0) + 1 }
+          : current.pagination,
+      }));
+    }
+    setBody("");
+    setReplyTo(null);
+    setSelectedMentions([]);
+    setMentionCandidates([]);
     setSubmitting(true);
     setActionError("");
-    setMessage("");
+    setMessage(wasReply ? "回复正在发送…" : "评论正在发送…");
     try {
-      await api.post("/comments", {
+      const result = await api.post("/comments", {
         post_id: postId,
         body: content,
+        client_request_id: idempotencyKey,
+        mention_user_ids: selectedMentions.map((item) => item.id),
         ...(replyTo ? { reply_to_comment_id: replyTo.id } : {}),
       });
-      const wasReply = Boolean(replyTo);
-      setBody("");
-      setReplyTo(null);
-      setMessage(wasReply ? "回复已发布。" : "评论已发布。");
+      const saved = result.data;
       if (wasReply) {
-        await load(page);
+        setItems((current) => replaceOptimisticComment(current, temporaryId, saved));
       } else {
         const nextTotal = (state.pagination?.total || 0) + 1;
         const targetPage = Math.max(1, Math.ceil(nextTotal / PAGE_SIZE));
-        if (targetPage === page) await load(page);
-        else setPage(targetPage);
+        if (targetPage === page) {
+          setItems((current) => replaceOptimisticComment(current, temporaryId, saved));
+        } else {
+          setPage(targetPage);
+        }
       }
+      setMessage(wasReply ? "回复已发布。" : "评论已发布。");
+      window.dispatchEvent(new CustomEvent("yingmo:notifications-changed"));
     } catch (error) {
-      setActionError(error.message);
+      setItems((current) => removeOptimisticComment(current, temporaryId));
+      if (!wasReply) {
+        setState((current) => ({
+          ...current,
+          pagination: current.pagination
+            ? { ...current.pagination, total: Math.max(0, (current.pagination.total || 0) - 1) }
+            : current.pagination,
+        }));
+      }
+      setBody(draft.body);
+      setReplyTo(draft.replyTo);
+      setSelectedMentions(draft.mentions);
+      setMessage("");
+      setActionError(`发送失败：${error.message} 草稿已恢复。`);
     } finally {
       setSubmitting(false);
     }
@@ -111,6 +275,7 @@ export function CommentsPanel({ postId }) {
   const changePage = (nextPage) => {
     setPage(nextPage);
     setReplyTo(null);
+    setSelectedMentions([]);
     setActionError("");
     setMessage("");
     window.requestAnimationFrame(() => {
@@ -122,28 +287,55 @@ export function CommentsPanel({ postId }) {
     });
   };
 
+  const scrollToQuoted = (commentId) => {
+    const node = document.getElementById(`comment-${commentId}`);
+    if (!node) return;
+    setFocusedComment(commentId);
+    node.scrollIntoView({ block: "center", behavior: "smooth" });
+    node.focus({ preventScroll: true });
+  };
+
   const commentNode = (comment, nested = false) => (
-    <article key={comment.id} className={`comment ${nested ? "comment-reply" : ""} ${comment.status === "deleted" ? "comment-deleted" : ""}`}>
+    <article
+      key={comment.id}
+      id={typeof comment.id === "number" ? `comment-${comment.id}` : undefined}
+      tabIndex={-1}
+      className={`comment ${nested ? "comment-reply" : ""} ${comment.status === "deleted" ? "comment-deleted" : ""} ${focusedComment === comment.id ? "comment-focused" : ""} ${comment.optimistic ? "comment-optimistic" : ""}`}
+    >
       <div className="comment-meta">
         {comment.author ? <Link to={`/users/${comment.author.username}`}>{comment.author.nickname}</Link> : <strong>成员</strong>}
         {nested && comment.reply_to_user ? <span>回复 {comment.reply_to_user.nickname}</span> : null}
-        <time dateTime={comment.created_at}>{formatDate(comment.created_at, true)}</time>
+        <time dateTime={comment.created_at}>{comment.optimistic ? "刚刚" : formatDate(comment.created_at, true)}</time>
       </div>
-      <p>{comment.body}</p>
-      {comment.status === "active" ? (
-        <div className="comment-actions">
-          <button className="text-button" type="button" disabled={submitting || deleting} onClick={() => beginReply(comment)}>回复</button>
-          {comment.can_delete ? (
-            <button className="text-button danger-text" type="button" disabled={submitting || deleting} onClick={() => {
-              setDeleteTarget(comment);
-              setActionError("");
-              setMessage("");
-            }}>
-              删除
-            </button>
-          ) : null}
-        </div>
+      {comment.quoted_comment ? (
+        <button className="comment-quote" type="button" onClick={() => scrollToQuoted(comment.quoted_comment.id)}>
+          <strong>引用 {comment.quoted_comment.author?.nickname || "成员"}</strong>
+          <span>{excerpt(comment.quoted_comment.body)}</span>
+        </button>
       ) : null}
+      <CommentBody comment={comment} />
+      {comment.status === "active" && !comment.optimistic ? (
+        <>
+          <ReactionPicker
+            compact
+            initialState={comment.reactions}
+            readPath={`/interactions/comments/${comment.id}/reactions`}
+            writePath={`/interactions/comments/${comment.id}/reaction`}
+          />
+          <div className="comment-actions">
+            <button className="text-button" type="button" disabled={submitting || deleting} onClick={() => beginReply(comment)}>回复并引用</button>
+            {comment.can_delete ? (
+              <button className="text-button danger-text" type="button" disabled={submitting || deleting} onClick={() => {
+                setDeleteTarget(comment);
+                setActionError("");
+                setMessage("");
+              }}>
+                删除
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : comment.optimistic ? <p className="meta-text" role="status">正在发送</p> : null}
       {comment.replies?.map((reply) => commentNode(reply, true))}
     </article>
   );
@@ -160,24 +352,38 @@ export function CommentsPanel({ postId }) {
       <form className="comment-form" onSubmit={submit}>
         {replyTo ? (
           <div className="reply-notice">
-            <span>正在回复 {replyTo.author?.nickname || "成员"}</span>
+            <span><strong>正在回复 {replyTo.author?.nickname || "成员"}</strong> · 将引用“{excerpt(replyTo.body, 60)}”</span>
             <button className="text-button" type="button" disabled={submitting} onClick={() => setReplyTo(null)}>取消回复</button>
           </div>
         ) : null}
         <label htmlFor={`comment-body-${postId}`}>{replyTo ? "写下回复" : "写下回应"}</label>
-        <textarea
-          ref={textareaRef}
-          id={`comment-body-${postId}`}
-          value={body}
-          disabled={submitting}
-          aria-describedby={`comment-count-${postId}`}
-          onChange={(event) => {
-            setBody(limitUnicode(event.target.value, 500));
-            setActionError("");
-            setMessage("");
-          }}
-        />
+        <div className="comment-compose">
+          <textarea
+            ref={textareaRef}
+            id={`comment-body-${postId}`}
+            value={body}
+            disabled={submitting}
+            aria-describedby={`comment-count-${postId}`}
+            onChange={(event) => {
+              const next = limitUnicode(event.target.value, 500);
+              setBody(next);
+              setSelectedMentions((current) => current.filter((member) => next.includes(`@${member.username}`)));
+              setActionError("");
+              setMessage("");
+            }}
+          />
+          {activeMentionQuery !== null && mentionCandidates.length ? (
+            <div className="mention-suggestions" role="listbox" aria-label="可提及成员">
+              {mentionCandidates.map((candidate) => (
+                <button key={candidate.id} type="button" role="option" aria-selected="false" onClick={() => selectMention(candidate)}>
+                  <strong>{candidate.nickname}</strong><span>@{candidate.username}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div className="form-row-end">
+          <span className="meta-text">输入 @ 选择当前可访问成员</span>
           <span className="meta-text tabular" id={`comment-count-${postId}`}>{characterCount} / 500</span>
           <button className="btn btn-primary" type="submit" disabled={submitting || deleting || state.loading || !body.trim()}>
             {submitting ? "发送中" : replyTo ? "发表回复" : "发表评论"}

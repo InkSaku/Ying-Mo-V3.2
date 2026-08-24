@@ -4,7 +4,7 @@ export function ProtectedImage({
   media,
   path,
   useOriginal = false,
-  alt = "",
+  alt = null,
   className = "",
   fallback = null,
 }) {
@@ -17,5 +17,5 @@ export function ProtectedImage({
   }
   if (state.error || !state.src) return fallback;
 
-  return <img className={`protected-image ${className}`} src={state.src} alt={alt} />;
+  return <img className={`protected-image ${className}`} src={state.src} alt={alt ?? media?.alt_text ?? ""} />;
 }

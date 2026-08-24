@@ -57,10 +57,13 @@ def test_notification_kinds_targets_acl_read_state_and_pagination(client, app):
     assert reply.status_code == 201
     bob_notices = client.get("/api/v1/notifications", headers=auth(bob_token)).get_json()["data"]
     post_comment = next(item for item in bob_notices if item["kind"] == "post_comment")
-    assert post_comment["target_url"] == f"/notes/{note['id']}"
+    assert post_comment["target_url"] == f"/notes/{note['id']}?comment={root['id']}#comment-{root['id']}"
+    assert post_comment["summary"] == "comment for author"
     creator_notices = client.get("/api/v1/notifications", headers=auth(alice_token)).get_json()["data"]
     comment_reply = next(item for item in creator_notices if item["kind"] == "comment_reply")
-    assert comment_reply["target_url"] == f"/notes/{note['id']}"
+    reply_id = reply.get_json()["data"]["id"]
+    assert comment_reply["target_url"] == f"/notes/{note['id']}?comment={reply_id}#comment-{reply_id}"
+    assert comment_reply["summary"] == "reply for commenter"
 
     client.put(
         f"/api/v1/collections/{collection['id']}/members",

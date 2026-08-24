@@ -7,6 +7,9 @@ const items = [
   ["/me/favorites", "收藏"],
   ["/me/comments", "我的评论"],
   ["/me/notifications", "通知"],
+  ["/year-in-review", "年度回顾"],
+  ["/me/media", "我的媒体"],
+  ["/me/data", "数据导出"],
   ["/me/settings", "个人资料"],
   ["/me/sessions", "登录会话"],
 ];

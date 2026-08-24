@@ -85,3 +85,41 @@ class CollectionMember(db.Model):
 
     collection = db.relationship("Collection", back_populates="member_links")
     user = db.relationship("User")
+
+
+class CollectionNotificationPreference(db.Model):
+    __tablename__ = "collection_notification_preferences"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "collection_id", "user_id",
+            name="uq_collection_notification_preferences_collection_user",
+        ),
+        db.Index(
+            "ix_collection_notification_preferences_user_collection",
+            "user_id", "collection_id",
+        ),
+        db.CheckConstraint(
+            "level IN ('all', 'important', 'muted')",
+            name="ck_collection_notification_preferences_level",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    collection_id = db.Column(
+        db.Integer,
+        db.ForeignKey("collections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    level = db.Column(db.String(20), nullable=False, default="all", server_default="all")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    collection = db.relationship("Collection")
+    user = db.relationship("User")

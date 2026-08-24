@@ -6,6 +6,7 @@ import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
 import {
   AUTOSAVE_DELAY,
@@ -19,6 +20,9 @@ import {
   removeMediaPlaceholders,
 } from "../lib/internalMedia";
 import { applyMarkdownShortcut, markdownActionForKeyEvent } from "../lib/markdownToolbar";
+import {
+  offlineDraftKey, readOfflineDraft, removeOfflineDraft, writeOfflineDraft,
+} from "../lib/offlineDraft";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -92,6 +96,7 @@ function validExternalUrl(value) {
 }
 
 export function WritePage() {
+  const { user } = useAuth();
   const { postId } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -120,6 +125,8 @@ export function WritePage() {
   const [autosave, setAutosave] = useState({ status: "idle", message: "", savedAt: null });
   const [autosaveRetryKey, setAutosaveRetryKey] = useState(0);
   const [reloadConflictOpen, setReloadConflictOpen] = useState(false);
+  const [offlineRecovery, setOfflineRecovery] = useState(null);
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   const bodyEditorRef = useRef(null);
   const editorBodyRef = useRef("");
   const pendingEditorSelectionRef = useRef(null);
@@ -133,7 +140,20 @@ export function WritePage() {
   const saveQueueRef = useRef(Promise.resolve());
   const editorGenerationRef = useRef(0);
   const routeReadyRef = useRef(!postId);
+  const offlineKeyRef = useRef("");
+  const offlineFormRef = useRef(form);
   usePageMeta(postId ? "编辑记录" : "新建记录");
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!bodyEditorOpen) return;
@@ -151,6 +171,9 @@ export function WritePage() {
     const generation = editorGenerationRef.current + 1;
     editorGenerationRef.current = generation;
     routeReadyRef.current = false;
+    const storageKey = offlineDraftKey(user?.id, postId, requestedType, requestedCollection);
+    offlineKeyRef.current = storageKey;
+    setOfflineRecovery(null);
     setOptionsError("");
 
     Promise.allSettled([
@@ -180,6 +203,12 @@ export function WritePage() {
           autosaveBlockedRef.current = false;
           setSavedPost(result.data);
           setForm(loadedForm);
+          const localCopy = readOfflineDraft(window.localStorage, storageKey);
+          if (localCopy && draftFingerprint(draftPayloadFromForm(localCopy.form)) !== loadedFingerprint) {
+            setOfflineRecovery(localCopy);
+          } else if (localCopy) {
+            removeOfflineDraft(window.localStorage, storageKey);
+          }
           setAutosave((current) => (
             preserveSavedState && current.status === "saved"
               ? current
@@ -202,12 +231,16 @@ export function WritePage() {
       autosaveBlockedRef.current = false;
       setSavedPost(null);
       setForm(freshForm);
+      const localCopy = readOfflineDraft(window.localStorage, storageKey);
+      if (localCopy && draftFingerprint(draftPayloadFromForm(localCopy.form)) !== freshFingerprint) {
+        setOfflineRecovery(localCopy);
+      }
       setAutosave({ status: "idle", message: "", savedAt: null });
       routeReadyRef.current = true;
       setLoading(false);
     }
     return () => { active = false; };
-  }, [postId, reloadKey, requestedCollection, requestedType]);
+  }, [postId, reloadKey, requestedCollection, requestedType, user?.id]);
 
   useEffect(() => {
     if (!bodyEditorOpen) return undefined;
@@ -256,6 +289,21 @@ export function WritePage() {
     savedPostRef.current = savedPost;
   }, [savedPost]);
 
+  useEffect(() => {
+    if (loading || !routeReadyRef.current || offlineRecovery) return undefined;
+    const localForm = bodyEditorOpen ? { ...form, body: editorBody } : form;
+    offlineFormRef.current = localForm;
+    const fingerprint = draftFingerprint(draftPayloadFromForm(localForm));
+    if (fingerprint === lastSavedFingerprintRef.current) {
+      removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      writeOfflineDraft(window.localStorage, offlineKeyRef.current, localForm);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [bodyEditorOpen, editorBody, form, loading, offlineRecovery]);
+
   const saveDraftSnapshot = useCallback((snapshot, { automatic = false } = {}) => {
     const fingerprint = draftFingerprint(snapshot);
     const generation = editorGenerationRef.current;
@@ -290,7 +338,16 @@ export function WritePage() {
           message: "",
           savedAt: currentMatches ? new Date() : null,
         });
-        if (!currentPost) navigate(`/write/${saved.id}`, { replace: true });
+        if (currentMatches) removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+        if (!currentPost) {
+          if (!currentMatches) {
+            const nextKey = offlineDraftKey(user?.id, saved.id);
+            if (writeOfflineDraft(window.localStorage, nextKey, offlineFormRef.current)) {
+              removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+            }
+          }
+          navigate(`/write/${saved.id}`, { replace: true });
+        }
         return saved;
       } catch (saveError) {
         if (generation !== editorGenerationRef.current) throw saveError;
@@ -313,7 +370,7 @@ export function WritePage() {
     const queued = saveQueueRef.current.then(performSave, performSave);
     saveQueueRef.current = queued.catch(() => null);
     return queued;
-  }, [navigate]);
+  }, [navigate, user?.id]);
 
   const savedPostStatus = savedPost?.status;
 
@@ -334,6 +391,21 @@ export function WritePage() {
     setError("");
     setMessage("");
     setForm((current) => ({ ...current, [key]: event.target.value }));
+  };
+
+  const restoreOfflineCopy = () => {
+    if (!offlineRecovery?.form) return;
+    const restored = offlineRecovery.form;
+    setForm(restored);
+    payloadRef.current = draftPayloadFromForm(restored);
+    setAutosave({ status: "dirty", message: "已恢复浏览器本地副本，尚未保存到服务器。", savedAt: null });
+    setMessage("已恢复浏览器本地副本，请确认内容后保存。 ");
+    setOfflineRecovery(null);
+  };
+
+  const discardOfflineCopy = () => {
+    removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+    setOfflineRecovery(null);
   };
 
   const persistDraft = async (showMessage = true) => {
@@ -598,6 +670,16 @@ export function WritePage() {
 
       {error ? <div className="inline-error editor-feedback" role="alert">{error}</div> : null}
       {message ? <div className="inline-success editor-feedback" role="status">{message}</div> : null}
+      {!online ? <div className="inline-error editor-feedback" role="status">当前处于离线状态；修改会保存在此浏览器，联网后可继续保存到服务器。</div> : null}
+      {offlineRecovery ? (
+        <div className="inline-success editor-feedback offline-recovery" role="status">
+          <span>发现 {new Date(offlineRecovery.saved_at).toLocaleString("zh-CN")} 保存的浏览器本地副本。</span>
+          <div className="form-actions">
+            <button className="btn btn-primary" type="button" onClick={restoreOfflineCopy}>恢复本地副本</button>
+            <button className="btn btn-secondary" type="button" onClick={discardOfflineCopy}>忽略并删除</button>
+          </div>
+        </div>
+      ) : null}
       {autosave.status === "error" || autosave.status === "conflict" ? (
         <div className="inline-error editor-feedback autosave-feedback" role="alert">
           <span>{autosave.message || autosaveStatusLabel(autosave)}</span>

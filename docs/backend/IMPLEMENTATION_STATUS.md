@@ -1,8 +1,8 @@
-# Ying-Mo V3.4 后端实现状态
+# Ying-Mo 后端实现状态
 
-更新时间：2026-08-22
+更新时间：2026-08-24
 
-当前状态：**P0、P1 阶段 21–27、V3.3 Collection 时间轴与 V3.4 未来成员自动加入均已实现**。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
+当前状态：**P0、P1 阶段 21–27、V3.3–V3.7 与媒体记忆增强均已实现**。媒体记忆增强包含逻辑媒体、沉浸灯箱、Collection 筛选相册、Live Photo、展示衍生图、深链接与 ACL 撤销。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
 
 ## P0 已实现
 
@@ -66,7 +66,7 @@
 - [x] 通用无数据 SPA Shell、内容/认证/Admin `noindex,nofollow`、私密缓存。
 - [x] Sitemap 仅 `/` 与 `/about`；RSS 404；旧 Life/Game/Guide 路由 404。
 - [x] 运行时无 Game、Guide、旧 Life、Reports、发布资格、评论资格、Collection 审核与投稿策略代码。
-- [x] 四个 Alembic migration；空库可升级到 18 张业务表；模型与迁移列集合一致。
+- [x] 十一个 Alembic migration；空库可升级到 23 张业务表；模型与迁移列集合一致。
 - [x] `public → login_only` 有实际数据迁移、数量输出和不会重新公开的安全 downgrade。
 - [x] Gunicorn 生产配置、MySQL 8 URL 校验、S3 私有存储和 Redis 限流依赖。
 
@@ -132,26 +132,65 @@
 - [x] 用户停留在通知中心时，会话内新通知事件同步刷新当前列表。
 - [x] 通知中心以背景、未读标签、边线和字重共同区分状态，移动菜单跳转后自动收起。
 
+## V3.5：Collection Creator 转让
+
+- [x] 当前 creator 可将 Collection 原子转让给一名当前 active member；非 creator、非成员、受限成员和自转让均被拒绝。
+- [x] 目标成员成为唯一 creator 并退出普通成员关系；旧 creator 转为普通成员，继续拥有阅读与投稿权，但立即失去 Collection 管理权。
+- [x] 条件更新和事务约束保护重复/并发提交，不改变 Post 作者、成员之外的既有关系、排序、关键记录、未来成员策略和 Slug 生命周期。
+- [x] 新旧 creator 分别收到站内通知；转让写入包含 request ID 与前后 creator ID 的结构化管理日志。
+- [x] 管理页只列出当前 active member，并以高风险区、权限结果说明和二次确认完成操作。
+
+## V3.6：长期保存能力
+
+- [x] 成员 ZIP 数据导出包含个人资料、本人 Post Markdown、关系 JSON 与本人原始媒体。
+- [x] 站点完整备份支持创建、校验和显式确认恢复，覆盖 SQLAlchemy 业务表、私有媒体与 SHA-256 完整性清单。
+- [x] Collection 通知偏好支持全部、仅重要与静音；直接成员/治理通知始终送达。
+- [x] 年度回顾以当前 ACL 汇总本人内容；媒体管理支持 ALT、原件下载、重复检测及安全批处理。
+- [x] Alembic `20260823_0009` 新增通知偏好表与媒体长期管理字段。
+
+## V3.7：轻量互动
+
+- [x] Post 与 active 评论支持六种固定回应；每人每目标最多一种，幂等设定/清除接口可安全配合前端乐观更新。
+- [x] 既有 Like 表与数据迁移为 `heart` Post 回应；旧 Like API 作为兼容适配保留，Favorite 与回应继续分离且回应不发通知。
+- [x] 回复保持一级扁平结构并返回引用目标；评论 UUID 请求标识防止重试重复，删除正文同步移除其提及与回应。
+- [x] 提及候选与提交均在 SQL/后端按 Post 当前 ACL 和 active 成员状态裁决；提及关系结构化保存并去重。
+- [x] 通知返回当前可读 active 评论摘要和带页码定位能力的精确评论深链；失权后摘要、目标与 ID 脱敏。
+- [x] Collection `all / important / muted` 继续控制评论、回复与提及通知，直接治理通知始终送达。
+- [x] Alembic `20260824_0010` 增加回应、提及、评论幂等字段与索引，并将既有 Like 安全转换为 heart 回应。
+
+## 媒体记忆与沉浸灯箱
+
+- [x] 图片与 Live Photo 使用统一逻辑媒体 DTO；配对视频不重复计数，解析器重新裁决 Post / Collection ACL。
+- [x] 上传生成去 EXIF、限定尺寸的 WebP 展示图与缩略图；原件保留在私有存储且只允许所有者下载。
+- [x] Live Photo 动态片段在可用时转换为去元数据 H.264 MP4；浏览器不支持或转换失败时继续提供静态照片。
+- [x] Collection 媒体接口支持年份、作者、图片/Live Photo 筛选和分页，并返回语义时间、地点、作者和原 Post。
+- [x] 单媒体解析、Collection 相册、我的媒体和媒体文件读取均使用当前 ACL；成员移除后统一 404。
+- [x] Alembic `20260825_0011` 增加展示衍生文件键，既有媒体通过首次授权读取惰性补齐，不破坏原件。
+
 ## 验证状态
 
-- [x] 完整 pytest：111/111 passed。
-- [x] 前端 `npm run check`：ESLint、73/73 Node 回归、生产构建和包体预算全部通过。
+- [x] 完整 pytest：124/124 passed。
+- [x] 前端 `npm run check`：ESLint、83/83 Node 回归、生产构建和包体预算全部通过。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
 - [x] `MANIFEST.sha256` 已按当前后端源码重建，并由静态门禁执行可重复校验；旧重构路径不再冒充当前发布清单。
-- [x] Alembic 空库 upgrade 到 `20260822_0008`、legacy visibility upgrade/downgrade、Post 版本回填，以及 Revision `0006`、Collection Memories `0007`、Future Members `0008` 降级/重升与 Schema/Model 对齐。
-- [x] MySQL dialect 对 18 张模型表和索引完成 DDL 编译。
+- [x] Alembic 空库 upgrade 到 `20260825_0011`、legacy visibility upgrade/downgrade、Post 版本回填，以及 Revision `0006` 至媒体记忆 `0011` 的降级/重升与 Schema/Model 对齐。
+- [x] MySQL dialect 对 23 张模型表和索引完成 DDL 编译。
 - [x] Production 配置加载验证（MySQL URL、S3 adapter、Redis limiter、SMTP/TLS/HTTPS 邮件配置约束）。
 - [x] Gunicorn 配置检查、进程启动、Health 和受保护 HTML Shell HTTP smoke。
-- [ ] 真实 MySQL 8 实例执行 migration：当前环境没有可连接的 MySQL 服务。
+- [x] 真实 MySQL 实例 migration：从 `20260823_0009` 的 DDL 部分提交状态安全恢复至 `20260824_0010`，已有回应数据保留；隔离测试覆盖正常、改名中断和旧表缺失路径。
+- [x] 当前真实 MySQL 已继续升级到 `20260825_0011`，原有两条媒体记录保留并新增展示衍生键。
 - [ ] 真实 S3-compatible bucket 上传/读取与真实 Redis 限流压测：当前环境没有相应外部凭证和服务。
 - [ ] 真实 SMTP 服务上的 STARTTLS 握手、投递、退信与 SPF/DKIM/DMARC/DNS：当前环境没有可投递域名和凭证。
 - [x] 阶段 27 隔离浏览器验收：0/1/2/4 篇、原因文本、卡片跳转、ACL 不泄露、浅深色、1280px/390px 与 Console 均通过；验收中发现并修复紧凑卡片误隐藏原因文本。
 - [x] V3.4 通知感知隔离浏览器验收：桌面角标、390px 菜单角标、未读/已读视觉层级、全部已读角标回落和移动菜单收起均通过。
+- [x] V3.5 Creator 转让隔离浏览器验收：桌面与 390px、浅深色、候选筛选、二次确认、旧 creator 保留读写、新 creator 管理入口与转让通知均通过，Console 无错误。
+- [x] V3.7 轻量互动隔离浏览器验收：六种回应、引用、提及候选、通知摘要/深链、390×844 无横向溢出与 Console 均通过；隔离 HTTP 全表面回归通过。
+- [x] 媒体记忆隔离浏览器验收：Post 与 Collection 入口、筛选相册、Live Photo、深链接刷新、键盘切换、双击缩放、390×844 无溢出、无权通用错误与 Console 均通过。
 - [ ] 阶段 22 真实浏览器运行验收：此前尝试时桌面策略拒绝本地 HTTP 导航；阶段 27 已可在当前环境运行，但尚未倒推补验阶段 22 的账户恢复流程。
 
 以上外部验证未伪造成“已通过”；代码路径、配置校验、本地私有存储和内存邮件集成测试已完成。P0 逐项验收见 `docs/backend/P0_ACCEPTANCE.md`，阶段 21–27 见 `docs/backend/P1_ACCEPTANCE.md`，命令记录见 `docs/backend/VALIDATION.md`。
 
 ## 后续 P1 / 非本次范围
 
-尚未实现且不计入阶段 21–27：举报、多对多 Collection、关注、私信、实时协作、推荐算法和 creator 转让。邮箱验证、找回密码、草稿自动保存/版本冲突、数学公式、脚注、阅读统计、内容浏览筛选、Revision、往年今日、Explore 和静态相关阅读已实现，不再列入未完成范围。
+尚未实现且不计入阶段 21–27：举报、多对多 Collection、关注、私信、实时协作和推荐算法。邮箱验证、找回密码、草稿自动保存/版本冲突、数学公式、脚注、阅读统计、内容浏览筛选、Revision、往年今日、Explore、静态相关阅读和 creator 转让已实现，不再列入未完成范围。

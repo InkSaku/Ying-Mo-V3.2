@@ -10,16 +10,16 @@ import {
 
 test("Collection memory filters remain shareable and use the matching endpoint", () => {
   const state = readCollectionMemoryState(new URLSearchParams(
-    "view=media&year=2024&author=Alice&type=note&page=3"
+    "view=media&year=2024&author=Alice&type=note&media_kind=live_photo&page=3"
   ));
-  assert.deepEqual(state, { view: "media", year: "2024", author: "alice", type: "note", page: 3 });
+  assert.deepEqual(state, { view: "media", year: "2024", author: "alice", type: "note", mediaKind: "live_photo", page: 3 });
   assert.equal(
     collectionMemorySearchParams(state).toString(),
-    "view=media&year=2024&author=alice&type=note&page=3"
+    "view=media&year=2024&author=alice&type=note&media_kind=live_photo&page=3"
   );
   assert.equal(
     collectionMemoryApiPath("shared-days", state, 24),
-    "/collections/shared-days/media?year=2024&author=alice&post_type=note&page=3&page_size=24"
+    "/collections/shared-days/media?year=2024&author=alice&post_type=note&media_kind=live_photo&page=3&page_size=24"
   );
 });
 

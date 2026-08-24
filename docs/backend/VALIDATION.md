@@ -1,14 +1,14 @@
 # Validation Record
 
-更新时间：2026-08-21
+更新时间：2026-08-24
 
 本文件只记录实际执行结果。最终交付前重复执行同一组命令；如最终结果变化，以最后一次运行输出为准。
 
 ## 已执行并通过
 
 1. `python -m pytest -q`
-   - 结果：`102 passed`（102/102）。
-   - 覆盖 P0 认证/Session/ACL/内容/媒体/互动/Admin/隐私/migration，阶段 21–26 完整增量，以及阶段 27 相关阅读的静态分层、ACL、排除规则、数量上限和关联原因。
+   - 结果：`124 passed`（124/124）。
+   - 覆盖 P0 认证/Session/ACL/内容/媒体/互动/Admin/隐私/migration、阶段 21–27、V3.3–V3.7，以及逻辑媒体、展示衍生图、固定回应、引用回复、提及、通知摘要/深链、导出和 ACL 撤销边界。
 2. `python -m compileall -q app tests migrations scripts run.py gunicorn.conf.py`
    - 结果：通过。
 3. `python scripts/verify_static.py`
@@ -16,8 +16,8 @@
 4. `python -m pip check`
    - 结果：`No broken requirements found.`
 5. `flask --app run.py db upgrade`（全新临时 SQLite 数据库）
-   - 结果：升级到 `20260821_0006 (head)`。
-   - 结果：20 张业务表与 SQLAlchemy metadata 表集合、列集合一致。
+   - 结果：升级到 `20260825_0011 (head)`。
+   - 结果：23 张业务表与 SQLAlchemy metadata 表集合、列集合一致；既有 Like 转为 `heart` 回应。
 6. legacy visibility migration 集成测试
    - 在 `20260814_0001` 写入 `public` Post，再升级 head。
    - 结果：migration 输出转换数量，记录变为 `login_only`。
@@ -34,7 +34,7 @@
    - 发布后真实修改、Collection 变更与恢复会在事务内留版；草稿自动保存和无变化恢复不会制造 Revision。
    - 列表/详情仅作者可读，恢复使用 `expected_version` 防止旧窗口覆盖，失效 taxonomy、媒体或 Collection 按最小权限降级。
 10. MySQL Dialect DDL 编译
-   - 结果：包含 Revision 在内的 20 张模型表和索引完成编译。
+   - 结果：包含 V3.7 回应与提及表在内的 23 张模型表和索引完成编译。
 11. Production 配置加载
    - 使用合法 MySQL URL、32-byte secrets、显式 CORS、Redis URL、S3 bucket、HTTPS `SITE_URL`、SMTP、TLS 和发件地址配置创建 App。
    - 结果：应用配置与 adapter 初始化通过；这只是配置路径验证，不代表真实外部投递通过。
@@ -45,13 +45,15 @@
    - 阶段 25 的 `/api/v1/home/on-this-day` 成员接口已注册。
    - 阶段 26 的 `/api/v1/explore` 成员接口已注册。
    - 阶段 27 复用 Article 详情 API 返回最多 4 条 ACL 安全、带明确原因的 `related` 卡片数据。
+   - V3.5 `/api/v1/collections/:id/transfer-creator` 已注册；复用既有 creator/member 模型，无需新增 migration。
+   - V3.7 Post/评论回应、提及候选、评论上下文与通知评论深链接口均已注册。
 13. Gunicorn 启动与 HTTP smoke
    - `gunicorn --check-config -c gunicorn.conf.py run:app`：通过。
    - 以 testing 配置启动 Gunicorn，实际请求 `/api/v1/health`：200。
    - 实际请求 `/articles/private`：200 通用 Shell，包含 `noindex,nofollow` 与私密缓存头。
 14. `npm run check`（`frontend/`）
-   - 结果：ESLint 通过，Node 回归 `67 passed`（67/67），Vite 生产构建和 `BUNDLE_VERIFY_OK` 通过。
-   - 覆盖账户安全、内容浏览、Revision、往年今日、Explore seed 规范化与分享路径，以及构建与包体门禁。
+   - 结果：ESLint 通过，Node 回归 `83 passed`（83/83），Vite 生产构建和 `BUNDLE_VERIFY_OK` 通过。
+   - 覆盖账户安全、内容浏览、Revision、往年今日、Explore、Collection 成员/时间轴/通知、Creator 转让、离线草稿、固定回应与评论乐观回滚，以及构建与包体门禁。
 15. `git diff --check`
    - 结果：通过。
 16. 阶段 23 本地浏览器验收
@@ -67,10 +69,29 @@
    - 1280px 与 390×844 下页面 `clientWidth/scrollWidth` 分别为 `1280/1280`、`390/390`；窄屏为单列 358px 卡片，原因文本均有有效布局高度。深色模式下原因、卡片和页面使用深色主题变量，Console error/warn 为空。
    - 浏览器发现紧凑 Article 卡片旧选择器会把关联原因与摘要一起隐藏；已收窄为只隐藏非原因段落，并增加前端静态回归。
    - 在另一套全新迁移数据库、独立上传目录和后端 `8018` 运行 `scripts/verify_full_http.py`，返回 `FULL_HTTP_VERIFY_OK`，覆盖 Auth、Media、Post、Collection、Search、Taxonomy、个人中心、互动、评论、通知、Archive、Admin 全表面和 ACL 撤销。
+19. V3.5 Creator 转让隔离浏览器验收
+   - 使用全新升级到 `20260822_0008` 的临时 SQLite、独立上传目录、后端 `8017` 与前端 `5187`，以三个合成成员账号实际完成 Creator 转让，没有连接仓库开发数据库。
+   - 桌面与 390×844、浅色与深色下，目标下拉只列当前 active member；二次确认明确列出双方转让后的权限，布局与交互正常。
+   - 转让成功后旧 creator 自动回到 Collection 详情，仍有投稿入口但不再有管理入口；新 creator 拥有管理入口，并收到带 `1` 未读角标的转让通知。
+   - Collection 作者、成员、内容顺序与关键记录保持不变；浏览器 Console 没有 error，临时服务已停止，隔离目录已移入系统废纸篓且可恢复。
+20. V3.7 轻量互动隔离浏览器与真实 HTTP 验收
+   - 使用全新升级到 `20260824_0010` 的隔离 SQLite、后端 `8019` 与前端 `5189`，以三个合成成员账号验证六种 Post/评论回应、一级引用回复、结构化提及和通知评论摘要。
+   - 提及输入只列当前可访问的目标成员；通知目标为 `?comment=:id#comment-:id`，详情页通过评论上下文定位并高亮具体回复。
+   - 390×844 下 `clientWidth/scrollWidth` 为 `390/390`，Post 与两条评论共 18 个回应按钮均正常布局，评论深链仍保持焦点；Console error/warn 为空。
+   - 在同一隔离服务执行 `scripts/verify_full_http.py`，返回 `FULL_HTTP_VERIFY_OK`，覆盖 Auth、Media、Post、Collection、Search、Taxonomy、个人中心、互动、评论、通知、Archive、Admin 和 ACL 撤销。
+   - 浏览器技能促使本轮同时检查可访问名称、移动端横向溢出、提及下拉、深链焦点和 Console；隔离服务已停止，测试目录已移入系统废纸篓且可恢复。
+21. V3.7 真实 MySQL 中断恢复迁移
+   - 从 `20260823_0009` 的 DDL 部分提交状态恢复并升级到 `20260824_0010`；原有 Post 回应记录保留并回填为 `heart`。
+   - 隔离数据库同时覆盖正常旧表、改名后中断、旧表缺失三种迁移路径。
+22. 媒体记忆自动化、真实 MySQL 与隔离浏览器验收
+   - Alembic `20260825_0011` 已在当前真实 MySQL 从 `0010` 升级，新增 `media.display_key` 且保留原有两条媒体记录；迁移自动化覆盖 downgrade/re-upgrade 和模型列对齐。
+   - 后端集成测试验证 WebP 展示图去除 EXIF、普通成员不能下载所有者原件、Live Photo 逻辑合并、单媒体解析，以及成员移除后解析和文件读取均为 404。
+   - 使用全新隔离数据库、独立上传目录、后端 `8020` 与前端 `5190`，验证 Post 和 Collection 打开同一灯箱、三条逻辑媒体、Live Photo 播放/静态回退、左右键、深链接刷新恢复 `2 / 3`、双击缩放和通用无权错误。
+   - 390×844 下页面与灯箱均无横向溢出；关闭后焦点返回原媒体入口，灯箱打开时页面根节点 inert，干净标签页 Console error/warn 为空。
+   - 上传与读取链路仅提供授权展示衍生图；原文件走所有者接口。相邻静态图只短时预加载，认证结束或账号切换会释放所有受保护 Blob URL。
 
 ## 当前环境无法完成的外部验证
 
-- 没有可连接的 MySQL 8 服务，因此未声称真实 MySQL `db upgrade` 已通过；已完成 SQLite migration 行为测试和 MySQL DDL 编译。
 - 没有 S3-compatible bucket 凭证，因此未声称真实对象存储 I/O 已通过；已完成同一接口下的 LocalPrivateStorage HTTP 集成测试和 S3 client 配置加载。
 - 没有 Redis 服务，因此未执行分布式限流压测；已验证依赖和 production limiter 配置可初始化。
 - 没有真实 SMTP 账号、可投递域名和 DNS 控制权，因此未声称 STARTTLS 握手、真实收件、退信处理或 SPF/DKIM/DMARC 已通过；已完成 memory Outbox、SMTP adapter 和 production 配置校验。

@@ -11,6 +11,42 @@ from app.common.validation import USERNAME_RE, normalize_email, normalize_userna
 
 
 def register_commands(app):
+    @app.cli.command("backup-create")
+    @click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=str))
+    @with_appcontext
+    def backup_create(output):
+        from app.backup import create_backup
+        try:
+            summary = create_backup(output)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(f"backup created: {summary['path']} ({summary['tables']} tables, {summary['files']} files)")
+
+    @app.cli.command("backup-verify")
+    @click.option("--input", "input_path", required=True, type=click.Path(exists=True, dir_okay=False, path_type=str))
+    @with_appcontext
+    def backup_verify(input_path):
+        from app.backup import verify_backup
+        try:
+            summary = verify_backup(input_path)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(f"backup verified: {summary['path']} ({summary['tables']} tables, {summary['files']} files)")
+
+    @app.cli.command("backup-restore")
+    @click.option("--input", "input_path", required=True, type=click.Path(exists=True, dir_okay=False, path_type=str))
+    @click.option("--confirm", required=True, help="必须明确填写 RESTORE。")
+    @with_appcontext
+    def backup_restore(input_path, confirm):
+        from app.backup import restore_backup
+        if confirm != "RESTORE":
+            raise click.ClickException("恢复会覆盖当前数据库；--confirm 必须填写 RESTORE。")
+        try:
+            summary = restore_backup(input_path)
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(f"backup restored: {summary['path']}")
+
     @app.cli.command("create-admin")
     @click.option("--username", prompt=True)
     @click.option("--nickname", prompt=True)
@@ -55,9 +91,11 @@ def register_commands(app):
         if dry_run:
             return
         storage=get_storage()
-        paths=[]
+        paths=set()
         for media in rows:
-            paths.extend([key for key in (media.storage_key,media.thumbnail_key) if key])
+            paths.update([
+                key for key in (media.storage_key, media.display_key, media.thumbnail_key) if key
+            ])
             db.session.delete(media)
         db.session.commit()
         removed=0

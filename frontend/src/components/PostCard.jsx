@@ -1,13 +1,16 @@
 import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref, postTypeLabel } from "../lib/format";
 import { ProtectedImage } from "./ProtectedImage";
+import { MediaOpenButton } from "./MediaOpenButton";
+import { logicalMediaFromPostDisplay } from "../lib/mediaGallery";
 
 export function PostCard({ post, compact = false }) {
   const isArticle = post.post_type === "article";
   const media = post.display_media || post.cover_media;
+  const galleryItem = logicalMediaFromPostDisplay(post);
   return (
     <article className={`post-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${isArticle ? "article-card" : "note-card"}`}>
-      <ProtectedImage media={media} alt="" className={`card-cover ${compact ? "card-cover-compact" : ""}`} />
+      {media ? <MediaOpenButton item={galleryItem} context="post-card" label={`查看${post.title || "这则记录"}的影像`}><ProtectedImage media={media} alt="" className={`card-cover ${compact ? "card-cover-compact" : ""}`} /></MediaOpenButton> : null}
       <div className="post-card-content">
       <div className="post-card-meta">
         <span>{postTypeLabel(post.post_type)}</span>

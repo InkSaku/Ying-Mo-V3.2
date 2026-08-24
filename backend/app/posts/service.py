@@ -7,9 +7,10 @@ from app.access import is_collection_member
 from app.common.validation import SLUG_RE, normalize_name, slugify
 from app.extensions import db
 from app.models import (
-    ArticleSlug, Category, Collection, Media, Notification, Post, PostStatus, PostType,
-    PostVisibility, Tag,
+    ArticleSlug, Category, Collection, CollectionMember, Media, Post, PostStatus,
+    PostType, PostVisibility, Tag,
 )
+from app.notifications.service import add_collection_notification
 
 
 class DomainError(Exception):
@@ -176,16 +177,21 @@ def publish_post(post, actor_id, slug=None):
         post.visibility = PostVisibility.PRIVATE.value
         if post.collection.first_shared_at is None:
             post.collection.first_shared_at = utcnow()
-        if first_publish and post.collection.creator_id != actor_id:
-            db.session.add(Notification(
-                user_id=post.collection.creator_id,
-                actor_id=actor_id,
-                kind="collection_new_post",
-                target_type="post",
-                post_id=post.id,
-                collection_id=post.collection_id,
-                message="你的 Collection 收到了一篇新的成员投稿。",
-            ))
+        if first_publish:
+            recipient_ids = {post.collection.creator_id}
+            recipient_ids.update(db.session.scalars(db.select(CollectionMember.user_id).where(
+                CollectionMember.collection_id == post.collection_id,
+            )).all())
+            for recipient_id in recipient_ids - {actor_id}:
+                add_collection_notification(
+                    user_id=recipient_id,
+                    actor_id=actor_id,
+                    kind="collection_new_post",
+                    target_type="post",
+                    post_id=post.id,
+                    collection_id=post.collection_id,
+                    message=f"Collection「{post.collection.name}」有一篇新的成员投稿。",
+                )
     if post.category and post.category.first_used_at is None:
         post.category.first_used_at = utcnow()
     for tag in post.tags:

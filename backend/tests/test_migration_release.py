@@ -354,3 +354,64 @@ def test_collection_future_members_migration_round_trip_preserves_members(tmp_pa
         assert connection.scalar(text(
             "SELECT COUNT(*) FROM collection_members WHERE collection_id=1 AND user_id=2"
         )) == 1
+
+
+@pytest.mark.parametrize("legacy_state", ["renamed", "missing"])
+def test_lightweight_interactions_migration_recovers_legacy_table_states(tmp_path, legacy_state):
+    root = Path(__file__).resolve().parents[1]
+    database = tmp_path / f"lightweight-interactions-{legacy_state}.db"
+    url = f"sqlite+pysqlite:///{database}"
+    env = {**os.environ, "DATABASE_URL": url, "REGISTRATION_INVITE_CODE": "lyx0811"}
+
+    def flask_db(*args):
+        result = subprocess.run(
+            [sys.executable, "-m", "flask", "--app", "run.py", "db", *args],
+            cwd=root,
+            env=env,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+
+    flask_db("upgrade", "20260823_0009")
+    engine = create_engine(url)
+    with engine.begin() as connection:
+        if legacy_state == "renamed":
+            connection.execute(text("""
+                INSERT INTO users
+                  (id,username,username_normalized,email,email_normalized,password_hash,nickname,role,status,created_at,updated_at)
+                VALUES
+                  (1,'reactor','reactor','reactor@example.com','reactor@example.com','hash','Reactor','user','active',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+            """))
+            connection.execute(text("""
+                INSERT INTO posts
+                  (id,author_id,post_type,body,content_format,status,visibility,moderation_status,edit_version,created_at,updated_at)
+                VALUES
+                  (1,1,'note','Existing reaction','markdown','published','login_only','active',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+            """))
+            connection.execute(text("""
+                INSERT INTO content_likes (id,user_id,post_id,created_at)
+                VALUES (1,1,1,CURRENT_TIMESTAMP)
+            """))
+            connection.execute(text("ALTER TABLE content_likes RENAME TO post_reactions"))
+        else:
+            connection.execute(text("DROP TABLE content_likes"))
+
+    flask_db("upgrade")
+    inspector = inspect(engine)
+    assert "content_likes" not in inspector.get_table_names()
+    assert "post_reactions" in inspector.get_table_names()
+    assert "kind" in {column["name"] for column in inspector.get_columns("post_reactions")}
+    assert "client_request_id" in {
+        column["name"] for column in inspector.get_columns("comments")
+    }
+    assert {"comment_reactions", "comment_mentions"}.issubset(inspector.get_table_names())
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260825_0011"
+        assert "display_key" in {
+            column["name"] for column in inspector.get_columns("media")
+        }
+        expected_count = 1 if legacy_state == "renamed" else 0
+        assert connection.scalar(text("SELECT COUNT(*) FROM post_reactions")) == expected_count
+        if expected_count:
+            assert connection.scalar(text("SELECT kind FROM post_reactions WHERE id=1")) == "heart"

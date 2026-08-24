@@ -7,7 +7,7 @@ from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Collection, Notification, Post
+from app.models import Collection, Comment, Notification, Post
 from app.posts.service import current_article_slug
 
 bp=Blueprint("notifications",__name__)
@@ -17,20 +17,36 @@ INACCESSIBLE_COLLECTION_MESSAGES = {
     "collection_member_added": "一条 Collection 成员通知的目标当前不可访问。",
     "collection_member_removed": "你已被移出一个 Collection。",
     "post_removed_from_collection": "你的 Post 已从一个 Collection 移出。",
+    "collection_creator_received": "一条 Collection 创建者变更通知的目标当前不可访问。",
+    "collection_creator_transferred": "一条 Collection 创建者变更通知的目标当前不可访问。",
 }
 
 
-def _safe_notification(item,actor,posts,collections):
+def _summary(body,limit=100):
+    value=" ".join((body or "").split())
+    return value if len(value)<=limit else f"{value[:limit]}…"
+
+
+def _safe_notification(item,actor,posts,collections,comments=None):
     data=item.to_dict()
     data["target_url"]=None
+    data["summary"]=None
     if item.post_id is not None:
         post=posts.get(item.post_id)
         if post is not None and post.author_id==actor.id and item.kind=="post_removed_from_collection":
             data["target_url"]=f"/write/{post.id}"
         elif post is not None and can_read_post(actor.id,post,include_archived=True):
-            data["target_url"]=(
+            target_url=(
                 f"/articles/{current_article_slug(post.id)}" if post.post_type=="article" else f"/notes/{post.id}"
             )
+            comment=(comments or {}).get(item.comment_id)
+            if (
+                comment is not None and comment.post_id==post.id
+                and comment.status=="active"
+            ):
+                data["summary"]=_summary(comment.body)
+                target_url=f"{target_url}?comment={comment.id}#comment-{comment.id}"
+            data["target_url"]=target_url
         else:
             data["post_id"]=None
             data["comment_id"]=None
@@ -59,9 +75,13 @@ def list_notifications():
     rows=db.session.scalars(stmt.order_by(Notification.created_at.desc(),Notification.id.desc()).offset((page-1)*size).limit(size)).all()
     post_ids={row.post_id for row in rows if row.post_id is not None}
     collection_ids={row.collection_id for row in rows if row.collection_id is not None}
+    comment_ids={row.comment_id for row in rows if row.comment_id is not None}
     posts={p.id:p for p in db.session.scalars(db.select(Post).where(Post.id.in_(post_ids))).all()} if post_ids else {}
     collections={c.id:c for c in db.session.scalars(db.select(Collection).where(Collection.id.in_(collection_ids))).all()} if collection_ids else {}
-    return success_response([_safe_notification(n,actor,posts,collections) for n in rows],meta=pagination_meta(page,size,total))
+    comments={c.id:c for c in db.session.scalars(db.select(Comment).where(Comment.id.in_(comment_ids))).all()} if comment_ids else {}
+    return success_response([
+        _safe_notification(n,actor,posts,collections,comments) for n in rows
+    ],meta=pagination_meta(page,size,total))
 
 
 @bp.get("/unread-count")
@@ -88,7 +108,14 @@ def mark_read(notification_id):
         return error_response("RESOURCE_NOT_FOUND","通知不存在。",404)
     item.is_read=True
     db.session.commit()
-    return success_response(item.to_dict())
+    posts = {item.post_id: db.session.get(Post, item.post_id)} if item.post_id is not None else {}
+    collections = (
+        {item.collection_id: db.session.get(Collection, item.collection_id)}
+        if item.collection_id is not None
+        else {}
+    )
+    comments = {item.comment_id: db.session.get(Comment, item.comment_id)} if item.comment_id is not None else {}
+    return success_response(_safe_notification(item, actor, posts, collections, comments))
 
 
 @bp.post("/read-all")

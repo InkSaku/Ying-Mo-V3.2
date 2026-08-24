@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { CollectionCoverManager } from "../components/CollectionCoverManager";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { CustomSelect } from "../components/CustomSelect";
 import { ErrorState, PageLoader } from "../components/States";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
 import { collectionMemberSettingsPayload } from "../lib/collectionMembership";
+import { activeCreatorTransferCandidates, creatorTransferPayload } from "../lib/collectionOwnership";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 
 function memberIds(members) {
@@ -23,6 +25,7 @@ export function CollectionManagePage() {
   const [selected, setSelected] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [autoAddFutureMembers, setAutoAddFutureMembers] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState("");
   const [orderedPosts, setOrderedPosts] = useState([]);
   const [highlightIds, setHighlightIds] = useState([]);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
@@ -81,6 +84,11 @@ export function CollectionManagePage() {
   }, [members, options]);
 
   const activeOptionIds = useMemo(() => options.map((member) => member.id), [options]);
+  const transferCandidates = useMemo(
+    () => activeCreatorTransferCandidates(members, options),
+    [members, options],
+  );
+  const transferTarget = transferCandidates.find((member) => String(member.id) === transferTargetId) || null;
   const desiredMemberIds = selectAll ? activeOptionIds : selected;
 
   const toggleMember = (id) => {
@@ -246,6 +254,23 @@ export function CollectionManagePage() {
     }
   };
 
+  const transferCreator = async () => {
+    const payload = creatorTransferPayload(transferTargetId);
+    if (!payload || !transferTarget) return;
+    setBusy("transfer");
+    setError("");
+    try {
+      await api.post(`/collections/${collection.id}/transfer-creator`, payload);
+      setConfirm(null);
+      navigate(`/collections/${collection.slug}`, { replace: true });
+    } catch (transferError) {
+      setError(transferError.message);
+      setConfirm(null);
+    } finally {
+      setBusy("");
+    }
+  };
+
   const handleCoverChange = async (nextCollection) => {
     setCollection((current) => ({ ...current, ...nextCollection, posts: current.posts }));
   };
@@ -363,6 +388,19 @@ export function CollectionManagePage() {
 
         <aside className="collection-manage-aside">
           <CollectionCoverManager collection={collection} onChange={handleCoverChange} />
+          <section className="collection-transfer-zone">
+            <h2>转让创建者</h2>
+            <p>转让后，对方将管理此 Collection；你会保留普通成员的阅读和投稿权。</p>
+            <label>
+              <span>新创建者</span>
+              <CustomSelect aria-label="新创建者" value={transferTargetId} disabled={Boolean(busy) || !transferCandidates.length} onChange={(event) => setTransferTargetId(event.target.value)}>
+                <option value="">选择当前有效成员</option>
+                {transferCandidates.map((member) => <option key={member.id} value={member.id}>{member.nickname} · @{member.username}</option>)}
+              </CustomSelect>
+            </label>
+            {!transferCandidates.length ? <p className="collection-transfer-empty">当前没有可接收 Collection 的有效成员。</p> : null}
+            <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || !transferTarget} onClick={() => setConfirm({ type: "transfer", member: transferTarget })}>转让 Collection</button>
+          </section>
           <section className="collection-danger-zone">
             <h2>删除 Collection</h2>
             <p>所有 Post 会安全脱离并恢复为作者私有内容，不会转移作者身份。</p>
@@ -373,16 +411,18 @@ export function CollectionManagePage() {
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.type === "members" ? "移除选中的共同成员？" : confirm?.type === "post" ? "将这篇 Post 移出 Collection？" : "删除这个 Collection？"}
+        title={confirm?.type === "members" ? "移除选中的共同成员？" : confirm?.type === "post" ? "将这篇 Post 移出 Collection？" : confirm?.type === "transfer" ? `将 Collection 转让给 ${confirm.member.nickname}？` : "删除这个 Collection？"}
         description={confirm?.type === "members"
           ? `将移除 ${confirm.removed.map((member) => member.nickname).join("、")}。他们会立即失去普通阅读和投稿权限，但仍可通过作者入口管理自己的历史 Post。`
           : confirm?.type === "post"
             ? "Post 会脱离 Collection 并恢复为作者私有内容；创建者不会获得该 Post 的编辑或删除权限。"
+            : confirm?.type === "transfer"
+              ? `${confirm.member.nickname} 将立即获得资料、成员、排序、关键记录和删除权限。你将变为普通成员，仍可阅读、投稿和管理自己的 Post，但不能再管理此 Collection。`
             : "Collection 将被删除，所有 Post 会脱离并恢复为各自作者的私有内容。此操作无法在前端撤销。"}
-        confirmLabel={confirm?.type === "members" ? "确认更新成员" : confirm?.type === "post" ? "确认移出" : "确认删除"}
+        confirmLabel={confirm?.type === "members" ? "确认更新成员" : confirm?.type === "post" ? "确认移出" : confirm?.type === "transfer" ? "确认转让" : "确认删除"}
         danger
         busy={Boolean(busy)}
-        onConfirm={confirm?.type === "members" ? saveMembers : confirm?.type === "post" ? removePost : deleteCollection}
+        onConfirm={confirm?.type === "members" ? saveMembers : confirm?.type === "post" ? removePost : confirm?.type === "transfer" ? transferCreator : deleteCollection}
         onClose={() => !busy && setConfirm(null)}
       />
     </main>

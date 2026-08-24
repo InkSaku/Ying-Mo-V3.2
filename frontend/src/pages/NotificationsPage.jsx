@@ -92,6 +92,7 @@ export function NotificationsPage() {
                   {!item.is_read ? <span className="notification-unread-label">未读</span> : null}
                   <p>{item.message}</p>
                 </div>
+                {item.summary ? <p className="notification-summary">“{item.summary}”</p> : null}
                 <time dateTime={item.created_at}>{formatDate(item.created_at, true)}</time>
               </div>
               <div className="notification-actions">
