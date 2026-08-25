@@ -218,8 +218,18 @@ export function HomeFeed({ userId, type, newPost }) {
         previousDay = dayKey;
         return (
           <Fragment key={post.id}>
-            <div className="home-feed-entry" data-feed-post-id={post.id}>{showDay ? <h3 className="home-feed-day">{post._feedFresh ? "刚刚" : homeFeedDayLabel(post.semantic_time || post.published_at)}</h3> : null}<FeedPost post={post} /></div>
-            {index + 1 === memoryIndex ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
+            <div className={`home-feed-entry is-${post.post_type} ${post.post_type === "note" && index % 3 === 1 ? "is-offset" : ""}`} data-feed-post-id={post.id}>
+              <div className="home-feed-day-slot">
+                {showDay ? <h3 className="home-feed-day"><span>{post._feedFresh ? "刚刚" : homeFeedDayLabel(post.semantic_time || post.published_at)}</span><small>TIME</small></h3> : null}
+              </div>
+              <div className="home-feed-entry-content"><FeedPost post={post} /></div>
+            </div>
+            {index + 1 === memoryIndex ? (
+              <div className="home-feed-interlude-row">
+                <div className="home-feed-day-slot"><p>回望<br /><span>MEMORY</span></p></div>
+                <FeedMemoryInterlude memory={feed.memoryInterlude} />
+              </div>
+            ) : null}
           </Fragment>
         );
       })}
