@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -16,10 +16,13 @@ import { installVisibleReadTracker } from "../lib/readingStats";
 import { logicalMediaFromRaw } from "../lib/mediaGallery";
 import { MediaOpenButton } from "../components/MediaOpenButton";
 import { useMediaLightbox } from "../contexts/MediaLightboxContext";
+import { NoteDetail } from "../components/NoteDetail";
+import { NoteExperience } from "../components/NoteExperience";
 
 export function PostDetailPage({ type }) {
   const params = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const path = type === "article" ? `/posts/slug/${encodeURIComponent(params.slug)}` : `/posts/${params.id}`;
   const state = useAsyncData(() => api.get(path), [path]);
   const post = state.data?.redirect ? null : state.data;
@@ -50,6 +53,19 @@ export function PostDetailPage({ type }) {
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   if (!post) return null;
   const coverGalleryItem = galleryItems.find((item) => item.id === post.cover_media?.public_id);
+
+  if (post.post_type === "note") {
+    return (
+      <main className="page-shell reading-page note-reading-page">
+        {location.state?.fromHomeFeed ? (
+          <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
+        ) : null}
+        <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
+        <NoteExperience experience={post.experience} />
+        <CommentsPanel key={post.id} postId={post.id} />
+      </main>
+    );
+  }
 
   const renderedBody = post.rendered_html ? (
     <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} />
@@ -91,6 +107,9 @@ export function PostDetailPage({ type }) {
 
   return (
     <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools" : ""}`}>
+      {location.state?.fromHomeFeed ? (
+        <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
+      ) : null}
       <article className={`post-detail ${post.post_type === "article" ? "post-detail-with-tools" : ""}`}>
         <header className={`post-detail-header ${post.post_type === "article" ? "article-reading-width" : ""}`}>
           <div className="post-detail-meta">

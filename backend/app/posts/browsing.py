@@ -10,6 +10,7 @@ from app.posts.service import current_article_slug
 MARKDOWN_TOKEN_RE = re.compile(r"[`*_#>\[\](){}!|~-]+")
 CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 LATIN_WORD_RE = re.compile(r"[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*")
+BROWSE_EXCERPT_SOURCE_LIMIT = 500
 
 
 def estimate_reading_minutes(body):
@@ -51,6 +52,7 @@ def _active_media(media):
 
 def serialize_browse_post(post, *, actor_id=None, display_media=None):
     data = post.to_dict(include_body=False)
+    data["content_excerpt"] = (post.summary or post.body or "")[:BROWSE_EXCERPT_SOURCE_LIMIT]
     if post.post_type == PostType.ARTICLE.value:
         data["slug"] = current_article_slug(post.id) or post.slug_candidate
         data["reading_minutes"] = estimate_reading_minutes(post.body)

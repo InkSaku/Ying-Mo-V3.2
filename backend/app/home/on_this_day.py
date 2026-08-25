@@ -14,7 +14,7 @@ def utc_today():
     return datetime.now(timezone.utc).date()
 
 
-def on_this_day_data(actor_id, *, page=1, size=20, today=None):
+def on_this_day_data(actor_id, *, page=1, size=20, today=None, include_facets=True):
     today = today or utc_today()
     time_expr = semantic_time_expression()
     year_expr = extract("year", time_expr)
@@ -47,19 +47,21 @@ def on_this_day_data(actor_id, *, page=1, size=20, today=None):
         item["years_ago"] = today.year - memory_year
         items.append(item)
 
-    facet_stmt = db.select(
-        year_expr.label("year"),
-        func.count(Post.id).label("count"),
-    ).where(*filters).group_by(year_expr).order_by(year_expr.desc())
-    year_facets = [
-        {
-            "year": int(row.year),
-            "years_ago": today.year - int(row.year),
-            "count": row.count,
-        }
-        for row in db.session.execute(facet_stmt)
-        if row.year is not None
-    ]
+    year_facets = []
+    if include_facets:
+        facet_stmt = db.select(
+            year_expr.label("year"),
+            func.count(Post.id).label("count"),
+        ).where(*filters).group_by(year_expr).order_by(year_expr.desc())
+        year_facets = [
+            {
+                "year": int(row.year),
+                "years_ago": today.year - int(row.year),
+                "count": row.count,
+            }
+            for row in db.session.execute(facet_stmt)
+            if row.year is not None
+        ]
     return {
         "date": today.isoformat(),
         "month": today.month,

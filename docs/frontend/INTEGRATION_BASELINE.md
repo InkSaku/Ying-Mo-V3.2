@@ -547,3 +547,62 @@
 - 后端先应用统一 ACL，再按严格分层的静态关系与 `published_at DESC, id DESC` 稳定排序；不使用任何阅读、互动、热门、画像或 AI 信号。
 - 当前权威自动化：后端 `102/102`、前端 `67/67`、ESLint、Vite 生产构建与 `BUNDLE_VERIFY_OK` 通过；专项覆盖 ACL、草稿/隐藏/删除排除、4 篇上限、分层排序、关联原因，以及紧凑卡片不误隐藏原因文本。
 - 隔离浏览器验收覆盖 0/1/2/4 篇、真实卡片跳转、无权 Collection 不泄露、深色模式、1280px/390px 无横向溢出和 Console；验收中发现并修复紧凑卡片旧摘要规则误隐藏原因文本。
+
+## V3.9 Note 阶段一：首页 Quick Note Composer
+
+- 首页在阅读模块之前直接提供轻量随记输入，默认受众为 `private`，也可显式选择登录成员或当前成员有权投稿的 Collection；Collection 选择仍由后端 ACL 最终裁决。
+- 纯文字输入以成员与 Quick Note 场景隔离的本地草稿保存，刷新后恢复；首次添加图片时才创建服务器 Note 草稿，避免空输入污染草稿列表。
+- 图片沿用既有上传、绑定和受保护媒体契约；地点、心情、发生时间按需展开。发布使用同一草稿并在首页“刚刚发布”区原地回显，无需整页刷新。
+- “继续完整编辑”先持久化当前输入，再进入既有 `/write/:postId`；Article 仍走正式 WritePage，本阶段未增加数据库迁移或新的后端 API。
+- 新增 Quick Note 纯逻辑回归，覆盖 payload、受众映射、本地恢复、有效内容判断和 Feed 图片选择。`npm run check` 通过：ESLint、Node 回归 `93/93`、Vite 生产构建与 `BUNDLE_VERIFY_OK` 全部通过，HomePage 页面块为 `5.19 KiB gzip`。
+- 后端全量测试 `124/124` 与 `scripts/verify_static.py` 通过，静态检查返回 `MANIFEST_VERIFY_OK files=128` 和 `STATIC_VERIFY_OK`；既有 Post、Upload、Collection ACL 与 semantic time 回归保持通过。
+- 真实登录态浏览器验收覆盖桌面与 390×844：本地文字刷新恢复、地点/心情恢复、private 文字发布、图片上传、纯图片发布和发布后原地回显；页面无横向溢出，Console error/warn 为空。验收创建的两条私密测试 Note 及三份图片存储对象已按精确内容校验后清理。
+
+## V3.9 Note 阶段二：首页统一 Feed
+
+- 首页移除精选文章、精选 Collection、最近文章、最近随记和我的 Collection 等平行内容模块；往年今日、漫游和合集保留为轻量延伸入口，Quick Note 之后直接进入单列混合时间流。
+- 新增 `GET /api/v1/home/feed`：统一 ACL 过滤后按 `semantic_time DESC, id DESC` 稳定排序，支持 `all / note / article`，使用服务端签名且绑定筛选类型的游标；游标篡改、跨筛选复用和非法 page size 返回 422。
+- 客户端使用 `IntersectionObserver` 在列表末端进入 500px 预取区时补页，稳定扁平合并并去重；当前成员的页面数据只保存在 30 分钟内存缓存，不写入 Web Storage。`sessionStorage` 仅保存成员与筛选隔离的数值滚动坐标。
+- 从 Feed 进入 Article / Note 详情时显示“返回首页时间流”，返回后复用已加载页面并恢复位置；Quick Note 发布结果按 Memos 的新内容提升模式即时置顶，服务端刷新后仍按语义时间排序。
+- Feed 卡片只保留作者、类型与时间、正文或标题、首张媒体、最多一个 Collection / 地点上下文和“查看与回应”；Article / Note / Collection 详情与既有独立列表保持原路由。
+- 实现参考 [Memos 游标式无限查询](https://github.com/usememos/memos/blob/45c3a79b1215ecd8912b699d9d635055147041c3/web/src/hooks/useMemoQueries.ts)、[Memos 分页列表与新内容提升](https://github.com/usememos/memos/blob/45c3a79b1215ecd8912b699d9d635055147041c3/web/src/components/PagedMemoList/PagedMemoList.tsx) 和 [React Router 滚动位置存储](https://github.com/remix-run/react-router/blob/cab1a69054aa7dfba08a81b6e4b4d13957c82a38/packages/react-router/lib/dom/lib.tsx)。映墨没有引入 TanStack Query，也没有迁移 Router；只复用其游标、页面合并、内存缓存和数值位置恢复模式。
+- 前端 `npm run check` 全部通过：ESLint、Node 回归 `100/100`、生产构建和 `BUNDLE_VERIFY_OK`；HomePage 页面块 `7.09 KiB gzip`。后端全量测试 `126/126` 通过，新增回归覆盖 ACL、语义时间、签名游标、类型绑定、非法参数、private 自读和 archived 排除。
+- 真实登录态浏览器验收覆盖桌面深色、390×844、全部 / 随记筛选 URL、12 条首批内容、详情返回入口与位置恢复、PWA 快捷入口自动聚焦；移动端页面与 Feed `scrollWidth=390/358`，无横向溢出，Console error/warn 为空。本轮没有创建或修改验收数据。
+
+## V3.9 Note 阶段三：拆分 Article 与 Note 展示组件
+
+- 首页 `FeedPost` 收口为只负责按 `post_type` 分发的兼容入口；Article 使用独立 `ArticleFeedPost`，保留标题、摘要、封面、阅读时间和“阅读全文与回应”，Note 使用独立 `NoteFeedPost`，正文先于影像，保持生活时间与“查看与回应”。作者、语义时间、Collection / 地点上下文、媒体灯箱和详情返回状态由共享 `FeedPostFrame` 统一维护。
+- 全站 `PostCard` 同步改为薄分发器；文章列表、相关阅读等进入 `ArticlePostCard`，随记列表、归档、搜索、合集、用户主页与 Explore 进入 `NotePostCard`。Article 保留 Category、发布时间、更新时间和阅读分钟，Note 不再制造“未命名随记”标题，直接以正文预览、发生时间、地点和心情构成内容层级。
+- 通用浏览序列化在完整 ACL 查询之后新增最多 500 字的 `content_excerpt`，Article 优先使用 summary，Note 使用正文；接口仍不返回完整 body。前端统一移除 Markdown 标记和内部媒体占位符，避免列表只能重复显示占位文案，也不改变详情读取权限。
+- 新增组件责任边界与摘要优先级回归，旧的相关阅读原因测试已迁移到 Article 专属组件。当前前端 Node 回归 `104/104`，生产构建和 `BUNDLE_VERIFY_OK` 通过，HomePage 页面块为 `7.29 KiB gzip`；后端总测试数保持 `126/126`，内容浏览专项覆盖摘要存在且完整 body 不进入卡片响应。
+- 真实登录态浏览器验收覆盖首页 Article / Note 混排、独立 `/articles` 与 `/notes` 列表、浅色与深色、桌面与 390×844。移动端 `innerWidth/bodyWidth/feedWidth=390/390/358`，首屏加载 9 条 Article 与 3 条 Note，无横向溢出，Console error/warn 为空。本轮没有创建或修改验收数据。
+
+## V3.9 Note 阶段四：Feed 连续性
+
+- Feed 不再只依赖绝对滚动坐标。离开前保存吸顶工具栏下方第一条可见 Post 的 `postId + 相对偏移`，返回后以当前 DOM 位置重新计算滚动目标，因此卡片高度、响应式排版或图片布局变化不会把读者带到另一段内容。
+- 详情链接在路由切换前显式保存锚点，避免组件卸载发生在浏览器滚动状态变化之后；恢复使用连续两帧和一次短延迟校准，兼容 React 提交、路由恢复和受保护媒体布局稳定过程。`sessionStorage` 仍只保存成员与筛选隔离的数值坐标，作为锚点失效时的兜底，不保存内容、Post ID 或页面快照。
+- `all / note / article` 分别保存 30 分钟内存页面与阅读锚点。切换前先保存当前流；目标流有快照时回到自己的锚点，没有快照时从 Feed 工具栏起点开始，不继承上一筛选的深层位置。
+- Quick Note 在读者已深入 Feed 时置顶新内容，会先记录当前锚点并在渲染后校正，使视口内原内容保持稳定；读者仍在顶部时则直接看到新内容。分页继续使用稳定合并与 ID 去重，加载提示改为“正在接上更早的记录...”。
+- 新增纯逻辑回归覆盖相对锚点计算、卡片高度变化、成员隔离、筛选隔离、TTL 清理与 Web Storage 边界。`npm run check` 通过：ESLint、Node 回归 `106/106`、Vite 生产构建和 `BUNDLE_VERIFY_OK` 全部通过；HomePage 页面块为 `8.21 KiB gzip`。
+- 后端全量测试保持 `126/126` 通过；静态验证返回 `MANIFEST_VERIFY_OK files=130` 和 `STATIC_VERIFY_OK`。本阶段没有新增后端 API、依赖或数据库迁移。
+- 真实登录态浏览器验收中，桌面详情往返保持同一 Post；自动化点击导致的点击前滚动也被按实际点击时锚点精确恢复。筛选流分别恢复各自锚点。390×844 下 `innerWidth/bodyWidth=390/390`，无横向溢出，Console error/warn 为空。本轮未创建、修改或删除内容数据。
+
+## V3.9 Note 阶段五：Note 详情与共同经历
+
+- Note 详情退出 Article 通用标题骨架。顶部只保留作者头像、作者与生活时间；有真实标题时才显示标题，无标题时只保留屏幕阅读器可用的页面标题。正文先于封面、媒体、地点、心情、发布时间与互动出现，影像 Note 继续复用受保护媒体和沉浸灯箱。
+- 新增独立 `NoteDetail` 与 `NoteExperience` 组件，Article 详情、目录、阅读进度、相邻文章和相关阅读保持原实现。Note 详情不再渲染“随记”或“未命名随记”作为视觉标题。
+- 既有 Post 详情响应为 Collection Note 增加 `experience`：只从当前 Note 所属 Collection 查询当前访问者可读、已发布或已归档且未隐藏、未删除的 Post；分别取时间之前与之后的候选，再按与当前 Note 的语义时间距离选择最多 4 条并按时间展示。
+- 共同经历允许 Article 与 Note 混排，返回作者、语义时间、ACL 安全摘要、首张可用影像、Canonical 路径和 `before / after` 相对位置，不返回完整 body。独立 Note 返回 `experience: null`，不会用同作者、共同 Tag、热度或随机内容伪造关系。
+- Collection 名称、描述和封面只在当前 Note 已通过 Collection ACL 后进入关系数据；草稿、隐藏、删除及失权内容不能进入链路。点击邻近记录进入其原始 Article / Note 详情，底部可进入完整 Collection。
+- `npm run check` 通过：ESLint、Node 回归 `108/108`、Vite 生产构建和 `BUNDLE_VERIFY_OK` 全部通过；PostDetail 页面块为 `9.63 KiB gzip`。后端全量测试 `127/127` 通过，专项覆盖混合类型、时间位置、媒体摘要、完整 body 排除、草稿与隐藏排除以及独立 Note 空关系。
+- 静态验证返回 `MANIFEST_VERIFY_OK files=131` 和 `STATIC_VERIFY_OK`。本阶段没有新增数据库迁移、第三方依赖或独立 API 端点。
+- 真实登录态浏览器验收覆盖无标题 Note、正文优先层级、4 条混合共同经历、Article 与 Collection 跳转、桌面、390×844、浅色与深色。移动端 `innerWidth/bodyWidth/noteWidth=390/390/358`，无横向溢出，Console error/warn 为空。本轮未创建、修改或删除内容数据。
+
+## V3.9 Note 阶段六：回忆穿插与收口
+
+- “往年今日”不再只是首页顶部的平行入口：`all` 时间流首批响应会在完整 ACL 查询后带回最多 3 条历史同日记录，客户端固定在第三条当前内容之后插入一次轻量回忆段；当前内容不足 3 条时顺延到末尾，只有历史归档时也能在空时间流中出现。
+- 插页只保留日期、年份、距今年数、类型、作者、标题或短正文和可选首图，不复用完整 `PostCard`，不加入 Category、Tag、阅读统计或管理字段。点击内容仍进入 Canonical Article / Note 详情，并携带首页返回状态；“查看全部”进入既有 `/on-this-day`。
+- `note / article` 显式筛选保持纯类型语义，不混入回忆。回忆只在首个 `all` 响应出现；其最多 3 个 Post ID 被写入服务端签名游标，后续分页在 ACL 与时间条件之后排除这些 ID，避免一条已发布旧记录先作为回忆、深滚动时又作为普通 Feed 内容重复出现。
+- 回忆查询继续复用既有 semantic time、published / archived 与 Collection / private ACL 规则；草稿、隐藏、删除和无权内容不能进入插页。首屏预览跳过不需要的年份 Facet 查询，没有新增数据库结构、端点、第三方依赖、热度排序、随机抽取或个性化推荐。
+- `npm run check` 通过：ESLint、Node 回归 `110/110`、Vite 生产构建和 `BUNDLE_VERIFY_OK` 全部通过；HomePage 页面块为 `8.64 KiB gzip`。后端全量测试 `128/128` 通过，新增专项覆盖归档回忆、private 隔离、类型筛选、首屏单次响应和跨游标去重。
+- 静态验证返回 `MANIFEST_VERIFY_OK files=131` 和 `STATIC_VERIFY_OK`。真实登录态浏览器验收覆盖桌面深色、390×844、第三条后插入、`all / note` 筛选边界、回忆详情返回与同一阅读位置恢复；验收创建的精确标记私密 Note 已通过作者删除流程软删除。

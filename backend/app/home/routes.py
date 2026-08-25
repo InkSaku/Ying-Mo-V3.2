@@ -14,6 +14,7 @@ from app.models import Collection, FeaturedContent, Post, PostStatus, PostType
 from app.posts.browsing import serialize_browse_posts
 from app.home.on_this_day import on_this_day_data
 from app.home.year_review import year_review_data
+from app.home.feed import FEED_TYPES, decode_feed_cursor, home_feed_data
 
 bp=Blueprint("home",__name__)
 
@@ -76,6 +77,35 @@ def home():
         "collections":[c.to_dict() for c in collections],
         "on_this_day":on_this_day,
     })
+
+
+@bp.get("/feed")
+@jwt_required(locations=["headers"])
+def home_feed():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+
+    feed_type = request.args.get("type", "all").strip().lower()
+    if feed_type not in FEED_TYPES:
+        return error_response("VALIDATION_ERROR", "type 不合法。", 422)
+    try:
+        size = int(request.args.get("page_size", "12"))
+    except ValueError:
+        return error_response("VALIDATION_ERROR", "page_size 不合法。", 422)
+    if size < 1 or size > 30:
+        return error_response("VALIDATION_ERROR", "page_size 不合法。", 422)
+
+    raw_cursor = request.args.get("cursor", "").strip()
+    cursor = decode_feed_cursor(raw_cursor, feed_type) if raw_cursor else None
+    if raw_cursor and cursor is None:
+        return error_response("VALIDATION_ERROR", "cursor 不合法或与当前筛选不匹配。", 422)
+    return success_response(home_feed_data(
+        actor.id,
+        feed_type=feed_type,
+        cursor=cursor,
+        size=size,
+    ))
 
 
 @bp.get("/on-this-day")

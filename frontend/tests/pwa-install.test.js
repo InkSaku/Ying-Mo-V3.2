@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { isIosLike, pwaInstallMode } from "../src/lib/pwaInstall.js";
@@ -17,4 +18,10 @@ test("prioritizes installed and secure prompt states", () => {
   assert.equal(pwaInstallMode({ secure: true, serviceWorker: true, canPrompt: true }), "prompt");
   assert.equal(pwaInstallMode({ secure: true, serviceWorker: true, ios: true }), "ios");
   assert.equal(pwaInstallMode({ secure: true, serviceWorker: true }), "browser-menu");
+});
+
+test("PWA quick-note shortcut opens the homepage composer", () => {
+  const config = readFileSync(new URL("../vite.config.js", import.meta.url), "utf8");
+  assert.match(config, /url: "\/home\?compose=note&source=pwa-shortcut"/);
+  assert.doesNotMatch(config, /url: "\/write\?type=note&source=pwa-shortcut"/);
 });

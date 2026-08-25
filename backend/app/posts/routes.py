@@ -29,6 +29,7 @@ from app.posts.revisions import (
     revision_detail, snapshot_post,
 )
 from app.posts.related import related_articles
+from app.posts.note_experience import note_experience
 
 bp = Blueprint("posts", __name__)
 
@@ -206,7 +207,7 @@ def _detail(post,actor):
             PostReaction,PostReaction.post_id,post.id,actor_id=actor.id,
         ),
     }
-    data["previous"]=None; data["next"]=None; data["related"]=[]
+    data["previous"]=None; data["next"]=None; data["related"]=[]; data["experience"]=None
     if post.post_type==PostType.ARTICLE.value and post.published_at is not None:
         base=(
             db.select(Post).where(
@@ -226,6 +227,8 @@ def _detail(post,actor):
             return {"id":item.id,"title":item.title,"slug":current_article_slug(item.id)} if item else None
         data["previous"]=nav(previous); data["next"]=nav(following)
         data["related"] = related_articles(post, actor.id)
+    elif post.post_type == PostType.NOTE.value:
+        data["experience"] = note_experience(post, actor.id)
     return data
 
 

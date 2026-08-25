@@ -73,6 +73,7 @@ def test_browse_filters_cards_and_detail_metadata(client, app):
     assert articles.status_code == 200
     article_card = articles.get_json()["data"][0]
     assert article_card["id"] == article["id"]
+    assert article_card["content_excerpt"] == "七日旅行记录"
     assert article_card["reading_minutes"] == 3
     assert article_card["category"]["slug"] == "travel"
 
@@ -83,6 +84,8 @@ def test_browse_filters_cards_and_detail_metadata(client, app):
     assert notes.status_code == 200
     note_card = notes.get_json()["data"][0]
     assert note_card["id"] == note["id"]
+    assert note_card["content_excerpt"] == "第一次看到东京塔亮灯"
+    assert "body" not in note_card
     assert note_card["display_media"]["public_id"] == media_public_id
     assert note_card["collection"]["slug"] == "tokyo-2026"
     assert note_card["semantic_time"].startswith("2025-08-10")
@@ -106,6 +109,78 @@ def test_browse_filters_cards_and_detail_metadata(client, app):
     assert [item["id"] for item in archive["items"]] == [note["id"]]
     assert archive["items"][0]["display_media"]["public_id"] == media_public_id
     assert archive["items"][0]["collection"]["slug"] == "tokyo-2026"
+
+
+def test_note_experience_uses_nearby_collection_posts_without_leaking_body(client, app):
+    alice_response = register(client, "experiencealice", nickname="Alice")
+    bob_response = register(client, "experiencebob", nickname="Bob")
+    alice = alice_response.get_json()["data"]["user"]
+    bob = bob_response.get_json()["data"]["user"]
+    alice_token = token_from(alice_response)
+    bob_token = token_from(bob_response)
+
+    collection = client.post("/api/v1/collections", headers=auth(alice_token), json={
+        "name": "海边周末",
+        "slug": "seaside-weekend",
+        "description": "朋友们从不同视角留下的海边记录。",
+        "member_ids": [bob["id"]],
+    }).get_json()["data"]
+    older_note = publish(client, bob_token, {
+        "post_type": "note", "body": "出发前在车站买了热咖啡。",
+        "occurred_at": "2025-08-09T08:00:00Z", "collection_id": collection["id"],
+    })
+    current_note = publish(client, alice_token, {
+        "post_type": "note", "body": "傍晚一起走到了海边。",
+        "occurred_at": "2025-08-10T18:00:00Z", "collection_id": collection["id"],
+    })
+    later_article = publish(client, bob_token, {
+        "post_type": "article", "title": "海边的两天", "body": "完整文章正文",
+        "collection_id": collection["id"],
+    }, slug="seaside-two-days")
+    hidden_note = publish(client, alice_token, {
+        "post_type": "note", "body": "不应出现的隐藏记录",
+        "occurred_at": "2025-08-10T19:00:00Z", "collection_id": collection["id"],
+    })
+    independent_note = publish(client, alice_token, {
+        "post_type": "note", "body": "一条独立记录", "visibility": "login_only",
+    })
+    draft = client.post("/api/v1/posts", headers=auth(alice_token), json={
+        "post_type": "note", "body": "不应出现的草稿", "collection_id": collection["id"],
+    }).get_json()["data"]
+
+    with app.app_context():
+        db.session.get(Post, later_article["id"]).published_at = datetime(2025, 8, 11, 12, tzinfo=timezone.utc)
+        db.session.get(Post, hidden_note["id"]).moderation_status = PostModerationStatus.HIDDEN.value
+        media = Media(
+            owner_id=bob["id"], kind="image", mime_type="image/jpeg", byte_size=128,
+            width=1200, height=800, storage_key="experience/station.jpg",
+            thumbnail_key="experience/station.webp", bound_type="post", bound_id=older_note["id"],
+        )
+        db.session.add(media)
+        db.session.commit()
+        media_public_id = media.public_id
+
+    response = client.get(f"/api/v1/posts/{current_note['id']}", headers=auth(bob_token))
+    assert response.status_code == 200
+    experience = response.get_json()["data"]["experience"]
+    assert experience["collection"] == {
+        "id": collection["id"],
+        "name": "海边周末",
+        "slug": "seaside-weekend",
+        "description": "朋友们从不同视角留下的海边记录。",
+        "cover_media": None,
+    }
+    assert [item["id"] for item in experience["items"]] == [older_note["id"], later_article["id"]]
+    assert [item["experience_position"] for item in experience["items"]] == ["before", "after"]
+    assert experience["items"][0]["display_media"]["public_id"] == media_public_id
+    assert experience["items"][1]["slug"] == "seaside-two-days"
+    assert all("body" not in item for item in experience["items"])
+    assert hidden_note["id"] not in {item["id"] for item in experience["items"]}
+    assert draft["id"] not in {item["id"] for item in experience["items"]}
+
+    independent = client.get(f"/api/v1/posts/{independent_note['id']}", headers=auth(bob_token))
+    assert independent.status_code == 200
+    assert independent.get_json()["data"]["experience"] is None
 
 
 def test_related_articles_are_acl_safe_scored_explainable_and_capped(client, app):

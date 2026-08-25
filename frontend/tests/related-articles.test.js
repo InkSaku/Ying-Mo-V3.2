@@ -5,7 +5,7 @@ import test from "node:test";
 
 test("compact related Article cards keep their explainable reasons visible", async () => {
   const [component, styles] = await Promise.all([
-    readFile(new URL("../src/components/PostCard.jsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/ArticlePostCard.jsx", import.meta.url), "utf8"),
     readFile(new URL("../src/styles/index.css", import.meta.url), "utf8"),
   ]);
 

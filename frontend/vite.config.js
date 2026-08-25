@@ -32,7 +32,7 @@ export default defineConfig({
             name: "写随记",
             short_name: "写随记",
             description: "创建一条新的生活随记",
-            url: "/write?type=note&source=pwa-shortcut",
+            url: "/home?compose=note&source=pwa-shortcut",
             icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
           },
           {

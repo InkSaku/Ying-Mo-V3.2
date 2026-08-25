@@ -1,89 +1,62 @@
-import { Link } from "react-router-dom";
-import { api } from "../lib/api";
-import { useAsyncData } from "../hooks/useAsyncData";
+import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { HomeFeed } from "../components/HomeFeed";
+import { QuickNoteComposer } from "../components/QuickNoteComposer";
+import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { PageLoader, ErrorState, EmptyState } from "../components/States";
-import { PostCard } from "../components/PostCard";
-import { CollectionCard } from "../components/CollectionCard";
-import { SectionHeader } from "../components/SectionHeader";
-import { MemoryCard } from "../components/MemoryCard";
-import { memoryDayLabel } from "../lib/onThisDay";
+import { HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
+
+const feedFilters = [["all", "全部"], ["note", "随记"], ["article", "文章"]];
 
 export function HomePage() {
   usePageMeta("首页");
-  const state = useAsyncData(() => api.get("/home"), []);
+  const { user } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const type = normalizeHomeFeedType(params.get("type"));
+  const [publishedPost, setPublishedPost] = useState(null);
 
-  if (state.loading) return <PageLoader />;
-  if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
+  const selectType = (nextType) => {
+    window.dispatchEvent(new Event(HOME_FEED_SAVE_EVENT));
+    const hasSnapshot = Boolean(readHomeFeedCache(user.id, nextType));
+    const next = new URLSearchParams(params);
+    if (nextType === "all") next.delete("type");
+    else next.set("type", nextType);
+    setParams(next, { replace: true, preventScrollReset: true });
+    if (!hasSnapshot) {
+      window.requestAnimationFrame(() => {
+        const toolbar = document.querySelector(".home-feed-toolbar");
+        if (toolbar) window.scrollTo(0, Math.max(0, toolbar.offsetTop - 72));
+      });
+    }
+  };
 
-  const data = state.data || {};
   return (
-    <main className="page-shell home-page">
-      <section className="member-hero">
+    <main className="page-shell home-page home-feed-page">
+      <header className="home-feed-intro">
         <div>
           <p className="hero-kicker">你的映墨</p>
-          <h1>继续记录，也继续阅读朋友的近况。</h1>
-          <p>这里仅展示你当前有权访问的内容。Collection 的阅读范围完全以后端成员关系为准。</p>
+          <h1>继续写，也继续往下读。</h1>
+          <p>朋友的随记与文章，按它们真正发生的时间汇在一起。</p>
         </div>
-        <div className="member-hero-actions">
-          <Link className="btn btn-primary" to="/write">新建记录</Link>
-          <Link className="btn btn-secondary" to="/collections/new">创建合集</Link>
-          <Link className="btn btn-secondary" to="/year-in-review">年度回顾</Link>
+        <nav aria-label="首页延伸入口">
+          <Link to="/on-this-day">往年今日</Link>
+          <Link to="/explore">漫游</Link>
+          <Link to="/collections">我的合集</Link>
+        </nav>
+      </header>
+
+      <QuickNoteComposer autoFocus={params.get("compose") === "note"} onPublished={setPublishedPost} />
+
+      <div className="home-feed-toolbar">
+        <div><h2 id="home-feed-title">时间流</h2><p>内容本身就是首页。</p></div>
+        <div className="home-feed-filters" aria-label="筛选时间流">
+          {feedFilters.map(([value, label]) => (
+            <button key={value} type="button" className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => selectType(value)}>{label}</button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      <section className="content-section home-memory-section">
-        <SectionHeader
-          title="往年今日"
-          description={`${memoryDayLabel(data.on_this_day)}，重新遇见过去的记录。`}
-          actions={<Link to="/on-this-day">查看全部</Link>}
-        />
-        {data.on_this_day?.items?.length ? (
-          <div className="memory-grid home-memory-grid">
-            {data.on_this_day.items.map((item) => <MemoryCard key={item.id} post={item} />)}
-          </div>
-        ) : (
-          <div className="home-memory-empty">
-            <p>今天暂时没有旧日记录。</p>
-            <Link to="/archive">翻阅时间归档</Link>
-          </div>
-        )}
-      </section>
-
-      {data.featured_articles?.length ? (
-        <section className="content-section">
-          <SectionHeader title="精选文章" />
-          <div className="two-column-grid">{data.featured_articles.map((item) => <PostCard key={item.id} post={item} />)}</div>
-        </section>
-      ) : null}
-
-      {data.featured_collections?.length ? (
-        <section className="content-section">
-          <SectionHeader title="精选 Collection" />
-          <div className="collection-grid">{data.featured_collections.map((item) => <CollectionCard key={item.id} collection={item} />)}</div>
-        </section>
-      ) : null}
-
-      <section className="content-section">
-        <SectionHeader title="最近文章" actions={<Link to="/articles">查看全部</Link>} />
-        {data.recent_articles?.length
-          ? <div className="two-column-grid">{data.recent_articles.map((item) => <PostCard key={item.id} post={item} />)}</div>
-          : <EmptyState title="还没有文章" description="发布第一篇 Article 后，它会出现在这里。" action={<Link className="btn btn-secondary" to="/write?type=article">写文章</Link>} />}
-      </section>
-
-      <section className="content-section">
-        <SectionHeader title="最近随记" actions={<Link to="/notes">查看全部</Link>} />
-        {data.recent_notes?.length
-          ? <div className="note-stream">{data.recent_notes.map((item) => <PostCard key={item.id} post={item} compact />)}</div>
-          : <EmptyState title="还没有随记" description="Note 适合保存片段、地点、心情与日常。" action={<Link className="btn btn-secondary" to="/write?type=note">写随记</Link>} />}
-      </section>
-
-      <section className="content-section">
-        <SectionHeader title="我的 Collection" actions={<Link to="/collections">查看全部</Link>} />
-        {data.collections?.length
-          ? <div className="collection-grid">{data.collections.map((item) => <CollectionCard key={item.id} collection={item} />)}</div>
-          : <EmptyState title="还没有可访问的合集" description="你可以创建自己的 Collection，或者等待朋友把你加入共同记录。" />}
-      </section>
+      <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} />
     </main>
   );
 }
