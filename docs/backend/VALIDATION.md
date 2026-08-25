@@ -52,7 +52,7 @@
    - 以 testing 配置启动 Gunicorn，实际请求 `/api/v1/health`：200。
    - 实际请求 `/articles/private`：200 通用 Shell，包含 `noindex,nofollow` 与私密缓存头。
 14. `npm run check`（`frontend/`）
-   - 结果：ESLint 通过，Node 回归 `83 passed`（83/83），Vite 生产构建和 `BUNDLE_VERIFY_OK` 通过。
+   - 结果：ESLint 通过，Node 回归 `88 passed`（88/88），Vite PWA 生产构建和 `BUNDLE_VERIFY_OK` 通过。
    - 覆盖账户安全、内容浏览、Revision、往年今日、Explore、Collection 成员/时间轴/通知、Creator 转让、离线草稿、固定回应与评论乐观回滚，以及构建与包体门禁。
 15. `git diff --check`
    - 结果：通过。
@@ -89,6 +89,12 @@
    - 使用全新隔离数据库、独立上传目录、后端 `8020` 与前端 `5190`，验证 Post 和 Collection 打开同一灯箱、三条逻辑媒体、Live Photo 播放/静态回退、左右键、深链接刷新恢复 `2 / 3`、双击缩放和通用无权错误。
    - 390×844 下页面与灯箱均无横向溢出；关闭后焦点返回原媒体入口，灯箱打开时页面根节点 inert，干净标签页 Console error/warn 为空。
    - 上传与读取链路仅提供授权展示衍生图；原文件走所有者接口。相邻静态图只短时预加载，认证结束或账号切换会释放所有受保护 Blob URL。
+23. V3.8 PWA 构建与隔离浏览器验收
+   - 生产构建生成 `app.webmanifest`、`sw.js`、Workbox 运行时、192/512/maskable/Apple Touch 图标；Manifest 为 `standalone`，从 `/home?source=pwa` 启动并提供写随记、写文章和搜索快捷入口。
+   - 构建门禁从生成的 Service Worker 提取 precache URL，确认没有 `/api`；导航回退包含 `/api` denylist，未配置任何运行时 API 或受保护媒体缓存。
+   - Vite Preview 实际返回 `application/manifest+json` 与 `text/javascript`，Manifest、Service Worker 和图标均为 200；部署脚本增加对应产物与 HTML 元数据检查。
+   - 使用全新 SQLite、独立上传目录、后端 `8000` 与前端 `4173` 登录隔离演示成员，真实检查个人资料安装区；桌面 DOM、可访问名称和 390×844 视觉布局正常，`clientWidth/scrollWidth` 为 `390/390`，Console error/warn 为空。
+   - 当前内置验收浏览器不暴露 Service Worker 和 `beforeinstallprompt`，外部 Chrome 连接也不可用，因此没有把系统级安装弹窗记为已点按通过；该项需在 HTTPS 部署域名上用 Chrome/Edge/Safari 完成最终设备安装检查。
 
 ## 当前环境无法完成的外部验证
 

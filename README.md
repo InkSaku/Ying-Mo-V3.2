@@ -63,6 +63,8 @@
 - 正文内部媒体占位符
 - 浏览器离线副本与意外关闭后的草稿恢复
 
+站点同时提供可安装的 PWA 外壳。成员可从「个人资料 → 安装映墨」将站点添加到桌面、Dock、开始菜单或手机主屏幕，并通过应用图标快捷进入写随记、写文章和搜索。PWA 只预缓存无用户数据的前端静态外壳；API、文章内容与受保护媒体不进入 Service Worker 离线缓存。
+
 ---
 
 ### Collection 共同记录
@@ -613,6 +615,34 @@ frontend/dist/
 ```
 
 可直接由 Nginx 提供。
+
+构建同时生成：
+
+```text
+app.webmanifest
+sw.js
+workbox-*.js
+pwa-192.png
+pwa-512.png
+pwa-maskable-512.png
+```
+
+PWA 在生产环境要求 HTTPS。建议让 Nginx 对 Service Worker 和 Web App Manifest 使用可重新验证的缓存策略：
+
+```nginx
+location = /sw.js {
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    try_files $uri =404;
+}
+
+location = /app.webmanifest {
+    default_type application/manifest+json;
+    add_header Cache-Control "no-cache";
+    try_files $uri =404;
+}
+```
+
+其余带内容哈希的前端静态资源仍可长期缓存。部署脚本会在重新加载 Nginx 前检查 PWA 清单、Service Worker 和 HTML manifest 元数据是否存在。
 
 后端：
 

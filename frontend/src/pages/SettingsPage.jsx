@@ -6,6 +6,7 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { PersonalNav } from "../components/PersonalNav";
 import { ErrorState, PageLoader } from "../components/States";
 import { AvatarManager } from "../components/AvatarManager";
+import { PwaInstallPanel } from "../components/PwaInstallPanel";
 import { accountActionMessage, emailVerificationState } from "../lib/accountSecurity";
 import { formatDate } from "../lib/format";
 
@@ -162,6 +163,7 @@ export function SettingsPage() {
           <Link className="btn btn-secondary" to="/verify-email">查看验证状态</Link>
         </div>
       </section>
+      <PwaInstallPanel />
     </main>
   );
 }

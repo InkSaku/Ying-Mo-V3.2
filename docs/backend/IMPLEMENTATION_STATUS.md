@@ -1,8 +1,8 @@
 # Ying-Mo 后端实现状态
 
-更新时间：2026-08-24
+更新时间：2026-08-25
 
-当前状态：**P0、P1 阶段 21–27、V3.3–V3.7 与媒体记忆增强均已实现**。媒体记忆增强包含逻辑媒体、沉浸灯箱、Collection 筛选相册、Live Photo、展示衍生图、深链接与 ACL 撤销。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
+当前状态：**P0、P1 阶段 21–27、V3.3–V3.8 与媒体记忆增强均已实现**。媒体记忆增强包含逻辑媒体、沉浸灯箱、Collection 筛选相册、Live Photo、展示衍生图、深链接与 ACL 撤销；V3.8 新增可安装 PWA 外壳。`docs/product.md` 是唯一需求基线；本文件只记录真实实现和验证状态。
 
 ## P0 已实现
 
@@ -167,10 +167,19 @@
 - [x] 单媒体解析、Collection 相册、我的媒体和媒体文件读取均使用当前 ACL；成员移除后统一 404。
 - [x] Alembic `20260825_0011` 增加展示衍生文件键，既有媒体通过首次授权读取惰性补齐，不破坏原件。
 
+## V3.8：可安装 PWA
+
+- [x] 生产构建生成 Web App Manifest、Service Worker、普通/高分辨率/maskable/Apple Touch 图标，并支持独立窗口与 `/home` 安全启动页。
+- [x] 应用图标提供写随记、写文章和搜索三个快捷入口；未登录时继续经既有 `next` 参数返回原目标，不绕过认证。
+- [x] 个人资料页按浏览器能力显示系统安装按钮、iOS Safari 操作说明或浏览器菜单指引；已安装环境显示明确状态。
+- [x] 新版本进入 waiting 状态后由全局提示让成员主动刷新，不在写作过程中强制重载页面。
+- [x] Service Worker 只预缓存无用户数据的构建静态资源和 SPA 外壳，导航回退显式排除 `/api`，不配置 API、文章、媒体或跨域运行时缓存。
+- [x] 部署脚本检查 `app.webmanifest`、`sw.js` 和 HTML manifest 元数据，构建门禁校验启动页、maskable 图标、快捷入口和 API 缓存排除规则。
+
 ## 验证状态
 
 - [x] 完整 pytest：124/124 passed。
-- [x] 前端 `npm run check`：ESLint、83/83 Node 回归、生产构建和包体预算全部通过。
+- [x] 前端 `npm run check`：ESLint、88/88 Node 回归、PWA 生产构建和包体预算全部通过。
 - [x] Python compileall。
 - [x] `scripts/verify_static.py`。
 - [x] `MANIFEST.sha256` 已按当前后端源码重建，并由静态门禁执行可重复校验；旧重构路径不再冒充当前发布清单。

@@ -614,6 +614,27 @@ h3 {
   background: var(--tag-soft);
 }
 
+.notification-toast .pwa-update-action {
+  width: auto;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  color: var(--brand-link);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notification-toast.pwa-update-toast {
+  top: auto;
+  bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+.notification-toast button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
 .mobile-menu-foot {
   display: flex;
   align-items: center;
@@ -6309,6 +6330,18 @@ input[aria-invalid="true"] {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.pwa-install-section {
+  margin-top: 28px;
+}
+
+.pwa-install-guidance {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  border-left: 2px solid var(--brand);
+  background: var(--tag-soft);
+  color: var(--text-2) !important;
 }
 
 @media (max-width: 900px) {

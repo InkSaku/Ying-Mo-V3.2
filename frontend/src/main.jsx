@@ -5,9 +5,12 @@ import { App } from "./App";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { MediaLightboxProvider } from "./contexts/MediaLightboxContext";
+import { initializePwaInstall } from "./lib/pwaInstall";
 import "@fontsource-variable/noto-serif-sc/wght.css";
 import "@fontsource-variable/jetbrains-mono/wght.css";
 import "./styles/index.css";
+
+initializePwaInstall();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

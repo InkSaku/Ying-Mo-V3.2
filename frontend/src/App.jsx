@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute } from "./components/RouteGuards";
 import { AppShell } from "./components/AppShell";
 import { PageLoader } from "./components/States";
+import { PwaUpdatePrompt } from "./components/PwaUpdatePrompt";
 
 function lazyNamed(loader, exportName) {
   return lazy(() => loader().then((module) => ({ default: module[exportName] })));
@@ -58,8 +59,10 @@ const NotFoundPage = lazyNamed(() => import("./pages/NotFoundPage"), "NotFoundPa
 
 export function App() {
   return (
-    <Suspense fallback={<PageLoader label="正在读取页面" />}>
-      <Routes>
+    <>
+      <PwaUpdatePrompt />
+      <Suspense fallback={<PageLoader label="正在读取页面" />}>
+        <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
@@ -116,7 +119,8 @@ export function App() {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </>
   );
 }

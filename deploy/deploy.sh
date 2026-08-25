@@ -286,9 +286,25 @@ fi
 
 
 
+if [ ! -f "$FRONTEND_DIR/dist/app.webmanifest" ] || [ ! -f "$FRONTEND_DIR/dist/sw.js" ]; then
+
+    fail "Frontend PWA assets missing"
+
+fi
+
+
+
 if ! grep -q 'href="/favicon.png"' "$FRONTEND_DIR/dist/index.html"; then
 
     fail "Frontend favicon metadata missing"
+
+fi
+
+
+
+if ! grep -q 'href="/app.webmanifest"' "$FRONTEND_DIR/dist/index.html"; then
+
+    fail "Frontend PWA manifest metadata missing"
 
 fi
 

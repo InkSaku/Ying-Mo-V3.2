@@ -4,16 +4,41 @@ import path from "node:path";
 
 const DIST_DIR = path.resolve("dist");
 const MANIFEST_PATH = path.join(DIST_DIR, ".vite", "manifest.json");
+const WEB_MANIFEST_PATH = path.join(DIST_DIR, "app.webmanifest");
+const SERVICE_WORKER_PATH = path.join(DIST_DIR, "sw.js");
 const PAGE_CHUNK_BUDGET = 150 * 1024;
 const INITIAL_ROUTE_BUDGET = 300 * 1024;
 
 const manifest = JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
+const webManifest = JSON.parse(await readFile(WEB_MANIFEST_PATH, "utf8"));
+const serviceWorker = await readFile(SERVICE_WORKER_PATH, "utf8");
 const records = Object.entries(manifest);
 const entry = records.find(([, record]) => record.isEntry);
 const pageEntries = records.filter(([, record]) => record.isDynamicEntry && record.file.endsWith(".js"));
 
 if (!entry) {
   throw new Error("构建产物缺少入口清单，无法校验首屏体积。");
+}
+
+if (webManifest.display !== "standalone" || webManifest.start_url !== "/home?source=pwa") {
+  throw new Error("PWA Web App Manifest 缺少独立窗口或安全启动页配置。");
+}
+
+if (!Array.isArray(webManifest.icons) || !webManifest.icons.some((icon) => icon.purpose === "maskable")) {
+  throw new Error("PWA Web App Manifest 缺少 maskable 应用图标。");
+}
+
+if (!Array.isArray(webManifest.shortcuts) || webManifest.shortcuts.length < 3) {
+  throw new Error("PWA Web App Manifest 缺少创作与搜索快捷入口。");
+}
+
+const precacheUrls = [...serviceWorker.matchAll(/url:"([^"]+)"/g)].map((match) => match[1]);
+if (precacheUrls.some((url) => url.startsWith("api/") || url.startsWith("/api/"))) {
+  throw new Error("Service Worker 产物不得预缓存 API 或受保护媒体路径。");
+}
+
+if (!serviceWorker.includes("denylist:[/^\\/api")) {
+  throw new Error("Service Worker 导航回退必须显式排除 API 路径。");
 }
 
 if (pageEntries.length < 10) {
