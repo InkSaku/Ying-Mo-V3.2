@@ -92,6 +92,57 @@ function MediaWallView({ slug, memory, onChange }) {
   </section>;
 }
 
+function CollectionOverview({ collection, notificationPreference, onSaveNotificationPreference }) {
+  const members = [collection.creator, ...(collection.members || [])];
+  return (
+    <div className="collection-overview-layout">
+      <div className="collection-overview-main">
+        {collection.highlights?.length ? (
+          <section className="collection-overview-section collection-highlights" aria-labelledby="collection-highlights-title">
+            <header className="collection-spread-heading">
+              <div><p>EDITOR&apos;S MARKS</p><h2 id="collection-highlights-title">关键记录</h2></div>
+              <span>由创建者挑选的共同片段。</span>
+            </header>
+            <div className="collection-highlight-grid">{collection.highlights.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
+          </section>
+        ) : null}
+
+        <section className="collection-overview-section collection-posts-section" aria-labelledby="collection-posts-title">
+          <header className="collection-spread-heading">
+            <div><p>CONTENTS</p><h2 id="collection-posts-title">合集内容</h2></div>
+            <span>{collection.posts?.length || 0} 则当前记录</span>
+          </header>
+          {collection.posts?.length
+            ? <div className="collection-post-catalogue">{collection.posts.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
+            : <EmptyState title="这个合集还没有已发布内容" description="创建者与成员都可以在这里发表自己的记录。" />}
+        </section>
+      </div>
+
+      <aside className="collection-overview-index" aria-label="合集卷内索引">
+        <section className="collection-index-section" aria-labelledby="collection-members-title">
+          <header><p>CONTRIBUTORS</p><h2 id="collection-members-title">共同署名</h2><span>{members.length} 位成员</span></header>
+          <div className="collection-member-index">
+            {members.map((member, index) => (
+              <Link key={`${member.id}-${index}`} to={`/users/${member.username}`}>
+                <span className="tabular">{String(index + 1).padStart(2, "0")}</span>
+                <strong>{member.nickname}</strong>
+                <small>{index === 0 ? "创建者" : "共同成员"}</small>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="collection-index-section collection-notification-preference" aria-labelledby="collection-notification-title">
+          <div><p>SUBSCRIPTION</p><h2 id="collection-notification-title">卷内通知</h2><span>加入、移除和创建者转让等与你直接相关的通知始终保留。</span></div>
+          <CustomSelect aria-label="Collection 通知偏好" disabled={notificationPreference.loading || notificationPreference.saving} value={notificationPreference.level} onChange={(event) => { void onSaveNotificationPreference(event.target.value); }}><option value="all">全部通知</option><option value="important">仅重要变更</option><option value="muted">静音共同投稿</option></CustomSelect>
+          {notificationPreference.error ? <small className="field-error">{notificationPreference.error}</small> : null}
+          {notificationPreference.message ? <small>{notificationPreference.message}</small> : null}
+        </section>
+      </aside>
+    </div>
+  );
+}
+
 export function CollectionDetailPage() {
   const { slug } = useParams();
   const { user } = useAuth();
@@ -127,10 +178,27 @@ export function CollectionDetailPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   const collection = state.data;
   return <main className="page-shell collection-memory-page">
-    <header className="collection-hero"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" /><div><p className="hero-kicker">Collection</p><h1>{collection.name}</h1>{collection.description ? <p>{collection.description}</p> : null}<div className="collection-meta"><span>创建者 <Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname}</Link></span><span>更新于 {formatDate(collection.updated_at)}</span></div></div><div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理 Collection</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>向这里投稿</Link></div></header>
-    <nav className="collection-memory-nav" aria-label="Collection 阅读视图"><button type="button" className={memory.view === "overview" ? "active" : ""} onClick={() => changeView("overview")}>合集内容</button><button type="button" className={memory.view === "timeline" ? "active" : ""} onClick={() => changeView("timeline")}>共同时间轴</button><button type="button" className={memory.view === "media" ? "active" : ""} onClick={() => changeView("media")}>共同影像</button></nav>
+    <header className="collection-hero collection-volume-hero">
+      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" /><span aria-hidden="true">YING-MO / SHARED VOLUME</span></div>
+      <div className="collection-volume-copy">
+        <p className="hero-kicker">Collection · Shared Volume</p>
+        <h1>{collection.name}</h1>
+        {collection.description ? <p>{collection.description}</p> : <p>这一册还没有写下卷首说明。</p>}
+        <dl className="collection-volume-facts">
+          <div><dt>创建者</dt><dd><Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname}</Link></dd></div>
+          <div><dt>共同署名</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
+          <div><dt>最近整理</dt><dd>{formatDate(collection.updated_at)}</dd></div>
+        </dl>
+        <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理这册合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>写入新的记录</Link></div>
+      </div>
+    </header>
+    <nav className="collection-memory-nav collection-volume-nav" aria-label="Collection 阅读视图">
+      <button type="button" className={memory.view === "overview" ? "active" : ""} onClick={() => changeView("overview")}><span>01</span><strong>合集内容</strong><small>Overview</small></button>
+      <button type="button" className={memory.view === "timeline" ? "active" : ""} onClick={() => changeView("timeline")}><span>02</span><strong>共同时间轴</strong><small>Timeline</small></button>
+      <button type="button" className={memory.view === "media" ? "active" : ""} onClick={() => changeView("media")}><span>03</span><strong>共同影像</strong><small>Images</small></button>
+    </nav>
     {memory.view === "timeline" ? <TimelineView slug={slug} memory={memory} onChange={changeMemory} /> : null}
     {memory.view === "media" ? <MediaWallView slug={slug} memory={memory} onChange={changeMemory} /> : null}
-    {memory.view === "overview" ? <>{collection.highlights?.length ? <section className="content-section collection-highlights"><div className="collection-memory-heading"><div><p className="hero-kicker">Highlights</p><h2>关键记录</h2><p>由 Collection 创建者挑选的共同片段。</p></div></div><div className="note-stream">{collection.highlights.map((post) => <PostCard key={post.id} post={post} compact />)}</div></section> : null}<section className="content-section collection-notification-preference"><div><h2>通知偏好</h2><p>直接与你有关的加入、移除和 Creator 转让通知始终保留；这里控制共同投稿提醒。</p></div><CustomSelect aria-label="Collection 通知偏好" disabled={notificationPreference.loading || notificationPreference.saving} value={notificationPreference.level} onChange={(event) => { void saveNotificationPreference(event.target.value); }}><option value="all">全部通知</option><option value="important">仅重要变更</option><option value="muted">静音共同投稿</option></CustomSelect>{notificationPreference.error ? <small className="field-error">{notificationPreference.error}</small> : null}{notificationPreference.message ? <small>{notificationPreference.message}</small> : null}</section><section className="content-section"><h2>共同成员</h2><div className="member-list"><Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname} <span>创建者</span></Link>{collection.members?.map((member) => <Link key={member.id} to={`/users/${member.username}`}>{member.nickname}</Link>)}</div></section><section className="content-section"><h2>合集内容</h2>{collection.posts?.length ? <div className="note-stream">{collection.posts.map((post) => <PostCard key={post.id} post={post} compact />)}</div> : <EmptyState title="这个合集还没有已发布内容" description="创建者与成员都可以在这里发表自己的记录。" />}</section></> : null}
+    {memory.view === "overview" ? <CollectionOverview collection={collection} notificationPreference={notificationPreference} onSaveNotificationPreference={saveNotificationPreference} /> : null}
   </main>;
 }

@@ -2,11 +2,12 @@ import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
 
-export function NotePostCard({ post, compact = false }) {
+export function NotePostCard({ post, compact = false, variant = "", index = 0 }) {
   const media = post.display_media || post.cover_media;
   const body = excerpt(post);
   return (
-    <article className={`post-card note-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""}`} data-post-type="note">
+    <article className={`post-card note-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="note">
+      {variant ? <span className="post-card-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
       <PostCardMedia post={post} media={media} compact={compact} label="查看这则随记的影像" />
       <div className="post-card-content">
         <div className="post-card-meta"><span>随记</span></div>

@@ -28,18 +28,26 @@ export function CollectionsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell" aria-busy={pageNeedsClamp || undefined}>
-      <header className="page-heading">
-        <div>
-          <h1>Collection</h1>
-          <p>只展示你作为创建者或共同成员有权进入的合集。</p>
+    <main className="page-shell collection-library-page" aria-busy={pageNeedsClamp || undefined}>
+      <header className="collection-library-hero">
+        <div className="collection-library-copy">
+          <p className="hero-kicker">Collection Library</p>
+          <h1>共同记录，<br />分册保存。</h1>
+          <p>每一册都由真实作者共同写成。这里仅陈列你作为创建者或成员有权进入的记录。</p>
         </div>
-        <Link className="btn btn-primary" to="/collections/new">创建合集</Link>
+        <aside className="collection-library-index" aria-label="合集目录概览">
+          <span className="tabular">{pagination.total || 0}</span>
+          <div><strong>册可进入的合集</strong><p>包含自己创建与朋友共同维护的 Collection。</p></div>
+          <Link className="btn btn-primary" to="/collections/new">创建新册</Link>
+        </aside>
       </header>
       {pageNeedsClamp
         ? <div className="profile-refresh" role="status">正在返回有效页码…</div>
         : state.data?.length
-        ? <div className="collection-grid">{state.data.map((item) => <CollectionCard key={item.id} collection={item} />)}</div>
+        ? <section className="collection-library-shelf" aria-labelledby="collection-library-title">
+            <header><div><p>LIBRARY / {String(page).padStart(2, "0")}</p><h2 id="collection-library-title">最近打开的册页</h2></div><span>按最近更新时间排列</span></header>
+            <div className="collection-library-grid">{state.data.map((item, index) => <CollectionCard key={item.id} collection={item} index={(page - 1) * PAGE_SIZE + index} variant={index === 0 ? "featured" : "catalogue"} />)}</div>
+          </section>
         : <EmptyState title="还没有 Collection" description="创建一个合集，或让朋友把你加入共同记录。" />}
       <Pagination
         page={pagination.page || page}

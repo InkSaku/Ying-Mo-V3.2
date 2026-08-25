@@ -14,10 +14,12 @@ function FilterSelect({ label, value, options, valueKey, onChange, allLabel }) {
   );
 }
 
-export function PostFilters({ type = "", filters, options = {}, loading = false, onChange, onClear, showSort = true }) {
+export function PostFilters({ type = "", filters, options = {}, loading = false, onChange, onClear, showSort = true, editorial = false }) {
   const isNote = type === "note";
+  const activeCount = [filters.author, filters.category, filters.tag, filters.collection, filters.sort !== "newest" ? filters.sort : ""].filter(Boolean).length;
   return (
-    <section className="post-filters" aria-label="内容筛选" aria-busy={loading || undefined}>
+    <section className={`post-filters ${editorial ? `post-filters-editorial post-filters-${isNote ? "note" : "article"}` : ""}`} aria-label="内容筛选" aria-busy={loading || undefined}>
+      {editorial ? <header className="post-filters-heading"><span>INDEX FILTERS</span><strong>筛选目录</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "快速缩小阅读范围"}</small></header> : null}
       <FilterSelect label="作者" value={filters.author} options={options.authors || []} valueKey="username" allLabel="全部作者" onChange={(value) => onChange("author", value)} />
       {!isNote ? <FilterSelect label="分类" value={filters.category} options={options.categories || []} valueKey="slug" allLabel="全部分类" onChange={(value) => onChange("category", value)} /> : null}
       <FilterSelect label="标签" value={filters.tag} options={options.tags || []} valueKey="slug" allLabel="全部标签" onChange={(value) => onChange("tag", value)} />

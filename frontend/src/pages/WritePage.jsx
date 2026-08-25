@@ -652,13 +652,14 @@ export function WritePage() {
 
   return (
     <main className="page-shell editor-page">
-      <header className="page-heading editor-heading">
-        <div>
-          <h1>{postId ? `编辑 ${title}` : `新建 ${title}`}</h1>
-          <p>草稿默认仅自己可见。加入 Collection 后，阅读与投稿范围自动跟随该 Collection。</p>
+      <header className="editor-heading editor-publication-bar">
+        <Link className="editor-back-link" to="/me/posts">← 返回内容</Link>
+        <div className="editor-document-identity">
+          <span>写作台 · {form.post_type === "article" ? "文章" : "随记"}</span>
+          <strong>{form.title.trim() || (postId ? "未命名草稿" : "一篇新的记录")}</strong>
+          <small><i aria-hidden="true" />{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</small>
         </div>
         <div className="editor-top-actions">
-          <Link className="btn btn-secondary" to="/me/posts">返回我的内容</Link>
           <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => persistDraft(true)}>
             {busy ? "正在保存" : savedPost ? "保存修改" : "保存草稿"}
           </button>
@@ -697,104 +698,107 @@ export function WritePage() {
 
       <form className="editor-layout" onSubmit={(event) => event.preventDefault()}>
         <div className="editor-main">
-          <fieldset className="segmented-field" disabled={isPublished}>
-            <legend>内容类型</legend>
-            <label className={form.post_type === "article" ? "selected" : ""}>
-              <input type="radio" name="post_type" value="article" checked={form.post_type === "article"}
-                onChange={() => setForm((current) => ({ ...current, post_type: "article", occurred_at: "", location: "", mood: "", external_video_url: "" }))} />
-              <span>Article</span>
-            </label>
-            <label className={form.post_type === "note" ? "selected" : ""}>
-              <input type="radio" name="post_type" value="note" checked={form.post_type === "note"}
-                onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "" }))} />
-              <span>Note</span>
-            </label>
-            {isPublished ? <small>第一次发布后类型由后端锁定。</small> : null}
-          </fieldset>
-
-          <label>
-            <span>标题 {form.post_type === "article" ? "（发布时必填）" : "（可选）"}</span>
-            <input maxLength={240} value={form.title} onChange={set("title")} />
-          </label>
-
-          {form.post_type === "article" ? (
-            <>
-              <label>
-                <span>摘要</span>
-                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} />
-              </label>
-              <div className="form-grid editor-field-grid">
-                <label>
-                  <span>Slug</span>
-                  <input value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} aria-invalid={Boolean(form.slug) && !slugPattern.test(form.slug.trim())} />
-                  <small>发布时必填；历史 Slug 由后端保留。</small>
-                </label>
-                <label>
-                  <span>Category</span>
-                  <CustomSelect value={form.category_id} onChange={set("category_id")}>
-                    <option value="">不设置 Category</option>
-                    {categoryUnavailable ? <option value={form.category_id}>{savedPost?.category?.name || "当前 Category"}（已停用）</option> : null}
-                    {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-                  </CustomSelect>
-                </label>
+          <section className={`editor-paper editor-paper-${form.post_type}`} aria-label={`${title} 写作画布`}>
+            <div className="editor-paper-masthead">
+              <div className="editor-paper-intro">
+                <p>{postId ? "继续整理这份草稿" : "从一个标题开始"}</p>
+                <span>{form.post_type === "article" ? "适合完整的叙述、思考与长内容。" : "适合记录此刻、地点与轻盈片段。"}</span>
               </div>
-            </>
-          ) : (
-            <div className="form-grid editor-field-grid">
-              <label>
-                <span>发生时间</span>
-                <input type="datetime-local" value={form.occurred_at} onChange={set("occurred_at")} />
-              </label>
-              <label>
-                <span>地点</span>
-                <input maxLength={255} value={form.location} onChange={set("location")} />
-              </label>
-              <label>
-                <span>心情</span>
-                <input maxLength={100} value={form.mood} onChange={set("mood")} />
-              </label>
-              <label>
-                <span>外部视频链接</span>
-                <input type="url" value={form.external_video_url} onChange={set("external_video_url")} aria-invalid={!validExternalUrl(form.external_video_url)} />
-              </label>
+              <fieldset className="segmented-field editor-type-switch" disabled={isPublished}>
+                <legend className="sr-only">内容类型</legend>
+                <label className={form.post_type === "article" ? "selected" : ""}>
+                  <input type="radio" name="post_type" value="article" checked={form.post_type === "article"}
+                    onChange={() => setForm((current) => ({ ...current, post_type: "article", occurred_at: "", location: "", mood: "", external_video_url: "" }))} />
+                  <span>文章 <small>Article</small></span>
+                </label>
+                <label className={form.post_type === "note" ? "selected" : ""}>
+                  <input type="radio" name="post_type" value="note" checked={form.post_type === "note"}
+                    onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "" }))} />
+                  <span>随记 <small>Note</small></span>
+                </label>
+                {isPublished ? <small>首次发布后类型锁定</small> : null}
+              </fieldset>
             </div>
-          )}
 
-          <section className="editor-body-section" aria-labelledby="editor-body-heading">
-            <div className="editor-body-toolbar">
-              <div>
-                <span id="editor-body-heading">正文</span>
-                <small>点击正文区域，进入左右分栏的 Markdown 实时预览编辑器。</small>
+            <label className="editor-paper-field editor-title-field">
+              <span><b>01</b> 标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
+              <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下文章标题" : "给片段一个标题"} />
+            </label>
+
+            {form.post_type === "article" ? (
+              <label className="editor-paper-field editor-summary-field">
+                <span><b>02</b> 摘要</span>
+                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
+              </label>
+            ) : (
+              <div className="editor-note-dateline" aria-label="随记发生信息">
+                <label><span>发生时间</span><input type="datetime-local" value={form.occurred_at} onChange={set("occurred_at")} /></label>
+                <label><span>地点</span><input maxLength={255} value={form.location} onChange={set("location")} placeholder="在哪里发生" /></label>
+                <label><span>心情</span><input maxLength={100} value={form.mood} onChange={set("mood")} placeholder="此刻的感受" /></label>
               </div>
-              <button className="btn btn-secondary" type="button" onClick={openBodyEditor}>展开编辑</button>
-            </div>
-            <button
-              className="markdown-editor-launcher"
-              type="button"
-              aria-haspopup="dialog"
-              onClick={openBodyEditor}
-            >
-              {form.body ? <span>{form.body}</span> : <span className="is-placeholder">点击这里编写 Markdown 正文…</span>}
-              <small>点击打开沉浸式编辑器</small>
-            </button>
-            <small id="editor-body-help" className="editor-body-help">内部媒体使用稳定占位符保存，不会把 Blob URL、签名 URL 或公开 S3 地址写进正文。</small>
+            )}
+
+            <section className="editor-body-section" aria-labelledby="editor-body-heading">
+              <div className="editor-body-toolbar">
+                <div>
+                  <span id="editor-body-heading"><b>{form.post_type === "article" ? "03" : "02"}</b> 正文</span>
+                  <small>在沉浸编辑器中写作，并随时查看 Markdown 排版。</small>
+                </div>
+                <button className="btn btn-secondary" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
+              </div>
+              <button className="markdown-editor-launcher" type="button" aria-haspopup="dialog" onClick={openBodyEditor}>
+                {form.body ? <span>{form.body}</span> : <span className="is-placeholder">从这里开始写下正文……</span>}
+                <small>打开 Markdown 编辑器 ↗</small>
+              </button>
+              <small id="editor-body-help" className="editor-body-help">图片与 Live Photo 使用安全的内部引用保存，不会在正文中暴露存储地址。</small>
+            </section>
           </section>
 
-          <PostMediaManager
-            ref={mediaManagerRef}
-            post={savedPost}
-            ensurePost={() => (bodyEditorOpen ? saveEditorBody({ showMessage: false }) : persistDraft(false))}
-            onPostChange={handleMediaPostChange}
-            onInsertMedia={insertMediaIntoBody}
-            onRemoveMedia={removeMediaFromBody}
-            inlineMediaIds={inlineMediaIds}
-          />
+          <details className="editor-media-drawer">
+            <summary><span><small>素材</small><strong>图片与 Live Photo</strong></span><span>{savedPost?.bound_media?.length || 0} 项 <i aria-hidden="true">＋</i></span></summary>
+            <div>
+              <PostMediaManager
+                ref={mediaManagerRef}
+                post={savedPost}
+                ensurePost={() => (bodyEditorOpen ? saveEditorBody({ showMessage: false }) : persistDraft(false))}
+                onPostChange={handleMediaPostChange}
+                onInsertMedia={insertMediaIntoBody}
+                onRemoveMedia={removeMediaFromBody}
+                inlineMediaIds={inlineMediaIds}
+              />
+            </div>
+          </details>
         </div>
 
         <aside className="editor-sidebar">
+          <header className="editor-sidebar-heading"><p>发布设置 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>补充归属与访问范围；这些信息不会打断正文写作。</span></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
+          <section className="editor-publication-status" aria-label="发布状态">
+            <div className="editor-status"><span>内容状态</span><strong>{savedPost?.status || "未保存草稿"}</strong></div>
+            <div className={`editor-status editor-save-status is-${autosave.status}`} aria-live="polite"><span>自动保存</span><strong>{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</strong></div>
+            <div className="editor-status"><span>封面图片</span><strong>{savedPost?.cover_media_id ? "已设置" : "未设置"}</strong></div>
+          </section>
+          {form.post_type === "article" ? <section className="editor-sidebar-section">
+            <header><span>01</span><strong>网址与分类</strong></header>
+            <label>
+              <span>文章网址</span>
+              <input value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} aria-invalid={Boolean(form.slug) && !slugPattern.test(form.slug.trim())} placeholder="article-slug" />
+              <small>发布时必填；历史 Slug 由后端保留。</small>
+            </label>
+            <label>
+              <span>分类</span>
+              <CustomSelect value={form.category_id} onChange={set("category_id")}>
+                <option value="">不设置 Category</option>
+                {categoryUnavailable ? <option value={form.category_id}>{savedPost?.category?.name || "当前 Category"}（已停用）</option> : null}
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </CustomSelect>
+            </label>
+          </section> : <section className="editor-sidebar-section"><header><span>01</span><strong>延伸内容</strong></header><label><span>外部视频链接</span><input type="url" value={form.external_video_url} onChange={set("external_video_url")} aria-invalid={!validExternalUrl(form.external_video_url)} placeholder="https://" /></label></section>}
+
+          <section className="editor-sidebar-section">
+          <header><span>02</span><strong>归属与访问</strong></header>
           <label>
-            <span>Collection</span>
+            <span>合集</span>
             <CustomSelect value={form.collection_id} onChange={set("collection_id")}>
               <option value="">不加入 Collection</option>
               {collectionUnavailable ? <option value={form.collection_id}>原 Collection（当前不可访问）</option> : null}
@@ -815,20 +819,11 @@ export function WritePage() {
           </label>
 
           <label>
-            <span>Tags</span>
+            <span>标签</span>
             <input value={form.tag_names} onChange={set("tag_names")} placeholder="学习, Python, 随想" />
             <small>使用英文逗号分隔，最多 20 个。</small>
           </label>
-
-          <div className="editor-status">
-            <span>状态</span>
-            <strong>{savedPost?.status || "未保存草稿"}</strong>
-          </div>
-          <div className={`editor-status editor-save-status is-${autosave.status}`} aria-live="polite">
-            <span>草稿保存</span>
-            <strong>{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</strong>
-          </div>
-          {savedPost?.cover_media_id ? <div className="editor-status"><span>封面</span><strong>已设置</strong></div> : null}
+          </section>
         </aside>
       </form>
 

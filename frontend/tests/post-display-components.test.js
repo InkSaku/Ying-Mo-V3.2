@@ -41,6 +41,19 @@ test("browse cards keep a compatible dispatcher with type-specific semantics", (
   assert.doesNotMatch(note, /category|未命名随记/);
 });
 
+test("Article and Note browsing use distinct editorial structures", () => {
+  const page = source("../src/pages/PostsPage.jsx");
+
+  assert.match(page, /function ArticleMagazine/);
+  assert.match(page, /magazine-lead/);
+  assert.match(page, /magazine-secondary/);
+  assert.match(page, /magazine-index/);
+  assert.match(page, /function NoteJournal/);
+  assert.match(page, /groupNotesByYear/);
+  assert.match(page, /variant="journal"/);
+  assert.doesNotMatch(page, /two-column-grid|note-stream/);
+});
+
 test("shared display frames preserve media, author and canonical navigation", () => {
   const frame = source("../src/components/FeedPostFrame.jsx");
   const media = source("../src/components/PostCardMedia.jsx");

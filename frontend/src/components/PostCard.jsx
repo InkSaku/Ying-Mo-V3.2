@@ -6,7 +6,7 @@ const POST_CARD_COMPONENTS = {
   note: NotePostCard,
 };
 
-export function PostCard({ post, compact = false }) {
+export function PostCard({ post, compact = false, variant = "", index = 0 }) {
   const Component = POST_CARD_COMPONENTS[post?.post_type];
-  return Component ? <Component post={post} compact={compact} /> : null;
+  return Component ? <Component post={post} compact={compact} variant={variant} index={index} /> : null;
 }

@@ -2,13 +2,19 @@ import { Link } from "react-router-dom";
 import { formatDate } from "../lib/format";
 import { ProtectedImage } from "./ProtectedImage";
 
-export function CollectionCard({ collection }) {
+export function CollectionCard({ collection, variant = "", index = 0 }) {
+  const catalogueNumber = String(index + 1).padStart(2, "0");
   return (
-    <article className="collection-card">
-      <ProtectedImage media={collection.cover_media} alt="" className="card-cover" />
+    <article className={`collection-card ${variant ? `collection-card-${variant}` : ""}`}>
+      {variant ? (
+        <div className="collection-card-cover-frame">
+          <ProtectedImage media={collection.cover_media} alt="" className="card-cover" />
+          <span className="collection-card-volume" aria-hidden="true">VOL. {catalogueNumber}</span>
+        </div>
+      ) : <ProtectedImage media={collection.cover_media} alt="" className="card-cover" />}
       <div className="collection-card-content">
       <div className="collection-card-top">
-        <span>Collection</span>
+        <span>{variant === "featured" ? "Featured Collection" : "Collection"}</span>
         <time dateTime={collection.updated_at || undefined}>{formatDate(collection.updated_at)}</time>
       </div>
       <h3><Link to={`/collections/${collection.slug}`}>{collection.name}</Link></h3>

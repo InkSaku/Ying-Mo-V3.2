@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   autosaveStatusLabel,
@@ -61,4 +62,15 @@ test("labels draft and published save states without hiding local failures", () 
     autosaveStatusLabel({ status: "idle" }, false),
     "已发布内容仅手动保存",
   );
+});
+
+test("writing desk keeps creation, publication and media concerns visibly separated", () => {
+  const page = readFileSync(new URL("../src/pages/WritePage.jsx", import.meta.url), "utf8");
+
+  assert.match(page, /editor-publication-bar/);
+  assert.match(page, /editor-paper editor-paper-/);
+  assert.match(page, /editor-sidebar-heading/);
+  assert.match(page, /editor-media-drawer/);
+  assert.match(page, /进入沉浸写作/);
+  assert.match(page, /PUBLICATION/);
 });

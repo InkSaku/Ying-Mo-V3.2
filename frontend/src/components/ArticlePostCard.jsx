@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
 
-export function ArticlePostCard({ post, compact = false }) {
+export function ArticlePostCard({ post, compact = false, variant = "", index = 0 }) {
   const media = post.cover_media || post.display_media;
   return (
-    <article className={`post-card article-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""}`} data-post-type="article">
+    <article className={`post-card article-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="article">
+      {variant ? <span className="post-card-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
       <PostCardMedia post={post} media={media} compact={compact} label={`查看${post.title || "这篇文章"}的封面`} />
       <div className="post-card-content">
         <div className="post-card-meta">
