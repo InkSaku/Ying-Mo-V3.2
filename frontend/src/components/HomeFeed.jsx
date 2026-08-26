@@ -24,6 +24,27 @@ function emptyFeed() {
   return { items: [], nextCursor: "", hasMore: true, memoryInterlude: null };
 }
 
+function FeedEntry({ post, index, showDay, variant = "" }) {
+  const semanticTime = post.semantic_time || post.published_at;
+  return (
+    <div className={`home-feed-entry is-${post.post_type} ${variant ? `is-${variant}` : ""} ${post.post_type === "note" && index % 3 === 1 ? "is-offset" : ""}`} data-feed-post-id={post.id}>
+      <div className="home-feed-day-slot">
+        {showDay ? <h3 className="home-feed-day"><span>{post._feedFresh ? "刚刚" : homeFeedDayLabel(semanticTime)}</span><small>TIME</small></h3> : null}
+      </div>
+      <div className="home-feed-entry-content"><FeedPost post={post} /></div>
+    </div>
+  );
+}
+
+function MemoryInterludeRow({ memory }) {
+  return (
+    <div className="home-feed-interlude-row">
+      <div className="home-feed-day-slot"><p>回望<br /><span>MEMORY</span></p></div>
+      <FeedMemoryInterlude memory={memory} />
+    </div>
+  );
+}
+
 export function HomeFeed({ userId, type, newPost }) {
   const cachedRef = useRef(readHomeFeedCache(userId, type));
   const initialRef = useRef(cachedRef.current || emptyFeed());
@@ -204,35 +225,52 @@ export function HomeFeed({ userId, type, newPost }) {
     if (anchor) preserveAnchorAfterRender(anchor);
   }, [capturePosition, commit, newPost, preserveAnchorAfterRender, type]);
 
-  let previousDay = "";
   const memoryIndex = homeFeedMemoryInterludeIndex(feed.items.length, feed.memoryInterlude);
+  const openingPosts = feed.items.slice(0, 4);
+  const leadPost = openingPosts.find((post) => post.post_type === "article") || openingPosts[0];
+  const supportingPosts = openingPosts.filter((post) => post.id !== leadPost?.id);
+  const streamPosts = feed.items.slice(openingPosts.length);
+  const memoryBelongsToOpening = memoryIndex > 0 && memoryIndex <= openingPosts.length;
+  let previousStreamDay = "";
   return (
     <section ref={sectionRef} className="home-feed" aria-labelledby="home-feed-title" aria-busy={loading || loadingMore || undefined} onClickCapture={(event) => {
       if (event.target.closest?.("a[href]")) rememberDeparture();
     }}>
       {loading && !feed.items.length ? <div className="home-feed-loading" role="status"><span /><span /><span /><p className="sr-only">正在读取时间流</p></div> : null}
 
-      {feed.items.map((post, index) => {
-        const dayKey = post._feedFresh ? `fresh-${post.id}` : homeFeedDayKey(post.semantic_time || post.published_at);
-        const showDay = dayKey !== previousDay;
-        previousDay = dayKey;
-        return (
-          <Fragment key={post.id}>
-            <div className={`home-feed-entry is-${post.post_type} ${post.post_type === "note" && index % 3 === 1 ? "is-offset" : ""}`} data-feed-post-id={post.id}>
-              <div className="home-feed-day-slot">
-                {showDay ? <h3 className="home-feed-day"><span>{post._feedFresh ? "刚刚" : homeFeedDayLabel(post.semantic_time || post.published_at)}</span><small>TIME</small></h3> : null}
-              </div>
-              <div className="home-feed-entry-content"><FeedPost post={post} /></div>
-            </div>
-            {index + 1 === memoryIndex ? (
-              <div className="home-feed-interlude-row">
-                <div className="home-feed-day-slot"><p>回望<br /><span>MEMORY</span></p></div>
-                <FeedMemoryInterlude memory={feed.memoryInterlude} />
+      {leadPost ? (
+        <section className="home-feed-opening" aria-labelledby="home-feed-opening-title">
+          <header className="home-feed-opening-heading">
+            <div><p>OPENING SPREAD</p><h3 id="home-feed-opening-title">刚刚发生</h3></div>
+            <span>一篇主稿，几则从时间里拾起的片段。</span>
+          </header>
+          <div className="home-feed-opening-grid">
+            <FeedEntry post={leadPost} index={openingPosts.indexOf(leadPost)} showDay variant="lead" />
+            {supportingPosts.length ? (
+              <div className="home-feed-opening-stack">
+                {supportingPosts.map((post) => <FeedEntry key={post.id} post={post} index={openingPosts.indexOf(post)} showDay variant="supporting" />)}
               </div>
             ) : null}
-          </Fragment>
-        );
-      })}
+          </div>
+        </section>
+      ) : null}
+
+      {memoryBelongsToOpening ? <MemoryInterludeRow memory={feed.memoryInterlude} /> : null}
+
+      {streamPosts.length ? <div className="home-feed-stream">
+        {streamPosts.map((post, streamIndex) => {
+          const index = openingPosts.length + streamIndex;
+          const dayKey = post._feedFresh ? `fresh-${post.id}` : homeFeedDayKey(post.semantic_time || post.published_at);
+          const showDay = dayKey !== previousStreamDay;
+          previousStreamDay = dayKey;
+          return (
+            <Fragment key={post.id}>
+              <FeedEntry post={post} index={index} showDay={showDay} />
+              {index + 1 === memoryIndex ? <MemoryInterludeRow memory={feed.memoryInterlude} /> : null}
+            </Fragment>
+          );
+        })}
+      </div> : null}
 
       {!feed.items.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
 

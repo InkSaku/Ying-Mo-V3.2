@@ -46,17 +46,33 @@ function BrowseHero({ isArticle, total }) {
         <span className="tabular">{total || 0}</span>
         <div><strong>{isArticle ? "篇可阅读文章" : "则可阅读随记"}</strong><p>仅统计当前账号有权读取的内容。</p></div>
         <nav aria-label="内容类型切换"><Link className={isArticle ? "active" : ""} to="/articles">文章</Link><Link className={!isArticle ? "active" : ""} to="/notes">随记</Link></nav>
+        <a className="browse-hero-jump" href="#browse-content"><span>START READING</span>从本页首篇开始 <i aria-hidden="true">↓</i></a>
       </aside>
     </header>
   );
 }
 
 function ArticleMagazine({ posts, page, total }) {
+  const lead = posts[0];
+  const secondary = posts.slice(1, 3);
+  const indexPosts = posts.slice(3);
   return (
-    <section className="browse-editorial-section" aria-labelledby="article-magazine-heading">
+    <section className="browse-editorial-section" id="browse-content" aria-labelledby="article-magazine-heading">
       <header className="browse-section-heading"><div><p>ISSUE / {String(page).padStart(2, "0")}</p><h2 id="article-magazine-heading">本期阅读目录</h2></div><span>{total} 篇文章 · 按当前条件编排</span></header>
       <div className="article-magazine-grid">
-        {posts.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index} variant={index === 0 ? "magazine-lead" : index < 3 ? "magazine-secondary" : "magazine-index"} />)}
+        <div className="article-magazine-opening">
+          <PostCard post={lead} index={(page - 1) * PAGE_SIZE} variant="magazine-lead" />
+          {secondary.length ? <aside className="article-magazine-rail" aria-label="本期推荐篇目">
+            <header><span>IN THIS ISSUE</span><strong>接着阅读</strong><small>{secondary.length} 篇推荐</small></header>
+            {secondary.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} variant="magazine-secondary" />)}
+          </aside> : null}
+        </div>
+        {indexPosts.length ? <section className="article-magazine-index-section" aria-label="更多文章篇目">
+          <header><span>CONTENTS</span><strong>更多篇目</strong><small>沿着目录继续阅读</small></header>
+          <div className="article-magazine-index-list">
+            {indexPosts.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 3} variant="magazine-index" />)}
+          </div>
+        </section> : null}
       </div>
     </section>
   );
@@ -64,12 +80,12 @@ function ArticleMagazine({ posts, page, total }) {
 
 function NoteJournal({ posts, page, total }) {
   return (
-    <section className="browse-editorial-section" aria-labelledby="note-journal-heading">
+    <section className="browse-editorial-section" id="browse-content" aria-labelledby="note-journal-heading">
       <header className="browse-section-heading"><div><p>JOURNAL / {String(page).padStart(2, "0")}</p><h2 id="note-journal-heading">发生时间手账</h2></div><span>{total} 则随记 · 按当前条件编排</span></header>
       <div className="note-journal">
         {groupNotesByYear(posts).map((group) => (
           <section className="note-journal-period" key={group.key}>
-            <header><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
+            <header><p>YEAR BOOK</p><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
             <div className="note-journal-entries">
               {group.items.map(({ post, index }) => <PostCard key={post.id} post={post} compact index={(page - 1) * PAGE_SIZE + index} variant="journal" />)}
             </div>

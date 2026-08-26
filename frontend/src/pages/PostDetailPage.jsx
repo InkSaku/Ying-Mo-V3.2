@@ -84,19 +84,14 @@ export function PostDetailPage({ type }) {
 
       {post.post_type === "article" && (post.previous || post.next) ? (
         <nav className="article-nav" aria-label="相邻文章">
-          <div>{post.previous ? <Link to={`/articles/${post.previous.slug}`}>上一篇：{post.previous.title}</Link> : null}</div>
-          <div>{post.next ? <Link to={`/articles/${post.next.slug}`}>下一篇：{post.next.title}</Link> : null}</div>
+          <div>{post.previous ? <Link to={`/articles/${post.previous.slug}`}><span>上一篇</span><strong>{post.previous.title}</strong></Link> : null}</div>
+          <div>{post.next ? <Link to={`/articles/${post.next.slug}`}><span>下一篇</span><strong>{post.next.title}</strong></Link> : null}</div>
         </nav>
       ) : null}
 
       {post.post_type === "article" && post.related?.length ? (
         <section className="related-articles" aria-labelledby="related-articles-title">
-          <div className="section-header">
-            <div>
-              <h2 id="related-articles-title">相关阅读</h2>
-              <p>根据合集、分类与标签的明确关联整理</p>
-            </div>
-          </div>
+          <header className="related-articles-heading"><h2 id="related-articles-title">继续阅读</h2><p>这些文章与当前内容属于相同合集、分类或标签。</p></header>
           <div className="related-articles-grid">
             {post.related.map((item) => <PostCard key={item.id} post={item} compact />)}
           </div>
@@ -110,47 +105,39 @@ export function PostDetailPage({ type }) {
       {location.state?.fromHomeFeed ? (
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
       ) : null}
-      <article className={`post-detail ${post.post_type === "article" ? "post-detail-with-tools" : ""}`}>
-        <header className={`post-detail-header ${post.post_type === "article" ? "article-reading-width" : ""}`}>
-          <div className="post-detail-meta">
-            <span>{postTypeLabel(post.post_type)}</span>
-            {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
+      <article className="post-detail post-detail-with-tools article-detail">
+        <header className="post-detail-header article-detail-hero">
+          <div className="article-detail-heading">
+            <Link className="article-detail-back" to="/articles">返回文章目录</Link>
+            <h1>{post.title || "未命名文章"}</h1>
+            {post.summary ? <p className="lede">{post.summary}</p> : null}
           </div>
-          <h1>{post.title || (post.post_type === "note" ? "随记" : "未命名文章")}</h1>
-          {post.summary ? <p className="lede">{post.summary}</p> : null}
-          <div className="post-context">
-            {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
-            {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
-            {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
-          </div>
-          <dl className="post-facts">
-            {post.post_type === "article" ? (
-              <>
-                <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
-                <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
-                {post.reading_minutes ? <div><dt>阅读时间</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
-              </>
-            ) : (
-              <>
-                <div><dt>记录时间</dt><dd><time dateTime={post.semantic_time}>{formatDate(post.semantic_time, true)}</time></dd></div>
-                <div><dt>发布时间</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
-                {post.location ? <div><dt>地点</dt><dd>{post.location}</dd></div> : null}
-                {post.mood ? <div><dt>心情</dt><dd>{post.mood}</dd></div> : null}
-              </>
-            )}
-          </dl>
+          <aside className="article-detail-folio" aria-label="文章信息">
+            <div className="post-detail-meta">
+              <span>{postTypeLabel(post.post_type)}</span>
+              {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
+            </div>
+            <dl className="post-facts">
+              <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
+              <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
+              {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
+            </dl>
+            <div className="post-context">
+              {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
+              {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
+              {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
+            </div>
+          </aside>
         </header>
 
         {post.cover_media ? <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面"><ProtectedImage
           media={post.cover_media}
           useOriginal
           alt=""
-          className={`post-detail-cover ${post.post_type === "article" ? "article-reading-width" : ""}`}
+          className="post-detail-cover article-detail-cover"
         /></MediaOpenButton> : null}
 
-        {post.post_type === "article" ? (
-          <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
-        ) : postContent}
+        <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
       </article>
 
       <CommentsPanel key={post.id} postId={post.id} />

@@ -1,12 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  activeHeadingAt,
-  calculateReadingProgress,
-  hasArticleToc,
-  normalizeArticleOutline,
-} from "../lib/articleReading";
-
-const HEADING_OFFSET = 96;
+import { useEffect, useMemo, useRef, useState } from "react";
+import { hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
 
 function decodeHash(value) {
   try {
@@ -18,11 +11,9 @@ function decodeHash(value) {
 
 export function ArticleReadingLayout({ outline, children }) {
   const contentRef = useRef(null);
-  const frameRef = useRef(0);
   const normalizedOutline = useMemo(() => normalizeArticleOutline(outline), [outline]);
   const showToc = hasArticleToc(normalizedOutline);
   const [activeId, setActiveId] = useState(normalizedOutline[0]?.id || "");
-  const [progress, setProgress] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -30,49 +21,23 @@ export function ArticleReadingLayout({ outline, children }) {
     setMobileOpen(false);
   }, [normalizedOutline]);
 
-  const updateReadingState = useCallback(() => {
-    frameRef.current = 0;
-    const content = contentRef.current;
-    if (!content) return;
-    const contentRect = content.getBoundingClientRect();
-    const contentTop = window.scrollY + contentRect.top;
-    setProgress(calculateReadingProgress({
-      scrollTop: window.scrollY + HEADING_OFFSET,
-      contentTop,
-      contentHeight: contentRect.height,
-      viewportHeight: window.innerHeight - HEADING_OFFSET,
-    }));
-    if (showToc) {
-      const positions = normalizedOutline.map((item) => {
-        const heading = document.getElementById(item.id);
-        return { id: item.id, top: heading ? window.scrollY + heading.getBoundingClientRect().top : Number.POSITIVE_INFINITY };
-      });
-      setActiveId(activeHeadingAt(positions, window.scrollY + HEADING_OFFSET + 2));
-    }
-  }, [normalizedOutline, showToc]);
-
   useEffect(() => {
-    const queueUpdate = () => {
-      if (!frameRef.current) frameRef.current = window.requestAnimationFrame(updateReadingState);
-    };
-    queueUpdate();
-    window.addEventListener("scroll", queueUpdate, { passive: true });
-    window.addEventListener("resize", queueUpdate);
-    window.addEventListener("hashchange", queueUpdate);
-    window.addEventListener("popstate", queueUpdate);
-    document.addEventListener("scroll", queueUpdate, { capture: true, passive: true });
-    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(queueUpdate);
-    if (contentRef.current) resizeObserver?.observe(contentRef.current);
+    if (!showToc || typeof IntersectionObserver === "undefined") return undefined;
+    const headings = normalizedOutline
+      .map((item) => document.getElementById(item.id))
+      .filter(Boolean);
+    if (!headings.length) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]?.target?.id) setActiveId(visible[0].target.id);
+    }, { rootMargin: "-88px 0px -68% 0px", threshold: [0, 1] });
+    headings.forEach((heading) => observer.observe(heading));
     return () => {
-      window.removeEventListener("scroll", queueUpdate);
-      window.removeEventListener("resize", queueUpdate);
-      window.removeEventListener("hashchange", queueUpdate);
-      window.removeEventListener("popstate", queueUpdate);
-      document.removeEventListener("scroll", queueUpdate, true);
-      resizeObserver?.disconnect();
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
+      observer.disconnect();
     };
-  }, [updateReadingState]);
+  }, [normalizedOutline, showToc]);
 
   useEffect(() => {
     const targetId = decodeHash(window.location.hash);
@@ -80,26 +45,17 @@ export function ArticleReadingLayout({ outline, children }) {
     const frame = window.requestAnimationFrame(() => {
       document.getElementById(targetId)?.scrollIntoView();
       setActiveId(targetId);
-      window.requestAnimationFrame(updateReadingState);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [normalizedOutline, updateReadingState]);
+  }, [normalizedOutline]);
 
   return (
     <>
-      <div
-        className="reading-progress"
-        role="progressbar"
-        aria-label="文章阅读进度"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow={Math.round(progress)}
-      >
-        <span style={{ transform: `scaleX(${progress / 100})` }} />
-      </div>
+      <div className="reading-progress" aria-hidden="true"><span /></div>
       <div className={`article-reading-layout ${showToc ? "has-toc" : ""}`}>
         {showToc ? (
           <aside className={`article-toc ${mobileOpen ? "is-open" : ""}`} aria-label="文章目录">
+            <p className="article-toc-label">文章目录</p>
             <button
               type="button"
               className="article-toc-toggle"
@@ -120,7 +76,6 @@ export function ArticleReadingLayout({ outline, children }) {
                   onClick={() => {
                     setActiveId(item.id);
                     setMobileOpen(false);
-                    window.requestAnimationFrame(updateReadingState);
                   }}
                 >
                   {item.label}

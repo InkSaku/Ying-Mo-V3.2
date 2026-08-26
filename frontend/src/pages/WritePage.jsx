@@ -113,6 +113,7 @@ export function WritePage() {
   const [savedPost, setSavedPost] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [publicationOpen, setPublicationOpen] = useState(false);
   const [bodyEditorOpen, setBodyEditorOpen] = useState(false);
   const [editorBody, setEditorBody] = useState("");
   const [editorBaseline, setEditorBaseline] = useState("");
@@ -128,6 +129,7 @@ export function WritePage() {
   const [offlineRecovery, setOfflineRecovery] = useState(null);
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   const bodyEditorRef = useRef(null);
+  const inlineBodyRef = useRef(null);
   const editorBodyRef = useRef("");
   const pendingEditorSelectionRef = useRef(null);
   const pendingMediaInsertionRef = useRef(null);
@@ -156,15 +158,14 @@ export function WritePage() {
   }, []);
 
   useLayoutEffect(() => {
-    if (!bodyEditorOpen) return;
     const selection = pendingEditorSelectionRef.current;
-    const editor = bodyEditorRef.current;
+    const editor = bodyEditorOpen ? bodyEditorRef.current : inlineBodyRef.current;
     if (!selection || !editor) return;
 
     pendingEditorSelectionRef.current = null;
     editor.focus();
     editor.setSelectionRange(selection[0], selection[1]);
-  }, [bodyEditorOpen, editorBody]);
+  }, [bodyEditorOpen, editorBody, form.body]);
 
   useEffect(() => {
     let active = true;
@@ -554,16 +555,22 @@ export function WritePage() {
   };
 
   const applyMarkdownFormat = (action) => {
-    const textarea = bodyEditorRef.current;
-    const source = editorBodyRef.current;
+    const textarea = bodyEditorOpen ? bodyEditorRef.current : inlineBodyRef.current;
+    const source = bodyEditorOpen ? editorBodyRef.current : form.body;
     const selectionStart = textarea ? textarea.selectionStart : source.length;
     const selectionEnd = textarea ? textarea.selectionEnd : selectionStart;
     const next = applyMarkdownShortcut(source, selectionStart, selectionEnd, action);
-    editorBodyRef.current = next.value;
     pendingEditorSelectionRef.current = [next.selectionStart, next.selectionEnd];
-    setEditorBody(next.value);
-    setEditorError("");
-    setEditorMessage("");
+    if (bodyEditorOpen) {
+      editorBodyRef.current = next.value;
+      setEditorBody(next.value);
+      setEditorError("");
+      setEditorMessage("");
+    } else {
+      setForm((current) => ({ ...current, body: next.value }));
+      setError("");
+      setMessage("");
+    }
   };
 
   const handleBodyKeyDown = (event) => {
@@ -660,6 +667,9 @@ export function WritePage() {
           <small><i aria-hidden="true" />{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</small>
         </div>
         <div className="editor-top-actions">
+          <button className="btn btn-secondary editor-settings-trigger" type="button" aria-expanded={publicationOpen} onClick={() => setPublicationOpen(true)}>
+            发布设置
+          </button>
           <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => persistDraft(true)}>
             {busy ? "正在保存" : savedPost ? "保存修改" : "保存草稿"}
           </button>
@@ -721,37 +731,52 @@ export function WritePage() {
             </div>
 
             <label className="editor-paper-field editor-title-field">
-              <span><b>01</b> 标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
+              <span>标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
               <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下文章标题" : "给片段一个标题"} />
             </label>
-
-            {form.post_type === "article" ? (
-              <label className="editor-paper-field editor-summary-field">
-                <span><b>02</b> 摘要</span>
-                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
-              </label>
-            ) : (
-              <div className="editor-note-dateline" aria-label="随记发生信息">
-                <label><span>发生时间</span><input type="datetime-local" value={form.occurred_at} onChange={set("occurred_at")} /></label>
-                <label><span>地点</span><input maxLength={255} value={form.location} onChange={set("location")} placeholder="在哪里发生" /></label>
-                <label><span>心情</span><input maxLength={100} value={form.mood} onChange={set("mood")} placeholder="此刻的感受" /></label>
-              </div>
-            )}
 
             <section className="editor-body-section" aria-labelledby="editor-body-heading">
               <div className="editor-body-toolbar">
                 <div>
-                  <span id="editor-body-heading"><b>{form.post_type === "article" ? "03" : "02"}</b> 正文</span>
-                  <small>在沉浸编辑器中写作，并随时查看 Markdown 排版。</small>
+                  <span id="editor-body-heading">正文</span>
+                  <small>直接写作；需要对照排版时再进入沉浸模式。</small>
                 </div>
                 <button className="btn btn-secondary" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
               </div>
-              <button className="markdown-editor-launcher" type="button" aria-haspopup="dialog" onClick={openBodyEditor}>
-                {form.body ? <span>{form.body}</span> : <span className="is-placeholder">从这里开始写下正文……</span>}
-                <small>打开 Markdown 编辑器 ↗</small>
-              </button>
+              <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
+                {MARKDOWN_SHORTCUTS.map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
+              </div>
+              <textarea
+                ref={inlineBodyRef}
+                className="editor-body-textarea"
+                value={form.body}
+                spellCheck="true"
+                onChange={set("body")}
+                onKeyDown={handleBodyKeyDown}
+                placeholder={form.post_type === "article" ? "从这里开始写下正文……" : "记下此刻发生的事……"}
+                aria-describedby="editor-body-help"
+              />
               <small id="editor-body-help" className="editor-body-help">图片与 Live Photo 使用安全的内部引用保存，不会在正文中暴露存储地址。</small>
             </section>
+
+            {form.post_type === "article" ? (
+              <details className="editor-abstract-drawer">
+                <summary><span><small>可选信息</small><strong>添加文章摘要</strong></span><i aria-hidden="true">＋</i></summary>
+                <label className="editor-paper-field editor-summary-field">
+                  <span>摘要</span>
+                  <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
+                </label>
+              </details>
+            ) : (
+              <details className="editor-abstract-drawer">
+                <summary><span><small>可选信息</small><strong>补充时间、地点与心情</strong></span><i aria-hidden="true">＋</i></summary>
+                <div className="editor-note-dateline" aria-label="随记发生信息">
+                  <label><span>发生时间</span><input type="datetime-local" value={form.occurred_at} onChange={set("occurred_at")} /></label>
+                  <label><span>地点</span><input maxLength={255} value={form.location} onChange={set("location")} placeholder="在哪里发生" /></label>
+                  <label><span>心情</span><input maxLength={100} value={form.mood} onChange={set("mood")} placeholder="此刻的感受" /></label>
+                </div>
+              </details>
+            )}
           </section>
 
           <details className="editor-media-drawer">
@@ -770,8 +795,10 @@ export function WritePage() {
           </details>
         </div>
 
-        <aside className="editor-sidebar">
-          <header className="editor-sidebar-heading"><p>发布设置 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>补充归属与访问范围；这些信息不会打断正文写作。</span></header>
+        {publicationOpen ? <>
+        <button className="editor-sidebar-scrim" type="button" aria-label="关闭发布设置" onClick={() => setPublicationOpen(false)} />
+        <aside className="editor-sidebar" aria-label="发布设置">
+          <header className="editor-sidebar-heading"><div><p>发布设置 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>补充归属与访问范围；这些信息不会打断正文写作。</span></div><button type="button" aria-label="关闭发布设置" onClick={() => setPublicationOpen(false)}>×</button></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <section className="editor-publication-status" aria-label="发布状态">
             <div className="editor-status"><span>内容状态</span><strong>{savedPost?.status || "未保存草稿"}</strong></div>
@@ -825,6 +852,7 @@ export function WritePage() {
           </label>
           </section>
         </aside>
+        </> : null}
       </form>
 
       <MarkdownEditorDialog
