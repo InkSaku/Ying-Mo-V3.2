@@ -67,6 +67,28 @@ export function groupArchiveFacets(facets = []) {
     }));
 }
 
+export function groupArchiveItems(items = []) {
+  const groups = [];
+  for (const item of items) {
+    const value =
+      item?.post_type === "note"
+        ? item?.semantic_time || item?.published_at
+        : item?.published_at || item?.semantic_time;
+    const date = new Date(value || "");
+    const valid = !Number.isNaN(date.getTime());
+    const year = valid ? date.getFullYear() : null;
+    const month = valid ? date.getMonth() + 1 : null;
+    const key = valid ? `${year}-${month}` : "undated";
+    let group = groups.find((candidate) => candidate.key === key);
+    if (!group) {
+      group = { key, year, month, items: [] };
+      groups.push(group);
+    }
+    group.items.push(item);
+  }
+  return groups;
+}
+
 export function archiveRangeLabel({ year = "", month = "" }) {
   if (!year) return "全部时间";
   if (!month) return `${year} 年`;

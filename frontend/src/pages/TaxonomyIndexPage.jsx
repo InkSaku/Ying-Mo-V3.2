@@ -4,23 +4,30 @@ import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { TaxonomyNav } from "../components/TaxonomyNav";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
+import { summarizeTaxonomyItems, taxonomyTagProminence } from "../lib/taxonomy";
 
 const CONFIG = {
   category: {
-    title: "Categories",
-    description: "按编辑分类阅读文章；数量只包含你当前有权访问的内容。",
+    title: "栏目目录",
+    description: "按长期主题整理文章，像翻阅刊物目录一样找到连续阅读的入口。",
     endpoint: "/categories",
     path: "/categories",
-    emptyTitle: "还没有可见 Category",
-    emptyDescription: "Category 只有在包含你有权阅读的文章时才会出现在这里。",
+    itemLabel: "栏目",
+    sectionTitle: "全部栏目",
+    sectionDescription: "栏目按编辑顺序排列，收录数量只计算你有权阅读的文章。",
+    emptyTitle: "还没有可见栏目",
+    emptyDescription: "栏目只有在包含你有权阅读的文章时才会出现在这里。",
   },
   tag: {
-    title: "Tags",
-    description: "沿着标签浏览文章与随记；所有计数均已先应用内容权限。",
+    title: "主题索引",
+    description: "沿着关键词串联文章与随记，让分散的片段形成新的阅读路径。",
     endpoint: "/tags",
     path: "/tags",
-    emptyTitle: "还没有可见 Tag",
-    emptyDescription: "Tag 只有在关联你有权阅读的内容时才会出现在这里。",
+    itemLabel: "主题",
+    sectionTitle: "全部主题",
+    sectionDescription: "出现越频繁的主题拥有更清晰的字级，计数已应用内容权限。",
+    emptyTitle: "还没有可见主题",
+    emptyDescription: "主题只有在关联你有权阅读的内容时才会出现在这里。",
   },
 };
 
@@ -35,42 +42,60 @@ export function TaxonomyIndexPage({ kind }) {
   }
 
   const items = state.data || [];
+  const summary = summarizeTaxonomyItems(items);
 
   return (
-    <main className="page-shell taxonomy-page">
+    <main className={`page-shell taxonomy-page taxonomy-publication-page taxonomy-index-${kind}`}>
       <TaxonomyNav />
-      <header className="page-heading taxonomy-heading">
-        <div>
+      <header className="taxonomy-index-hero">
+        <div className="taxonomy-index-copy">
           <h1>{config.title}</h1>
           <p>{config.description}</p>
         </div>
-        <span className="taxonomy-total tabular">{items.length} 个可见{kind === "category" ? "分类" : "标签"}</span>
+        <dl className="taxonomy-index-facts">
+          <div><dt>目录条目</dt><dd className="tabular">{summary.itemCount}</dd></div>
+          <div><dt>可读内容</dt><dd className="tabular">{summary.postCount}</dd></div>
+          <div><dt>编排方式</dt><dd>{kind === "category" ? "编辑顺序" : "主题频次"}</dd></div>
+        </dl>
       </header>
 
       {items.length ? (
-        <div className={`taxonomy-grid taxonomy-grid-${kind}`}>
-          {items.map((item) => (
-            <article className="taxonomy-card" key={item.id}>
-              <div className="taxonomy-card-meta">
-                <span>{kind === "category" ? "Category" : "Tag"}</span>
-                <span className="tabular">{item.visible_post_count || 0} 篇</span>
-              </div>
-              <h2>
-                <Link to={`${config.path}/${item.slug}`}>
-                  {kind === "tag" ? "#" : ""}{item.name}
+        <section className="taxonomy-register" aria-labelledby="taxonomy-register-title">
+          <header className="taxonomy-register-heading">
+            <h2 id="taxonomy-register-title">{config.sectionTitle}</h2>
+            <p>{config.sectionDescription}</p>
+          </header>
+          {kind === "category" ? (
+            <ol className="taxonomy-category-register">
+              {items.map((item, index) => (
+                <li key={item.id}>
+                  <Link to={`${config.path}/${item.slug}`}>
+                    <span className="taxonomy-register-order tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="taxonomy-category-copy">
+                      <strong>{item.name}</strong>
+                      <small>{item.description || "这个栏目暂未填写说明。"}</small>
+                    </span>
+                    <span className="taxonomy-register-count"><b className="tabular">{item.visible_post_count || 0}</b><small>篇文章</small></span>
+                    <span className="taxonomy-register-action">进入栏目</span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <div className="taxonomy-tag-register">
+              {items.map((item) => (
+                <Link
+                  className={`taxonomy-tag-entry is-${taxonomyTagProminence(item, summary.maxCount)}`}
+                  key={item.id}
+                  to={`${config.path}/${item.slug}`}
+                >
+                  <strong>#{item.name}</strong>
+                  <span className="tabular">{item.visible_post_count || 0} 则</span>
                 </Link>
-              </h2>
-              {kind === "category" ? (
-                item.description
-                  ? <p>{item.description}</p>
-                  : <p className="muted">还没有填写分类说明。</p>
-              ) : (
-                <p className="muted">查看这个标签下你有权阅读的内容。</p>
-              )}
-              <Link className="taxonomy-card-link" to={`${config.path}/${item.slug}`}>浏览内容</Link>
-            </article>
-          ))}
-        </div>
+              ))}
+            </div>
+          )}
+        </section>
       ) : (
         <EmptyState title={config.emptyTitle} description={config.emptyDescription} />
       )}

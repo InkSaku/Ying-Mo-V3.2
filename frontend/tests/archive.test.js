@@ -6,6 +6,7 @@ import {
   archiveRangeLabel,
   archiveSearchParams,
   groupArchiveFacets,
+  groupArchiveItems,
   readArchiveSelection,
 } from "../src/lib/archive.js";
 
@@ -62,5 +63,29 @@ test("groups month facets into descending years with ACL-derived totals", () => 
       count: 2,
       months: [{ year: 2023, month: 12, count: 2 }],
     },
+  ]);
+});
+
+test("groups notes by semantic time and articles by publication time", () => {
+  const groups = groupArchiveItems([
+    {
+      id: 1,
+      post_type: "note",
+      semantic_time: "2025-03-04T00:00:00Z",
+      published_at: "2024-01-01T00:00:00Z",
+    },
+    { id: 2, post_type: "note", semantic_time: "2025-03-02T00:00:00Z" },
+    {
+      id: 3,
+      post_type: "article",
+      semantic_time: "2025-05-01T00:00:00Z",
+      published_at: "2024-12-11T00:00:00Z",
+    },
+    { id: 4 },
+  ]);
+  assert.deepEqual(groups.map((group) => [group.key, group.items.map((item) => item.id)]), [
+    ["2025-3", [1, 2]],
+    ["2024-12", [3]],
+    ["undated", [4]],
   ]);
 });

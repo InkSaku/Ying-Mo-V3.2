@@ -23,6 +23,16 @@ test("Collection memory filters remain shareable and use the matching endpoint",
   );
 });
 
+test("Collection opens on the shared timeline while overview remains shareable", () => {
+  assert.equal(readCollectionMemoryState(new URLSearchParams()).view, "timeline");
+  assert.equal(collectionMemorySearchParams({
+    view: "timeline", year: "", author: "", type: "", mediaKind: "", page: 1,
+  }).toString(), "");
+  assert.equal(collectionMemorySearchParams({
+    view: "overview", year: "", author: "", type: "", mediaKind: "", page: 1,
+  }).toString(), "view=overview");
+});
+
 test("Collection timeline groups stable semantic dates by year and month", () => {
   const groups = groupTimelineItems([
     { id: 1, semantic_time: "2024-08-02T00:00:00Z" },

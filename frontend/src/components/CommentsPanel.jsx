@@ -10,6 +10,7 @@ import {
 import { formatDate } from "../lib/format";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pagination } from "./Pagination";
+import { ProtectedImage } from "./ProtectedImage";
 import { ReactionPicker } from "./ReactionPicker";
 import { EmptyState, ErrorState } from "./States";
 
@@ -60,6 +61,21 @@ function CommentBody({ comment }) {
   }
   if (cursor < body.length) parts.push(body.slice(cursor));
   return <p>{parts}</p>;
+}
+
+function CommentAvatar({ member, current = false }) {
+  const initial = (member?.nickname || member?.username || "?").slice(0, 1);
+  const image = (
+    <ProtectedImage
+      media={member?.avatar_media}
+      alt=""
+      className="comment-avatar-image"
+      fallback={<span className="comment-avatar-fallback" aria-hidden="true">{initial}</span>}
+    />
+  );
+
+  if (!member?.username || current) return <span className="comment-avatar">{image}</span>;
+  return <Link className="comment-avatar" to={`/users/${member.username}`} aria-label={`查看${member.nickname || "成员"}的主页`}>{image}</Link>;
 }
 
 export function CommentsPanel({ postId }) {
@@ -295,50 +311,60 @@ export function CommentsPanel({ postId }) {
     node.focus({ preventScroll: true });
   };
 
-  const commentNode = (comment, nested = false) => (
-    <article
-      key={comment.id}
-      id={typeof comment.id === "number" ? `comment-${comment.id}` : undefined}
-      tabIndex={-1}
-      className={`comment ${nested ? "comment-reply" : ""} ${comment.status === "deleted" ? "comment-deleted" : ""} ${focusedComment === comment.id ? "comment-focused" : ""} ${comment.optimistic ? "comment-optimistic" : ""}`}
-    >
-      <div className="comment-meta">
-        {comment.author ? <Link to={`/users/${comment.author.username}`}>{comment.author.nickname}</Link> : <strong>成员</strong>}
-        {nested && comment.reply_to_user ? <span>回复 {comment.reply_to_user.nickname}</span> : null}
-        <time dateTime={comment.created_at}>{comment.optimistic ? "刚刚" : formatDate(comment.created_at, true)}</time>
-      </div>
-      {comment.quoted_comment ? (
-        <button className="comment-quote" type="button" onClick={() => scrollToQuoted(comment.quoted_comment.id)}>
-          <strong>引用 {comment.quoted_comment.author?.nickname || "成员"}</strong>
-          <span>{excerpt(comment.quoted_comment.body)}</span>
-        </button>
-      ) : null}
-      <CommentBody comment={comment} />
-      {comment.status === "active" && !comment.optimistic ? (
-        <>
-          <ReactionPicker
-            compact
-            initialState={comment.reactions}
-            readPath={`/interactions/comments/${comment.id}/reactions`}
-            writePath={`/interactions/comments/${comment.id}/reaction`}
-          />
-          <div className="comment-actions">
-            <button className="text-button" type="button" disabled={submitting || deleting} onClick={() => beginReply(comment)}>回复并引用</button>
-            {comment.can_delete ? (
-              <button className="text-button danger-text" type="button" disabled={submitting || deleting} onClick={() => {
-                setDeleteTarget(comment);
-                setActionError("");
-                setMessage("");
-              }}>
-                删除
-              </button>
-            ) : null}
+  const commentNode = (comment, nested = false) => {
+    const authorName = comment.author?.nickname || "成员";
+    return (
+      <article
+        key={comment.id}
+        id={typeof comment.id === "number" ? `comment-${comment.id}` : undefined}
+        tabIndex={-1}
+        className={`comment ${nested ? "comment-reply" : ""} ${comment.status === "deleted" ? "comment-deleted" : ""} ${focusedComment === comment.id ? "comment-focused" : ""} ${comment.optimistic ? "comment-optimistic" : ""}`}
+      >
+        <header className="comment-header">
+          <CommentAvatar member={comment.author} />
+          <div className="comment-author-block">
+            {comment.author ? <Link to={`/users/${comment.author.username}`}>{authorName}</Link> : <strong>{authorName}</strong>}
+            <div className="comment-meta">
+              <time dateTime={comment.created_at}>{comment.optimistic ? "刚刚" : formatDate(comment.created_at, true)}</time>
+              {nested && comment.reply_to_user ? <span>回复 {comment.reply_to_user.nickname}</span> : null}
+            </div>
           </div>
-        </>
-      ) : comment.optimistic ? <p className="meta-text" role="status">正在发送</p> : null}
-      {comment.replies?.map((reply) => commentNode(reply, true))}
-    </article>
-  );
+        </header>
+        <div className="comment-copy">
+          {comment.quoted_comment ? (
+            <button className="comment-quote" type="button" onClick={() => scrollToQuoted(comment.quoted_comment.id)}>
+              <strong>引用 {comment.quoted_comment.author?.nickname || "成员"}</strong>
+              <span>{excerpt(comment.quoted_comment.body)}</span>
+            </button>
+          ) : null}
+          <CommentBody comment={comment} />
+          {comment.status === "active" && !comment.optimistic ? (
+            <div className="comment-toolbar">
+              <ReactionPicker
+                compact
+                initialState={comment.reactions}
+                readPath={`/interactions/comments/${comment.id}/reactions`}
+                writePath={`/interactions/comments/${comment.id}/reaction`}
+              />
+              <div className="comment-actions">
+                <button className="text-button" type="button" disabled={submitting || deleting} onClick={() => beginReply(comment)}>回复并引用</button>
+                {comment.can_delete ? (
+                  <button className="text-button danger-text" type="button" disabled={submitting || deleting} onClick={() => {
+                    setDeleteTarget(comment);
+                    setActionError("");
+                    setMessage("");
+                  }}>
+                    删除
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : comment.optimistic ? <p className="meta-text" role="status">正在发送</p> : null}
+        </div>
+        {comment.replies?.map((reply) => commentNode(reply, true))}
+      </article>
+    );
+  };
 
   const characterCount = unicodeLength(body);
   const pagination = state.pagination || {};
@@ -346,7 +372,10 @@ export function CommentsPanel({ postId }) {
   return (
     <section className="comments-panel" aria-labelledby="comments-title" aria-busy={state.loading || undefined}>
       <div className="comments-heading">
-        <h2 id="comments-title">评论</h2>
+        <div>
+          <h2 id="comments-title">评论</h2>
+          <p>围绕这篇内容，留下你的想法与回应。</p>
+        </div>
         {pagination.total !== undefined ? <span className="tabular">{pagination.total} 条一级评论</span> : null}
       </div>
       <form className="comment-form" onSubmit={submit}>
@@ -356,7 +385,14 @@ export function CommentsPanel({ postId }) {
             <button className="text-button" type="button" disabled={submitting} onClick={() => setReplyTo(null)}>取消回复</button>
           </div>
         ) : null}
-        <label htmlFor={`comment-body-${postId}`}>{replyTo ? "写下回复" : "写下回应"}</label>
+        <div className="comment-composer-header">
+          <CommentAvatar member={user} current />
+          <div>
+            <strong>{user?.nickname || user?.username || "成员"}</strong>
+            <span>{replyTo ? `回复 ${replyTo.author?.nickname || "成员"}` : "参与这段共同阅读"}</span>
+          </div>
+        </div>
+        <label className="sr-only" htmlFor={`comment-body-${postId}`}>{replyTo ? "写下回复" : "写下回应"}</label>
         <div className="comment-compose">
           <textarea
             ref={textareaRef}
@@ -364,6 +400,7 @@ export function CommentsPanel({ postId }) {
             value={body}
             disabled={submitting}
             aria-describedby={`comment-count-${postId}`}
+            placeholder={replyTo ? "写下你的回复…" : "写下你想继续讨论的内容…"}
             onChange={(event) => {
               const next = limitUnicode(event.target.value, 500);
               setBody(next);
@@ -382,12 +419,14 @@ export function CommentsPanel({ postId }) {
             </div>
           ) : null}
         </div>
-        <div className="form-row-end">
+        <div className="comment-compose-footer">
           <span className="meta-text">输入 @ 选择当前可访问成员</span>
-          <span className="meta-text tabular" id={`comment-count-${postId}`}>{characterCount} / 500</span>
-          <button className="btn btn-primary" type="submit" disabled={submitting || deleting || state.loading || !body.trim()}>
-            {submitting ? "发送中" : replyTo ? "发表回复" : "发表评论"}
-          </button>
+          <div>
+            <span className="meta-text tabular" id={`comment-count-${postId}`}>{characterCount} / 500</span>
+            <button className="btn btn-primary" type="submit" disabled={submitting || deleting || state.loading || !body.trim()}>
+              {submitting ? "发送中" : replyTo ? "发表回复" : "发表评论"}
+            </button>
+          </div>
         </div>
       </form>
 
