@@ -64,6 +64,11 @@ def test_every_member_can_create_and_collection_acl(client, app):
     collection = created.get_json()["data"]
     assert [u["id"] for u in collection["members"]] == [bob["id"]]
 
+    library = client.get("/api/v1/collections", headers=auth(bob_token))
+    assert library.status_code == 200
+    listed_collection = next(item for item in library.get_json()["data"] if item["id"] == collection["id"])
+    assert listed_collection["member_count"] == 2
+
     assert client.get("/api/v1/collections/trip", headers=auth(bob_token)).status_code == 200
     assert client.get("/api/v1/collections/trip", headers=auth(charlie_token)).status_code == 404
 

@@ -4,6 +4,7 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import case, func
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 
 from app.access import collection_member_predicate, is_collection_member, semantic_time_expression
 from app.admin.service import record_admin_log
@@ -68,12 +69,17 @@ def list_collections():
     if not args:
         return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
     page, size = args
-    stmt = db.select(Collection).where(collection_member_predicate(actor.id))
+    stmt = db.select(Collection).options(selectinload(Collection.member_links)).where(collection_member_predicate(actor.id))
     total = db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows = db.session.scalars(
         stmt.order_by(Collection.updated_at.desc(), Collection.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
-    return success_response([c.to_dict() for c in rows], meta=pagination_meta(page, size, total))
+    data = []
+    for collection in rows:
+        item = collection.to_dict()
+        item["member_count"] = len(collection.member_links) + 1
+        data.append(item)
+    return success_response(data, meta=pagination_meta(page, size, total))
 
 
 @bp.get("/<slug>")

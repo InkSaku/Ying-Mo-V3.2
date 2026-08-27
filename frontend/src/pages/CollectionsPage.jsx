@@ -19,6 +19,7 @@ export function CollectionsPage() {
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
   const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const emptyShelfSlots = Math.max(0, Math.min(3, 4 - (state.data?.length || 0)));
 
   useEffect(() => {
     if (pageNeedsClamp) setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
@@ -28,8 +29,8 @@ export function CollectionsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell collection-library-page" aria-busy={pageNeedsClamp || undefined}>
-      <header className="collection-library-hero">
+    <main className="page-shell collection-library-page collection-library-page-editorial" aria-busy={pageNeedsClamp || undefined}>
+      <header className="collection-library-hero collection-library-hero-editorial">
         <div className="collection-library-copy">
           <p className="hero-kicker">Collection Library</p>
           <h1>共同记录，<br />分册保存。</h1>
@@ -46,7 +47,12 @@ export function CollectionsPage() {
         : state.data?.length
         ? <section className="collection-library-shelf" aria-labelledby="collection-library-title">
             <header><div><p>LIBRARY / {String(page).padStart(2, "0")}</p><h2 id="collection-library-title">最近打开的册页</h2></div><span>按最近更新时间排列</span></header>
-            <div className="collection-library-grid">{state.data.map((item, index) => <CollectionCard key={item.id} collection={item} index={(page - 1) * PAGE_SIZE + index} variant={index === 0 ? "featured" : "catalogue"} />)}</div>
+            <div className="collection-bookshelf" aria-label="合集书架" tabIndex={state.data.length > 4 ? 0 : undefined}>
+              <div className="collection-bookshelf-track">
+                {state.data.map((item, index) => <CollectionCard key={item.id} collection={item} index={(page - 1) * PAGE_SIZE + index} variant="shelf" />)}
+                {Array.from({ length: emptyShelfSlots }, (_, index) => <span className="collection-bookshelf-slot" key={`empty-shelf-slot-${index}`} aria-hidden="true" />)}
+              </div>
+            </div>
           </section>
         : <EmptyState title="还没有 Collection" description="创建一个合集，或让朋友把你加入共同记录。" />}
       <Pagination
