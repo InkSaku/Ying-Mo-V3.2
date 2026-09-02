@@ -45,6 +45,14 @@ def test_profile_has_independent_pagination_and_never_exposes_self_only_fields(c
         "name":"Hidden Circle","slug":"hidden-circle","member_ids":[charlie["id"]],
     }).get_json()["data"]
 
+    my_collections=client.get(
+        "/api/v1/users/me/collections?page=1&page_size=1",
+        headers=auth(bob_token),
+    )
+    assert my_collections.status_code==200
+    assert my_collections.get_json()["meta"]["pagination"]["total"]==2
+    assert my_collections.get_json()["data"][0]["member_count"]==2
+
     def publish_note(body,**extra):
         created=client.post("/api/v1/posts",headers=auth(alice_token),json={
             "post_type":"note","body":body,**extra,

@@ -1,6 +1,7 @@
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import exists, func, or_
+from sqlalchemy.orm import selectinload
 
 from app.access import collection_member_predicate, readable_post_predicate
 from app.common.auth import current_user
@@ -194,7 +195,7 @@ def my_collections():
     if not args:
         return error_response("VALIDATION_ERROR","分页参数不合法。",422)
     page,size=args
-    stmt=db.select(Collection).where(
+    stmt=db.select(Collection).options(selectinload(Collection.member_links)).where(
         Collection.deleted_at.is_(None),
         or_(
             Collection.creator_id==actor.id,
@@ -202,8 +203,13 @@ def my_collections():
         ),
     )
     total=db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
-    rows=db.session.scalars(stmt.order_by(Collection.updated_at.desc()).offset((page-1)*size).limit(size)).all()
-    return success_response([c.to_dict() for c in rows],meta=pagination_meta(page,size,total))
+    rows=db.session.scalars(stmt.order_by(Collection.updated_at.desc(),Collection.id.desc()).offset((page-1)*size).limit(size)).all()
+    data=[]
+    for collection in rows:
+        item=collection.to_dict()
+        item["member_count"]=len(collection.member_links)+1
+        data.append(item)
+    return success_response(data,meta=pagination_meta(page,size,total))
 
 
 @bp.get("/me/comments")

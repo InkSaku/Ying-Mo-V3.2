@@ -18,6 +18,14 @@ test("bold toggles off without nesting markers", () => {
   assert.equal(result.value.slice(result.selectionStart, result.selectionEnd), "hello");
 });
 
+test("italic wraps, toggles, and keeps the inner text selected", () => {
+  const inserted = applyMarkdownShortcut("hello", 0, 5, "italic");
+  const removed = applyMarkdownShortcut("*hello*", 1, 6, "italic");
+  assert.equal(inserted.value, "*hello*");
+  assert.equal(inserted.value.slice(inserted.selectionStart, inserted.selectionEnd), "hello");
+  assert.equal(removed.value, "hello");
+});
+
 test("heading inserts a readable placeholder at an empty cursor", () => {
   const result = applyMarkdownShortcut("前文", 2, 2, "heading");
   assert.equal(result.value, "前文\n\n## 标题");
@@ -109,6 +117,7 @@ test("block math inserts a display formula and toggles its fences", () => {
 
 test("keyboard shortcuts cover inline and ordered or unordered list actions", () => {
   assert.equal(markdownActionForKeyEvent({ key: "B", metaKey: true }), "bold");
+  assert.equal(markdownActionForKeyEvent({ key: "i", ctrlKey: true }), "italic");
   assert.equal(markdownActionForKeyEvent({ key: "k", ctrlKey: true }), "link");
   assert.equal(markdownActionForKeyEvent({ key: "&", code: "Digit7", metaKey: true, shiftKey: true }), "orderedList");
   assert.equal(markdownActionForKeyEvent({ key: "*", code: "Digit8", ctrlKey: true, shiftKey: true }), "list");

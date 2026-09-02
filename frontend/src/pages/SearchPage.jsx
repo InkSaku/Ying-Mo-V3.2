@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { PostCard } from "../components/PostCard";
 import { CollectionCard } from "../components/CollectionCard";
+import { ProtectedImage } from "../components/ProtectedImage";
 import { Pagination } from "../components/Pagination";
 import { EmptyState, ErrorState } from "../components/States";
 import { clampPageToTotal } from "../lib/pagination";
 
 const SUGGESTION_DELAY = 300;
 const PAGE_SIZE = 20;
+const RESULT_VIEWS = new Set(["all", "posts", "collections", "users"]);
 
 function cleanPage(value) {
   const parsed = Number.parseInt(value || "1", 10);
@@ -22,7 +24,9 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const q = (params.get("q") || "").trim();
   const page = cleanPage(params.get("page"));
+  const resultView = RESULT_VIEWS.has(params.get("type")) ? params.get("type") : "all";
   const [inputValue, setInputValue] = useState(q);
+  const searchInputRef = useRef(null);
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [suggestionReload, setSuggestionReload] = useState(0);
@@ -42,6 +46,18 @@ export function SearchPage() {
   useEffect(() => {
     setInputValue(q);
   }, [q]);
+
+  useEffect(() => {
+    const focusSearch = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        setSuggestionOpen(true);
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, []);
 
   const suggestionTerm = inputValue.trim();
   useEffect(() => {
@@ -96,9 +112,12 @@ export function SearchPage() {
 
   useEffect(() => {
     if (pageNeedsClamp) {
-      setParams(clampedPage === 1 ? { q } : { q, page: String(clampedPage) }, { replace: true });
+      const nextParams = { q };
+      if (clampedPage !== 1) nextParams.page = String(clampedPage);
+      if (resultView !== "all") nextParams.type = resultView;
+      setParams(nextParams, { replace: true });
     }
-  }, [clampedPage, pageNeedsClamp, q, setParams]);
+  }, [clampedPage, pageNeedsClamp, q, resultView, setParams]);
 
   const runSearch = (value) => {
     const nextQuery = value.trim();
@@ -129,30 +148,121 @@ export function SearchPage() {
   };
 
   const data = state.data;
+  const resultCounts = {
+    posts: pagination.total || data?.posts?.length || 0,
+    collections: data?.collections?.length || 0,
+    users: data?.users?.length || 0,
+  };
+  const totalResultCount = resultCounts.posts + resultCounts.collections + resultCounts.users;
   const hasResults = Boolean(data && (
     data.posts?.length || data.collections?.length || data.users?.length ||
     data.category_facets?.length || data.tag_facets?.length
   ));
   const showSuggestionPanel = suggestionOpen && Boolean(suggestionTerm);
+  const hasVisibleResults = resultView === "posts" ? Boolean(data?.posts?.length)
+    : resultView === "collections" ? Boolean(data?.collections?.length)
+      : resultView === "users" ? Boolean(data?.users?.length)
+        : hasResults;
+
+  const setResultView = (nextView) => {
+    const nextParams = { q };
+    if (nextView !== "all") nextParams.type = nextView;
+    setParams(nextParams);
+  };
+
+  const resultTabs = [
+    { id: "all", label: "全部", count: totalResultCount },
+    { id: "posts", label: "文章与随记", count: resultCounts.posts },
+    { id: "collections", label: "合集", count: resultCounts.collections },
+    { id: "users", label: "成员", count: resultCounts.users },
+  ];
+
+  const renderCollections = (compact = false) => (
+    <div className={compact ? "search-collection-list" : "collection-grid search-collection-grid"}>
+      {data.collections.map((item, index) => compact ? (
+        <Link className="search-collection-result" key={item.id} to={`/collections/${item.slug}`}>
+          <ProtectedImage
+            media={item.cover_media}
+            alt=""
+            className="search-collection-cover"
+            fallback={<span className="search-collection-cover search-collection-cover-fallback" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>}
+          />
+          <span>
+            <small>COLLECTION / {String(index + 1).padStart(2, "0")}</small>
+            <strong>{item.name}</strong>
+            <em>{item.description || "这一册还没有卷首说明。"}</em>
+          </span>
+          <i aria-hidden="true">↗</i>
+        </Link>
+      ) : <CollectionCard key={item.id} collection={item} variant="shelf" index={index} />)}
+    </div>
+  );
+
+  const renderUsers = () => (
+    <div className="search-member-list">
+      {data.users.map((user) => {
+        const label = user.nickname || user.username;
+        return (
+          <Link key={user.id} to={`/users/${user.username}`} className="search-member-result">
+            <ProtectedImage
+              media={user.avatar_media}
+              alt=""
+              className="search-member-avatar"
+              fallback={<span className="search-member-avatar search-member-avatar-fallback" aria-hidden="true">{label.slice(0, 1)}</span>}
+            />
+            <span><strong>{label}</strong><small>@{user.username}</small></span>
+            <i aria-hidden="true">↗</i>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
+  const renderFacets = () => (
+    data.category_facets?.length || data.tag_facets?.length ? (
+      <section className="search-facet-panel" aria-labelledby="search-facets-heading">
+        <div className="search-rail-heading">
+          <span>RELATED INDEX</span>
+          <h2 id="search-facets-heading">相关索引</h2>
+        </div>
+        {data.category_facets?.length ? (
+          <div className="search-facet-group">
+            <h3>分类</h3>
+            <div className="search-facet-list">
+              {data.category_facets.map((item) => <Link key={item.id} to={`/categories/${item.slug}`}><span>{item.name}</span><small>{item.count}</small></Link>)}
+            </div>
+          </div>
+        ) : null}
+        {data.tag_facets?.length ? (
+          <div className="search-facet-group">
+            <h3>标签</h3>
+            <div className="tag-cloud search-tag-cloud">
+              {data.tag_facets.map((item) => <Link className="tag" key={item.id} to={`/tags/${item.slug}`}>#{item.name} <small>{item.count}</small></Link>)}
+            </div>
+          </div>
+        ) : null}
+      </section>
+    ) : null
+  );
 
   return (
-    <main className="page-shell" aria-busy={state.loading || pageNeedsClamp || undefined}>
-      <header className="page-heading search-heading">
-        <div>
-          <h1>搜索</h1>
-          <p>搜索结果只来自你当前有权访问的内容空间。</p>
+    <main className="page-shell search-page" aria-busy={state.loading || pageNeedsClamp || undefined}>
+      <header className="search-hero">
+        <div className="search-hero-copy">
+          <span className="search-eyebrow">SEARCH / DISCOVERY</span>
+          <h1>{q ? "继续寻找。" : "在共同记忆里，\n找到那一页。"}</h1>
+          <p>从文章、随记、合集与成员中检索。结果始终遵循你当前拥有的访问权限。</p>
         </div>
-      </header>
 
-      <form
-        className="search-form"
+        <form
+        className="search-form search-hero-form"
         role="search"
         onSubmit={(event) => {
           event.preventDefault();
           runSearch(inputValue);
         }}
       >
-        <label htmlFor="global-search">关键词</label>
+        <label htmlFor="global-search">搜索内容</label>
         <div className="search-form-row">
           <div
             className="search-combobox"
@@ -165,11 +275,12 @@ export function SearchPage() {
           >
             <input
               id="global-search"
+              ref={searchInputRef}
               name="q"
               type="search"
               value={inputValue}
               maxLength={100}
-              placeholder="标题、正文、Collection 或成员"
+              placeholder="输入标题、正文、合集或成员…"
               autoComplete="off"
               role="combobox"
               aria-autocomplete="list"
@@ -184,6 +295,8 @@ export function SearchPage() {
               }}
               onKeyDown={handleKeyDown}
             />
+
+            <span className="search-input-icon" aria-hidden="true">⌕</span>
 
             {showSuggestionPanel ? (
               <div id="search-suggestions" className="search-suggestions">
@@ -221,8 +334,9 @@ export function SearchPage() {
                             runSearch(item.label);
                           }}
                         >
-                          <span>{item.kind === "post" ? "Post" : "Collection"}</span>
-                          {item.label}
+                          <span>{item.kind === "post" ? "内容" : "合集"}</span>
+                          <strong>{item.label}</strong>
+                          <i aria-hidden="true">↵</i>
                         </button>
                       </li>
                     ))}
@@ -231,63 +345,113 @@ export function SearchPage() {
               </div>
             ) : null}
           </div>
-          <button className="btn btn-primary" type="submit">搜索</button>
+          <button className="btn btn-primary search-submit" type="submit">开始搜索 <span aria-hidden="true">→</span></button>
         </div>
-      </form>
+        <p className="search-form-hint"><span>⌘ K</span> 支持标题与正文关键词，也可以直接搜索一个人的名字。</p>
+        </form>
+      </header>
 
-      {!q ? <EmptyState title="输入关键词开始搜索" description="不会跨越 Collection ACL 展示无权内容。" /> : null}
+      {!q ? (
+        <section className="search-start" aria-labelledby="search-start-heading">
+          <div className="search-start-heading">
+            <span>HOW TO SEARCH</span>
+            <h2 id="search-start-heading">你可以从这些线索开始</h2>
+          </div>
+          <div className="search-start-grid">
+            <article><span>01</span><h3>一句话</h3><p>搜索标题、摘要和正文，找回只记得片段的那篇内容。</p></article>
+            <article><span>02</span><h3>一本合集</h3><p>输入合集名称，回到一组共同维护、持续生长的记录。</p></article>
+            <article><span>03</span><h3>一个人</h3><p>通过昵称或用户名，找到共同书写这段记忆的成员。</p></article>
+          </div>
+          <p className="search-privacy-note"><span aria-hidden="true">◉</span> 私密内容不会因为搜索而越过原有的访问边界。</p>
+        </section>
+      ) : null}
       {q && state.loading ? <div className="search-loading" role="status">正在搜索“{q}”…</div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : null}
-      {q && !state.loading && !state.error && !pageNeedsClamp && !hasResults ? <EmptyState title="没有找到匹配内容" description="可以尝试更短或更具体的关键词。" /> : null}
-
-      {!state.loading && !state.error && !pageNeedsClamp && data?.posts?.length ? (
-        <section className="content-section" aria-labelledby="search-posts-heading">
-          <div className="search-section-heading">
-            <h2 id="search-posts-heading">Posts</h2>
-            <span>{pagination.total || data.posts.length} 条内容</span>
-          </div>
-          <div className="note-stream">{data.posts.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
-          <Pagination page={pagination.page || page} totalPages={totalPages} disabled={pageNeedsClamp} onChange={(nextPage) => {
-            setParams(nextPage === 1 ? { q } : { q, page: String(nextPage) });
-            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
-          }} />
-        </section>
+      {q && !state.loading && !state.error && !pageNeedsClamp && !hasResults ? (
+        <div className="search-empty-result">
+          <span aria-hidden="true">00</span>
+          <div><h2>没有找到“{q}”</h2><p>试着减少关键词、换一种说法，或检查是否输入了完整的人名与合集名称。</p></div>
+          <button className="text-button" type="button" onClick={() => { setInputValue(""); setParams({}); }}>重新搜索</button>
+        </div>
       ) : null}
 
-      {!state.loading && !state.error && !pageNeedsClamp && data?.collections?.length ? (
-        <section className="content-section" aria-labelledby="search-collections-heading">
-          <h2 id="search-collections-heading">Collections</h2>
-          <div className="collection-grid">{data.collections.map((item) => <CollectionCard key={item.id} collection={item} />)}</div>
-        </section>
-      ) : null}
+      {q && !state.loading && !state.error && !pageNeedsClamp && hasResults ? (
+        <>
+          <section className="search-result-overview" aria-labelledby="search-results-heading">
+            <div>
+              <span className="search-eyebrow">SEARCH RESULTS</span>
+              <h2 id="search-results-heading">关于“{q}”</h2>
+            </div>
+            <p><strong>{totalResultCount}</strong><span>项可访问结果</span></p>
+          </section>
 
-      {!state.loading && !state.error && !pageNeedsClamp && data?.users?.length ? (
-        <section className="content-section" aria-labelledby="search-users-heading">
-          <h2 id="search-users-heading">Users</h2>
-          <div className="member-list search-members">
-            {data.users.map((user) => <Link key={user.id} to={`/users/${user.username}`}>{user.nickname} <span>@{user.username}</span></Link>)}
-          </div>
-        </section>
-      ) : null}
+          <nav className="search-result-tabs" aria-label="搜索结果类型">
+            {resultTabs.map((tab) => (
+              <button key={tab.id} type="button" className={resultView === tab.id ? "active" : ""} aria-pressed={resultView === tab.id} onClick={() => setResultView(tab.id)}>
+                <span>{tab.label}</span><small>{String(tab.count).padStart(2, "0")}</small>
+              </button>
+            ))}
+          </nav>
 
-      {!state.loading && !state.error && !pageNeedsClamp && data?.category_facets?.length ? (
-        <section className="content-section facet-section" aria-labelledby="search-categories-heading">
-          <h2 id="search-categories-heading">Categories</h2>
-          <div className="tag-cloud">
-            {data.category_facets.map((item) => <Link className="tag" key={item.id} to={`/categories/${item.slug}`}>{item.name} ({item.count})</Link>)}
-          </div>
-        </section>
-      ) : null}
+          {!hasVisibleResults ? (
+            <EmptyState title={`“${resultTabs.find((tab) => tab.id === resultView)?.label}”中没有匹配内容`} description="可以切换到“全部”查看其他类型的结果。" action={<button className="text-button" type="button" onClick={() => setResultView("all")}>查看全部结果</button>} />
+          ) : null}
 
-      {!state.loading && !state.error && !pageNeedsClamp && data?.tag_facets?.length ? (
-        <section className="content-section facet-section" aria-labelledby="search-tags-heading">
-          <h2 id="search-tags-heading">Tags</h2>
-          <div className="tag-cloud">
-            {data.tag_facets.map((item) => <Link className="tag" key={item.id} to={`/tags/${item.slug}`}>#{item.name} ({item.count})</Link>)}
-          </div>
-        </section>
+          {hasVisibleResults && (resultView === "all" || resultView === "posts") ? (
+            <div className={`search-results-layout ${resultView === "posts" ? "search-results-layout-wide" : ""} ${!data?.posts?.length ? "search-results-layout-secondary-only" : ""}`}>
+              {data?.posts?.length ? (
+                <section className="search-primary-results" aria-labelledby="search-posts-heading">
+                  <div className="search-section-heading">
+                    <div><span>WRITING / {String(resultCounts.posts).padStart(2, "0")}</span><h2 id="search-posts-heading">文章与随记</h2></div>
+                    <p>按最近相关内容排序</p>
+                  </div>
+                  <div className="note-stream search-post-stream">{data.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="search" index={index} />)}</div>
+                  <Pagination page={pagination.page || page} totalPages={totalPages} disabled={pageNeedsClamp} onChange={(nextPage) => {
+                    const nextParams = { q };
+                    if (nextPage !== 1) nextParams.page = String(nextPage);
+                    if (resultView !== "all") nextParams.type = resultView;
+                    setParams(nextParams);
+                    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+                  }} />
+                </section>
+              ) : null}
+
+              {resultView === "all" ? (
+                <aside className="search-discovery-rail" aria-label="关联搜索结果">
+                  {data?.collections?.length ? (
+                    <section aria-labelledby="search-collections-heading">
+                      <div className="search-rail-heading"><span>COLLECTIONS / {String(resultCounts.collections).padStart(2, "0")}</span><h2 id="search-collections-heading">相关合集</h2></div>
+                      {renderCollections(true)}
+                    </section>
+                  ) : null}
+                  {data?.users?.length ? (
+                    <section aria-labelledby="search-users-heading">
+                      <div className="search-rail-heading"><span>PEOPLE / {String(resultCounts.users).padStart(2, "0")}</span><h2 id="search-users-heading">相关成员</h2></div>
+                      {renderUsers()}
+                    </section>
+                  ) : null}
+                  {renderFacets()}
+                </aside>
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasVisibleResults && resultView === "collections" ? (
+            <section className="search-filtered-section" aria-labelledby="search-collections-heading">
+              <div className="search-section-heading"><div><span>COLLECTIONS / {String(resultCounts.collections).padStart(2, "0")}</span><h2 id="search-collections-heading">相关合集</h2></div><p>仅显示你可以进入的合集</p></div>
+              {renderCollections(false)}
+            </section>
+          ) : null}
+
+          {hasVisibleResults && resultView === "users" ? (
+            <section className="search-filtered-section search-filtered-members" aria-labelledby="search-users-heading">
+              <div className="search-section-heading"><div><span>PEOPLE / {String(resultCounts.users).padStart(2, "0")}</span><h2 id="search-users-heading">相关成员</h2></div><p>按昵称与用户名匹配</p></div>
+              {renderUsers()}
+            </section>
+          ) : null}
+        </>
       ) : null}
     </main>
   );

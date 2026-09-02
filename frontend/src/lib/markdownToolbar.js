@@ -137,6 +137,7 @@ export function markdownActionForKeyEvent(event) {
   if (event.shiftKey && code === "Digit8") return "list";
   if (event.shiftKey) return null;
   if (key === "b") return "bold";
+  if (key === "i") return "italic";
   if (key === "k") return "link";
   return null;
 }
@@ -162,6 +163,25 @@ export function applyMarkdownShortcut(value, start, end, action) {
       `**${content}**`,
       2,
       2 + content.length,
+    );
+  }
+
+  if (action === "italic") {
+    const unwrapped = unwrapDelimitedSelection(source, safeStart, safeEnd, "*");
+    if (unwrapped) return unwrapped;
+    if (selected.startsWith("*") && selected.endsWith("*") && selected.length >= 3) {
+      const content = selected.slice(1, -1);
+      return replaceInline(source, safeStart, safeEnd, content, 0, content.length);
+    }
+
+    const content = selected || "倾斜文字";
+    return replaceInline(
+      source,
+      safeStart,
+      safeEnd,
+      `*${content}*`,
+      1,
+      1 + content.length,
     );
   }
 

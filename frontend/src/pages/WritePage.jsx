@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { CustomSelect } from "../components/CustomSelect";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
+import { ProtectedImage } from "../components/ProtectedImage";
+import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -28,14 +30,15 @@ const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const acceptedInlineImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PREVIEW_DELAY = 220;
 const MARKDOWN_SHORTCUTS = [
-  { action: "heading", label: "标题", hint: "插入二级标题" },
-  { action: "bold", label: "加粗", hint: "加粗选中文字（⌘/Ctrl+B）" },
+  { action: "heading", label: "H2", hint: "插入二级标题" },
+  { action: "bold", label: "B", hint: "加粗选中文字（⌘/Ctrl+B）" },
+  { action: "italic", label: "I", hint: "倾斜选中文字（⌘/Ctrl+I）" },
   { action: "quote", label: "引用", hint: "插入引用" },
-  { action: "list", label: "无序列表", hint: "插入无序列表（⌘/Ctrl+Shift+8）" },
-  { action: "orderedList", label: "有序列表", hint: "插入有序列表（⌘/Ctrl+Shift+7）" },
+  { action: "list", label: "列表", hint: "插入无序列表（⌘/Ctrl+Shift+8）" },
+  { action: "orderedList", label: "编号", hint: "插入有序列表（⌘/Ctrl+Shift+7）" },
   { action: "link", label: "链接", hint: "插入链接（⌘/Ctrl+K）" },
   { action: "footnote", label: "脚注", hint: "插入脚注引用与定义" },
-  { action: "inlineMath", label: "行内公式", hint: "插入 $...$ 行内公式，也兼容 \\(...\\)" },
+  { action: "inlineMath", label: "公式", hint: "插入 $...$ 行内公式，也兼容 \\(...\\)" },
   { action: "mathBlock", label: "块公式", hint: "插入 $$...$$ 块公式，也兼容 \\[...\\]" },
   { action: "code", label: "代码", hint: "插入代码块" },
   { action: "table", label: "表格", hint: "插入表格模板" },
@@ -95,6 +98,13 @@ function validExternalUrl(value) {
   }
 }
 
+function postStatusLabel(status) {
+  if (status === "published") return "已发布";
+  if (status === "archived") return "已归档";
+  if (status === "draft") return "草稿";
+  return "未保存草稿";
+}
+
 export function WritePage() {
   const { user } = useAuth();
   const { postId } = useParams();
@@ -114,6 +124,7 @@ export function WritePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [publicationOpen, setPublicationOpen] = useState(false);
+  const [workspaceMode, setWorkspaceMode] = useState("write");
   const [bodyEditorOpen, setBodyEditorOpen] = useState(false);
   const [editorBody, setEditorBody] = useState("");
   const [editorBaseline, setEditorBaseline] = useState("");
@@ -134,6 +145,7 @@ export function WritePage() {
   const pendingEditorSelectionRef = useRef(null);
   const pendingMediaInsertionRef = useRef(null);
   const mediaManagerRef = useRef(null);
+  const mediaDrawerRef = useRef(null);
   const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
   const payloadRef = useRef(initialPayload);
   const savedPostRef = useRef(null);
@@ -244,12 +256,13 @@ export function WritePage() {
   }, [postId, reloadKey, requestedCollection, requestedType, user?.id]);
 
   useEffect(() => {
-    if (!bodyEditorOpen) return undefined;
+    if (!bodyEditorOpen && workspaceMode !== "preview") return undefined;
     const controller = new AbortController();
     setPreview((current) => ({ ...current, loading: true, error: "" }));
     const timer = window.setTimeout(async () => {
       try {
-        const result = await api.post("/posts/preview", { body: editorBody || "" }, { signal: controller.signal });
+        const source = bodyEditorOpen ? editorBody : form.body;
+        const result = await api.post("/posts/preview", { body: source || "" }, { signal: controller.signal });
         setPreview({ html: result.data?.rendered_html || "", loading: false, error: "" });
       } catch (previewError) {
         if (previewError?.code !== "REQUEST_ABORTED") {
@@ -262,7 +275,7 @@ export function WritePage() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [bodyEditorOpen, editorBody]);
+  }, [bodyEditorOpen, editorBody, form.body, workspaceMode]);
 
   const isPublished = Boolean(savedPost?.published_at);
   const inCollection = Boolean(form.collection_id);
@@ -277,10 +290,22 @@ export function WritePage() {
   const categoryUnavailable = Boolean(
     form.category_id && !categories.some((category) => String(category.id) === form.category_id)
   );
+  const selectedCollection = collections.find((collection) => String(collection.id) === form.collection_id);
 
   const payload = useMemo(() => {
     return draftPayloadFromForm(form);
   }, [form]);
+  const publishReadiness = useMemo(() => {
+    const accessReady = !collectionUnavailable;
+    const checks = form.post_type === "article"
+      ? [Boolean(form.title.trim()), Boolean(form.body.trim()), slugPattern.test(form.slug.trim()), accessReady]
+      : [
+        Boolean(form.body.trim() || form.external_video_url.trim() || savedPost?.cover_media_id || savedPost?.bound_media?.length),
+        validExternalUrl(form.external_video_url.trim()),
+        accessReady,
+      ];
+    return { completed: checks.filter(Boolean).length, total: checks.length };
+  }, [collectionUnavailable, form, savedPost]);
 
   useEffect(() => {
     payloadRef.current = payload;
@@ -435,6 +460,12 @@ export function WritePage() {
     setEditorMessage("");
     setPreview({ html: "", loading: false, error: "" });
     setBodyEditorOpen(true);
+  };
+
+  const openMediaDrawer = () => {
+    if (!mediaDrawerRef.current) return;
+    mediaDrawerRef.current.open = true;
+    mediaDrawerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const updateEditorBody = (value) => {
@@ -668,9 +699,13 @@ export function WritePage() {
         </div>
         <div className="editor-top-actions">
           <button className="btn btn-secondary editor-settings-trigger" type="button" aria-expanded={publicationOpen} onClick={() => setPublicationOpen(true)}>
-            发布设置
+            文稿信息
           </button>
-          <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => persistDraft(true)}>
+          <div className="editor-view-switch" role="tablist" aria-label="写作视图">
+            <button type="button" role="tab" aria-selected={workspaceMode === "write"} className={workspaceMode === "write" ? "active" : ""} onClick={() => setWorkspaceMode("write")}>写作</button>
+            <button type="button" role="tab" aria-selected={workspaceMode === "preview"} className={workspaceMode === "preview" ? "active" : ""} onClick={() => setWorkspaceMode("preview")}>预览</button>
+          </div>
+          <button className="editor-save-action" type="button" disabled={busy} onClick={() => persistDraft(true)}>
             {busy ? "正在保存" : savedPost ? "保存修改" : "保存草稿"}
           </button>
           <button className="btn btn-primary" type="button" disabled={busy} onClick={publish}>
@@ -706,14 +741,12 @@ export function WritePage() {
         </div>
       ) : null}
 
-      <form className="editor-layout" onSubmit={(event) => event.preventDefault()}>
+      <form className={`editor-layout editor-layout-${workspaceMode}`} onSubmit={(event) => event.preventDefault()}>
         <div className="editor-main">
+          {workspaceMode === "write" ? (
           <section className={`editor-paper editor-paper-${form.post_type}`} aria-label={`${title} 写作画布`}>
             <div className="editor-paper-masthead">
-              <div className="editor-paper-intro">
-                <p>{postId ? "继续整理这份草稿" : "从一个标题开始"}</p>
-                <span>{form.post_type === "article" ? "适合完整的叙述、思考与长内容。" : "适合记录此刻、地点与轻盈片段。"}</span>
-              </div>
+              <p className="editor-paper-index">{form.post_type === "article" ? "ARTICLE" : "NOTE"} / 01</p>
               <fieldset className="segmented-field editor-type-switch" disabled={isPublished}>
                 <legend className="sr-only">内容类型</legend>
                 <label className={form.post_type === "article" ? "selected" : ""}>
@@ -732,19 +765,23 @@ export function WritePage() {
 
             <label className="editor-paper-field editor-title-field">
               <span>标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
-              <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下文章标题" : "给片段一个标题"} />
+              <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下值得被慢慢读完的事" : "给此刻留下一行标题"} />
             </label>
+
+            {form.post_type === "article" ? (
+              <label className="editor-paper-field editor-summary-field editor-summary-inline">
+                <span>摘要 · 可选</span>
+                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
+              </label>
+            ) : null}
 
             <section className="editor-body-section" aria-labelledby="editor-body-heading">
               <div className="editor-body-toolbar">
-                <div>
-                  <span id="editor-body-heading">正文</span>
-                  <small>直接写作；需要对照排版时再进入沉浸模式。</small>
+                <span id="editor-body-heading" className="sr-only">正文</span>
+                <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
+                  {MARKDOWN_SHORTCUTS.map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
                 </div>
-                <button className="btn btn-secondary" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
-              </div>
-              <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
-                {MARKDOWN_SHORTCUTS.map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
+                <button className="editor-immersive-action" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
               </div>
               <textarea
                 ref={inlineBodyRef}
@@ -759,15 +796,7 @@ export function WritePage() {
               <small id="editor-body-help" className="editor-body-help">图片与 Live Photo 使用安全的内部引用保存，不会在正文中暴露存储地址。</small>
             </section>
 
-            {form.post_type === "article" ? (
-              <details className="editor-abstract-drawer">
-                <summary><span><small>可选信息</small><strong>添加文章摘要</strong></span><i aria-hidden="true">＋</i></summary>
-                <label className="editor-paper-field editor-summary-field">
-                  <span>摘要</span>
-                  <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
-                </label>
-              </details>
-            ) : (
+            {form.post_type === "note" ? (
               <details className="editor-abstract-drawer">
                 <summary><span><small>可选信息</small><strong>补充时间、地点与心情</strong></span><i aria-hidden="true">＋</i></summary>
                 <div className="editor-note-dateline" aria-label="随记发生信息">
@@ -776,10 +805,26 @@ export function WritePage() {
                   <label><span>心情</span><input maxLength={100} value={form.mood} onChange={set("mood")} placeholder="此刻的感受" /></label>
                 </div>
               </details>
-            )}
+            ) : null}
           </section>
+          ) : (
+            <section className="editor-paper editor-paper-preview" aria-label={`${title} 安全预览`} aria-live="polite">
+              <div className="editor-paper-masthead">
+                <p className="editor-paper-index">PREVIEW / {form.post_type === "article" ? "ARTICLE" : "NOTE"}</p>
+                <span className="editor-preview-status">与发布页面使用相同的安全渲染</span>
+              </div>
+              <article className="editor-preview-document">
+                <h1>{form.title.trim() || (form.post_type === "article" ? "未命名文章" : "未命名随记")}</h1>
+                {form.summary ? <p className="editor-preview-summary">{form.summary}</p> : null}
+                {preview.error ? <div className="inline-error" role="alert">{preview.error}</div> : null}
+                {preview.html ? <ProtectedMarkdown html={preview.html} media={savedPost?.bound_media || []} management className="prose editor-preview-prose" /> : null}
+                {!preview.error && !preview.html ? <p className="editor-preview-empty">{preview.loading ? "正在生成安全预览…" : "正文为空，暂无可预览内容。"}</p> : null}
+                {preview.loading && preview.html ? <span className="editor-preview-updating">正在更新预览…</span> : null}
+              </article>
+            </section>
+          )}
 
-          <details className="editor-media-drawer">
+          <details ref={mediaDrawerRef} className="editor-media-drawer">
             <summary><span><small>素材</small><strong>图片与 Live Photo</strong></span><span>{savedPost?.bound_media?.length || 0} 项 <i aria-hidden="true">＋</i></span></summary>
             <div>
               <PostMediaManager
@@ -795,13 +840,12 @@ export function WritePage() {
           </details>
         </div>
 
-        {publicationOpen ? <>
-        <button className="editor-sidebar-scrim" type="button" aria-label="关闭发布设置" onClick={() => setPublicationOpen(false)} />
-        <aside className="editor-sidebar" aria-label="发布设置">
-          <header className="editor-sidebar-heading"><div><p>发布设置 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>补充归属与访问范围；这些信息不会打断正文写作。</span></div><button type="button" aria-label="关闭发布设置" onClick={() => setPublicationOpen(false)}>×</button></header>
+        {publicationOpen ? <button className="editor-sidebar-scrim" type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)} /> : null}
+        <aside className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} aria-label="文稿信息">
+          <header className="editor-sidebar-heading"><div><p>文稿信息 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>归属与访问设置会随草稿一起保存。</span></div><button type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)}>×</button></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <section className="editor-publication-status" aria-label="发布状态">
-            <div className="editor-status"><span>内容状态</span><strong>{savedPost?.status || "未保存草稿"}</strong></div>
+            <div className="editor-status"><span>内容状态</span><strong>{postStatusLabel(savedPost?.status)}</strong></div>
             <div className={`editor-status editor-save-status is-${autosave.status}`} aria-live="polite"><span>自动保存</span><strong>{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</strong></div>
             <div className="editor-status"><span>封面图片</span><strong>{savedPost?.cover_media_id ? "已设置" : "未设置"}</strong></div>
           </section>
@@ -837,22 +881,35 @@ export function WritePage() {
           </label>
 
           <label>
-            <span>独立内容可见性</span>
+            <span>可见性</span>
             <CustomSelect disabled={inCollection} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
               <option value="private">仅自己</option>
               <option value="login_only">所有登录成员</option>
             </CustomSelect>
             {inCollection ? <small>Collection Post 的 visibility 不扩大合集 ACL。</small> : null}
           </label>
+          </section>
 
+          <section className="editor-sidebar-section editor-sidebar-tags">
+          <header><span>03</span><strong>标签与封面</strong></header>
           <label>
             <span>标签</span>
+            {payload.tag_names?.length ? <span className="editor-tag-preview" aria-label="当前标签">{payload.tag_names.map((tag) => <i key={tag}>{tag}</i>)}</span> : null}
             <input value={form.tag_names} onChange={set("tag_names")} placeholder="学习, Python, 随想" />
             <small>使用英文逗号分隔，最多 20 个。</small>
           </label>
+          <div className="editor-cover-panel">
+            {savedPost?.cover_media ? <ProtectedImage media={savedPost.cover_media} alt="当前文稿封面" className="editor-cover-preview" /> : <div className="editor-cover-placeholder"><span>封面图片</span><strong>尚未设置</strong></div>}
+            <button type="button" onClick={openMediaDrawer}>{savedPost?.cover_media ? "更换封面" : "设置封面"}</button>
+          </div>
           </section>
+
+          <footer className="editor-publish-readiness">
+            <span>发布准备</span>
+            <strong>{publishReadiness.completed} / {publishReadiness.total} 已完成</strong>
+            {selectedCollection ? <small>将发布至 {selectedCollection.name}</small> : <small>当前为独立内容</small>}
+          </footer>
         </aside>
-        </> : null}
       </form>
 
       <MarkdownEditorDialog
