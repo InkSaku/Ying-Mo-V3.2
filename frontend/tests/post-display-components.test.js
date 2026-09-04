@@ -64,6 +64,15 @@ test("shared display frames preserve media, author and canonical navigation", ()
   assert.match(media, /context="post-card"/);
 });
 
+test("inline and gallery media use the author-maintained ALT text", () => {
+  const markdown = source("../src/components/ProtectedMarkdown.jsx");
+  const gallery = source("../src/components/PostMediaGallery.jsx");
+
+  assert.match(markdown, /group\.image\.alt_text/);
+  assert.match(gallery, /group\.image\?\.alt_text/);
+  assert.doesNotMatch(markdown, /alt="正文图片"/);
+});
+
 test("home memories stay a compact editorial interlude inside the reading flow", () => {
   const feed = source("../src/components/HomeFeed.jsx");
   const memory = source("../src/components/FeedMemoryInterlude.jsx");

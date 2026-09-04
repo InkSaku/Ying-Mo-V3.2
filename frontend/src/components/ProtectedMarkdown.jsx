@@ -1,5 +1,6 @@
 import { createElement, lazy, Suspense, useMemo } from "react";
 import { isIgnorableMarkdownWhitespace } from "../lib/markdownRender";
+import { mediaPresentation } from "../lib/postMedia";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedVideo } from "./ProtectedVideo";
 import { MediaOpenButton } from "./MediaOpenButton";
@@ -65,14 +66,16 @@ function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
   if (!group?.image) {
     return <span className="inline-media-missing" role="status">这项媒体当前不可用。</span>;
   }
+  const presentation = mediaPresentation(group.image);
+  const presentationClass = `media-size-${presentation.display_size} media-align-${presentation.alignment}`;
 
   if (group.kind === "live_photo") {
     const galleryItem = galleryItems.find((item) => item.id === group.image?.public_id);
     return (
-      <figure className="inline-protected-media inline-live-photo">
+      <figure className={`inline-protected-media inline-live-photo ${presentationClass}`}>
         <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
           path={imagePath(group.image, management)}
-          alt="正文中的 Live Photo 静态画面"
+          alt={group.image.alt_text || ""}
           className="inline-protected-image"
         /></MediaOpenButton>
         <ProtectedVideo
@@ -80,19 +83,20 @@ function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
           label="正文中的 Live Photo 动态片段"
           className="inline-protected-video"
         />
-        <figcaption>Live Photo</figcaption>
+        <figcaption>{group.image.caption || "Live Photo"}</figcaption>
       </figure>
     );
   }
 
   const galleryItem = galleryItems.find((item) => item.id === group.image?.public_id);
   return (
-    <figure className="inline-protected-media">
+    <figure className={`inline-protected-media ${presentationClass}`}>
       <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
         path={imagePath(group.image, management)}
-        alt="正文图片"
+        alt={group.image.alt_text || ""}
         className="inline-protected-image"
       /></MediaOpenButton>
+      {group.image.caption ? <figcaption>{group.image.caption}</figcaption> : null}
     </figure>
   );
 }

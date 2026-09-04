@@ -10,7 +10,8 @@
     "check": "npm run lint && npm run test:run && npm run build && npm run verify:bundle",
     "lint": "eslint . --max-warnings=0",
     "verify:bundle": "node scripts/verify-build.mjs",
-    "test:run": "node --test tests/*.test.js"
+    "test:run": "node --test tests/*.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "5.3.0",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^10.8.1",

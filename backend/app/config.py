@@ -52,7 +52,7 @@ class BaseConfig:
     RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "10 per minute")
     RATE_LIMIT_REFRESH = os.getenv("RATE_LIMIT_REFRESH", "30 per minute")
     RATE_LIMIT_COMMENT = os.getenv("RATE_LIMIT_COMMENT", "30 per minute")
-    RATE_LIMIT_UPLOAD = os.getenv("RATE_LIMIT_UPLOAD", "20 per hour")
+    RATE_LIMIT_UPLOAD = os.getenv("RATE_LIMIT_UPLOAD", "120 per hour")
     RATE_LIMIT_EMAIL_VERIFICATION = os.getenv("RATE_LIMIT_EMAIL_VERIFICATION", "5 per hour")
     RATE_LIMIT_EMAIL_CONFIRM = os.getenv("RATE_LIMIT_EMAIL_CONFIRM", "30 per hour")
     RATE_LIMIT_PASSWORD_RESET = os.getenv("RATE_LIMIT_PASSWORD_RESET", "5 per hour")

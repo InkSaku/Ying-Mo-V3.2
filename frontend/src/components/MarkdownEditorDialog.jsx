@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
+import { UploadProgress } from "./UploadProgress";
+import { VisualMarkdownEditor } from "./VisualMarkdownEditor";
+import { IMAGE_ACCEPT } from "../lib/imageUpload";
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -23,6 +26,7 @@ export function MarkdownEditorDialog({
   dirty,
   saving,
   uploading,
+  uploadState,
   error,
   message,
   preview,
@@ -33,7 +37,11 @@ export function MarkdownEditorDialog({
   onChange,
   onKeyDown,
   onFormat,
+  onPrepareImagePicker,
   onUploadImages,
+  onCancelUpload,
+  onRetryUpload,
+  onUpdateMedia,
   onSave,
   onSaveAndClose,
   onRequestClose,
@@ -102,10 +110,10 @@ export function MarkdownEditorDialog({
   if (!open) return null;
 
   const busy = saving || uploading;
-  const uploadFiles = async (files) => {
+  const uploadFiles = async (files, options) => {
     const images = Array.from(files || []);
     if (!images.length) return;
-    await onUploadImages(images);
+    await onUploadImages(images, options);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -185,7 +193,12 @@ export function MarkdownEditorDialog({
             className="markdown-shortcut-button markdown-editor-image-picker"
             type="button"
             disabled={busy}
-            onClick={() => fileInputRef.current?.click()}
+            aria-label="插入图片"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              onPrepareImagePicker?.();
+              fileInputRef.current?.click();
+            }}
           >
             {uploading ? "上传中" : "插入图片"}
           </button>
@@ -193,17 +206,18 @@ export function MarkdownEditorDialog({
             ref={fileInputRef}
             className="markdown-editor-file-input"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT}
             multiple
             disabled={busy}
             tabIndex="-1"
-            onChange={(event) => uploadFiles(event.target.files)}
+            onChange={(event) => uploadFiles(event.target.files, { selectionPrepared: true })}
           />
         </div>
 
         <div className="markdown-editor-feedback-slot">
           {error ? <div className="inline-error markdown-editor-feedback" role="alert">{error}</div> : null}
           {message ? <div className="inline-success markdown-editor-feedback" role="status">{message}</div> : null}
+          <UploadProgress state={uploadState} onCancel={onCancelUpload} onRetry={onRetryUpload} compact />
         </div>
 
         <div
@@ -233,13 +247,16 @@ export function MarkdownEditorDialog({
                 uploadFiles(files);
               }}
             >
-              <textarea
+              <VisualMarkdownEditor
                 ref={textareaRef}
-                className="markdown-editor-textarea"
+                className="markdown-editor-visual"
                 value={value}
-                spellCheck="true"
+                media={media}
+                management
+                spellCheck
                 onChange={onChange}
                 onKeyDown={onKeyDown}
+                onUpdateMedia={onUpdateMedia}
                 onPaste={(event) => {
                   const files = Array.from(event.clipboardData?.items || [])
                     .filter((item) => item.kind === "file")
@@ -250,7 +267,7 @@ export function MarkdownEditorDialog({
                   uploadFiles(files);
                 }}
                 placeholder="在这里编写 Markdown 正文。也可以拖入图片或直接粘贴截图。"
-                aria-label="Markdown 正文"
+                ariaLabel="Markdown 正文"
               />
               <div className="markdown-editor-drop-hint" aria-hidden={!draggingImage}>松开即可上传并插入图片</div>
             </div>
@@ -287,7 +304,7 @@ export function MarkdownEditorDialog({
         </div>
 
         <footer className="markdown-editor-dialog-footer">
-          <p>支持拖拽或粘贴 JPEG、PNG、WebP；取消编辑不会删除已经上传的媒体。</p>
+          <p>支持拖拽或粘贴 JPEG、PNG、WebP、HEIC、HEIF；大图会先在本机优化，取消编辑不会删除已经上传的媒体。</p>
           <div>
             <button className="btn btn-secondary" type="button" disabled={busy} onClick={onRequestClose}>取消</button>
             <button className="btn btn-secondary" type="button" disabled={busy} onClick={onSave} title="⌘/Ctrl + S">保存</button>

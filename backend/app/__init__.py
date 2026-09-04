@@ -6,10 +6,14 @@ from time import perf_counter
 
 from dotenv import load_dotenv
 from flask import Flask, abort, g, make_response, request
+from pillow_heif import register_heif_opener
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.config import get_config
 from app.extensions import db, init_extensions, jwt
+
+
+register_heif_opener()
 
 
 def create_app(config_name=None, config_overrides=None):

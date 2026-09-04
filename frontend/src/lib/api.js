@@ -164,6 +164,79 @@ async function execute(path, options = {}, retry = true, responseType = "json") 
   };
 }
 
+async function uploadWithProgress(path, body, { onProgress, signal } = {}, retry = true) {
+  const result = await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const cleanup = () => signal?.removeEventListener("abort", abortRequest);
+    const abortRequest = () => xhr.abort();
+    xhr.open("POST", requestUrl(path));
+    xhr.withCredentials = true;
+    if (accessToken) xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    if (signal) {
+      if (signal.aborted) {
+        reject(new ApiError("请求已取消。", { code: "REQUEST_ABORTED" }));
+        return;
+      }
+      signal.addEventListener("abort", abortRequest, { once: true });
+    }
+    xhr.upload.onprogress = (event) => {
+      const total = event.lengthComputable ? event.total : 0;
+      onProgress?.({
+        loaded: event.loaded,
+        total,
+        percent: total ? Math.min(100, Math.round((event.loaded / total) * 100)) : null,
+      });
+    };
+    xhr.onerror = () => {
+      cleanup();
+      reject(new ApiError("无法连接服务器，请检查网络或稍后重试。", { code: "NETWORK_ERROR" }));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      reject(new ApiError("请求已取消。", { code: "REQUEST_ABORTED" }));
+    };
+    xhr.onload = () => {
+      cleanup();
+      let payload;
+      try {
+        payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        reject(new ApiError("服务器返回了无法识别的响应。", {
+          status: xhr.status,
+          code: "UNEXPECTED_RESPONSE",
+        }));
+        return;
+      }
+      resolve({
+        status: xhr.status,
+        payload,
+        requestId: payload?.request_id || xhr.getResponseHeader("X-Request-ID") || null,
+      });
+    };
+    xhr.send(body);
+  });
+
+  if (retry && shouldTryRefresh(result.status, result.payload?.error?.code, path)) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return uploadWithProgress(path, body, { onProgress, signal }, false);
+  }
+  if (result.status < 200 || result.status >= 300 || result.payload?.ok === false) {
+    const error = result.payload?.error || {};
+    throw new ApiError(error.message || `请求失败（${result.status}）`, {
+      status: result.status,
+      code: error.code || "HTTP_ERROR",
+      details: error.details,
+      requestId: result.requestId,
+    });
+  }
+  onProgress?.({ loaded: 1, total: 1, percent: 100 });
+  return {
+    data: result.payload?.data ?? null,
+    meta: result.payload?.meta ?? null,
+    requestId: result.requestId,
+  };
+}
+
 export async function refreshAccessToken() {
   if (refreshPromise) return refreshPromise;
 
@@ -220,6 +293,9 @@ export const api = {
   },
   post(path, body, options = {}) {
     return execute(path, { method: "POST", body, ...options });
+  },
+  upload(path, body, options = {}) {
+    return uploadWithProgress(path, body, options);
   },
   patch(path, body, options = {}) {
     return execute(path, { method: "PATCH", body, ...options });

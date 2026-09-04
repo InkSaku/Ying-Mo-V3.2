@@ -21,10 +21,12 @@ python run.py
 
 ```bash
 npm run check
+npm run test:e2e
 npm run preview
 ```
 
 `npm run check` 会依次执行 ESLint、全部 Node 回归、Vite 生产构建和包体预算校验。只需要单独构建时可使用 `npm run build`。
+`npm run test:e2e` 会自动启动隔离后端与 Vite，用 Playwright Chromium 回归写作器的自动保存、图片插入、版式设置、排序和移动端布局。
 
 ## 主要路由
 

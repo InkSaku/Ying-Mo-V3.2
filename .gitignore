@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+frontend/playwright-report/
+frontend/test-results/
 instance/
 *.db
 /uploads/

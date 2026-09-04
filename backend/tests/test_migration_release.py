@@ -407,10 +407,13 @@ def test_lightweight_interactions_migration_recovers_legacy_table_states(tmp_pat
     }
     assert {"comment_reactions", "comment_mentions"}.issubset(inspector.get_table_names())
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260825_0011"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260904_0012"
         assert "display_key" in {
             column["name"] for column in inspector.get_columns("media")
         }
+        assert {"caption", "display_size", "alignment"}.issubset({
+            column["name"] for column in inspector.get_columns("media")
+        })
         expected_count = 1 if legacy_state == "renamed" else 0
         assert connection.scalar(text("SELECT COUNT(*) FROM post_reactions")) == expected_count
         if expected_count:

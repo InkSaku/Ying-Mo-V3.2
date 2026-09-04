@@ -27,6 +27,14 @@ class Media(db.Model):
             name="ck_media_bound_type",
         ),
         db.CheckConstraint("status IN ('active', 'hidden')", name="ck_media_status"),
+        db.CheckConstraint(
+            "display_size IN ('small', 'medium', 'large', 'full')",
+            name="ck_media_display_size",
+        ),
+        db.CheckConstraint(
+            "alignment IN ('left', 'center', 'right')",
+            name="ck_media_alignment",
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +46,9 @@ class Media(db.Model):
     content_sha256 = db.Column(db.String(64), nullable=True, index=True)
     original_filename = db.Column(db.String(255), nullable=True)
     alt_text = db.Column(db.String(300), nullable=True)
+    caption = db.Column(db.String(500), nullable=True)
+    display_size = db.Column(db.String(20), nullable=False, default="medium", server_default="medium")
+    alignment = db.Column(db.String(20), nullable=False, default="center", server_default="center")
     width = db.Column(db.Integer, nullable=True)
     height = db.Column(db.Integer, nullable=True)
     storage_key = db.Column(db.String(500), nullable=False, unique=True)
@@ -60,6 +71,9 @@ class Media(db.Model):
             "mime_type": self.mime_type,
             "byte_size": self.byte_size,
             "alt_text": self.alt_text,
+            "caption": self.caption,
+            "display_size": self.display_size,
+            "alignment": self.alignment,
             "width": self.width,
             "height": self.height,
             "display_key_ready": bool(self.display_key),

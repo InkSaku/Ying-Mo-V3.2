@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ProtectedImage } from "./ProtectedImage";
+import { UploadProgress } from "./UploadProgress";
 
-const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxBytes = 15 * 1024 * 1024;
 
 export function AvatarManager({ profile, onChange }) {
@@ -14,6 +15,9 @@ export function AvatarManager({ profile, onChange }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [uploadState, setUploadState] = useState(null);
+  const [retryFile, setRetryFile] = useState(null);
+  const uploadAbortRef = useRef(null);
 
   useEffect(() => {
     if (!file) {
@@ -38,8 +42,8 @@ export function AvatarManager({ profile, onChange }) {
       clearSelection();
       return;
     }
-    if (!imageTypes.has(selected.type)) {
-      setError("请选择 JPEG、PNG 或 WebP 图片。");
+    if (!isAcceptedImageFile(selected)) {
+      setError("请选择 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
       clearSelection();
       return;
     }
@@ -51,15 +55,27 @@ export function AvatarManager({ profile, onChange }) {
     setFile(selected);
   };
 
-  const save = async () => {
-    if (!file) return;
+  const save = async (fileOverride = null) => {
+    const selectedFile = fileOverride || file;
+    if (!selectedFile) return;
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    setRetryFile(null);
+    setUploadState({ status: "optimizing", stage: "正在检查图片", percent: 0, currentFile: 1, totalFiles: 1, fileName: selectedFile.name });
     setBusy(true);
     setError("");
     setMessage("");
     try {
+      const prepared = await prepareImageForUpload(selectedFile, {
+        signal: controller.signal,
+        onStage: (stage) => setUploadState((current) => ({ ...current, status: "optimizing", stage, percent: 0 })),
+      });
       const body = new FormData();
-      body.append("file", file);
-      const uploaded = await api.post("/uploads/images", body);
+      body.append("file", prepared.file);
+      const uploaded = await api.upload("/uploads/images", body, {
+        signal: controller.signal,
+        onProgress: ({ percent }) => setUploadState((current) => ({ ...current, status: "uploading", stage: "正在上传", percent })),
+      });
       const previousId = profile.avatar_media_id;
       const updated = await api.patch("/users/me", { avatar_media_id: uploaded.data.id });
       let cleanupFailed = false;
@@ -72,12 +88,17 @@ export function AvatarManager({ profile, onChange }) {
       }
       await onChange(updated.data);
       clearSelection();
+      setUploadState(null);
       setMessage(cleanupFailed
         ? "新头像已生效，但旧媒体解绑失败；当前头像不受影响。"
         : previousId ? "头像已替换。" : "头像已设置。");
     } catch (saveError) {
-      setError(saveError.message);
+      const cancelled = saveError.code === "REQUEST_ABORTED" || saveError.name === "AbortError";
+      setError(cancelled ? "头像上传已取消。" : saveError.message);
+      setUploadState((current) => ({ ...current, status: cancelled ? "cancelled" : "error", stage: cancelled ? "上传已取消" : "上传失败" }));
+      setRetryFile(selectedFile);
     } finally {
+      uploadAbortRef.current = null;
       setBusy(false);
     }
   };
@@ -132,6 +153,12 @@ export function AvatarManager({ profile, onChange }) {
       {file ? <p className="avatar-file-meta">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p> : null}
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {message ? <div className="inline-success" role="status">{message}</div> : null}
+      <UploadProgress
+        state={uploadState}
+        onCancel={() => uploadAbortRef.current?.abort()}
+        onRetry={retryFile ? () => { void save(retryFile); } : null}
+        compact
+      />
 
       <div className="avatar-manager-actions">
         {!file ? (
@@ -140,7 +167,7 @@ export function AvatarManager({ profile, onChange }) {
             <input
               ref={inputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept={IMAGE_ACCEPT}
               disabled={busy}
               onChange={choose}
             />

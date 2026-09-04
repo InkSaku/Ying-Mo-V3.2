@@ -8,7 +8,7 @@ import uuid
 
 from flask import Blueprint, current_app, request, send_file
 from flask_jwt_extended import jwt_required
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func
 
 from app.common.auth import current_user
@@ -28,7 +28,12 @@ from app.media_memory import (
 from app.storage import get_storage
 
 bp=Blueprint("uploads",__name__)
-ALLOWED_FORMATS={"JPEG":("image/jpeg",".jpg"),"PNG":("image/png",".png"),"WEBP":("image/webp",".webp")}
+ALLOWED_FORMATS={
+    "JPEG":("image/jpeg",".jpg"),
+    "PNG":("image/png",".png"),
+    "WEBP":("image/webp",".webp"),
+    "HEIF":("image/heic",".heic"),
+}
 
 
 def _paths(public_id,ext):
@@ -52,6 +57,7 @@ def _read_image(file):
         if fmt not in ALLOWED_FORMATS:
             raise ValueError("unsupported")
         image=Image.open(BytesIO(raw)); image.load()
+        image=ImageOps.exif_transpose(image)
     except (UnidentifiedImageError,OSError):
         raise ValueError("invalid")
     return raw,image,fmt
@@ -451,14 +457,29 @@ def update_owner_media(media_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or media.owner_id!=actor.id or media.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    if not isinstance(data,dict) or set(data)!={"alt_text"}:
-        return error_response("VALIDATION_ERROR","仅支持 alt_text 字段。",422)
-    alt_text=data["alt_text"]
-    if alt_text is not None and (not isinstance(alt_text,str) or len(alt_text.strip())>300):
-        return error_response("VALIDATION_ERROR","ALT 文本不得超过 300 个字符。",422)
-    if media.kind=="live_photo_video" and alt_text:
-        return error_response("VALIDATION_ERROR","Live Photo 视频文件不单独设置 ALT。",422)
-    media.alt_text=alt_text.strip() if isinstance(alt_text,str) and alt_text.strip() else None
+    allowed={"alt_text","caption","display_size","alignment"}
+    if not isinstance(data,dict) or not data or not set(data).issubset(allowed):
+        return error_response("VALIDATION_ERROR","媒体展示字段不合法。",422)
+    if media.kind=="live_photo_video":
+        return error_response("VALIDATION_ERROR","Live Photo 视频文件不单独设置展示信息。",422)
+    if "alt_text" in data:
+        alt_text=data["alt_text"]
+        if alt_text is not None and (not isinstance(alt_text,str) or len(alt_text.strip())>300):
+            return error_response("VALIDATION_ERROR","ALT 文本不得超过 300 个字符。",422)
+        media.alt_text=alt_text.strip() if isinstance(alt_text,str) and alt_text.strip() else None
+    if "caption" in data:
+        caption=data["caption"]
+        if caption is not None and (not isinstance(caption,str) or len(caption.strip())>500):
+            return error_response("VALIDATION_ERROR","图片图注不得超过 500 个字符。",422)
+        media.caption=caption.strip() if isinstance(caption,str) and caption.strip() else None
+    if "display_size" in data:
+        if data["display_size"] not in {"small","medium","large","full"}:
+            return error_response("VALIDATION_ERROR","图片尺寸设置不合法。",422)
+        media.display_size=data["display_size"]
+    if "alignment" in data:
+        if data["alignment"] not in {"left","center","right"}:
+            return error_response("VALIDATION_ERROR","图片对齐设置不合法。",422)
+        media.alignment=data["alignment"]
     db.session.commit()
     return success_response(media.to_dict(include_manage_paths=True))
 

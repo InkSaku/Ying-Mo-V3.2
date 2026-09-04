@@ -1,7 +1,5 @@
 import { offlineDraftKey, readOfflineDraft, removeOfflineDraft, writeOfflineDraft } from "./offlineDraft.js";
 
-export const QUICK_NOTE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
 export function initialQuickNoteForm() {
   return {
     body: "",

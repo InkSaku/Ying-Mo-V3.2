@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { api } from "../lib/api";
+import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ProtectedImage } from "./ProtectedImage";
-
-const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+import { UploadProgress } from "./UploadProgress";
 
 export function CollectionCoverManager({ collection, onChange }) {
   const inputRef = useRef(null);
@@ -11,22 +11,33 @@ export function CollectionCoverManager({ collection, onChange }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [uploadState, setUploadState] = useState(null);
+  const [retryFile, setRetryFile] = useState(null);
+  const uploadAbortRef = useRef(null);
 
-  const upload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const runUpload = async (file) => {
     setError("");
     setMessage("");
-    if (!imageTypes.has(file.type)) {
-      setError("请选择 JPEG、PNG 或 WebP 图片。");
-      event.target.value = "";
+    if (!isAcceptedImageFile(file)) {
+      setError("请选择 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
       return;
     }
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    setRetryFile(null);
+    setUploadState({ status: "optimizing", stage: "正在检查图片", percent: 0, currentFile: 1, totalFiles: 1, fileName: file.name });
     setBusy(true);
     try {
+      const prepared = await prepareImageForUpload(file, {
+        signal: controller.signal,
+        onStage: (stage) => setUploadState((current) => ({ ...current, status: "optimizing", stage, percent: 0 })),
+      });
       const body = new FormData();
-      body.append("file", file);
-      const uploaded = await api.post("/uploads/images", body);
+      body.append("file", prepared.file);
+      const uploaded = await api.upload("/uploads/images", body, {
+        signal: controller.signal,
+        onProgress: ({ percent }) => setUploadState((current) => ({ ...current, status: "uploading", stage: "正在上传", percent })),
+      });
       const previousCoverId = collection.cover_media_id;
       const updated = await api.patch(`/collections/${collection.id}`, { cover_media_id: uploaded.data.id });
       let cleanupFailed = false;
@@ -38,13 +49,23 @@ export function CollectionCoverManager({ collection, onChange }) {
         }
       }
       await onChange(updated.data);
+      setUploadState(null);
       setMessage(cleanupFailed ? "封面已替换，但旧媒体解绑失败，请刷新后重试。" : "Collection 封面已更新。");
     } catch (uploadError) {
-      setError(uploadError.message);
+      const cancelled = uploadError.code === "REQUEST_ABORTED" || uploadError.name === "AbortError";
+      setError(cancelled ? "封面上传已取消。" : uploadError.message);
+      setUploadState((current) => ({ ...current, status: cancelled ? "cancelled" : "error", stage: cancelled ? "上传已取消" : "上传失败" }));
+      setRetryFile(file);
     } finally {
+      uploadAbortRef.current = null;
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
     }
+  };
+
+  const upload = (event) => {
+    const file = event.target.files?.[0];
+    if (file) void runUpload(file);
   };
 
   const remove = async () => {
@@ -75,10 +96,11 @@ export function CollectionCoverManager({ collection, onChange }) {
       ) : <div className="collection-cover-empty">尚未设置封面</div>}
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {message ? <div className="inline-success" role="status">{message}</div> : null}
+      <UploadProgress state={uploadState} onCancel={() => uploadAbortRef.current?.abort()} onRetry={retryFile ? () => { void runUpload(retryFile); } : null} compact />
       <div className="collection-cover-actions">
         <label className={`btn btn-secondary file-picker ${busy ? "is-disabled" : ""}`} aria-disabled={busy}>
           {busy ? "正在处理" : collection.cover_media_id ? "替换封面" : "上传封面"}
-          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={upload} />
+          <input ref={inputRef} type="file" accept={IMAGE_ACCEPT} disabled={busy} onChange={upload} />
         </label>
         {collection.cover_media_id ? <button className="text-button danger-text" type="button" disabled={busy} onClick={() => setConfirmRemove(true)}>移除封面</button> : null}
       </div>

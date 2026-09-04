@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
+import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import {
   formWithQuickNoteAudience,
   initialQuickNoteForm,
-  QUICK_NOTE_IMAGE_TYPES,
   quickNoteAudienceValue,
   quickNoteBrowseItem,
   quickNoteDraftKey,
@@ -17,6 +17,7 @@ import {
 } from "../lib/quickNote";
 import { CustomSelect } from "./CustomSelect";
 import { ProtectedImage } from "./ProtectedImage";
+import { UploadProgress } from "./UploadProgress";
 
 function formFromDraft(post, fallback) {
   const occurredAt = post.occurred_at ? new Date(post.occurred_at) : null;
@@ -62,6 +63,9 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
   const fileInputRef = useRef(null);
   const bodyInputRef = useRef(null);
   const mountedRef = useRef(true);
+  const uploadAbortRef = useRef(null);
+  const [uploadState, setUploadState] = useState(null);
+  const [retryFiles, setRetryFiles] = useState(null);
 
   const replacePost = (next) => {
     postRef.current = next;
@@ -179,13 +183,11 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
     }
   };
 
-  const uploadImages = async (event) => {
-    const files = Array.from(event.target.files || []);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  const runUploadImages = async (files) => {
     if (!files.length) return;
-    const invalid = files.find((file) => !QUICK_NOTE_IMAGE_TYPES.has(file.type));
+    const invalid = files.find((file) => !isAcceptedImageFile(file));
     if (invalid) {
-      setError("快速随记只支持 JPEG、PNG 或 WebP 图片。");
+      setError("快速随记只支持 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
       return;
     }
     if (!online) {
@@ -195,23 +197,50 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
     setBusy("uploading");
     setError("");
     setMessage("");
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    setRetryFiles(null);
+    setUploadState({ status: "optimizing", stage: "正在检查图片", percent: 0, currentFile: 1, totalFiles: files.length, fileName: files[0].name });
     let draft = null;
+    let completedCount = 0;
     try {
       draft = await persistDraft();
-      for (const file of files) {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        setUploadState({ status: "optimizing", stage: "正在检查图片", percent: 0, currentFile: index + 1, totalFiles: files.length, fileName: file.name });
+        const prepared = await prepareImageForUpload(file, {
+          signal: controller.signal,
+          onStage: (stage) => setUploadState((current) => ({ ...current, status: "optimizing", stage, percent: 0 })),
+        });
         const body = new FormData();
-        body.append("file", file);
-        const uploaded = await api.post("/uploads/images", body);
+        body.append("file", prepared.file);
+        const uploaded = await api.upload("/uploads/images", body, {
+          signal: controller.signal,
+          onProgress: ({ percent }) => setUploadState((current) => ({ ...current, status: "uploading", stage: "正在上传", percent })),
+        });
         await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: draft.id });
+        completedCount = index + 1;
       }
       await refreshPost(draft.id);
+      setUploadState(null);
       setMessage(files.length > 1 ? `已上传 ${files.length} 张图片。` : "图片已上传并加入随记。");
     } catch (uploadError) {
       if (draft?.id) await refreshPost(draft.id).catch(() => undefined);
-      setError(`图片上传未全部完成：${uploadError.message}`);
+      const cancelled = uploadError.code === "REQUEST_ABORTED" || uploadError.name === "AbortError";
+      setError(cancelled ? "图片上传已取消，可以重试。" : `图片上传未全部完成：${uploadError.message}`);
+      setUploadState((current) => ({ ...current, status: cancelled ? "cancelled" : "error", stage: cancelled ? "上传已取消" : "上传失败" }));
+      const remainingFiles = files.slice(completedCount);
+      setRetryFiles(remainingFiles.length ? remainingFiles : null);
     } finally {
+      uploadAbortRef.current = null;
       if (mountedRef.current) setBusy("");
     }
+  };
+
+  const uploadImages = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    void runUploadImages(files);
   };
 
   const removeImage = async (mediaId) => {
@@ -315,7 +344,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
         <div className="quick-note-tools">
           <label className={`btn btn-secondary file-picker ${busy ? "is-disabled" : ""}`} aria-disabled={Boolean(busy)}>
             {busy === "uploading" ? "正在上传" : "添加图片"}
-            <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={Boolean(busy)} onChange={(event) => void uploadImages(event)} />
+            <input ref={fileInputRef} type="file" multiple accept={IMAGE_ACCEPT} disabled={Boolean(busy)} onChange={uploadImages} />
           </label>
           <div className="quick-note-audience">
             <span>发布到</span>
@@ -346,6 +375,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
       </div>
 
       <div className="quick-note-status" aria-live="polite">
+        <UploadProgress state={uploadState} onCancel={() => uploadAbortRef.current?.abort()} onRetry={retryFiles ? () => { void runUploadImages(retryFiles); } : null} compact />
         {!online ? <p className="quick-note-offline">离线中：文字会保存在这台设备，图片与发布暂不可用。</p> : null}
         {optionsError ? <p className="field-error">Collection 读取失败：{optionsError}</p> : null}
         {selectedCollectionUnavailable ? <p className="field-error">你已无法访问原 Collection，请重新选择发布范围。</p> : null}

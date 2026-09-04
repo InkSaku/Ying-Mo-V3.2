@@ -75,10 +75,23 @@ def test_year_review_export_and_media_management(client):
         "file": (image_file(), "memory-copy.png"),
     }, content_type="multipart/form-data").get_json()["data"]
     assert second["duplicate_of_id"] == first["id"]
+    updated_media = client.patch(
+        f"/api/v1/uploads/manage/media/{first['id']}", headers=auth(token),
+        json={
+            "alt_text": "West Lake in spring",
+            "caption": "A quiet afternoon by the lake",
+            "display_size": "large",
+            "alignment": "right",
+        },
+    ).get_json()["data"]
+    assert updated_media["alt_text"] == "West Lake in spring"
+    assert updated_media["caption"] == "A quiet afternoon by the lake"
+    assert updated_media["display_size"] == "large"
+    assert updated_media["alignment"] == "right"
     assert client.patch(
         f"/api/v1/uploads/manage/media/{first['id']}", headers=auth(token),
-        json={"alt_text": "West Lake in spring"},
-    ).get_json()["data"]["alt_text"] == "West Lake in spring"
+        json={"display_size": "giant"},
+    ).status_code == 422
     duplicates = client.get("/api/v1/uploads/manage/media/duplicates", headers=auth(token)).get_json()["data"]
     assert len(duplicates) == 1 and len(duplicates[0]["items"]) == 2
     original = client.get(first["original_download_path"], headers=auth(token))

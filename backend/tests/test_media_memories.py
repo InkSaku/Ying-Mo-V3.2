@@ -21,6 +21,24 @@ def private_jpeg():
     return output
 
 
+def oriented_jpeg():
+    image = Image.new("RGB", (120, 80), "#405a7a")
+    exif = Image.Exif()
+    exif[274] = 6
+    output = BytesIO()
+    image.save(output, "JPEG", quality=92, exif=exif)
+    output.seek(0)
+    return output
+
+
+def phone_heic():
+    image = Image.new("RGB", (96, 128), "#58705a")
+    output = BytesIO()
+    image.save(output, "HEIF", quality=80)
+    output.seek(0)
+    return output
+
+
 def upload(client, token):
     response = client.post(
         "/api/v1/uploads/images",
@@ -74,6 +92,52 @@ def test_display_derivative_strips_metadata_and_original_stays_owner_only(client
     )
     assert original.status_code == 200
     assert Image.open(BytesIO(original.data)).getexif().get(270) == "private-location-metadata"
+
+
+def test_upload_applies_exif_orientation_before_recording_dimensions(client):
+    _, token = make_user(client, "orientedowner")
+    response = client.post(
+        "/api/v1/uploads/images",
+        headers=auth(token),
+        data={"file": (oriented_jpeg(), "portrait.jpg")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 201, response.get_json()
+    media = response.get_json()["data"]
+    assert (media["width"], media["height"]) == (80, 120)
+
+    displayed = client.get(
+        f"/api/v1/uploads/images/{media['public_id']}", headers=auth(token)
+    )
+    decoded = Image.open(BytesIO(displayed.data))
+    assert decoded.size == (80, 120)
+    assert not decoded.getexif()
+
+
+def test_upload_accepts_heic_and_serves_safe_webp_derivative(client):
+    _, token = make_user(client, "heicowner")
+    response = client.post(
+        "/api/v1/uploads/images",
+        headers=auth(token),
+        data={"file": (phone_heic(), "iphone-photo.heic")},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 201, response.get_json()
+    media = response.get_json()["data"]
+    assert media["mime_type"] == "image/heic"
+    assert media["original_filename"] == "iphone-photo.heic"
+    assert (media["width"], media["height"]) == (96, 128)
+    assert media["display_size"] == "medium"
+    assert media["alignment"] == "center"
+
+    displayed = client.get(
+        f"/api/v1/uploads/images/{media['public_id']}", headers=auth(token)
+    )
+    assert displayed.status_code == 200
+    assert displayed.content_type == "image/webp"
+    assert Image.open(BytesIO(displayed.data)).format == "WEBP"
 
 
 def test_logical_gallery_resolver_and_collection_acl_converge(client):

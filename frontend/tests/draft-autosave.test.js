@@ -74,3 +74,23 @@ test("writing desk keeps creation, publication and media concerns visibly separa
   assert.match(page, /进入沉浸写作/);
   assert.match(page, /PUBLICATION/);
 });
+
+test("both writing surfaces expose cursor-aware image insertion and shared autosave", () => {
+  const page = readFileSync(new URL("../src/pages/WritePage.jsx", import.meta.url), "utf8");
+  const dialog = readFileSync(new URL("../src/components/MarkdownEditorDialog.jsx", import.meta.url), "utf8");
+  const manager = readFileSync(new URL("../src/components/PostMediaManager.jsx", import.meta.url), "utf8");
+
+  assert.match(page, /editor-inline-image-button/);
+  assert.match(page, /onPaste={handleInlinePaste}/);
+  assert.match(page, /onDrop={handleInlineDrop}/);
+  assert.match(page, /bodyEditorOpen \? bodyEditorRef\.current : inlineBodyRef\.current/);
+  assert.match(page, /captureMediaInsertionSelection\(\);\s*inlineImageInputRef\.current\?\.click\(\)/);
+  assert.match(page, /selectionPrepared: true/);
+  assert.doesNotMatch(page, /if \(loading \|\| bodyEditorOpen \|\| !routeReadyRef/);
+  assert.match(dialog, /onPaste=/);
+  assert.match(dialog, /onDrop=/);
+  assert.match(dialog, /onPrepareImagePicker\?\.\(\);\s*fileInputRef\.current\?\.click\(\)/);
+  assert.match(page, /onPrepareInsert={captureMediaInsertionSelection}/);
+  assert.match(manager, /onPrepareInsert\?\.\(\)/);
+  assert.match(manager, /await onInsertMedia\?\./);
+});
