@@ -67,7 +67,7 @@ export function ArticleReadingLayout({ outline, children }) {
               <span aria-hidden="true">{mobileOpen ? "收起" : `${normalizedOutline.length} 节`}</span>
             </button>
             <nav id="article-toc-list" className="article-toc-list" aria-label="正文目录">
-              {normalizedOutline.map((item) => (
+              {normalizedOutline.map((item, index) => (
                 <a
                   key={item.id}
                   href={`#${encodeURIComponent(item.id)}`}
@@ -78,7 +78,8 @@ export function ArticleReadingLayout({ outline, children }) {
                     setMobileOpen(false);
                   }}
                 >
-                  {item.label}
+                  <span className="article-toc-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                  <span>{item.label}</span>
                 </a>
               ))}
             </nav>

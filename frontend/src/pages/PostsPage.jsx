@@ -5,10 +5,13 @@ import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { PostFilters } from "../components/PostFilters";
 import { PostCard } from "../components/PostCard";
+import { ArticleIndexRow, ArticleLeadStory, ArticleMarginStory } from "../components/ArticlePublication";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { Pagination } from "../components/Pagination";
 import { clampPageToTotal } from "../lib/pagination";
 import { hasActivePostFilters, postFilterSearchParams, postsApiPath, readPostFilters } from "../lib/postBrowsing";
+import { formatDate } from "../lib/format";
+import "../styles/articles.css";
 
 const PAGE_SIZE = 12;
 
@@ -34,43 +37,88 @@ function groupNotesByYear(posts) {
   });
 }
 
-function BrowseHero({ isArticle, total }) {
+function articleYear(post) {
+  const match = String(post?.published_at || post?.updated_at || "").match(/^(\d{4})/);
+  return match?.[1] || "日期";
+}
+
+function groupArticlesByYear(posts) {
+  const groups = new Map();
+  posts.forEach((post) => {
+    const year = articleYear(post);
+    if (!groups.has(year)) groups.set(year, []);
+    groups.get(year).push(post);
+  });
+  return [...groups.entries()].map(([year, items]) => ({ year, items }));
+}
+
+function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
+  if (isArticle) {
+    const openingCopy = sort === "oldest" ? "从最早保存的一篇开始" : sort === "updated" ? "从最近整理的一篇开始" : "从最近写下的一篇开始";
+    return (
+      <header className="browse-hero browse-hero-article">
+        <div className="browse-hero-copy">
+          <p className="hero-kicker">ARTICLES / READING ARCHIVE</p>
+          <h1>文章，<br />展开阅读。</h1>
+          <p>长文、学习笔记与生活观察，依照阅读关系而不是组件尺寸，被装订成一册持续生长的私人刊物。</p>
+        </div>
+        <aside className="articles-hero-note" aria-label="文章目录概览">
+          <strong>{openingCopy}</strong>
+          <p>共 {total || 0} 篇可阅读文章{latestPost?.published_at ? <><br />本页首篇发布于 {formatDate(latestPost.published_at)}</> : null}</p>
+          <nav aria-label="内容类型切换"><Link className="active" to="/articles">文章</Link><Link to="/notes">随记</Link></nav>
+          <a href="#browse-content">进入目录 <span aria-hidden="true">↓</span></a>
+          <i className="articles-hero-scribble" aria-hidden="true">TAKE YOUR TIME ↘</i>
+        </aside>
+      </header>
+    );
+  }
+
   return (
-    <header className={`browse-hero browse-hero-${isArticle ? "article" : "note"}`}>
+    <header className="browse-hero browse-hero-note">
       <div className="browse-hero-copy">
-        <p className="hero-kicker">{isArticle ? "Reading Journal" : "Field Notes"}</p>
-        <h1>{isArticle ? <>文章，<br />展开阅读。</> : <>随记，<br />留住当下。</>}</h1>
-        <p>{isArticle ? "较完整的长内容、学习笔记与思考，按一本持续生长的阅读刊物重新编排。" : "更轻的生活片段、地点、心情与即时记录，按真正发生的时间装订成册。"}</p>
+        <p className="hero-kicker">Field Notes</p>
+        <h1>随记，<br />留住当下。</h1>
+        <p>更轻的生活片段、地点、心情与即时记录，按真正发生的时间装订成册。</p>
       </div>
       <aside className="browse-hero-index" aria-label="内容目录概览">
         <span className="tabular">{total || 0}</span>
-        <div><strong>{isArticle ? "篇可阅读文章" : "则可阅读随记"}</strong><p>仅统计当前账号有权读取的内容。</p></div>
-        <nav aria-label="内容类型切换"><Link className={isArticle ? "active" : ""} to="/articles">文章</Link><Link className={!isArticle ? "active" : ""} to="/notes">随记</Link></nav>
+        <div><strong>则可阅读随记</strong><p>仅统计当前账号有权读取的内容。</p></div>
+        <nav aria-label="内容类型切换"><Link to="/articles">文章</Link><Link className="active" to="/notes">随记</Link></nav>
         <a className="browse-hero-jump" href="#browse-content"><span>START READING</span>从本页首篇开始 <i aria-hidden="true">↓</i></a>
       </aside>
     </header>
   );
 }
 
-function ArticleMagazine({ posts, page, total }) {
+function ArticleMagazine({ posts, page, total, sort }) {
   const lead = posts[0];
   const secondary = posts.slice(1, 3);
   const indexPosts = posts.slice(3);
+  const archiveGroups = groupArticlesByYear(indexPosts);
+  const openingLabel = sort === "newest" ? "LATEST STORY" : sort === "oldest" ? "FROM THE ARCHIVE" : "RECENTLY UPDATED";
   return (
     <section className="browse-editorial-section" id="browse-content" aria-labelledby="article-magazine-heading">
-      <header className="browse-section-heading"><div><p>ISSUE / {String(page).padStart(2, "0")}</p><h2 id="article-magazine-heading">本期阅读目录</h2></div><span>{total} 篇文章 · 按当前条件编排</span></header>
+      <header className="browse-section-heading"><div><p>READING SELECTION / PAGE {String(page).padStart(2, "0")}</p><h2 id="article-magazine-heading">从这里开始</h2></div><span>{total} 篇文章 · 先读一篇，再慢慢走进目录</span></header>
       <div className="article-magazine-grid">
         <div className="article-magazine-opening">
-          <PostCard post={lead} index={(page - 1) * PAGE_SIZE} variant="magazine-lead" />
-          {secondary.length ? <aside className="article-magazine-rail" aria-label="本期推荐篇目">
-            <header><span>IN THIS ISSUE</span><strong>接着阅读</strong><small>{secondary.length} 篇推荐</small></header>
-            {secondary.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} variant="magazine-secondary" />)}
+          <div className="article-magazine-opening-main">
+            <p className="article-magazine-opening-label">{openingLabel} <span>本页首篇</span></p>
+            <ArticleLeadStory post={lead} index={(page - 1) * PAGE_SIZE} />
+          </div>
+          {secondary.length ? <aside className="article-magazine-rail" aria-label="延伸阅读篇目">
+            <header><span>READ NEXT</span><strong>接着阅读</strong><small>{secondary.length} 篇延伸阅读</small></header>
+            {secondary.map((post, index) => <ArticleMarginStory key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} />)}
           </aside> : null}
         </div>
-        {indexPosts.length ? <section className="article-magazine-index-section" aria-label="更多文章篇目">
-          <header><span>CONTENTS</span><strong>更多篇目</strong><small>沿着目录继续阅读</small></header>
-          <div className="article-magazine-index-list">
-            {indexPosts.map((post, index) => <PostCard key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 3} variant="magazine-index" />)}
+        {archiveGroups.length ? <section className="article-magazine-index-section" aria-label="文章年份目录">
+          <header><span>ARCHIVE</span><strong>文章档案</strong><small>依照发布时间继续浏览</small></header>
+          <div className="article-year-groups">
+            {archiveGroups.map((group) => <section className="article-year-group" key={group.year} aria-labelledby={`article-year-${group.year}`}>
+              <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong><span>{group.items.length} STORIES</span></header>
+              <ol className="article-magazine-index-list">
+                {group.items.map((post) => <ArticleIndexRow key={post.id} post={post} />)}
+              </ol>
+            </section>)}
           </div>
         </section> : null}
       </div>
@@ -136,7 +184,7 @@ export function PostsPage({ type }) {
 
   return (
     <main className={`page-shell browse-page browse-page-${isArticle ? "article" : "note"}`} aria-busy={state.loading || pageNeedsClamp || undefined}>
-      <BrowseHero isArticle={isArticle} total={pagination.total || 0} />
+      <BrowseHero isArticle={isArticle} total={pagination.total || 0} latestPost={state.data?.[0]} sort={filters.sort} />
 
       <PostFilters editorial type={type} filters={filters} options={optionState.data || {}} loading={optionState.loading} onChange={changeFilter} onClear={() => setParams("")} />
 
@@ -146,7 +194,7 @@ export function PostsPage({ type }) {
         <EmptyState title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : "这里只会出现你有权读取的已发布或归档内容。"} />
       ) : (
         isArticle
-          ? <ArticleMagazine posts={state.data} page={pagination.page || page} total={pagination.total || state.data.length} />
+          ? <ArticleMagazine posts={state.data} page={pagination.page || page} total={pagination.total || state.data.length} sort={filters.sort} />
           : <NoteJournal posts={state.data} page={pagination.page || page} total={pagination.total || state.data.length} />
       )}
 

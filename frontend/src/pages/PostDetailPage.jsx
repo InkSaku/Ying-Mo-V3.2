@@ -106,36 +106,43 @@ export function PostDetailPage({ type }) {
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
-        <header className="post-detail-header article-detail-hero">
+        <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
           <div className="article-detail-heading">
             <Link className="article-detail-back" to="/articles">返回文章目录</Link>
+            <p className="article-detail-kicker">{postTypeLabel(post.post_type)} · READING</p>
             <h1>{post.title || "未命名文章"}</h1>
             {post.summary ? <p className="lede">{post.summary}</p> : null}
+            <aside className="article-detail-folio" aria-label="文章信息">
+              <div className="post-detail-meta">
+                <span>撰文</span>
+                {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : <span>匿名</span>}
+              </div>
+              <dl className="post-facts">
+                <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
+                <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
+                {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
+              </dl>
+              <div className="post-context">
+                {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
+                {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
+                {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
+              </div>
+            </aside>
           </div>
-          <aside className="article-detail-folio" aria-label="文章信息">
-            <div className="post-detail-meta">
-              <span>{postTypeLabel(post.post_type)}</span>
-              {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
-            </div>
-            <dl className="post-facts">
-              <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
-              <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
-              {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
-            </dl>
-            <div className="post-context">
-              {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
-              {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
-              {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
-            </div>
-          </aside>
-        </header>
 
-        {post.cover_media ? <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面"><ProtectedImage
-          media={post.cover_media}
-          useOriginal
-          alt=""
-          className="post-detail-cover article-detail-cover"
-        /></MediaOpenButton> : null}
+          {post.cover_media ? (
+            <div className="article-detail-cover-frame">
+              <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面">
+                <ProtectedImage
+                  media={post.cover_media}
+                  useOriginal
+                  alt=""
+                  className="post-detail-cover article-detail-cover"
+                />
+              </MediaOpenButton>
+            </div>
+          ) : null}
+        </header>
 
         <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
       </article>

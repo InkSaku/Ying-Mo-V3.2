@@ -45,9 +45,10 @@ test("Article and Note browsing use distinct editorial structures", () => {
   const page = source("../src/pages/PostsPage.jsx");
 
   assert.match(page, /function ArticleMagazine/);
-  assert.match(page, /magazine-lead/);
-  assert.match(page, /magazine-secondary/);
-  assert.match(page, /magazine-index/);
+  assert.match(page, /ArticleLeadStory/);
+  assert.match(page, /ArticleMarginStory/);
+  assert.match(page, /ArticleIndexRow/);
+  assert.doesNotMatch(page, /variant="magazine-/);
   assert.match(page, /function NoteJournal/);
   assert.match(page, /groupNotesByYear/);
   assert.match(page, /variant="journal"/);
@@ -97,6 +98,17 @@ test("Note detail owns its content-first hierarchy instead of reusing the Articl
   assert.match(detail, /<h1 className="sr-only">/);
   assert.ok(detail.indexOf("{renderedBody}") < detail.indexOf("note-detail-cover"));
   assert.doesNotMatch(detail, /未命名随记/);
+});
+
+test("Article detail uses one continuous cover, metadata, contents and reading structure", () => {
+  const page = source("../src/pages/PostDetailPage.jsx");
+  const layout = source("../src/components/ArticleReadingLayout.jsx");
+
+  assert.match(page, /article-detail-hero.*has-cover.*without-cover/);
+  assert.ok(page.indexOf("article-detail-heading") < page.indexOf("article-detail-cover-frame"));
+  assert.ok(page.indexOf("article-detail-folio") < page.indexOf("article-detail-cover-frame"));
+  assert.match(layout, /article-toc-index/);
+  assert.match(layout, /padStart\(2, "0"\)/);
 });
 
 test("Note experience follows explicit Collection relations with mixed content links", () => {

@@ -41,7 +41,7 @@ function manageableImages(post) {
   ));
 }
 
-export function QuickNoteComposer({ onPublished, autoFocus = false }) {
+export function QuickNoteComposer({ onPublished, autoFocus = false, appearance = "default", onCollectionsLoaded }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const storageKey = quickNoteDraftKey(user?.id);
@@ -92,7 +92,10 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
   useEffect(() => {
     let active = true;
     api.get("/collections?page_size=100").then((result) => {
-      if (active) setCollections(result.data || []);
+      if (active) {
+        setCollections(result.data || []);
+        onCollectionsLoaded?.(result.data || []);
+      }
     }).catch((loadError) => {
       if (active) setOptionsError(loadError.message);
     });
@@ -114,7 +117,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
       });
     }
     return () => { active = false; };
-  }, [storageKey]);
+  }, [storageKey, onCollectionsLoaded]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -282,11 +285,11 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
   );
 
   return (
-    <section className={`quick-note-composer ${expanded ? "is-expanded" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
+    <section className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" ? "is-paper" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
       <div className="quick-note-heading">
         <div>
           <p className="hero-kicker">Quick Note</p>
-          <h2 id="quick-note-title">现在，记点什么？</h2>
+          <h2 id="quick-note-title">{appearance === "paper" ? "此刻，留下一笔" : "现在，记点什么？"}</h2>
         </div>
         <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setExpanded((current) => !current)}>
           {expanded ? "收起补充项" : "补充时间与状态"}
@@ -298,7 +301,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false }) {
         className="quick-note-body"
         value={form.body}
         maxLength={20000}
-        placeholder="写下此刻的想法、见闻或生活片段……"
+        placeholder={appearance === "paper" ? "写点什么，或留下一张照片……" : "写下此刻的想法、见闻或生活片段……"}
         aria-label="快速随记正文"
         onFocus={() => setExpanded(true)}
         onChange={set("body")}

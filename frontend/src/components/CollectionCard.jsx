@@ -40,7 +40,12 @@ export function CollectionCard({ collection, variant = "", index = 0 }) {
     <article className={`collection-card ${variant ? `collection-card-${variant}` : ""}`}>
       {variant ? (
         <div className="collection-card-cover-frame">
-          <ProtectedImage media={collection.cover_media} alt="" className="card-cover" />
+          <ProtectedImage
+            media={collection.cover_media}
+            alt=""
+            className="card-cover"
+            fallback={<div className="collection-book-fallback" aria-hidden="true"><span>COLLECTION</span><strong>{collection.name}</strong></div>}
+          />
           <span className="collection-card-volume" aria-hidden="true">VOL. {catalogueNumber}</span>
         </div>
       ) : <ProtectedImage media={collection.cover_media} alt="" className="card-cover" />}

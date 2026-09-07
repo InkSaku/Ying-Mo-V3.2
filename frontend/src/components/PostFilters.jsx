@@ -53,6 +53,29 @@ export function PostFilters({ type = "", filters, options = {}, loading = false,
     return <section className="post-filters" aria-label="内容筛选" aria-busy={loading || undefined}>{controls}</section>;
   }
 
+  if (!isNote) {
+    const categories = options.categories || [];
+    return (
+      <section className="post-filters post-filters-editorial post-filters-article" aria-label="文章目录筛选" aria-busy={loading || undefined}>
+        <div className="post-filters-index-line">
+          <span>INDEX / FILTER</span>
+          <nav aria-label="按分类筛选文章">
+            <button className={!filters.category ? "is-active" : ""} type="button" onClick={() => onChange("category", "")}>全部</button>
+            {categories.slice(0, 4).map((category) => <button className={filters.category === category.slug ? "is-active" : ""} key={category.id} type="button" onClick={() => onChange("category", category.slug)}>{category.name}</button>)}
+          </nav>
+          <button className="post-filters-drawer-toggle" type="button" aria-label={filtersOpen ? "收起筛选" : "展开筛选"} aria-expanded={filtersOpen} aria-controls="editorial-filter-controls" onClick={() => setFiltersOpen((value) => !value)}>
+            筛选{activeCount ? ` · ${activeCount}` : ""}<i aria-hidden="true">{filtersOpen ? "−" : "+"}</i>
+          </button>
+        </div>
+        <div className={`post-filters-controls post-filters-drawer ${filtersOpen ? "is-open" : ""}`} id="editorial-filter-controls" hidden={!filtersOpen}>{controls}</div>
+        {activeFilters.length ? <div className="post-filters-active" aria-label="已启用的筛选条件">
+          <span>正在查看</span>
+          {activeFilters.map((item) => <button key={item.key} type="button" onClick={() => onChange(item.key, item.resetValue || "")} aria-label={`移除筛选：${item.label}`}>{item.label}<i aria-hidden="true">×</i></button>)}
+        </div> : null}
+      </section>
+    );
+  }
+
   return (
     <section className={`post-filters post-filters-editorial post-filters-${isNote ? "note" : "article"}`} aria-label="内容筛选" aria-busy={loading || undefined}>
       <header className="post-filters-heading">
