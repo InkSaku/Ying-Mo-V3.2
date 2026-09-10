@@ -1,0 +1,29 @@
+.landing-nav { display: flex; gap: 32px; font-size: 12px; color: var(--login-muted); }
+.landing-opening { position: relative; max-width: 1160px; margin: 42px auto 60px; display: grid; grid-template-columns: .85fr 1.15fr; gap: 80px; align-items: end; }
+.landing-opening-copy { padding: 12px 0 14px 28px; }
+.landing-opening h1 { margin: 0 0 32px; font-size: clamp(110px, 10vw, 156px); font-weight: 500; line-height: 1.2; }
+.landing-verse { margin: 0; font-size: clamp(23px, 2.4vw, 32px); line-height: 1.85; letter-spacing: .08em; }
+.landing-translation { margin: 28px 0 0; color: var(--login-muted); font-family: Georgia, serif; font-size: 11px; line-height: 1.9; letter-spacing: .22em; }
+.landing-entry-links { max-width: 300px; margin-top: 64px; }
+.landing-paper .login-submit { color: #f8f7f3; }
+.landing-entry-links p { text-align: center; font-size: 12px; color: var(--login-muted); margin: 18px 0 0; }
+.landing-entry-links p a { margin-left: 10px; text-decoration: underline; text-underline-offset: 5px; }
+.landing-coast { margin: 0; padding-top: 110px; }
+.landing-coast img { width: 100%; height: 450px; display: block; object-fit: cover; filter: grayscale(1); }
+.landing-coast figcaption { display: flex; justify-content: space-between; gap: 20px; font-size: 10px; color: var(--login-muted); margin-top: 16px; line-height: 1.8; }
+.landing-annotation { position: absolute; right: 25px; top: 10px; margin: 0; color: #334b76; font-family: "Snell Roundhand", "Segoe Script", cursive; font-size: 34px; line-height: 1.2; transform: rotate(-10deg); }
+.landing-annotation span { margin-left: 44px; }
+@media (min-width: 1500px) { .landing-opening { margin-top: 7vh; margin-bottom: 8vh; } }
+@media (max-width: 900px) { .landing-opening { gap: 40px; } .landing-opening-copy { padding-left: 0; } .landing-coast img { height: 390px; } .landing-coast figcaption span:last-child { display: none; } }
+@media (max-width: 640px) {
+  .landing-nav { gap: 20px; }
+  .landing-opening { display: flex; flex-direction: column; align-items: stretch; gap: 28px; margin: 24px auto 30px; }
+  .landing-opening-copy { display: contents; }
+  .landing-opening h1 { font-size: 86px; margin: 0; }
+  .landing-verse { font-size: 23px; }
+  .landing-translation { margin: -6px 0 0; font-size: 10px; }
+  .landing-coast { order: 1; padding: 0; }
+  .landing-coast img { height: 190px; }
+  .landing-annotation { top: 217px; right: 0; font-size: 25px; }
+  .landing-entry-links { order: 2; max-width: none; margin-top: 0; }
+}

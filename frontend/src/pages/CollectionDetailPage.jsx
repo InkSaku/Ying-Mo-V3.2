@@ -18,10 +18,15 @@ import {
   readCollectionMemoryState,
 } from "../lib/collectionMemories";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
+import { CollectionSketch } from "../components/CollectionSketch";
+import "../styles/collection-detail-editorial.css";
 
 function MemoryFilters({ data, memory, onChange, media = false }) {
   const patch = (next) => onChange({ ...memory, ...next, page: 1 });
+  const activeCount = [memory.year, memory.author, memory.type, media ? memory.mediaKind : ""].filter(Boolean).length;
   return (
+    <details className={`collection-memory-filter-drawer ${media ? "is-media" : ""}`}>
+      <summary><span>REFINE / 筛选</span><strong>缩小阅读范围</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "年份、作者与内容类型"}</small><i aria-hidden="true" /></summary>
     <div className={`collection-memory-filters ${media ? "is-media" : ""}`} aria-label="共同回忆筛选">
       <label><span>年份</span><CustomSelect value={memory.year} onChange={(event) => patch({ year: event.target.value })}>
         <option value="">全部年份</option>
@@ -37,6 +42,7 @@ function MemoryFilters({ data, memory, onChange, media = false }) {
       {media ? <label><span>媒体</span><CustomSelect value={memory.mediaKind} onChange={(event) => patch({ mediaKind: event.target.value })}><option value="">图片与 Live Photo</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect></label> : null}
       {(memory.year || memory.author || memory.type || memory.mediaKind) ? <button className="text-button" type="button" onClick={() => patch({ year: "", author: "", type: "", mediaKind: "" })}>清除筛选</button> : null}
     </div>
+    </details>
   );
 }
 
@@ -52,7 +58,7 @@ function TimelineView({ slug, memory, onChange }) {
       {state.data?.year_facets?.length ? <div className="collection-year-jumps" aria-label="年份快速定位">{state.data.year_facets.slice(0, 8).map((facet) => <button key={facet.year} type="button" className={memory.year === String(facet.year) ? "active" : ""} onClick={() => onChange({ ...memory, year: String(facet.year), page: 1 })}>{facet.year}<span>{facet.count}</span></button>)}</div> : null}
     </div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} />
-    {groups.length ? <div className="collection-timeline">{groups.map((group) => <section key={`${group.year}-${group.month}`} className="collection-timeline-group"><header><strong className="tabular">{group.year}</strong><span>{String(group.month).padStart(2, "0")} 月</span></header><div>{group.items.map((post) => <PostCard key={post.id} post={post} compact />)}</div></section>)}</div> : <EmptyState title="这个时间段还没有共同记录" description="可以切换年份、作者或类型，看看其他时刻。" />}
+    {groups.length ? <div className="collection-timeline">{groups.map((group) => <section key={`${group.year}-${group.month}`} className="collection-timeline-group"><header><strong className="tabular">{group.year}</strong><span>{String(group.month).padStart(2, "0")} 月</span></header><div>{group.items.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} />)}</div></section>)}</div> : <EmptyState title="这个时间段还没有共同记录" description="可以切换年份、作者或类型，看看其他时刻。" />}
     <Pagination page={pagination.page || 1} totalPages={pagination.total_pages || 0} onChange={(page) => onChange({ ...memory, page })} />
   </section>;
 }
@@ -113,7 +119,7 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
             <p>当前收录 {collection.posts?.length || 0} 则记录。</p>
           </header>
           {collection.posts?.length
-            ? <div className="collection-post-catalogue">{collection.posts.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
+            ? <div className="collection-post-catalogue">{collection.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} />)}</div>
             : <EmptyState title="这个合集还没有已发布内容" description="创建者与成员都可以在这里发表自己的记录。" />}
         </section>
       </div>
@@ -178,9 +184,10 @@ export function CollectionDetailPage() {
   const collection = state.data;
   return <main className="page-shell collection-memory-page">
     <header className="collection-hero collection-volume-hero">
-      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" /></div>
+      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span>YING MO / COLLECTION</span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
       <div className="collection-volume-copy">
         <Link className="collection-volume-back" to="/collections">返回合集目录</Link>
+        <span className="collection-volume-kicker">COLLECTION / SHARED VOLUME</span>
         <h1>{collection.name}</h1>
         {collection.description ? <p>{collection.description}</p> : <p>这一册还没有写下卷首说明。</p>}
         <dl className="collection-volume-facts">

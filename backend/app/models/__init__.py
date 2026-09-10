@@ -18,6 +18,7 @@ from .notification import Notification
 from .session import RefreshSession
 from .admin import AdminLog, FeaturedContent, SiteSetting
 from .account import AccountToken, AccountTokenPurpose
+from .memory import PostMemoryLink
 
 __all__ = [
     "User", "UserRole", "UserStatus",
@@ -30,5 +31,5 @@ __all__ = [
     "PostReaction", "REACTION_KINDS", "PostReadEvent", "PostRevision",
     "Notification", "RefreshSession",
     "AdminLog", "FeaturedContent", "SiteSetting",
-    "AccountToken", "AccountTokenPurpose",
+    "AccountToken", "AccountTokenPurpose", "PostMemoryLink",
 ]

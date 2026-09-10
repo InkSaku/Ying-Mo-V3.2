@@ -1,0 +1,49 @@
+.article-archive-cat {
+  overflow: clip;
+  height: 86px;
+  position: relative;
+  border-bottom: 1px solid var(--articles-rule, var(--border));
+  color: var(--text);
+  pointer-events: none;
+}
+
+.article-archive-cat-runner {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 116px;
+  height: 70px;
+}
+
+.article-archive-cat svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.article-archive-cat-runner[data-direction="right"] svg { transform: scaleX(-1); }
+.archive-cat-outline, .archive-cat-accents, .archive-cat-speed {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.archive-cat-ink { fill: currentColor; }
+.archive-cat-accents, .archive-cat-speed { stroke: var(--brand-link); }
+.archive-cat-speed { opacity: 0; }
+.archive-cat-pose { visibility: hidden; }
+.archive-cat-pose-0 { visibility: visible; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose {
+  animation: archive-cat-frames .6s step-end infinite;
+}
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-0 { visibility: hidden; animation-delay: 0s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-1 { animation-delay: -.48s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-2 { animation-delay: -.24s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-3 { animation-delay: -.36s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-4 { animation-delay: -.12s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-speed { opacity: .8; }
+@keyframes archive-cat-frames {
+  0%, 19.999% { visibility: visible; }
+  20%, 100% { visibility: hidden; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .article-archive-cat-runner * { animation: none !important; }
+}

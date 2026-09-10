@@ -18,6 +18,11 @@ import { MediaOpenButton } from "../components/MediaOpenButton";
 import { useMediaLightbox } from "../contexts/MediaLightboxContext";
 import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
+import { SharedMemorySection } from "../components/SharedMemorySection";
+import { ArticleEndMark, ArticleOpeningSketch } from "../components/ArticleSketches";
+import "../styles/shared-memory.css";
+import "../styles/reading-editorial.css";
+import "../styles/note-detail-editorial.css";
 
 export function PostDetailPage({ type }) {
   const params = useParams();
@@ -61,6 +66,7 @@ export function PostDetailPage({ type }) {
           <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
         ) : null}
         <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
+        <SharedMemorySection post={post} onPostChanged={state.reload} />
         <NoteExperience experience={post.experience} />
         <CommentsPanel key={post.id} postId={post.id} />
       </main>
@@ -79,6 +85,8 @@ export function PostDetailPage({ type }) {
       {post.external_video_url ? (
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
       ) : null}
+
+      <ArticleEndMark />
 
       <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} />
 
@@ -101,15 +109,19 @@ export function PostDetailPage({ type }) {
   );
 
   return (
-    <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools" : ""}`}>
+    <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools article-reading-page" : ""}`}>
       {location.state?.fromHomeFeed ? (
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
         <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
+          <aside className="article-detail-margin" aria-label="阅读导航">
+            <Link className="article-detail-back" to="/articles"><span aria-hidden="true">←</span> 返回文章目录</Link>
+            <ArticleOpeningSketch />
+            <p className="article-detail-hand" aria-hidden="true">Read slowly.<br /><span>Keep what stays.</span></p>
+          </aside>
           <div className="article-detail-heading">
-            <Link className="article-detail-back" to="/articles">返回文章目录</Link>
-            <p className="article-detail-kicker">{postTypeLabel(post.post_type)} · READING</p>
+            <p className="article-detail-kicker"><span>{postTypeLabel(post.post_type)}</span><span>YING MO / READING</span></p>
             <h1>{post.title || "未命名文章"}</h1>
             {post.summary ? <p className="lede">{post.summary}</p> : null}
             <aside className="article-detail-folio" aria-label="文章信息">
@@ -130,22 +142,27 @@ export function PostDetailPage({ type }) {
             </aside>
           </div>
 
+          <div className="article-detail-page-mark" aria-hidden="true"><span>READING / PAGE</span><strong>01</strong></div>
+
           {post.cover_media ? (
-            <div className="article-detail-cover-frame">
+            <figure className="article-detail-cover-frame">
               <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面">
                 <ProtectedImage
                   media={post.cover_media}
                   useOriginal
-                  alt=""
+                  alt={post.cover_media.alt_text ?? null}
                   className="post-detail-cover article-detail-cover"
                 />
               </MediaOpenButton>
-            </div>
+              {post.cover_media.caption ? <figcaption>{post.cover_media.caption}</figcaption> : null}
+            </figure>
           ) : null}
         </header>
 
         <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
       </article>
+
+      <SharedMemorySection post={post} onPostChanged={state.reload} />
 
       <CommentsPanel key={post.id} postId={post.id} />
     </main>

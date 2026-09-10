@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>映墨 · 原型预览 V1</title>
+<style>
+:root{color-scheme:light;--bg:#fcfcfa;--fg:#171715;--line:#e9e8e2}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"PingFang SC","Helvetica Neue",sans-serif}
+header{max-width:1240px;margin:auto;padding:32px 24px 20px;border-bottom:1px solid var(--line)}
+h1{font:400 28px/1.4 "Songti SC","Noto Serif SC",serif;margin:0 0 8px}
+p{font-size:14px;line-height:1.8;color:#595954}
+nav{position:sticky;top:0;z-index:1;background:var(--bg);border-bottom:1px solid var(--line);padding:18px 24px;display:flex;gap:28px;justify-content:center;flex-wrap:wrap}
+a{color:inherit;text-decoration:none}
+nav a{font-size:14px;padding:4px 0;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus-visible{border-color:var(--fg)}
+a:focus-visible{outline:2px solid #25265f;outline-offset:5px}
+main{max-width:1240px;padding:0 24px;margin:auto}
+section{padding:48px 0 64px;scroll-margin-top:82px;border-bottom:1px solid var(--line)}
+h2{font:400 24px/1.5 "Songti SC","Noto Serif SC",serif;margin:0}
+.caption{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:24px}
+.caption a{font-size:13px;white-space:nowrap;border-bottom:1px solid #ccc}
+figure{margin:0}
+img{display:block;width:100%;max-width:960px;height:auto;margin:auto;border:1px solid var(--line)}
+footer{max-width:1240px;margin:auto;padding:32px 24px 48px;font-size:13px;color:#666}
+@media(max-width:600px){nav{gap:16px;padding:12px}header,main,footer{padding-left:16px;padding-right:16px}h1{font-size:24px}.caption{align-items:flex-start}section{scroll-margin-top:110px}.caption p{margin-bottom:0}}
+</style>
+</head>
+<body>
+<header><h1>映墨 · 编辑式黑白拼贴</h1><p>首批五页原型 / V1 · 桌面全页构图<br>使用内置 ImageGen 生成，图文均为设计占位。点击原图可查看实际输出尺寸。</p></header>
+<nav aria-label="原型页面索引"><a href="#01-home">01 首页</a><a href="#02-articles">02 文章列表</a><a href="#03-reading">03 文章阅读</a><a href="#04-collection">04 合集详情</a><a href="#05-editor">05 写作页</a></nav>
+<main>
+<section id="01-home" aria-labelledby="01-home-title">
+<div class="caption"><div><h2 id="01-home-title">01 / 首页</h2><p>黑白拼贴与快速随记，往下衔接朋友动态、往年今日和共同记录。</p></div><a href="01-home.png" target="_blank" rel="noopener">打开独立原图 ↗</a></div>
+<figure><a href="01-home.png" target="_blank" rel="noopener" aria-label="查看首页原图"><img src="01-home.png" alt="映墨首页高保真设计原型" loading="eager"></a></figure>
+</section>
+<section id="02-articles" aria-labelledby="02-articles-title">
+<div class="caption"><div><h2 id="02-articles-title">02 / 文章列表</h2><p>缩短刊首介绍，以主文章、延伸阅读和清晰目录组织内容。</p></div><a href="02-articles.png" target="_blank" rel="noopener">打开独立原图 ↗</a></div>
+<figure><a href="02-articles.png" target="_blank" rel="noopener" aria-label="查看文章列表原图"><img src="02-articles.png" alt="映墨文章列表高保真设计原型" loading="lazy"></a></figure>
+</section>
+<section id="03-reading" aria-labelledby="03-reading-title">
+<div class="caption"><div><h2 id="03-reading-title">03 / 文章阅读</h2><p>用限宽正文、侧边目录和轻量评论入口支持持续阅读。</p></div><a href="03-reading.png" target="_blank" rel="noopener">打开独立原图 ↗</a></div>
+<figure><a href="03-reading.png" target="_blank" rel="noopener" aria-label="查看文章阅读原图"><img src="03-reading.png" alt="映墨文章阅读高保真设计原型" loading="lazy"></a></figure>
+</section>
+<section id="04-collection" aria-labelledby="04-collection-title">
+<div class="caption"><div><h2 id="04-collection-title">04 / 合集详情</h2><p>以成员权限、真实署名和共同时间轴组织一段经历。</p></div><a href="04-collection.png" target="_blank" rel="noopener">打开独立原图 ↗</a></div>
+<figure><a href="04-collection.png" target="_blank" rel="noopener" aria-label="查看合集详情原图"><img src="04-collection.png" alt="映墨合集详情高保真设计原型" loading="lazy"></a></figure>
+</section>
+<section id="05-editor" aria-labelledby="05-editor-title">
+<div class="caption"><div><h2 id="05-editor-title">05 / 写作页</h2><p>安静的正文画布，集中显示自动保存、图片设置和发布范围。</p></div><a href="05-editor.png" target="_blank" rel="noopener">打开独立原图 ↗</a></div>
+<figure><a href="05-editor.png" target="_blank" rel="noopener" aria-label="查看写作页原图"><img src="05-editor.png" alt="映墨写作页高保真设计原型" loading="lazy"></a></figure>
+</section>
+</main><footer>映墨 · 写字，也和朋友一起记录生活。<br><a href="README.md">设计说明</a> · <a href="PROMPTS.md">生成提示词</a></footer>
+</body></html>

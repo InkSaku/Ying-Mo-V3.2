@@ -9,6 +9,8 @@ import { TaxonomyNav } from "../components/TaxonomyNav";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { clampPageToTotal } from "../lib/pagination";
 import { summarizeTaxonomyPosts } from "../lib/taxonomy";
+import { TaxonomySketch } from "../components/TaxonomySketch";
+import "../styles/taxonomy-editorial.css";
 
 const PAGE_SIZE = 20;
 
@@ -70,6 +72,7 @@ export function TaxonomyPage({ kind }) {
               <p>{isCategory ? "这个栏目暂未填写说明。" : "从同一个关键词出发，重读彼此关联的文章与随记。"}</p>
           )}
           </div>
+          <TaxonomySketch kind={kind} />
           <dl className="taxonomy-detail-facts">
             <div><dt>可读内容</dt><dd className="tabular">{count}</dd></div>
             <div><dt>当前页</dt><dd className="tabular">{posts.length}</dd></div>

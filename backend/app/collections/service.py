@@ -117,6 +117,19 @@ def transfer_creator(collection_id, actor_id, new_creator_id):
 
 
 def delete_collection(collection):
+    from app.models import PostMemoryLink
+
+    now = utcnow()
+    db.session.execute(
+        db.update(PostMemoryLink).where(
+            PostMemoryLink.collection_id == collection.id,
+            PostMemoryLink.invalidated_at.is_(None),
+            PostMemoryLink.detached_at.is_(None),
+        ).values(
+            invalidated_at=now,
+            invalidation_reason="collection_deleted",
+        )
+    )
     posts = list(collection.posts)
     for post in posts:
         post.collection_id = None
@@ -128,5 +141,5 @@ def delete_collection(collection):
         db.session.delete(collection)
         return "physical"
 
-    collection.deleted_at = utcnow()
+    collection.deleted_at = now
     return "soft"

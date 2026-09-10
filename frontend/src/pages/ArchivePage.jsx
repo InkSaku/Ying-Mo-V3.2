@@ -16,6 +16,8 @@ import {
 } from "../lib/archive";
 import { clampPageToTotal } from "../lib/pagination";
 import { PostFilters } from "../components/PostFilters";
+import { ArchiveSketch } from "../components/ArchiveSketch";
+import "../styles/archive-editorial.css";
 
 const PAGE_SIZE = 20;
 
@@ -67,14 +69,17 @@ export function ArchivePage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   const activeYearGroup = groups.find((group) => String(group.year) === year);
+  const activeFilterCount = [selection.author, selection.category, selection.tag, selection.collection].filter(Boolean).length;
   const archiveTotal = groups.reduce((sum, group) => sum + group.count, 0);
   return (
     <main className="page-shell archive-publication-page" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <header className="archive-publication-hero">
         <div className="archive-publication-copy">
-          <h1>归档</h1>
-          <p>按年份和月份重读过往文章与随记，查看这份刊物持续生长的轨迹。</p>
+          <p className="archive-kicker">ARCHIVE / 时间目录</p>
+          <h1>归档，<br />重逢旧时光。</h1>
+          <p>沿着年份与月份，翻回曾经写下的一页。文章与随记，都在时间里留下了位置。</p>
         </div>
+        <ArchiveSketch />
         <dl className="archive-publication-facts">
           <div><dt>当前范围</dt><dd>{archiveRangeLabel(selection)}</dd></div>
           <div><dt>可读记录</dt><dd className="tabular">{total}</dd></div>
@@ -82,14 +87,14 @@ export function ArchivePage() {
         </dl>
       </header>
 
-      <section className="archive-filter-shelf" aria-labelledby="archive-filter-title">
-        <header><h2 id="archive-filter-title">查找归档</h2><p>可以继续按作者、分类、标签或合集缩小范围。</p></header>
+      <details className="archive-filter-shelf">
+        <summary><span>REFINE / 筛选</span><strong>查找归档</strong><small>{activeFilterCount ? `${activeFilterCount} 项条件已启用` : "作者、分类、标签与合集"}</small><i aria-hidden="true" /></summary>
         <PostFilters filters={{ ...selection, sort: "newest" }} options={optionState.data || {}} loading={optionState.loading} showSort={false} onChange={changeFilter} onClear={() => setParams(archiveSearchParams({ year, month, page: 1 }))} />
-      </section>
+      </details>
 
       <div className="archive-layout">
         <aside className="archive-facets" aria-label="归档年份与月份">
-          <header><h2>卷册索引</h2><p>选择年份后，可以继续定位到月份。</p></header>
+          <header><h2>按时间翻阅</h2><p>选择年份后，可以继续定位到月份。</p></header>
           <div className="archive-year-list">
             <button
               className={!year ? "active" : ""}
@@ -130,7 +135,7 @@ export function ArchivePage() {
           <header className="archive-results-heading">
             <div>
               <h2 id="archive-range-title">{archiveRangeLabel(selection)}</h2>
-              <p>共 {total} 则可阅读记录，当前页面按刊期整理。</p>
+              <p>共 {total} 则记录 · 文章按发布时间，随记按发生时间</p>
             </div>
             {state.loading ? <span className="profile-refresh" role="status">正在更新归档…</span> : null}
           </header>

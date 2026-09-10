@@ -4,7 +4,7 @@ from sqlalchemy import and_, or_
 
 from app.access import readable_post_predicate, semantic_time_expression
 from app.extensions import db
-from app.models import Post, PostType
+from app.models import Post, PostMemoryLink, PostType
 from app.posts.browsing import serialize_browse_posts
 
 
@@ -37,12 +37,26 @@ def note_experience(post, actor_id, *, limit=NOTE_EXPERIENCE_LIMIT):
     ):
         return None
 
+    active_link = db.session.scalar(db.select(PostMemoryLink).where(
+        PostMemoryLink.contribution_post_id == post.id,
+        PostMemoryLink.invalidated_at.is_(None),
+        PostMemoryLink.detached_at.is_(None),
+    ))
+    memory_root_id = active_link.root_post_id if active_link else post.id
+    memory_post_ids = db.select(PostMemoryLink.contribution_post_id).where(
+        PostMemoryLink.root_post_id == memory_root_id,
+        PostMemoryLink.invalidated_at.is_(None),
+        PostMemoryLink.detached_at.is_(None),
+    )
+
     time_expr = semantic_time_expression()
     current_time = post.semantic_time
     base = db.select(Post).where(
         readable_post_predicate(actor_id, include_archived=True),
         Post.collection_id == post.collection_id,
         Post.id != post.id,
+        Post.id != memory_root_id,
+        Post.id.not_in(memory_post_ids),
     )
     before = db.session.scalars(
         base.where(or_(

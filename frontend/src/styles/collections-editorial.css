@@ -1,0 +1,55 @@
+html:not([data-theme="dark"]):has(.collection-library-page) {
+  --page: #f8f7f3; --surface: #fbfaf6; --text: #242520; --text-2: #41423c;
+  --text-3: #72716b; --text-4: #72716b; --border: #deded5; --brand-link: #334b76;
+}
+.collection-library-page.collection-library-page-editorial { width: min(100%,1280px); padding: 40px 56px 80px; }
+.collection-library-page .collection-library-hero { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr) 200px; gap: 40px; align-items: center; padding: 24px 0 48px; border-bottom: 1px solid var(--border); }
+.collection-library-page .collection-library-copy h1 { font-size: 48px; font-weight: 400; line-height: 1.4; letter-spacing: .06em; }
+.collection-library-page .collection-library-copy > p:last-child { max-width: 28em; font-size: 14px; line-height: 1.85; }
+.collection-library-page .hero-kicker { font-size: 10px; letter-spacing: .18em; }
+.collection-library-drawing { position: relative; padding-top: 52px; }
+.collection-library-drawing > p { position: absolute; top: 0; left: 44px; color: var(--brand-link); font: 26px/1.2 "Snell Roundhand","Segoe Script",cursive; transform: rotate(-7deg); margin: 0; }
+.collection-library-drawing > p span { margin-left: 18px; }
+.collection-ink-sketch { display: block; width: 100%; color: var(--text); pointer-events: none; }
+.collection-ink-sketch path { vector-effect: non-scaling-stroke; }
+.collection-library-page .collection-library-index { display: flex; flex-direction: column; align-items: flex-start; padding: 16px 0 16px 24px; border-left: 1px solid var(--border); }
+.collection-library-page .collection-library-index > span { font-size: 46px; color: var(--text); font-weight: 400; }
+.collection-library-page .collection-library-index strong { font-size: 13px; font-weight: 400; }
+.collection-library-page .collection-library-index p { font-size: 11px; line-height: 1.8; }
+.collection-library-page .btn-primary { background: var(--text); color: var(--page); border-radius: 2px; box-shadow: none; }
+.collection-library-page .collection-bookshelf { overflow: visible; }
+.collection-library-page .collection-bookshelf-track { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 48px 36px; width: 100%; min-width: 0; padding: 0; }
+.collection-library-page .collection-bookshelf-track::before,
+.collection-library-page .collection-card-cover-frame::before,
+.collection-library-page .collection-card-cover-frame::after { display: none; }
+.collection-library-page .collection-card-shelf,
+.collection-library-page .collection-book-link { width: 100%; min-width: 0; }
+.collection-library-page .collection-card-cover-frame { width: 100%; height: auto; aspect-ratio: 4 / 3; border: 1px solid var(--border); border-radius: 0; box-shadow: none; transform: none; overflow: hidden; }
+.collection-library-page .collection-card-shelf .card-cover { border-radius: 0; filter: none; }
+.collection-library-page .collection-book-fallback { position: relative; background: var(--surface); color: var(--text); padding: 28px; border-left: 8px solid var(--border); }
+.collection-library-page .collection-book-fallback::after { content: ""; position: absolute; width: 52px; height: 6px; right: 28px; bottom: 20px; border-bottom: 1px solid var(--brand-link); transform: rotate(-5deg); }
+.collection-library-page .collection-book-fallback strong { font-size: 26px; font-weight: 400; }
+.collection-library-page .collection-card-volume { color: var(--brand-link); background: var(--page); font-size: 9px; border-radius: 0; }
+.collection-library-page .collection-card-content { padding-top: 20px; }
+.collection-library-page .collection-card-shelf h3 { font-size: 23px; font-weight: 400; line-height: 1.5; }
+.collection-library-page .collection-card-content > p { -webkit-line-clamp: 2; font-size: 13px; line-height: 1.8; }
+.collection-library-page a:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+@media(max-width: 979px) {
+  .collection-library-page.collection-library-page-editorial { padding: 32px; }
+  .collection-library-page .collection-library-hero { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; }
+  .collection-library-page .collection-library-index { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 24px; padding: 20px 0 0; border-left: 0; border-top: 1px solid var(--border); }
+  .collection-library-page .collection-library-index .btn { margin-left: auto; }
+  .collection-library-page .collection-bookshelf-track { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media(max-width: 600px) {
+  .collection-library-page.collection-library-page-editorial { padding: 24px 24px 56px; }
+  .collection-library-page .collection-library-hero { grid-template-columns: minmax(0,1fr); padding-top: 0; }
+  .collection-library-page .collection-library-copy h1 { font-size: 34px; }
+  .collection-library-drawing { width: 220px; justify-self: end; padding-top: 32px; }
+  .collection-library-drawing > p { font-size: 21px; }
+  .collection-library-page .collection-library-index { gap: 12px; flex-wrap: wrap; }
+  .collection-library-page .collection-library-index > span { font-size: 32px; }
+  .collection-library-page .collection-library-index p { max-width: 14em; }
+  .collection-library-page .collection-bookshelf-track { grid-template-columns: minmax(0,1fr); gap: 32px; }
+  .collection-library-page .collection-card-cover-frame { aspect-ratio: 16 / 10; }
+}

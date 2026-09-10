@@ -1,1 +1,3 @@
-Single clean V3.2 baseline migration. Run: flask --app run.py db upgrade
+数据库迁移操作统一见根 README.md 的“数据库迁移”章节。
+在 backend/ 中运行 flask --app run.py db heads 查看代码迁移头；运行 db current 查看目标数据库版本。
+本目录包含连续增量迁移，不是单一 V3.2 基线。部署前备份，随后运行 flask --app run.py db upgrade。

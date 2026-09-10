@@ -1,0 +1,69 @@
+.register-spread { grid-template-columns: 1fr 1fr; gap: clamp(64px, 9vw, 130px); margin-top: 36px; padding-bottom: 36px; }
+.register-story { position: relative; padding: 22px 0 0; }
+.register-chapter { margin: 0 0 32px; font-size: 11px; letter-spacing: .18em; color: var(--login-muted); }
+.register-story h2 { font-size: clamp(36px, 4vw, 54px); font-weight: 400; line-height: 1.65; letter-spacing: .08em; margin: 0; }
+.register-story-note { margin: 24px 0 40px; font-size: 14px; line-height: 1.9; color: var(--login-muted); }
+.register-photo { position: relative; width: 96%; margin: -8px 0 0 -24px; }
+.register-photo::before {
+  content: "";
+  position: absolute;
+  inset: 13% 5% 5%;
+  background: radial-gradient(ellipse at 48% 63%, rgba(83, 85, 75, .055), transparent 67%);
+  filter: blur(12px);
+  pointer-events: none;
+}
+.register-art { position: relative; width: 100%; aspect-ratio: 1.9 / 1; }
+.register-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: .88;
+  mix-blend-mode: multiply;
+  filter: sepia(.09) contrast(.92);
+}
+.register-photo figcaption { position: relative; margin: 4px 0 0 24px; font-size: 10px; line-height: 1.8; letter-spacing: .06em; color: var(--login-muted); }
+.register-handwritten { position: absolute; right: -2px; top: 255px; margin: 0; color: #334b76; font-family: "Snell Roundhand", "Segoe Script", cursive; font-size: 27px; line-height: 1.2; transform: rotate(-10deg); }
+.register-handwritten span { margin-left: 18px; }
+.register-invitation { margin: 42px 0 0; color: var(--login-muted); font-size: 12px; letter-spacing: .08em; }
+.register-entry { padding-top: 14px; }
+.register-form { max-width: 430px; }
+.register-form .login-intro > p:last-child { margin-bottom: 32px; }
+.register-fields { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; }
+.register-form .login-field { min-width: 0; margin-bottom: 25px; }
+.register-form .login-field small { display: block; margin-top: 9px; font-size: 10px; line-height: 1.8; color: var(--login-muted); }
+.register-form .login-field .field-error { color: #8d3d32; }
+.register-form .login-field input[aria-invalid="true"] { border-bottom-color: #8d3d32; }
+.register-fields .login-field:nth-child(n+3) { grid-column: 1 / -1; }
+.register-form .login-submit { margin-top: 4px; }
+@media (min-width: 1500px) { .register-spread { margin-top: 5vh; } }
+@media (min-width: 641px) and (max-width: 900px) {
+  .register-spread { gap: 40px; grid-template-columns: .9fr 1.1fr; }
+  .register-story h2 { font-size: 34px; }
+  .register-photo { width: calc(100% + 20px); margin-left: -16px; }
+  .register-photo figcaption { margin-left: 16px; }
+  .register-handwritten { top: 240px; font-size: 23px; }
+  .register-fields { display: block; }
+}
+@media (max-width: 640px) {
+  .register-spread { margin-top: 14px; padding-bottom: 0; }
+  .register-story { padding: 0 0 26px; }
+  .register-chapter { font-size: 10px; margin-bottom: 16px; }
+  .register-story h2 { font-size: 28px; line-height: 1.6; }
+  .register-story-note, .register-invitation, .register-photo figcaption { display: none; }
+  .register-photo { position: absolute; width: 43%; right: -4%; top: 0; margin: 0; }
+  .register-photo::before { inset: 8% 0 0; filter: blur(7px); }
+  .register-art { aspect-ratio: 1.25 / 1; overflow: hidden; }
+  .register-photo img { width: 145%; max-width: none; height: 100%; object-position: center; }
+  .register-handwritten { font-size: 17px; right: 0; top: 93px; margin: 0; }
+  .register-entry { border-top: 1px solid #deded5; padding-top: 24px; }
+  .register-form { max-width: none; }
+  .register-form .login-intro > p:last-child { margin-bottom: 24px; }
+  .register-fields { gap: 16px; }
+  .register-form .login-field { margin-bottom: 20px; }
+  .register-form .login-field small { font-size: 11px; }
+}
+@media (max-width: 360px) {
+  .register-fields { display: block; }
+  .register-story h2 { font-size: 25px; }
+}

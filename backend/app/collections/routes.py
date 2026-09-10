@@ -561,6 +561,8 @@ def remove_post(collection_id):
     post = db.session.get(Post, post_id) if isinstance(post_id, int) else None
     if post is None or post.collection_id != collection.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    from app.posts.memory_contributions import invalidate_links_for_post
+    invalidate_links_for_post(post.id, "post_removed_from_collection")
     post.collection_id = None
     post.collection_sort_order = None
     post.collection_highlight_order = None

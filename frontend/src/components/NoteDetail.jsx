@@ -5,6 +5,7 @@ import { MediaOpenButton } from "./MediaOpenButton";
 import { PostMediaGallery } from "./PostMediaGallery";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
+import { NoteSketch } from "./NoteSketch";
 
 function noteDateParts(value) {
   const date = new Date(value || "");
@@ -24,13 +25,19 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
   ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null;
 
   return (
-    <article className="post-detail note-detail">
+    <article className={`post-detail note-detail ${post.title ? "has-title" : "without-title"} ${post.cover_media ? "has-cover" : "without-cover"}`}>
       <header className="note-detail-header">
-        <Link className="note-detail-back" to="/notes">返回随记目录</Link>
+        <div className="note-detail-topline">
+          <Link className="note-detail-back" to="/notes"><span aria-hidden="true">←</span> 返回随记目录</Link>
+          <p aria-hidden="true">FIELD NOTE / {date.year}</p>
+        </div>
         <div className="note-detail-opening">
-          <time className="note-detail-date tabular" dateTime={post.semantic_time || undefined} aria-label={formatDate(post.semantic_time, true)}>
-            <strong>{date.day}</strong><span>{date.month}</span><small>{date.year}</small>
-          </time>
+          <aside className="note-detail-margin" aria-label="记录日期">
+            <time className="note-detail-date tabular" dateTime={post.semantic_time || undefined} aria-label={formatDate(post.semantic_time, true)}>
+              <strong>{date.day}</strong><span>{date.month}</span><small>{date.year}</small>
+            </time>
+            <NoteSketch />
+          </aside>
           <div className="note-detail-intro">
             <div className="note-detail-byline">
               <Link className="note-detail-avatar-link" to={`/users/${post.author?.username}`} aria-label={`查看${post.author?.nickname || "作者"}的主页`}>
@@ -51,6 +58,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
       </header>
 
       <div className="note-detail-content">
+        <header className="note-detail-body-label" aria-hidden="true"><span>随记正文</span><span>A MOMENT KEPT</span></header>
         {renderedBody}
 
         {post.cover_media ? <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看随记影像"><ProtectedImage

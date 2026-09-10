@@ -368,12 +368,28 @@ Ying-Mo-V3.2/
 └── README.md
 ```
 
-产品规则的权威基线见：
+### 文档入口
 
-- [`docs/product.md`](docs/product.md)
-- [`docs/backend/P0_ACCEPTANCE.md`](docs/backend/P0_ACCEPTANCE.md)
-- [`docs/backend/P1_ACCEPTANCE.md`](docs/backend/P1_ACCEPTANCE.md)
-- [`docs/backend/VALIDATION.md`](docs/backend/VALIDATION.md)
+日常开发先读本 README，再按任务查产品或设计规范。以下目录统一说明现存文档的职责；后续直接维护对应文件，不新增平行规范或重复交接文档。
+
+| 文档 | 作用 |
+| --- | --- |
+| [产品需求](docs/product.md) | 产品模型、权限、接口与业务规则的唯一需求基线 |
+| [前端设计规范](docs/frontend/DESIGN.md) | 视觉、组件、布局及双端验收的唯一设计基线 |
+| [前端启动说明](frontend/README.md) | 前端目录内的启动、构建、路由和认证／媒体约束速查 |
+| [迁移说明](backend/migrations/README) | 数据库迁移目录入口，具体操作回到本 README |
+| [共同回忆方案](docs/SHARED_MEMORY_DEVELOPMENT_PLAN.md) | 关系模型、并发、权限生命周期、测试矩阵及尚待执行的上线条件 |
+| [产品审查](docs/PRODUCT_REVIEW_2026-09-08.md) | 2026-09-08 的产品判断、依据和后续方向；建议不自动成为需求 |
+| [前端联调历史](docs/frontend/INTEGRATION_BASELINE.md) | 各阶段接口约定、实现细节与真实联调结果，非当前状态快照 |
+| [后端验证历史](docs/backend/VALIDATION.md) | 实际命令、数据库／浏览器验证及外部环境缺口 |
+| [P0 验收](docs/backend/P0_ACCEPTANCE.md) | 初始核心功能的需求—接口—测试对应矩阵 |
+| [P1 验收](docs/backend/P1_ACCEPTANCE.md) | 阶段 21–27 创作、账号恢复、阅读与版本能力的完成定义 |
+| [轻量互动验收](docs/backend/V37_ACCEPTANCE.md) | 回应、引用、提及、通知和失权边界的专项历史验收 |
+| [媒体记忆验收](docs/backend/MEDIA_MEMORY_ACCEPTANCE.md) | 灯箱、Live Photo、相册和媒体权限的专项历史验收 |
+| [原型说明](prototypes/editorial-scrapbook-v1/README.md) | 五张历史原型的索引、占位内容说明及适用边界 |
+| [原型提示词](prototypes/editorial-scrapbook-v1/PROMPTS.md) | 原型图片的生成来源与制作意图，不作为当前规范 |
+
+验收文档中的通过记录只对应当时执行范围，不代表当前代码或生产环境已通过。依赖清单 `backend/requirements.txt` 是安装输入，不属于可删除的说明文档；pytest 缓存内的 README 是工具生成文件，不进入项目文档体系。
 
 ---
 
@@ -554,7 +570,7 @@ flask --app run.py db upgrade
 - `public → login_only` 数据迁移
 - Post `edit_version`
 - 邮箱可信与账号恢复相关 Schema
-- 长期保存、轻量互动、媒体展示衍生图与图片版式 Schema（当前 head：`20260904_0012`）
+- 长期保存、轻量互动、媒体展示衍生图、图片版式与共同回忆关系 Schema；代码迁移头以 `db heads` 为准，目标数据库版本以 `db current` 为准
 
 生产环境部署新版本前，应先备份数据库，再执行 migration。
 

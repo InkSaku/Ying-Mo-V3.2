@@ -7,9 +7,9 @@ const coverPath = fileURLToPath(new URL("../public/pwa-192.png", import.meta.url
 
 async function login(page) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill(account.username);
-  await page.getByPlaceholder("请输入密码").fill(account.password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill(account.username);
+  await page.getByLabel("密码").fill(account.password);
+  await page.getByRole("button", { name: /登录，继续书写/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -50,15 +50,57 @@ test.beforeAll(async ({ request }) => {
     data: { slug: "reading-layout-e2e" },
   });
   expect(published.ok()).toBeTruthy();
+
+  const noCoverDraft = await request.post("/api/v1/posts", { headers, data: {
+    post_type: "article",
+    visibility: "login_only",
+    title: "关于一次临时起意的出发（29）",
+    summary: "出发的时候并没有完整计划。我们只记下了一个方向，然后把剩下的部分交给天气和脚步。",
+    body: "## 在路上重新决定\n\n很多出发并不需要完整答案，只需要给今天留下一个清楚的方向。\n\n## 把未知留在途中\n\n没有写进计划的部分，也会成为故事真正开始的地方。",
+  } });
+  expect(noCoverDraft.status()).toBe(201);
+  const noCover = (await noCoverDraft.json()).data;
+  const noCoverPublished = await request.post(`/api/v1/posts/${noCover.id}/publish`, {
+    headers,
+    data: { slug: "reading-layout-no-cover-e2e" },
+  });
+  expect(noCoverPublished.ok()).toBeTruthy();
 });
 
-test("reading page keeps the cover, title, contents and body on one editorial grid", async ({ page }, testInfo) => {
+test("long title without a cover remains in the main reading column", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await login(page);
+  await page.goto("/articles/reading-layout-no-cover-e2e");
+
+  await expect(page.getByRole("heading", { level: 1, name: "关于一次临时起意的出发（29）" })).toBeVisible();
+  await expect(page.locator(".article-detail-cover-frame")).toHaveCount(0);
+  const desktop = await page.evaluate(() => {
+    const heading = document.querySelector(".article-detail-heading").getBoundingClientRect();
+    const margin = document.querySelector(".article-detail-margin").getBoundingClientRect();
+    const title = document.querySelector(".article-detail-heading h1").getBoundingClientRect();
+    return { heading, margin, title };
+  });
+  expect(desktop.heading.left).toBeGreaterThan(desktop.margin.right);
+  expect(desktop.heading.width).toBeGreaterThan(600);
+  expect(desktop.title.height).toBeLessThan(260);
+  await expectNoOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("reading-no-cover-desktop.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileTitle = await page.locator(".article-detail-heading h1").boundingBox();
+  expect(mobileTitle.width).toBeGreaterThan(300);
+  await expectNoOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("reading-no-cover-mobile.png"), fullPage: true });
+});
+
+test("reading page forms a complete editorial opening and a focused reading column", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await login(page);
   await page.goto("/articles/reading-layout-e2e");
 
   await expect(page.locator(".article-detail-cover-frame img")).toBeVisible();
   await expect(page.locator(".article-toc-list a")).toHaveCount(4);
+  await expect(page.locator(".article-reading-start")).toContainText("READ FROM HERE");
   const geometry = await page.evaluate(() => {
     const cover = document.querySelector(".article-detail-cover-frame").getBoundingClientRect();
     const heading = document.querySelector(".article-detail-heading").getBoundingClientRect();
@@ -66,9 +108,10 @@ test("reading page keeps the cover, title, contents and body on one editorial gr
     const body = document.querySelector(".article-reading-column").getBoundingClientRect();
     return { cover, heading, toc, body };
   });
-  expect(geometry.cover.right).toBeLessThan(geometry.heading.left);
+  expect(geometry.cover.width).toBeGreaterThan(geometry.heading.width);
+  expect(geometry.cover.top).toBeGreaterThan(geometry.heading.bottom);
   expect(geometry.toc.right).toBeLessThan(geometry.body.left);
-  expect(Math.abs(geometry.heading.left - geometry.body.left)).toBeLessThan(2);
+  expect(geometry.body.width).toBeLessThanOrEqual(720);
   await expectNoOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("reading-desktop.png"), fullPage: true });
 

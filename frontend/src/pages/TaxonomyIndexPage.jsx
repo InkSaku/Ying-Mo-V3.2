@@ -5,6 +5,8 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { TaxonomyNav } from "../components/TaxonomyNav";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { summarizeTaxonomyItems, taxonomyTagProminence } from "../lib/taxonomy";
+import { TaxonomySketch } from "../components/TaxonomySketch";
+import "../styles/taxonomy-editorial.css";
 
 const CONFIG = {
   category: {
@@ -49,9 +51,11 @@ export function TaxonomyIndexPage({ kind }) {
       <TaxonomyNav />
       <header className="taxonomy-index-hero">
         <div className="taxonomy-index-copy">
+          <span className="taxonomy-kicker">{kind === "category" ? "CATEGORIES / 栏目" : "TAGS / 主题"}</span>
           <h1>{config.title}</h1>
           <p>{config.description}</p>
         </div>
+        <TaxonomySketch kind={kind} />
         <dl className="taxonomy-index-facts">
           <div><dt>目录条目</dt><dd className="tabular">{summary.itemCount}</dd></div>
           <div><dt>可读内容</dt><dd className="tabular">{summary.postCount}</dd></div>
@@ -62,6 +66,7 @@ export function TaxonomyIndexPage({ kind }) {
       {items.length ? (
         <section className="taxonomy-register" aria-labelledby="taxonomy-register-title">
           <header className="taxonomy-register-heading">
+            <span>{kind === "category" ? "CONTENTS" : "KEYWORDS"}</span>
             <h2 id="taxonomy-register-title">{config.sectionTitle}</h2>
             <p>{config.sectionDescription}</p>
           </header>

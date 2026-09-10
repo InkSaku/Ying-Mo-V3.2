@@ -407,7 +407,7 @@ def test_lightweight_interactions_migration_recovers_legacy_table_states(tmp_pat
     }
     assert {"comment_reactions", "comment_mentions"}.issubset(inspector.get_table_names())
     with engine.connect() as connection:
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260904_0012"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "20260908_0013"
         assert "display_key" in {
             column["name"] for column in inspector.get_columns("media")
         }

@@ -9,9 +9,9 @@ const coverPaths = ["coast.jpg", "train.jpg", "desk.jpg"].map((name) => (
 
 async function login(page) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill(account.username);
-  await page.getByPlaceholder("请输入密码").fill(account.password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill(account.username);
+  await page.getByLabel("密码").fill(account.password);
+  await page.getByRole("button", { name: /登录，继续书写/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -84,6 +84,25 @@ test("Articles presents a clear opening story, recommendation rail and readable 
   await expect(page.locator(".articles-lead-story")).toHaveCount(1);
   await expect(page.locator(".articles-margin-story")).toHaveCount(2);
   await expect(page.locator(".articles-index-row")).toHaveCount(9);
+  await expect(page.locator(".article-archive-cat")).toBeVisible();
+  const cat = page.locator(".article-archive-cat-runner");
+  await cat.scrollIntoViewIfNeeded();
+  const track = await page.locator(".article-archive-cat").boundingBox();
+  const initialCat = await cat.boundingBox();
+  await page.mouse.move(track.x + 8, track.y + 20);
+  await expect(cat).toHaveAttribute("data-direction", "left");
+  await expect.poll(async () => (await cat.boundingBox()).x).toBeLessThan(initialCat.x - 20);
+  await page.mouse.move(track.x + track.width - 8, track.y + 20);
+  await expect(cat).toHaveAttribute("data-direction", "right");
+  await expect(cat).toHaveAttribute("data-running", "false", { timeout: 12000 });
+  const stoppedCat = await cat.boundingBox();
+  expect(stoppedCat.x + stoppedCat.width).toBeLessThanOrEqual(track.x + track.width + 1);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.mouse.move(track.x, track.y);
+  await expect(cat).toHaveAttribute("data-running", "false");
+  expect((await cat.boundingBox()).x).toBe(stoppedCat.x);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
   await expect(page.locator(".articles-lead-visual .card-cover")).toBeVisible();
   await expect(page.locator(".article-magazine-grid .post-card")).toHaveCount(0);
 

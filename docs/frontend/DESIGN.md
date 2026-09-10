@@ -1,410 +1,298 @@
-# Design System Inspired by kami (紙 / 纸)
+# 映墨前端设计规范
 
-> Category: Editorial & Print
-> Editorial paper system: warm parchment canvas, ink-blue accent, serif-led hierarchy. Built for resumes, one-pagers, white papers, portfolios, slide decks — anything that should feel like high-quality print rather than UI. Multilingual by design (EN · zh-CN · ja).
+> 状态：现行规范
+>
+> 适用范围：登录、注册、内容浏览、阅读、写作、个人空间、设置与管理后台
+>
+> 设计基准：现有登录／注册页与“编辑纸页”原型
 
-## 1. Visual Theme & Atmosphere
+本文是映墨前端视觉与交互的唯一设计依据。其他提案、评审和历史原型只提供背景，不覆盖本文规则。新增页面不得再建立独立的视觉体系；确需修改规范时，直接更新本文，不另建同类设计文档。
 
-kami compresses into one sentence: **warm parchment canvas, ink-blue accent, serif carries hierarchy, no cool grays, no hard shadows.** It is not a UI framework — it is a constraint system for the page, designed to keep deliverables stable, clear, and unmistakably *printed*. The name reads as **kami / 紙 / 纸** — the same word for "paper" across Japanese and Chinese — and the system is co-designed across English, Simplified Chinese, and Japanese typesetting from the ground up, not retrofitted.
+## 1. 产品气质
 
-The page background is parchment (`#f5f4ed`), never pure white. Text sits on cream. The single chromatic move is ink-blue (`#1B365D`) — used on section numbers, primary CTAs, the left rule of a quote, the W500 weight in a metric. Everything else is a warm neutral with a yellow-brown undertone; cool blue-grays are absent on purpose.
+映墨是一个安静的私人记录与朋友共同回忆空间，不是资讯门户，也不是效率后台。
 
-Hierarchy is carried almost entirely by **serif type at a single weight (500)**. There is no bold, no italic, no second accent color. Density is achieved through tight line-heights (1.10–1.55), four-level gray ramps, and ring/whisper shadows that act as halos rather than drops. The aesthetic borrows from editorial print, technical white papers, and old typewritten correspondence — the goal is "good content on good paper," not "modern app UI."
+视觉关键词：
 
-**Key Characteristics:**
-- Warm parchment canvas (`#f5f4ed`) — never `#ffffff`
-- Single accent: ink-blue (`#1B365D`), covers ≤ 5% of any surface
-- All grays warm (R ≈ G > B), no cool blue-grays anywhere
-- Serif everywhere for hierarchy: Charter (EN), TsangerJinKai02 / Source Han Serif (CN), YuMincho (JA)
-- Locked at weight 500 — no synthetic bold (700/900) and **no italic**
-- Tight print rhythm (line-heights 1.10–1.55), much denser than typical web body
-- Depth via 1px rings and whisper shadows (`0 4px 24px rgba(0,0,0,0.05)`), never hard drop shadows
-- Tag fills are solid hex (e.g. `#E4ECF5`), never `rgba()` — print renderers double-paint alpha tags
-- Numbers sit in `font-variant-numeric: tabular-nums` so columns of metrics don't shimmy
+- 暖纸、墨字、留白、细线。
+- 中文宋体承担主要阅读与层级。
+- 黑白品牌影像与少量深蓝手写痕迹形成辨识度。
+- 内容本身比界面容器更重要。
+- 克制但不冷淡，编辑感但不牺牲可用性。
 
-## 2. Color Palette & Roles
+所有页面必须像出自同一本刊物，但不必使用相同构图。登录页可以有叙事和影像；设置、写作与后台应更直接，只共享颜色、字体、控件和节奏。
 
-### Brand
-- **Ink Blue** (`#1B365D`): The only chromatic color. CTAs, section numbers, link text on light surfaces, the left rule on a section title or quote, the active state of a switcher, the W500 metric value.
-- **Ink Light** (`#2D5A8A`): Brighter variant, only for links sitting on dark surfaces.
+## 2. 不可破坏的原则
 
-> Rule: ink-blue covers ≤ **5% of document surface area**. More than that turns into ornament and the restraint collapses.
+1. 页面使用暖纸色，不使用纯白或冷灰作为大面积背景。
+2. 标题、正文、导航和表单以同一中文衬线字体为主。
+3. 主操作使用近黑色；深蓝只用于链接、焦点、选中线和手写点缀。
+4. 内容区域优先使用留白、对齐和文字层级，必要时使用分隔线，不堆叠通用卡片或重复横线。
+5. 普通容器保持直角；圆形只用于头像、图标按钮和确有语义的状态点。
+6. 普通内容不使用阴影。阴影只属于菜单、浮层、弹窗和图片查看器。
+7. 手绘线稿和手写短句可以在同一页面形成呼应，但必须留有呼吸感，且不能承载必要信息。
+8. 用户照片默认保持原色；黑白处理仅用于登录、品牌拼贴和明确策展的封面。
+9. 移动端首先保证阅读和操作，不把桌面页面简单缩小。
+10. 任何视觉调整不得破坏权限、可见范围、保存状态、错误反馈和媒体能力。
 
-### Surface
-- **Parchment** (`#f5f4ed`): The page background — warm cream, the emotional foundation. Never replace with white.
-- **Ivory** (`#faf9f5`): Cards and lifted containers. Sits one half-shade brighter than parchment.
-- **Warm Sand** (`#e8e6dc`): Default button background, secondary interactive surfaces.
-- **Dark Surface** (`#30302e`): Dark-theme containers — warm charcoal, not slate.
-- **Deep Dark** (`#141413`): Dark-theme page background. Olive-tinted near-black, never `#000000`.
+## 3. 基础变量
 
-### Text (four levels — no fifth)
-- **Near Black** (`#141413`): Primary text. Slight olive warmth, gentler than pure black.
-- **Dark Warm** (`#3d3d3a`): Secondary text, table headers, link defaults.
-- **Olive** (`#504e49`): Subtext, captions, descriptions. (JA override: `#4d4c48` because YuMincho strokes are thinner.)
-- **Stone** (`#6b6a64`): Tertiary — dates, metadata, meta labels.
-
-### Border
-- **Border** (`#e8e6dc`): Primary border — section dividers, card edges, table headers.
-- **Border Soft** (`#e5e3d8`): Row separators, inner dividers, subtle internal lines.
-
-### Tag tints (solid, NOT rgba)
-Print renderers (WeasyPrint and friends) double-paint alpha fills, leaving a visible "double rectangle" on zoom. Tag and chip backgrounds must be solid hex, pre-blended over parchment:
-
-| Effective alpha of `#1B365D` over parchment | Solid hex |
-|---|---|
-| 0.08 | `#EEF2F7` |
-| 0.14 | `#E4ECF5` |
-| **0.18 (default tag)** | **`#E4ECF5`** |
-| 0.22 | `#D0DCE9` |
-| 0.30 | `#D6E1EE` |
-
-### Gradient System
-kami is **gradient-free** by default. The only sanctioned gradient is the soft tag brush running `#D6E1EE → #E4ECF5 → #EEF2F7` left-to-right at very low contrast — used at most once per page on a single decorative tag. Do not introduce hero gradients, brand-color washes, or backdrop-filter blurs.
-
-### Forbidden colors
-- `#ffffff` as a page background
-- `#000000` anywhere
-- Any cool-gray surface (`#f8f9fa`, `#f3f4f6`, `slate-*`)
-- Any second saturated color (no second accent — pick ink-blue or pick nothing)
-
-## 3. Typography Rules
-
-### Font Stacks
+以下值是全站基准。页面不得自行声明近似色制造第二套主题。
 
 ```css
-/* English (default) */
---serif: Charter, Georgia, Palatino, "Times New Roman", serif;
+:root {
+  --paper: #f8f7f3;
+  --paper-raised: #fbfaf6;
+  --ink: #242520;
+  --ink-secondary: #41423c;
+  --muted: #72716b;
+  --line: #deded5;
+  --line-strong: #bcbcb3;
+  --ink-blue: #334b76;
+  --danger: #8d3d32;
+  --success: #3d4a35;
 
-/* Chinese */
---serif: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC",
-         "Songti SC", "STSong", Georgia, serif;
+  --serif: "Noto Serif SC Variable", "Source Han Serif SC",
+           "Songti SC", "STSong", serif;
+  --hand: "Snell Roundhand", "Segoe Script", cursive;
+  --mono: "JetBrains Mono Variable", ui-monospace, monospace;
 
-/* Japanese */
---serif: "YuMincho", "Yu Mincho", "Hiragino Mincho ProN",
-         "Noto Serif CJK JP", "Source Han Serif JP",
-         "TsangerJinKai02", Georgia, serif;
+  --content-max: 1280px;
+  --reading-max: 720px;
+  --form-max: 430px;
+  --header-height: 68px;
 
-/* Mono — must include CJK fallback so labels/comments don't render as boxes */
---mono: "JetBrains Mono", "SF Mono", "Fira Code", Consolas, Monaco,
-        "TsangerJinKai02", "Source Han Serif SC", monospace;
-
-/* Sans always equals serif. There is no separate sans-serif family. */
---sans: var(--serif);
-```
-
-### When to swap the stack
-
-The three stacks above are **alternative values for `--serif`**, not three families layered together. When generating an artifact, set the primary stack on `:root` based on the dominant language of the content; let the browser's per-glyph fallback resolve mixed-script text inline. Concretely:
-
-- `<html lang="en">` (or English-dominant content) → leave `--serif` on the EN stack. CJK glyphs that appear inline will fall through to the system Han fallback.
-- `<html lang="zh-CN">` → override `--serif` to the CN stack on `:root` or on `html[lang="zh-CN"]`. Latin glyphs render via the Georgia tail of the stack.
-- `<html lang="ja">` → override `--serif` to the JA stack and apply the `--olive: #4d4c48` text-color override (YuMincho strokes are thinner; the standard olive looks anemic against parchment).
-- Multi-language artifacts (e.g. a deck with one Japanese chapter): set the dominant-language stack on `:root`, then scope the override on a wrapper element (`section[lang="ja"] { --serif: …; }`). Do **not** chain all three families inside a single `font-family` — that dilutes the visual character of every page.
-
-### Hierarchy (screen, px)
-
-The hierarchy table below is sized for **screen-rendered web pages** (resume, one-pager, portfolio shown at desktop width). For other surfaces, scale from the print pt baseline using these ratios — the same rules the kami `slides.py` template applies:
-
-| Surface | Macro tokens (font, padding) | Micro tokens (border, radius, tracking) |
-|---|---|---|
-| Page / web artifact (one-pager, resume, white paper) | print pt × ~1.33 | print pt × 1 |
-| Slide / 1920×1080 deck | print pt × ~1.6 | print pt × ~0.6 |
-
-Concretely: a 22pt H1 in print becomes ~29px on a web page and ~36px on a slide; an 8pt letter-spacing value that reads as confident in print drops to ~5px on a slide. Letter-spacing always uses the slide micro ratio — print tracking applied at slide scale falls apart.
-
-| Role | Family | Size | Weight | Line-height | Letter-spacing | Notes |
-|------|--------|------|--------|-------------|----------------|-------|
-| Hero / Display | serif | 96–106px | 500 | 1.05–1.10 | -1.2px | One per page max — cover or one-pager hero |
-| Display CN/JA | serif | 48–64px | 500 | 1.10–1.12 | 0–0.3px | CJK glyphs need looser tracking and smaller absolute size |
-| Section title | serif | 28–32px | 500 | 1.20 | 0.4px | Anchors a chapter; preceded by section number |
-| H2 | serif | 22px | 500 | 1.25 | 0 | Subsection |
-| H3 | serif | 17–18px | 500 | 1.30 | 0 | Item title, card heading |
-| Manifesto / pull quote | serif | 20px | 400 | 1.65 | 0.05em | The one place letter-spacing earns its keep |
-| Lede | serif | 15–16px | 500 | 1.55 | 0 | Intro paragraph under a section title |
-| Body | serif | 14px | 400 | 1.55 | 0 (EN) · 0.35px (CN) · 0.02em (JA) | Reading body |
-| Body dense | serif | 13–14px | 400 | 1.40–1.45 | 0 | Resume, one-pager, dense lists |
-| Caption | serif | 12px | 500 | 1.45 | 0 | Notes, figure captions |
-| Eyebrow / overline | sans | 12px | 500 | 1 | 1.2px, **uppercase** | Section eyebrow, switcher, meta header |
-| Label | sans | 12px | 500 | 1.35 | 0.4px, uppercase | Small inline label, ink-blue if active |
-| Mono / spec | mono | 12–13px | 400 | 1.55 | 0.4px | Hex codes, type specs, code |
-
-### Weight rules
-- Serif uses **only weights 400 and 500**. No 600, no 700, no 900.
-- `strong { font-weight: 500 }` is explicitly set so browsers don't synthesize bold.
-- Sans labels may use 500 or 600 at small sizes for legibility.
-- **No italic anywhere.** No `font-style: italic`. If emphasis is needed, switch the color to ink-blue or wrap in a tag.
-
-### Line-height
-- Tight headline: 1.10–1.30 (display, H1, H2)
-- Dense body: 1.40–1.45 (resume, one-pager, dense lists)
-- Reading body: 1.50–1.55 (long-form chapters, letters)
-- Label / caption: 1.30–1.40
-
-Forbidden: 1.6+ (web rhythm, floats off the page) and 1.0–1.05 (lines collide except at giant display sizes).
-
-### Letter-spacing
-- EN body: `0`
-- CN body (TsangerJinKai02): `0.35px` to compensate for the font's natural density
-- JA body: `0.02em`
-- All-caps overlines and small labels (< 10pt): +0.5 to +1.2px is mandatory
-- Display CJK at 24px+: `0.2–1px` of optical breathing room
-- On slides, tracking is roughly **half** of print values — 8px tracking that reads as confident in a printed deck disintegrates at slide scale.
-
-### Tabular-nums contexts
-
-`font-variant-numeric: tabular-nums` is mandatory anywhere kami numbers stack vertically or sit alongside other numbers — uneven proportional digits read as a layout bug at print resolution. Apply it to:
-
-- Metric values (the big ink-blue number in `.metric-value`) and any side-by-side metric row
-- Slide footers and slide counters (`02 / 05`), page numbers, deck pagination
-- Section numbers in chapter heads (`01`, `02`, …) when they appear in a stacked TOC
-- Resume dates, employment ranges, and education years
-- Financial figures: revenue, ARR/MRR, valuations, tables of P&L line items
-- White-paper and equity-report data tables (every numeric column)
-- Stat-dashboard hero numbers and KPI grids
-- Changelog version numbers (`1.4.2 → 1.4.3`) and any inline release dates
-- Any inline numeric span inside a paragraph that compares values (`from 142 to 168`)
-
-Do **not** apply tabular-nums to running prose where a single number appears mid-sentence — proportional digits read better there. The rule is "stacks and tables, yes; sentences, no."
-
-## 4. Component Stylings
-
-### Cards / Containers
-```css
-background: var(--ivory);             /* never parchment — cards lift one shade */
-border: 1px solid var(--border);
-border-radius: 8px;                   /* default; featured cards 12px; hero 16–24px */
-padding: 28px 28px 24px;              /* component interior */
-transition: box-shadow 0.2s;
-/* Hover lifts via whisper shadow only — no transform, no brightness shift */
-&:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.05); }
-```
-
-### Buttons
-```css
-.btn-primary {
-  background: var(--brand);                    /* #1B365D */
-  color: var(--ivory);
-  box-shadow: 0 0 0 1px var(--brand);          /* ring shadow as edge */
-  padding: 8px 14px;
-  border-radius: 8px;
-  font: 500 12px/1 var(--sans);
-  letter-spacing: 0.4px;
-}
-.btn-secondary {
-  background: var(--warm-sand);
-  color: var(--dark-warm);
-  box-shadow: 0 0 0 1px var(--border);
-}
-.btn-ghost {
-  background: transparent;
-  color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand);
+  --radius-control: 2px;
+  --radius-overlay: 6px;
 }
 ```
 
-### Tags / Chips
-```css
-.tag {
-  font: 500 12px/1 var(--sans);
-  padding: 2px 7px;
-  border-radius: 2px;
-  color: var(--brand);
-  background: #EEF2F7;        /* solid hex, NOT rgba */
-  letter-spacing: 0.4px;
-}
-.tag.standard { background: #E4ECF5; padding: 2px 8px; border-radius: 4px; }
+状态色只用于真实状态，不作为装饰。若保留深色模式，它是同一系统的兼容呈现：使用暖炭黑而非纯黑，结构、字号和层级不得改变。
 
-/* The single sanctioned gradient — see §2 "Gradient System".
- * Use at most once per page on a "featured" or "new" tag. The gradient
- * runs darkest-to-lightest left-to-right so the eye reads it as a
- * watercolor wash, not a button highlight. */
-.tag.brush {
-  background: linear-gradient(to right, #D6E1EE, #E4ECF5 70%, #EEF2F7);
-}
-```
+## 4. 字体与层级
 
-```html
-<!-- Example: a single brush tag flagging the new chapter in a long doc -->
-<span class="tag brush">New · Edition 02</span>
-```
+中文是主要排版语言。标题和正文使用 `--serif`；等宽字体只用于代码、编号或需要对齐的数字。手写字体只用于装饰性短句。
 
-### Quote
-```css
-.quote {
-  border-left: 2px solid var(--brand);
-  padding: 4px 0 4px 14px;
-  font: 500 15px/1.55 var(--serif);
-  color: var(--olive);
-}
-```
+| 角色 | 桌面 | 手机 | 字重 | 行高 |
+|---|---:|---:|---:|---:|
+| 品牌大字 | 72–112px | 58–72px | 400 | 1.10–1.20 |
+| 页面标题 | 40–56px | 30–38px | 400 | 1.25–1.40 |
+| 阅读标题 | 46–60px | 32–40px | 400 | 1.30–1.45 |
+| 区块标题 | 22–30px | 20–26px | 400–500 | 1.35 |
+| 列表标题 | 17–24px | 17–21px | 400–500 | 1.45 |
+| 阅读正文 | 17–19px | 16–18px | 400 | 1.75–1.90 |
+| 界面正文 | 14–16px | 14–16px | 400 | 1.55–1.75 |
+| 标签／元信息 | 10–13px | 10–12px | 400–500 | 1.40–1.60 |
 
-### Section title pattern
-```html
-<div class="section-head">
-  <p class="section-num">01</p>            <!-- ink-blue, 14px serif, tracking 0.4px -->
-  <h2 class="section-title">Color</h2>     <!-- 32px serif 500 -->
-  <p class="section-lede">Optional one-line description in olive.</p>
-</div>
-```
-The number is set in the same serif as the title, in ink-blue, the same size as caption text. There is no underline, no left bar, no eyebrow — the number *is* the marker.
+规则：
 
-### Metrics
-```html
-<div class="metric">
-  <div class="metric-value">8.4×</div>     <!-- serif 500 24px ink-blue, tabular-nums -->
-  <div class="metric-label">faster ship</div> <!-- serif 12px olive -->
-</div>
-```
-Numbers always sit in `font-variant-numeric: tabular-nums` so adjacent metrics align.
+- 中文标题使用轻字重和字号建立层级，不使用 700 以上粗体。
+- 正文默认字间距 `0.02em`；大标题可使用 `0.04em–0.08em`。
+- 英文眉题允许大写及 `0.12em–0.22em` 字间距。
+- 日期、统计和并列数字使用 `font-variant-numeric: tabular-nums`。
+- 链接应通过颜色或下划线被识别，不能只依赖悬停。
+- 长标题自然换行，不以固定高度裁掉文字。
 
-### Lists
-```css
-ul.dash {
-  list-style: none; padding: 0;
-}
-ul.dash li {
-  position: relative; padding-left: 14px;
-}
-ul.dash li::before {
-  content: "\2013";          /* en-dash, ink-blue */
-  position: absolute; left: 0;
-  color: var(--brand);
-}
-```
-Bullets are en-dashes in ink-blue, never filled discs.
+## 5. 页面骨架
 
-### Code block
-```css
-.code {
-  background: var(--ivory);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 14px;
-  font: 12px/1.55 var(--mono);
-  color: var(--near-black);
-  white-space: pre;
-}
-.code .k { color: var(--brand); }   /* keyword */
-.code .c { color: var(--stone); }   /* comment */
-```
+### 5.1 桌面端
 
-## 5. Layout Principles
+- 内容最大宽度 `1280px`，左右内边距通常为 `48–64px`。
+- 阅读正文最大宽度 `720px`；不为了填满宽屏而拉长行宽。
+- 全局顶栏保持轻薄，以细线分隔，不悬浮成卡片。
+- 一级导航收敛为：`首页 / 漫游 / 合集 / 查找`，之后以细线分组 `写作 / 通知 / 我的`。
+- 文章、随记、分类、标签、归档与搜索属于“查找”，不是七个同级品牌入口。
 
-### Page geometry (print A4)
+### 5.2 移动端
 
-| Document | Top | Right | Bottom | Left |
-|---|---|---|---|---|
-| Resume (dense) | 11mm | 13mm | 11mm | 13mm |
-| One-Pager | 15mm | 18mm | 15mm | 18mm |
-| Long Doc | 20mm | 22mm | 22mm | 22mm |
-| Letter | 25mm | 25mm | 25mm | 25mm |
-| Portfolio | 12mm | 15mm | 12mm | 15mm |
+- 页面水平内边距通常为 `20–24px`。
+- 顶栏承载品牌、返回、页面标题、搜索及上下文操作。
+- 登录后的稳定底部导航为：`首页 / 发现 / 写作 / 我的`。
+- 底部导航包含安全区，正文必须预留对应空间。
+- 主要触控目标不小于 `44 × 44px`。
+- 不使用汉堡菜单隐藏四个最高频入口；低频入口放入“我的”或“发现”。
 
-Rule: **denser = smaller margins, more formal = larger margins.**
+### 5.3 空间节奏
 
-### Web / screen pages
-- Max content width: `1120px`, centered, with `padding: 88px 64px 120px` on desktop.
-- Section gap: `72px` between top-level sections.
-- Card-grid columns: 2 by default at desktop; collapse to 1 below 768px.
-- Table columns sized in absolute px (not %), so kami tables don't reflow into spaghetti.
+只使用以下间距级别：`4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96px`。
 
-### Slides (1920×1080)
-- Four-side padding baseline: `--slide-pad: 80px`.
-- Padding-top of a content slide: 72–80px (print is 96–120px; slides are more compact).
-- Sizing follows the surface ratios from §3 ("Hierarchy"): macro tokens × 1.6, micro tokens × 0.6 against the print pt baseline.
-- Cover and chapter slides may flip background to ink-blue (`#1B365D`) with ivory text; everything else stays on parchment.
+- 相关文字：`8–16px`。
+- 单个组件内部：`12–24px`。
+- 列表条目之间：`20–32px`，配合细线。
+- 页面区块之间：`48–72px`。
+- 展示型开场最多占桌面首屏的三分之二；登录后的首页应尽快出现真实内容和记录入口。
 
-## 6. Depth & Elevation
+## 6. 组件规则
 
-Three sanctioned levels — that is the entire system:
+### 6.1 按钮
 
-| Level | Treatment | Use |
-|-------|-----------|-----|
-| Flat (0) | No shadow, no border | Body text, manifesto, paragraphs on parchment |
-| Ring (1) | `1px solid var(--border)` or `0 0 0 1px var(--brand)` | Cards, primary buttons, table edges |
-| Whisper (2) | `0 4px 24px rgba(0,0,0,0.05)` | Hovered cards, lifted hero containers, screenshots |
+- 主按钮：近黑底、暖纸文字、直角或 `2px` 圆角。
+- 次按钮：透明底、近黑细边框。
+- 文字按钮：无容器，通过文字和箭头表达动作。
+- 危险按钮：仅在删除、撤销权限等危险动作中使用暗红色。
+- 每个局部区域只保留一个最强主操作。
+- 深蓝色不作为大面积主按钮背景。
 
-Forbidden:
-- Hard drop shadows (`0 12px 40px rgba(0,0,0,0.25)` and the like) — the page is paper, not a UI panel
-- Neumorphism, glassmorphism, backdrop-filter blurs
-- Multi-layer composite shadows
+### 6.2 输入框
 
-### Border radius scale
-`2px → 4px → 6px → 8px (default) → 12px → 16px`. Tags hover at 2–4px, buttons and cards at 8px, featured / hero containers at 12–16px. Anything above 16px is reserved for cover-slide visuals.
+- 登录、注册、搜索和轻量输入优先使用底部细线。
+- 设置、后台和复杂编辑器可以使用完整边框，但保持直角和透明／纸色背景。
+- 聚焦状态使用 `2px` 深蓝轮廓或加深底线，不能只改变细微颜色。
+- 标签、帮助、错误文字始终靠近对应字段。
+- 错误使用暗红文字和边线，不用整块高饱和背景。
 
-## 7. Do's and Don'ts
+### 6.3 内容容器
 
-### Do
-- Use parchment (`#f5f4ed`) as the page background — the warm cream tone *is* the kami personality.
-- Use a single serif weight (500) for every heading; let size carry hierarchy.
-- Use ink-blue (`#1B365D`) only for primary CTAs, section numbers, links, the left rule of a quote, and the W500 in metrics.
-- Keep every gray warm (yellow-brown undertone). When in doubt, sample with `R ≈ G > B`.
-- Use ring shadows or whisper shadows for elevation; never hard drops.
-- Set tag backgrounds as solid hex pre-blended over parchment, never `rgba()`.
-- Set numbers in `font-variant-numeric: tabular-nums`.
-- Pair the section number with the section title in the same serif — no eyebrow needed.
-- Default bullets to ink-blue en-dashes (`–`).
+- 文章、随记和合集列表默认是连续目录行，不是卡片墙。
+- 区块先通过留白、对齐和标题层级建立结构；仍需明确边界时，再使用 `1px` 分隔线。
+- 同一处内容边界只保留一条必要的线，避免父容器底线、下一节顶线、标题底线连续叠加。眉题旁的延长线、首篇上下边线和列表末尾横线若没有独立作用，应删除。
+- 连续目录可保留辅助逐行阅读的细线，但不要让所有标题、容器和空白区域都带横线。验收时同时检查有图和无图内容，避免无图页面退化成一串平行线。
+- 先减少冗余线条，再以少量手绘点缀丰富节奏；装饰不能成为保留多余边框的理由。
+- 只有菜单、弹窗、通知浮层等真正覆盖页面的组件才使用悬浮容器。
+- 不为空数据制造装饰性占位卡片。
 
-### Don't
-- Don't use `#ffffff` as page background, anywhere.
-- Don't introduce a second accent color or a chromatic gradient.
-- Don't use cool blue-grays (`slate-*`, `#f3f4f6`, `#6b7280`). Every neutral is warm.
-- Don't use bold (700+) on serif — weight 500 is the ceiling.
-- **Don't use italic anywhere.** No `font-style: italic`. Swap to ink-blue or a tag instead.
-- Don't use sans-serif for headlines or body — sans is reserved for eyebrows, switchers, and small labels (and the sans stack literally equals the serif stack).
-- Don't drop body line-height below 1.4 or push it above 1.55 — that range *is* kami's reading rhythm.
-- Don't use round-disc bullets, drop shadows, or pill-shaped chips with heavy borders.
-- Don't apply `backdrop-filter`, `mix-blend-mode`, or any modern compositing trick — the system targets print fidelity.
+### 6.4 标签与状态
 
-## 8. Responsive Behavior
+- 标签优先使用纯文字、前缀或浅纸色小矩形。
+- 不使用大量胶囊标签。
+- 选中状态以深蓝文字、短下划线或底边线表示。
+- 状态文案必须直接说明含义，例如“仅自己可见”“草稿已保存”。
 
-### Breakpoints
+### 6.5 图片与手写标记
 
-| Name | Width | Key Changes |
-|------|-------|-------------|
-| Phone | < 768px | Single column. Hero 46px, section title 24px, manifesto 17px. Card padding drops to 20px 16px. Hide `.hero-tokens` row. |
-| Tablet | 768–979px | Most 2-col grids hold; switch tag tints from 5 to 3 columns. |
-| Desktop | ≥ 980px | Full 2-col / 4-col grids, JA gets `white-space: nowrap` rescue rules on long ledes. |
+- 品牌影像：黑白、低对比、生活化，不使用商业图库式人物摆拍。
+- 用户内容：忠实呈现原图，不为统一风格强制灰度。
+- 图片默认直角；拼贴最多轻微重叠或极小角度旋转。
+- 不使用胶带、贴纸、厚相框、强阴影和撕纸装饰堆叠。
+- 品牌装饰优先使用原创手绘线稿、墨迹轮廓与手写短句，不用无语义照片直接填补留白。
+- 手绘元素使用代码内 SVG 或项目自有资产；线条保留轻微不规则感，不使用通用图标库拼成插画。
+- 近黑线稿负责主体，`--ink-blue` 只用于短句、箭头或一两笔呼应；整组装饰不超过可视区域的 15%。
+- 所有手绘装饰设置 `aria-hidden="true"`，不得影响正文对比度、点击区域或移动端首要任务。
 
-### Touch targets
-- Buttons keep `8 14px` padding minimum.
-- Tap targets stay above 44×44 by giving cards generous internal padding rather than oversizing chrome.
+### 6.6 图标与反馈
 
-### Print
-- `@page { size: A4; margin: 14mm 16mm; background: #f5f4ed; }`.
-- Section, hero, family, comp, swatch, tint, quote, blockquote, pre, tr, anti-pattern blocks all use `break-inside: avoid` so kami pages don't snap mid-card.
-- `-webkit-print-color-adjust: exact` is required so the parchment background actually reaches paper.
+- 图标使用统一线性风格，描边粗细一致。
+- 不用 emoji 充当正式操作图标。
+- 加载、空状态、错误和成功反馈保持简洁，但必须明确下一步。
+- 系统通知和弹窗不得遮住顶栏、底部导航或主要提交按钮。
 
-## 9. Agent Prompt Guide
+## 7. 页面类型
 
-### Quick Color Reference
-- Page Background: "Parchment (#f5f4ed)"
-- Card Surface: "Ivory (#faf9f5)"
-- Brand / CTA: "Ink Blue (#1B365D)"
-- Primary Text: "Near Black (#141413)"
-- Secondary Text: "Dark Warm (#3d3d3a)"
-- Subtext / Caption: "Olive (#504e49)"
-- Tertiary / Meta: "Stone (#6b6a64)"
-- Border: "Border (#e8e6dc)"
-- Tag fill (default): "#E4ECF5 solid (NOT rgba)"
+### 品牌与认证页
 
-### Example Component Prompts
-- "Build a kami one-pager hero on Parchment (#f5f4ed). Eyebrow row in 12px sans uppercase Stone (#6b6a64), letter-spacing 1.2px. Headline in serif 500 at 96px Near Black (#141413), line-height 1.05, letter-spacing -1.2px. Tagline below in serif 500 at 21px Olive (#504e49)."
-- "Design a kami section header. A two-line stack: section number `01` in serif 500 at 14px Ink Blue (#1B365D) tracking 0.4px, then the title in serif 500 at 32px Near Black. Optional lede in serif 500 at 16px Olive."
-- "Render a kami metric row of three metrics. Each metric is a vertical pair: value in serif 500 at 24px Ink Blue with `font-variant-numeric: tabular-nums`, label in 12px Olive. Gap between metrics: 28px."
-- "Build a kami card on Ivory (#faf9f5) with 1px Border (#e8e6dc), 8px radius, 28px padding. Title in serif 500 at 16px Near Black. Hint underneath in 12px mono Stone. On hover, add a whisper shadow `0 4px 24px rgba(0,0,0,0.05)`. No transform, no color shift."
-- "Build a kami slide cover at 1920×1080. Background ink-blue (#1B365D). Centered title in serif 500 at 96px Ivory (#faf9f5). Below, a 1px ivory rule, 96px wide. Author and date below in serif 500 at 18px Ivory at 70% opacity."
+允许大留白、黑白影像、手写短句和非对称构图。表单仍需清晰直接。登录成功后的首页必须延续相同纸色、字体和控件，避免视觉跳变。
 
-### Iteration Guide
-1. **Start by checking the gray temperature.** If a gray reads cool, the design is no longer kami. Replace with the warm ramp.
-2. **Audit the accent.** If ink-blue covers more than ~5% of the visible surface, reduce — push elements back to Olive or Dark Warm.
-3. **Audit weight.** Any weight above 500 on serif is wrong. Replace with weight 500 and let size carry the contrast.
-4. **Audit italic.** No italic, ever. Swap to ink-blue color or a small tag.
-5. **Audit shadows.** If a shadow is visible at a glance, it's too strong. The only shadows are 1px rings and the `0 4px 24px rgba(0,0,0,0.05)` whisper.
-6. **Tag fills must be solid hex.** If you wrote `rgba(27, 54, 93, 0.18)`, replace with `#E4ECF5`.
-7. **Numbers tabular-nums.** Any column of numbers without `font-variant-numeric: tabular-nums` will look wrong on a print render.
-8. **For slide work, halve tracking and scale macro tokens by 1.6.** Print rhythm is too loose at 1920×1080 without the adjustment.
+### 首页与浏览页
 
-## Attribution
+首页先服务“写下一笔”和“读到朋友”，真实内容应在首屏尽早出现。文章、随记、合集和归档优先使用编辑式目录、时间流或书册结构，不使用等高卡片网格填满页面。
 
-Aesthetic inspiration drawn from [tw93/kami](https://github.com/tw93/kami) (MIT, © Tw93 and contributors). kami is a Claude skill for typesetting professional documents and slide decks; the tokens, type rules, and "ten invariants" above adapt its print-first design language for use as an Open Design system.
+#### 文章页：沿着档案横线跑动的小猫
+
+`/articles` 在“文章档案”上方保留一条横线，让它同时成为小猫行走的地面。这个点缀为首篇阅读与档案目录之间提供轻巧的过渡，使结构线也能带有生活气息。先移除首篇周围及档案前重复的横线，再保留这一处互动，不在每条分隔线上复制装饰。
+
+- 造型以已确认的五张小猫原型为依据：近黑细线轮廓、尖耳、细胡须、弯曲翘尾，身体内部留白，以少量深蓝短线表达动势。使用代码内 SVG，保持缩小后的辨识度，并适配纸色与深色主题。
+- 鼠标在小猫左侧时向左跑，在右侧时向右跑，转身朝向行进方向；靠近鼠标的横向位置后停下，到达横线边缘不得越界。
+- 跑动使用站姿、伸展、收腿、腾空、落地等五个全身姿势组成约 `600ms` 的循环，避免只摆动四肢。停下后恢复站姿，动势线随之收起。
+- 小猫始终沿横线移动，不追随鼠标上下移动，不遮挡文章标题、目录或链接，也不改变内容布局。它是可偶然发现的趣味，不承担导航或必要信息。
+- 触控操作不触发追随，保留静态线稿；开启“减少动态效果”时停止追随与姿势动画。窗口失焦或页面隐藏时停止跑动。
+- 装饰使用 `aria-hidden="true"` 和 `pointer-events: none`，不进入键盘焦点顺序，不拦截点击或滑动。缩窄窗口时小猫仍须限制在横线内，不产生横向滚动。
+
+#### 随记页：连续的日常手账
+
+`/notes` 使用单列内容流，桌面侧栏标注年份与月份范围，每则随记以日期引出正文。年份之间通过留白区分，同一年内仅在相邻条目之间保留一条细线，取消双列围框、首条底色和重复边界。有图与无图条目共享文字层级，不因首条位置而放大正文。
+
+页头以纸飞机线稿和少量深蓝虚线呼应“一闪而过的念头”，保持静态，不复制文章页的小猫互动。筛选默认收起，展开后保留作者、标签、合集和排序能力。用户照片保持原色，桌面位于文字右侧，窄屏移到正文下方；作者、发生时间、地点、心情及内容关联入口继续保留。
+
+#### 归档页：按年月翻阅的时间目录
+
+`/archive` 与文章、随记共用浅色纸面底色，避免回退到偏黄的旧主题。页头使用旧卷册线稿与少量深蓝书签点缀；范围、记录数和年份数以文字统计呈现，不为每项统计增加边框。作者、分类、标签与合集筛选默认收起，收起时仍显示已启用条件的数量。
+
+桌面保留左侧年份与月份索引，右侧以年月标题组织连续记录；窄屏把时间索引移至内容上方。月份之间使用留白，只在同月相邻记录之间保留细线，避免年月标题、日期和内容各自带框。文章按发布时间、随记按发生时间归组，保留原有筛选、分页、链接和权限逻辑。
+
+#### 分类与主题页：阅读路径索引
+
+`/categories` 将栏目呈现为连续的书脊目录，以编号、名称、简短说明和可读文章数建立层级；仅在相邻栏目之间保留细线。`/tags` 以关键词频次形成克制的字号变化，通过留白组织主题，不使用等高卡片格。两类页面共用分类签与书页线稿语言，近黑线条负责主体，深蓝只标记书签、路径和当前入口。
+
+栏目或主题详情使用窄范围摘要与宽阅读清单。文章和随记可在主题下自然混排，编号、内容类型、标题或正文、作者及时间信息保持可辨；图片在桌面位于文字右侧，窄屏回到正文下方。页头与内容区不重复展示相同的粗线框，统计只辅助判断范围，不与分类名称争夺注意力。
+
+#### 搜索页：从一个线索开始
+
+`/search` 把搜索输入作为首要操作，标题、线稿与输入框形成完整的检索开场。输入框使用清晰的底线和充足字号，提交按钮保持明确；搜索建议作为临时浮层显示，支持键盘上下选择、回车确认、Esc 关闭和 `⌘/Ctrl + K` 聚焦。放大镜扫过手写行的线稿只表达“寻找”，不得挤压输入区或承载状态。
+
+结果按“全部、文章与随记、合集、成员”切换，标签之间使用留白与当前项底线，不用完整分栏边框。文章和随记采用编号、正文、右侧缩略图的连续目录；窄屏图片移至正文下方。合集、成员、分类及标签作为辅助发现入口，视觉强度低于主要内容。搜索计数、分页、建议、空结果与 URL 查询状态必须真实且可访问，任何结果都继续遵守原有内容权限。
+
+#### 合集详情页：一本共同书册
+
+合集详情以“封面、卷首信息、卷内目录”为基本结构。真实封面保持原色和直角；无封面时使用项目内书页线稿、合集名称及整理日期组成专属封面。封面通过细书脊与错开的纸页边缘表达书册厚度，不使用厚阴影或圆角卡片。名称、说明、创建者、共同署名、整理时间及“写入新的记录”构成卷首，管理入口只对创建者显示。
+
+共同时间轴、合集内容和共同影像共享一条阅读视图导航，当前视图使用深蓝底线。时间轴按真实发生时间分组，合集内容按收录顺序排列，两者都使用编号、正文与右侧缩略图的连续目录；筛选默认收起，收起时显示已启用条件数。共同影像保留疏密有别的画册布局，图片仍链接回原记录。成员、通知偏好、分页、权限、媒体查看与管理能力必须保持完整，移动端将封面居中、图片移至正文下方，并让视图导航可横向滚动。
+
+### 阅读页
+
+具体文章阅读页按“卷首、开篇影像、正文、篇末回应”建立完整阅读节奏。标题与摘要先形成安静的刊物卷首，作者、发布、更新、阅读时间及主题关系集中为一行题记；真实封面保持原色，以横向开篇影像衔接标题与正文，不使用高耸卡片式封面。无封面文章直接进入正文，不制造空洞占位。
+
+正文固定在约 `700px` 的窄列，首段、章节标题、引语、代码、公式、脚注和正文图片都以长时间阅读为先。宽屏目录作为左侧页边批注，当前章节使用深蓝短线提示；中等与手机屏幕折叠为正文前的目录抽屉。阅读进度保持在视口顶部，但不能覆盖顶栏或制造大面积色块。篇末标记、回应、上一篇／下一篇、相关阅读、共同记忆和评论依次位于正文之后，视觉强度逐级降低，不与文章主体争夺注意力。
+
+随记详情页是一张带日期的生活手账页。日期在桌面作为左侧页签，纸飞机线稿只点明“偶然记下”的轻盈感；作者、发生时间、可选标题、地点和心情构成开头，正文和原色影像共享稳定的窄列。无标题随记不得显示“未命名随记”，也不能为缺失标题留下大片空白；无图随记直接进入关联信息和回应。有图时保持原图比例，不用文章封面的横向裁切。合集前后记录以连续时间线呈现，共同记忆和评论依次收束在正文之后。手机端把日期与线稿合为一条轻量页签，所有正文和操作恢复为单列。
+
+### 个人主页
+
+个人主页以“人物封面、公开题记、记录目录、共同书册”组织。头像使用直角人物影像；无头像时以姓名首字和细线构成专属字样，不使用通用人物图标。昵称、账号、简介和地区是主要身份信息，可见内容与共同合集数量只作为旁注。本人编辑入口保持明确，但不抢过姓名和简介。
+
+该成员的文章与随记按发布时间混排为带编号的连续目录，文章突出标题与摘要，随记突出正文与发生时间，原色缩略图在桌面位于右侧、手机位于文字下方。共同合集使用小型书架结构和无封面书册占位。无简介、无头像、无可见内容或无共同合集时都使用真实简洁文案，不用空卡片填充；所有数量和内容仍以访问者当前权限为准。
+
+### 写作与操作页
+
+写作页像一张可工作的书桌，不做品牌拼贴。保存状态、预览、发布范围和错误优先于装饰。设置、个人管理和后台可以提高密度，但继续使用暖纸、宋体、细线和同一按钮规则。
+
+写作页是核心工作区，以标题与正文为视觉重心：桌面采用宽写作区与窄文稿信息栏，减少纸面边框和装饰性竖线；摘要可展开编辑，已有摘要时显示“已填写”。工具栏允许自然换行，图片、可视编辑、Markdown 源码、沉浸写作与素材管理保持可用。窄屏把文稿信息放入面板，底部保留写作／预览切换、保存与发布，并为操作栏和安全区预留正文空间。
+
+标题上方保留一条小猫行走的横线，复用文章页已确认的线稿、五姿势循环和鼠标追随行为，不在编辑区叠加另一幅桌面插画。小猫不进入正文、不遮挡输入、不拦截指针，也不出现在发布预览与沉浸写作中；触控和减少动态模式保持静态。装饰不能影响自动保存、离线恢复、冲突反馈、媒体插入或发布权限。
+
+
+## 8. 动效与无障碍
+
+- 常规动效时长 `120–200ms`，只用于状态切换、菜单和反馈。
+- 文章页与写作页沿线小猫是由鼠标触发的局部装饰例外，按上述跑步周期执行；到达目标即停，不自动巡游，不将此例外扩展为全站持续动画。
+- 不使用持续漂浮、视差或无意义入场动画。
+- 支持 `prefers-reduced-motion`。
+- 键盘焦点始终可见；不得移除轮廓后不提供替代。
+- 正文、元信息、链接和状态色必须满足可读对比度。
+- 图片提供真实替代文本；装饰图片和手写标记从读屏顺序中隐藏。
+- 表单错误使用 `aria-invalid` 与关联说明；异步状态使用适当的 live region。
+
+## 9. 禁止项
+
+- 冷灰背景、纯白大底、纯黑大底。
+- 渐变、玻璃拟态、发光、拟物厚阴影。
+- 大面积蓝色、第二品牌强调色。
+- 卡片墙、圆角面板套圆角面板。
+- 胶囊式主导航和胶囊标签泛滥。
+- 为制造“高级感”而降低文字对比度或字号。
+- 每个页面各写一套近似颜色、按钮和页头。
+- 把登录页的拼贴和手写装饰复制到所有操作页面。
+- 为了匹配原型而隐藏真实产品能力或伪造不存在的功能。
+
+## 10. 实施与验收
+
+统一顺序：
+
+1. 合并全局变量与基础控件。
+2. 重构桌面顶栏和移动端底部导航。
+3. 完成首页、文章详情、合集详情三张样板页。
+4. 迁移文章、随记、漫游、归档与个人内容页。
+5. 最后统一写作、通知、设置和管理后台。
+
+每个阶段同时检查 `390 × 844` 与 `1440 × 900`：
+
+- 登录进入首页时没有明显的色彩、字体或控件跳变。
+- 页面只有一套背景、文字、线条和强调色。
+- 同一内容边界没有重复横线；移除装饰后，仍能通过留白、对齐和标题读懂结构。
+- 文章页小猫造型与线稿原型一致，左右追随、转身、停步和边缘限制正常；触控与减少动态模式保持静态，装饰不遮挡阅读或操作。
+- 首要任务在首屏可发现，主要操作清晰。
+- 长标题、长昵称、有图、无图、空数据和错误状态均不破版。
+- 手机无横向滚动，底部导航不遮挡内容。
+- 键盘、读屏、触控和减少动态模式可正常使用。
+- 页面功能、权限、URL 状态、保存与上传流程通过原有测试。
+
+原型截图用于检查气质和信息层级，不作为逐像素实现要求。若原型与真实数据、交互或本文冲突，以真实产品能力和本文为准。

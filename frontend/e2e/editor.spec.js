@@ -5,9 +5,9 @@ const fixturePng = fileURLToPath(new URL("../public/pwa-192.png", import.meta.ur
 
 async function login(page) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill("editor_e2e");
-  await page.getByPlaceholder("请输入密码").fill("password123");
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill("editor_e2e");
+  await page.getByLabel("密码").fill("password123");
+  await page.getByRole("button", { name: /登录，继续书写/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -21,7 +21,7 @@ async function uploadInlineImage(page) {
   await uploaded;
 }
 
-test("visual editor autosaves, inserts and arranges real image blocks", async ({ page }) => {
+test("visual editor autosaves, inserts and arranges real image blocks", async ({ page }, testInfo) => {
   const consoleErrors = [];
   await login(page);
   page.on("console", (message) => {
@@ -72,16 +72,39 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   const afterIds = [...after.matchAll(/\[\[ym-media:(\d+)\]\]/g)].map((match) => match[1]);
   expect(afterIds).toEqual([...beforeIds].reverse());
 
-  await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".editor-body-visual").getByRole("button", { name: "可视编辑" }).click();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("writing-desktop.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
   const imageButton = page.getByRole("button", { name: "图片", exact: true });
   await expect(imageButton).toBeVisible();
-  await expect(page.locator(".editor-body-visual .visual-markdown-text-block").first()).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".editor-body-visual .visual-markdown-text-block").first()).toHaveCSS("font-size", "17px");
   const mobileMediaWidths = await page.locator(".editor-body-visual .visual-media-block").first().evaluate((element) => ({
     media: element.getBoundingClientRect().width,
     editor: element.parentElement.getBoundingClientRect().width,
   }));
   expect(mobileMediaWidths.media / mobileMediaWidths.editor).toBeGreaterThan(0.94);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: testInfo.outputPath("writing-mobile.png"), fullPage: true });
 
+  for (const width of [320, 390, 768, 1024, 1099, 1100, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  }
+
+  await expect(page.locator(".editor-cat-perch .article-archive-cat-runner")).toHaveCount(1);
+  await page.getByRole("tab", { name: "预览", exact: true }).click();
+  await expect(page.locator(".editor-preview-document h1")).toHaveText("编辑器端到端验收");
+  await expect(page.locator(".editor-preview-prose")).toContainText("第一段");
+  await page.getByRole("tab", { name: "写作", exact: true }).click();
+  await page.locator(".editor-summary-drawer summary").click();
+  await page.getByPlaceholder("用一两句话，为阅读留下入口。").fill("写作布局与预览验收");
+  await expect(page.locator(".editor-summary-drawer summary")).toContainText("已填写");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "文稿信息", exact: true }).click();
+  await expect(page.locator(".editor-sidebar")).toBeVisible();
+  await page.locator(".editor-sidebar").getByRole("button", { name: "关闭文稿信息" }).click();
+  await expect(page.locator(".editor-sidebar")).toBeHidden();
   expect(consoleErrors).toEqual([]);
 });

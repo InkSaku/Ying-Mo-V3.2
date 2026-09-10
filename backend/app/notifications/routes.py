@@ -7,7 +7,7 @@ from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Collection, Comment, Notification, Post
+from app.models import Collection, Comment, Notification, Post, PostMemoryLink
 from app.posts.service import current_article_slug
 
 bp=Blueprint("notifications",__name__)
@@ -31,6 +31,37 @@ def _safe_notification(item,actor,posts,collections,comments=None):
     data=item.to_dict()
     data["target_url"]=None
     data["summary"]=None
+    if item.kind == "memory_contribution_added":
+        link = db.session.scalar(db.select(PostMemoryLink).where(
+            PostMemoryLink.contribution_post_id == item.post_id,
+            PostMemoryLink.invalidated_at.is_(None),
+            PostMemoryLink.detached_at.is_(None),
+        ))
+        root = link.root_post if link else None
+        contribution = posts.get(item.post_id)
+        valid = bool(
+            link and root and contribution
+            and root.collection_id == link.collection_id
+            and contribution.collection_id == link.collection_id
+            and can_read_post(actor.id, root, include_archived=True)
+            and can_read_post(actor.id, contribution, include_archived=True)
+        )
+        if not valid:
+            data.update({
+                "actor": None,
+                "post_id": None,
+                "collection_id": None,
+                "comment_id": None,
+                "message": "一条共同回忆补充通知的目标当前不可访问。",
+            })
+            return data
+        data["target_url"] = (
+            f"/articles/{current_article_slug(root.id)}"
+            if root.post_type == "article"
+            else f"/notes/{root.id}"
+        ) + "#shared-memory"
+        data["summary"] = _summary(contribution.body)
+        return data
     if item.post_id is not None:
         post=posts.get(item.post_id)
         if post is not None and post.author_id==actor.id and item.kind=="post_removed_from_collection":

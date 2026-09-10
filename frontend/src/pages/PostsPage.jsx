@@ -12,6 +12,10 @@ import { clampPageToTotal } from "../lib/pagination";
 import { hasActivePostFilters, postFilterSearchParams, postsApiPath, readPostFilters } from "../lib/postBrowsing";
 import { formatDate } from "../lib/format";
 import "../styles/articles.css";
+import "../styles/notes.css";
+import { NoteSketch } from "../components/NoteSketch";
+import { CollectionSketch } from "../components/CollectionSketch";
+import { ArticleArchiveCat } from "../components/ArticleSketches";
 
 const PAGE_SIZE = 12;
 
@@ -60,14 +64,14 @@ function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
         <div className="browse-hero-copy">
           <p className="hero-kicker">ARTICLES / READING ARCHIVE</p>
           <h1>文章，<br />展开阅读。</h1>
-          <p>长文、学习笔记与生活观察，依照阅读关系而不是组件尺寸，被装订成一册持续生长的私人刊物。</p>
+          <p>把观察写成文字，把日常留给时间。<br />从这里，慢慢读到彼此。</p>
         </div>
+        <div className="articles-drawn-opening"><CollectionSketch /><p aria-hidden="true">Between the lines.<br /><span>A little life.</span></p></div>
         <aside className="articles-hero-note" aria-label="文章目录概览">
           <strong>{openingCopy}</strong>
           <p>共 {total || 0} 篇可阅读文章{latestPost?.published_at ? <><br />本页首篇发布于 {formatDate(latestPost.published_at)}</> : null}</p>
           <nav aria-label="内容类型切换"><Link className="active" to="/articles">文章</Link><Link to="/notes">随记</Link></nav>
           <a href="#browse-content">进入目录 <span aria-hidden="true">↓</span></a>
-          <i className="articles-hero-scribble" aria-hidden="true">TAKE YOUR TIME ↘</i>
         </aside>
       </header>
     );
@@ -76,13 +80,14 @@ function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
   return (
     <header className="browse-hero browse-hero-note">
       <div className="browse-hero-copy">
-        <p className="hero-kicker">Field Notes</p>
+        <p className="hero-kicker">FIELD NOTES / 日常片段</p>
         <h1>随记，<br />留住当下。</h1>
-        <p>更轻的生活片段、地点、心情与即时记录，按真正发生的时间装订成册。</p>
+        <p>一阵风、一段路、一个忽然想记住的瞬间。留几句话，让平凡的日子有迹可循。</p>
       </div>
+      <NoteSketch />
       <aside className="browse-hero-index" aria-label="内容目录概览">
         <span className="tabular">{total || 0}</span>
-        <div><strong>则可阅读随记</strong><p>仅统计当前账号有权读取的内容。</p></div>
+        <div><strong>则可阅读随记</strong><p>把日常片段，慢慢收进这一册。</p></div>
         <nav aria-label="内容类型切换"><Link to="/articles">文章</Link><Link className="active" to="/notes">随记</Link></nav>
         <a className="browse-hero-jump" href="#browse-content"><span>START READING</span>从本页首篇开始 <i aria-hidden="true">↓</i></a>
       </aside>
@@ -111,6 +116,7 @@ function ArticleMagazine({ posts, page, total, sort }) {
           </aside> : null}
         </div>
         {archiveGroups.length ? <section className="article-magazine-index-section" aria-label="文章年份目录">
+          <ArticleArchiveCat />
           <header><span>ARCHIVE</span><strong>文章档案</strong><small>依照发布时间继续浏览</small></header>
           <div className="article-year-groups">
             {archiveGroups.map((group) => <section className="article-year-group" key={group.year} aria-labelledby={`article-year-${group.year}`}>
@@ -129,11 +135,11 @@ function ArticleMagazine({ posts, page, total, sort }) {
 function NoteJournal({ posts, page, total }) {
   return (
     <section className="browse-editorial-section" id="browse-content" aria-labelledby="note-journal-heading">
-      <header className="browse-section-heading"><div><p>JOURNAL / {String(page).padStart(2, "0")}</p><h2 id="note-journal-heading">发生时间手账</h2></div><span>{total} 则随记 · 按当前条件编排</span></header>
+      <header className="browse-section-heading"><div><p>JOURNAL / {String(page).padStart(2, "0")}</p><h2 id="note-journal-heading">日子里的小事</h2></div><span>{total} 则随记 · 按当前条件编排</span></header>
       <div className="note-journal">
         {groupNotesByYear(posts).map((group) => (
           <section className="note-journal-period" key={group.key}>
-            <header><p>YEAR BOOK</p><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
+            <header><p>THE YEAR</p><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
             <div className="note-journal-entries">
               {group.items.map(({ post, index }) => <PostCard key={post.id} post={post} compact index={(page - 1) * PAGE_SIZE + index} variant="journal" />)}
             </div>

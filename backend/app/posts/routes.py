@@ -30,6 +30,11 @@ from app.posts.revisions import (
 )
 from app.posts.related import related_articles
 from app.posts.note_experience import note_experience
+from app.posts.memory_contributions import (
+    create_contribution_draft, detach_memory_link, ensure_memory_scope_update,
+    invalidate_links_for_post, memory_management, memory_summary, memory_thread,
+    validate_memory_contribution_publish,
+)
 
 bp = Blueprint("posts", __name__)
 
@@ -103,6 +108,8 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
         }
     else:
         data["collection"] = None
+    if management:
+        data["memory_link"] = memory_management(post)
     if include_body:
         media = db.session.scalars(
             db.select(Media).where(
@@ -208,6 +215,7 @@ def _detail(post,actor):
         ),
     }
     data["previous"]=None; data["next"]=None; data["related"]=[]; data["experience"]=None
+    data["memory"] = memory_summary(post, actor.id)
     if post.post_type==PostType.ARTICLE.value and post.published_at is not None:
         base=(
             db.select(Post).where(
@@ -241,6 +249,7 @@ def _apply_patch(post, actor, data):
     unknown = sorted(set(data) - allowed)
     if unknown:
         raise DomainError("VALIDATION_ERROR", "包含不支持的字段。", 422, [{"fields": unknown}])
+    ensure_memory_scope_update(post, data)
 
     if "post_type" in data:
         value = data["post_type"]
@@ -296,8 +305,11 @@ def _apply_patch(post, actor, data):
         if post.collection_id is None:
             post.visibility = visibility
 
+    previous_collection_id = post.collection_id
     if "collection_id" in data:
         apply_collection(post, actor.id, data["collection_id"])
+        if post.collection_id != previous_collection_id:
+            invalidate_links_for_post(post.id, "post_collection_changed")
 
     if "category_id" in data:
         apply_category(post, data["category_id"])
@@ -476,6 +488,73 @@ def get_post(post_id):
     return success_response(_detail(post,actor))
 
 
+@bp.get("/<int:post_id>/memory-thread")
+@jwt_required(locations=["headers"])
+def get_memory_thread(post_id):
+    actor = current_user()
+    args = parse_pagination(default_size=20, max_size=50)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if not args:
+        return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
+    post = db.session.get(Post, post_id)
+    try:
+        data, meta = memory_thread(post, actor.id, page=args[0], size=args[1])
+    except DomainError as error:
+        return _handle_domain(error)
+    return success_response(data, meta=meta)
+
+
+@bp.post("/<int:post_id>/memory-contributions")
+@jwt_required(locations=["headers"])
+def create_memory_contribution(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) != {"client_request_id"}:
+        return error_response("VALIDATION_ERROR", "请求仅接受 client_request_id。", 422)
+    source = db.session.get(Post, post_id)
+    try:
+        contribution, created = create_contribution_draft(
+            source, actor, data.get("client_request_id")
+        )
+    except (DomainError, IntegrityError) as error:
+        db.session.rollback()
+        if isinstance(error, IntegrityError):
+            return error_response("DUPLICATE_RESOURCE", "无法创建补充草稿。", 409)
+        return _handle_domain(error)
+    return success_response(
+        _serialize(contribution, actor_id=actor.id, management=True),
+        201 if created else 200,
+    )
+
+
+@bp.post("/<int:post_id>/memory-link/detach")
+@jwt_required(locations=["headers"])
+def detach_memory_contribution(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) != {"expected_version", "destination"}:
+        return error_response("VALIDATION_ERROR", "请求字段不合法。", 422)
+    post = db.session.get(Post, post_id)
+    if post is None or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "共同回忆补充不存在。", 404)
+    try:
+        detached = detach_memory_link(
+            post,
+            actor.id,
+            expected_version=data.get("expected_version"),
+            destination=data.get("destination"),
+        )
+    except DomainError as error:
+        db.session.rollback()
+        return _handle_domain(error)
+    return success_response(_serialize(detached, actor_id=actor.id, management=True))
+
+
 @bp.get("/slug/<slug>")
 @jwt_required(locations=["headers"])
 def get_by_slug(slug):
@@ -625,17 +704,31 @@ def autosave_post(post_id):
 @jwt_required(locations=["headers"])
 def publish(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
+    post = db.session.scalar(
+        db.select(Post).where(Post.id == post_id).with_for_update()
+    )
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     data = request.get_json(silent=True) or {}
     try:
-        slug = publish_post(post, actor.id, data.get("slug"))
+        memory_root = validate_memory_contribution_publish(
+            post, actor.id, data.get("expected_version")
+        )
+        slug = publish_post(post, actor.id, data.get("slug"), memory_root=memory_root)
         db.session.commit()
-    except (DomainError, IntegrityError) as error:
+    except (DomainError, IntegrityError, StaleDataError) as error:
         db.session.rollback()
+        if isinstance(error, StaleDataError):
+            current = db.session.get(Post, post_id)
+            if current is None or current.deleted_at is not None:
+                return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+            if current is not None and current.status in {
+                PostStatus.PUBLISHED.value, PostStatus.ARCHIVED.value,
+            }:
+                return success_response(_serialize(current, actor_id=actor.id, management=True))
+            return _edit_conflict(current, data.get("expected_version"))
         if isinstance(error, IntegrityError):
             return error_response("DUPLICATE_RESOURCE", "该 Article Slug 已被占用。", 409)
         return _handle_domain(error)
@@ -673,7 +766,11 @@ def move_collection(post_id):
     try:
         source_edit_version = post.edit_version
         before = snapshot_post(post) if post.was_published else None
+        previous_collection_id = post.collection_id
+        ensure_memory_scope_update(post, data)
         apply_collection(post, actor.id, data["collection_id"])
+        if post.collection_id != previous_collection_id:
+            invalidate_links_for_post(post.id, "post_collection_changed")
         if before is not None:
             create_revision(
                 post, before, changed_snapshot_fields(before, snapshot_post(post)),
@@ -696,12 +793,17 @@ def remove_from_collection(post_id):
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    try:
+        ensure_memory_scope_update(post, {"collection_id": None})
+    except DomainError as error:
+        return _handle_domain(error)
     source_edit_version = post.edit_version
     before = snapshot_post(post) if post.was_published else None
     post.collection_id = None
     post.collection_sort_order = None
     post.collection_highlight_order = None
     post.visibility = PostVisibility.PRIVATE.value
+    invalidate_links_for_post(post.id, "post_removed_from_collection")
     if before is not None:
         create_revision(
             post, before, changed_snapshot_fields(before, snapshot_post(post)),
@@ -721,6 +823,7 @@ def delete_post(post_id):
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    invalidate_links_for_post(post.id, "post_deleted")
     if not post.was_published:
         db.session.delete(post)
     else:

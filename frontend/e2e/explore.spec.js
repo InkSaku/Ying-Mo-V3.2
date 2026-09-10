@@ -51,9 +51,9 @@ const populatedExplore = {
 
 async function login(page) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill(account.username);
-  await page.getByPlaceholder("请输入密码").fill(account.password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill(account.username);
+  await page.getByLabel("密码").fill(account.password);
+  await page.getByRole("button", { name: /登录，继续书写/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -65,7 +65,8 @@ async function fulfillExplore(page, data) {
 }
 
 async function expectNoOverflow(page) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  const overflow = await page.evaluate(() => ({ width: innerWidth, excess: document.documentElement.scrollWidth - innerWidth, elements: [...document.querySelectorAll('main *')].filter(el => el.getBoundingClientRect().right > innerWidth).map(el => el.className).slice(0, 12) }));
+  expect(overflow.excess, JSON.stringify(overflow)).toBeLessThanOrEqual(1);
 }
 
 test.beforeAll(async ({ request }) => {
@@ -78,7 +79,7 @@ test.beforeAll(async ({ request }) => {
   expect(response.status()).toBe(201);
 });
 
-test("Explore keeps text-led content readable without a fake cover or overlapping collage", async ({ page }) => {
+test("Explore keeps text-led content readable without a fake cover or overlapping collage", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1024, height: 900 });
   await login(page);
   await fulfillExplore(page, populatedExplore);
@@ -105,6 +106,9 @@ test("Explore keeps text-led content readable without a fake cover or overlappin
 
   await page.getByRole("button", { name: "换一批内容" }).click();
   await expect(page).toHaveURL(/\/explore\?seed=batch-[a-z0-9]+/);
+  await page.screenshot({ path: testInfo.outputPath("explore-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: testInfo.outputPath("explore-mobile.png"), fullPage: true });
 });
 
 test("Explore uses one useful empty state when every source is empty", async ({ page }) => {

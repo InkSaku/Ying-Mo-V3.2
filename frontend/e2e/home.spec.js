@@ -6,9 +6,9 @@ let seededItems;
 
 async function login(page) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill(account.username);
-  await page.getByPlaceholder("请输入密码").fill(account.password);
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill(account.username);
+  await page.getByLabel("密码", { exact: true }).fill(account.password);
+  await page.getByRole("button", { name: "登录，继续书写" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -56,8 +56,10 @@ test("home keeps chronological order, cursor paging and the reading position", a
   await expect(entries).toHaveCount(items.length);
   expect(await entries.evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.feedPostId)))).toEqual(items.map((post) => post.id));
   expect(items[0].post_type).toBe("note");
-  await expect(page.locator(".home-frontispiece-copy h1")).toBeInViewport();
-  await expect(page.locator(".home-collage-photo")).toHaveCount(4);
+  await expect(page.locator(".home-edition-heading h1")).toBeInViewport();
+  await expect(page.locator(".home-ink-landscape")).toBeVisible();
+  await expect(page.locator(".home-writing-sketch")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeInViewport();
   await page.evaluate(() => document.fonts.ready);
   await page.locator(".home-collage img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
   await noOverflow(page);
@@ -91,7 +93,9 @@ test("home fits narrow screens and publishes an image note through the existing 
   const first = page.locator(".home-feed-entry").first();
   await expect(first).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
-  await expect(page.locator(".home-frontispiece-copy h1")).toBeInViewport();
+  await expect(page.locator(".home-edition-heading h1")).toBeInViewport();
+  await expect(page.locator(".home-ink-landscape")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeInViewport();
   await page.locator(".home-collage img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
   await page.screenshot({ path: testInfo.outputPath("home-mobile.png") });
   for (const width of [320, 390, 768, 1024, 1440]) {
@@ -119,9 +123,8 @@ test("home fits narrow screens and publishes an image note through the existing 
   await expect(page.getByRole("textbox", { name: "快速随记正文" })).toHaveValue("");
   await noOverflow(page);
   await page.reload();
-  await expect(page.locator(".home-collage a.home-collage-photo")).toHaveCount(1);
-  await expect(page.locator(".home-collage a img")).toBeVisible();
-  await expect(page.locator(".home-collage")).toContainText("记录中的影像，伴以首页意象图");
+  await expect(page.locator(".home-feed-entry").first()).toContainText(body);
+  await expect(page.locator(".home-feed-entry").first().locator("img.home-feed-media")).toHaveCSS("filter", "none");
 });
 
 test("home keeps empty and failed feeds usable", async ({ page }) => {

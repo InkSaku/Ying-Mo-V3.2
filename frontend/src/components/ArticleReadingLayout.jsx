@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
+import { ArticleTocSketch } from "./ArticleSketches";
 
 function decodeHash(value) {
   try {
@@ -55,6 +56,7 @@ export function ArticleReadingLayout({ outline, children }) {
       <div className={`article-reading-layout ${showToc ? "has-toc" : ""}`}>
         {showToc ? (
           <aside className={`article-toc ${mobileOpen ? "is-open" : ""}`} aria-label="文章目录">
+            <p className="article-toc-eyebrow" aria-hidden="true">ON THIS PAGE</p>
             <p className="article-toc-label">文章目录</p>
             <button
               type="button"
@@ -83,9 +85,16 @@ export function ArticleReadingLayout({ outline, children }) {
                 </a>
               ))}
             </nav>
+            <ArticleTocSketch />
           </aside>
         ) : null}
-        <div ref={contentRef} className="article-reading-column">{children}</div>
+        <div ref={contentRef} className="article-reading-column">
+          <header className="article-reading-start" aria-hidden="true">
+            <span>正文</span>
+            <span>READ FROM HERE</span>
+          </header>
+          {children}
+        </div>
       </div>
     </>
   );

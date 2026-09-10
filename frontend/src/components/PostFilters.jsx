@@ -86,7 +86,7 @@ export function PostFilters({ type = "", filters, options = {}, loading = false,
           {filtersOpen ? "收起" : "展开"}<i aria-hidden="true">{filtersOpen ? "−" : "+"}</i>
         </button>
       </header>
-      <div className={`post-filters-controls ${filtersOpen ? "is-open" : ""}`} id="editorial-filter-controls">{controls}</div>
+      <div className={`post-filters-controls ${filtersOpen ? "is-open" : ""}`} id="editorial-filter-controls" hidden={!filtersOpen}>{controls}</div>
       {activeFilters.length ? <div className="post-filters-active" aria-label="已启用的筛选条件">
         <span>正在查看</span>
         {activeFilters.map((item) => <button key={item.key} type="button" onClick={() => onChange(item.key, item.resetValue || "")} aria-label={`移除筛选：${item.label}`}>{item.label}<i aria-hidden="true">×</i></button>)}

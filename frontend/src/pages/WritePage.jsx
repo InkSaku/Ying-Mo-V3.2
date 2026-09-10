@@ -9,6 +9,8 @@ import { ErrorState, PageLoader } from "../components/States";
 import { PostMediaManager } from "../components/PostMediaManager";
 import { UploadProgress } from "../components/UploadProgress";
 import { VisualMarkdownEditor } from "../components/VisualMarkdownEditor";
+import { WritingCoverSketch } from "../components/WritingSketches";
+import { ArticleArchiveCat } from "../components/ArticleSketches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
@@ -28,6 +30,7 @@ import { applyMarkdownShortcut, markdownActionForKeyEvent } from "../lib/markdow
 import {
   offlineDraftKey, readOfflineDraft, removeOfflineDraft, writeOfflineDraft,
 } from "../lib/offlineDraft";
+import "../styles/writing-editorial.css";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PREVIEW_DELAY = 220;
@@ -285,6 +288,7 @@ export function WritePage() {
   }, [bodyEditorOpen, editorBody, form.body, workspaceMode]);
 
   const isPublished = Boolean(savedPost?.published_at);
+  const memoryLink = savedPost?.memory_link || null;
   const inCollection = Boolean(form.collection_id);
   const title = form.post_type === "article" ? "Article" : "Note";
   const inlineMediaIds = useMemo(
@@ -588,10 +592,33 @@ export function WritePage() {
     setBusy(true);
     try {
       const post = await saveDraftSnapshot(payloadRef.current);
-      const published = await api.post(`/posts/${post.id}/publish`, form.post_type === "article" ? { slug: form.slug.trim() } : {});
+      const publishPayload = { expected_version: post.edit_version };
+      if (form.post_type === "article") publishPayload.slug = form.slug.trim();
+      const published = await api.post(`/posts/${post.id}/publish`, publishPayload);
       navigate(published.data.post_type === "article" ? `/articles/${published.data.slug}` : `/notes/${published.data.id}`, { replace: true });
     } catch (publishError) {
       if (publishError.code !== "EDIT_CONFLICT") setError(publishError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const detachMemoryDraft = async () => {
+    if (!savedPost || !memoryLink) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await api.post(`/posts/${savedPost.id}/memory-link/detach`, {
+        expected_version: savedPost.edit_version,
+        destination: "private",
+      });
+      savedPostRef.current = result.data;
+      setSavedPost(result.data);
+      setForm((current) => ({ ...current, collection_id: "", visibility: "private" }));
+      setMessage("已转为独立私密草稿，可以继续编辑和发布。");
+    } catch (detachError) {
+      setError(detachError.message);
     } finally {
       setBusy(false);
     }
@@ -841,6 +868,10 @@ export function WritePage() {
 
       {error ? <div className="inline-error editor-feedback" role="alert">{error}</div> : null}
       {message ? <div className="inline-success editor-feedback" role="status">{message}</div> : null}
+      {memoryLink ? <div className={memoryLink.state === "invalidated" ? "inline-error editor-feedback" : "inline-success editor-feedback"} role="status">
+        <span>{memoryLink.state === "invalidated" ? "原记录或参与范围已不可用；草稿仍已保留。" : "这是一则共同回忆补充，内容类型和合集范围已锁定。"}</span>
+        <button className="text-button" type="button" disabled={busy} onClick={() => void detachMemoryDraft()}>转为独立私密草稿</button>
+      </div> : null}
       {!online ? <div className="inline-error editor-feedback" role="status">当前处于离线状态；修改会保存在此浏览器，联网后可继续保存到服务器。</div> : null}
       {offlineRecovery ? (
         <div className="inline-success editor-feedback offline-recovery" role="status">
@@ -871,8 +902,11 @@ export function WritePage() {
           {workspaceMode === "write" ? (
           <section className={`editor-paper editor-paper-${form.post_type}`} aria-label={`${title} 写作画布`}>
             <div className="editor-paper-masthead">
-              <p className="editor-paper-index">{form.post_type === "article" ? "ARTICLE" : "NOTE"} / 01</p>
-              <fieldset className="segmented-field editor-type-switch" disabled={isPublished}>
+              <div className="editor-paper-opening">
+                <p className="editor-paper-index">{form.post_type === "article" ? "ARTICLE" : "NOTE"} / 01</p>
+                <p className="editor-paper-whisper" aria-hidden="true">Take your time.</p>
+              </div>
+              <fieldset className="segmented-field editor-type-switch" disabled={isPublished || Boolean(memoryLink)}>
                 <legend className="sr-only">内容类型</legend>
                 <label className={form.post_type === "article" ? "selected" : ""}>
                   <input type="radio" name="post_type" value="article" checked={form.post_type === "article"}
@@ -884,9 +918,11 @@ export function WritePage() {
                     onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "" }))} />
                   <span>随记 <small>Note</small></span>
                 </label>
-                {isPublished ? <small>首次发布后类型锁定</small> : null}
+                {isPublished ? <small>首次发布后类型锁定</small> : (memoryLink ? <small>共同回忆补充固定为随记</small> : null)}
               </fieldset>
             </div>
+
+            <div className="editor-cat-perch"><ArticleArchiveCat /></div>
 
             <label className="editor-paper-field editor-title-field">
               <span>标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
@@ -894,10 +930,13 @@ export function WritePage() {
             </label>
 
             {form.post_type === "article" ? (
+              <details className="editor-summary-drawer">
+                <summary>摘要 <span>{form.summary.trim() ? "已填写 · 展开编辑" : "可选 · 为阅读留一个入口"}</span></summary>
               <label className="editor-paper-field editor-summary-field editor-summary-inline">
                 <span>摘要 · 可选</span>
                 <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
               </label>
+              </details>
             ) : null}
 
             <section
@@ -918,7 +957,11 @@ export function WritePage() {
               onDrop={handleInlineDrop}
             >
               <div className="editor-body-toolbar">
-                <span id="editor-body-heading" className="sr-only">正文</span>
+                <div className="editor-body-heading-copy">
+                  <span id="editor-body-heading">正文</span>
+                  <small>BODY / 在纸上慢慢展开</small>
+                </div>
+                <button className="editor-immersive-action" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
                 <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
                   <button
                     className="markdown-shortcut-button editor-inline-image-button"
@@ -944,7 +987,6 @@ export function WritePage() {
                     onChange={(event) => { void uploadFromInlinePicker(event); }}
                   />
                 </div>
-                <button className="editor-immersive-action" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
               </div>
               <UploadProgress state={editorUploadState} onCancel={cancelInlineUpload} onRetry={editorUploadRetryRef.current ? retryInlineUpload : null} compact />
               <VisualMarkdownEditor
@@ -963,7 +1005,7 @@ export function WritePage() {
                 ariaDescribedBy="editor-body-help"
               />
               <div className="editor-inline-drop-hint" aria-hidden={!inlineDraggingImage}>松开即可上传并插入到当前位置</div>
-              <small id="editor-body-help" className="editor-body-help">图片与 Live Photo 使用安全的内部引用保存，不会在正文中暴露存储地址。</small>
+              <small id="editor-body-help" className="editor-body-help">可以直接粘贴或拖入图片；选中文字后使用上方工具排版。</small>
             </section>
 
             {form.post_type === "note" ? (
@@ -981,7 +1023,7 @@ export function WritePage() {
             <section className="editor-paper editor-paper-preview" aria-label={`${title} 安全预览`} aria-live="polite">
               <div className="editor-paper-masthead">
                 <p className="editor-paper-index">PREVIEW / {form.post_type === "article" ? "ARTICLE" : "NOTE"}</p>
-                <span className="editor-preview-status">与发布页面使用相同的安全渲染</span>
+                <span className="editor-preview-status">发布前，再读一遍。</span>
               </div>
               <article className="editor-preview-document">
                 <h1>{form.title.trim() || (form.post_type === "article" ? "未命名文章" : "未命名随记")}</h1>
@@ -1041,12 +1083,14 @@ export function WritePage() {
           <header><span>02</span><strong>归属与访问</strong></header>
           <label>
             <span>合集</span>
-            <CustomSelect value={form.collection_id} onChange={set("collection_id")}>
+            <CustomSelect disabled={Boolean(memoryLink)} value={form.collection_id} onChange={set("collection_id")}>
               <option value="">不加入 Collection</option>
               {collectionUnavailable ? <option value={form.collection_id}>原 Collection（当前不可访问）</option> : null}
               {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
             </CustomSelect>
-            {collectionUnavailable
+            {memoryLink
+              ? <small>共同回忆补充沿用原记录的 Collection；解除关联后可修改。</small>
+              : collectionUnavailable
               ? <small className="field-error">你已不在原 Collection 中。仍可编辑，但发布前必须先移出。</small>
               : <small>只能选择你当前有权进入和投稿的 Collection。</small>}
           </label>
@@ -1070,7 +1114,7 @@ export function WritePage() {
             <small>使用英文逗号分隔，最多 20 个。</small>
           </label>
           <div className="editor-cover-panel">
-            {savedPost?.cover_media ? <ProtectedImage media={savedPost.cover_media} alt="当前文稿封面" className="editor-cover-preview" /> : <div className="editor-cover-placeholder"><span>封面图片</span><strong>尚未设置</strong></div>}
+            {savedPost?.cover_media ? <ProtectedImage media={savedPost.cover_media} alt="当前文稿封面" className="editor-cover-preview" /> : <div className="editor-cover-placeholder"><WritingCoverSketch /><span>封面图片</span><strong>尚未设置</strong></div>}
             <button type="button" onClick={openMediaDrawer}>{savedPost?.cover_media ? "更换封面" : "设置封面"}</button>
           </div>
           </section>

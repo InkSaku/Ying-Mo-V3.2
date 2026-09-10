@@ -1,0 +1,119 @@
+/* Match the article paper palette without restyling other browsing pages. */
+html:not([data-theme="dark"]):has(.browse-page-note) {
+  --page: #f8f7f3; --surface: #fbfaf6; --text: #242520; --text-2: #41423c;
+  --text-3: #72716b; --text-4: #72716b; --border: #deded5; --brand-link: #334b76;
+}
+/* A quiet, continuous journal. Whitespace carries the structure. */
+.browse-page-note {
+  width: min(calc(100% - clamp(32px, 8vw, 128px)), 1120px);
+  padding: 48px 0 96px;
+}
+.browse-page-note .browse-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr .85fr;
+  align-items: center;
+  gap: 40px;
+  min-height: 0;
+  padding: 12px 0 48px;
+  border: 0;
+}
+.browse-page-note .hero-kicker { color: var(--text-3); font-size: 10px; letter-spacing: .14em; }
+.browse-page-note .browse-hero-copy h1 { margin: 20px 0; font-size: 50px; font-weight: 400; line-height: 1.4; letter-spacing: .055em; }
+.browse-page-note .browse-hero-copy > p:last-child { max-width: 26em; font-size: 14px; line-height: 1.9; color: var(--text-3); }
+.notes-opening-sketch { color: var(--text); padding: 12px 0; }
+.notes-opening-sketch > p { margin: 0 0 0 12px; color: var(--brand-link); font: 23px/1.4 "Snell Roundhand", "Segoe Script", cursive; transform: rotate(-5deg); }
+.notes-opening-sketch svg { display: block; width: 100%; }
+.notes-sketch-trail { fill: none; stroke: var(--brand-link); stroke-width: 1.4; stroke-dasharray: 4 7; stroke-linecap: round; }
+.browse-page-note .browse-hero-index { display: block; padding: 8px 0 8px 24px; border: 0; border-left: 1px solid var(--border); background: transparent; }
+.browse-page-note .browse-hero-index > .tabular { display: block; margin-bottom: 12px; font: 44px/1 var(--western-serif); color: var(--brand-link); }
+.browse-page-note .browse-hero-index strong { font-size: 15px; font-weight: 400; }
+.browse-page-note .browse-hero-index p { margin-top: 8px; font-size: 12px; line-height: 1.8; }
+.browse-page-note .browse-hero-index nav { display: flex; gap: 24px; margin-top: 20px; border: 0; }
+.browse-page-note .browse-hero-index nav a { padding: 8px 0; font-size: 13px; }
+.browse-page-note .browse-hero-jump { margin-top: 16px; padding-top: 0; border: 0; font-size: 12px; }
+.browse-page-note .browse-hero-jump > span { display: none; }
+.browse-page-note .post-filters-editorial { display: block; margin: 0; padding: 0; border: 0; border-block: 1px solid var(--border); }
+.browse-page-note .post-filters-heading { display: flex; align-items: center; gap: 24px; min-height: 62px; padding: 0; border: 0; }
+.browse-page-note .post-filters-heading > span { color: var(--brand-link); font-size: 10px; }
+.browse-page-note .post-filters-heading > strong { font-size: 14px; font-weight: 400; }
+.browse-page-note .post-filters-heading > small { margin-left: auto; font-size: 12px; }
+.browse-page-note .post-filters-toggle { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; border: 0; background: transparent; }
+.browse-page-note .post-filters-controls[hidden] { display: none; }
+.browse-page-note .post-filters-controls.is-open { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 16px; padding: 12px 0 24px; }
+.browse-page-note .post-filters-active { padding: 12px 0; border-top: 0; }
+.browse-page-note .browse-editorial-section { margin-top: 56px; }
+.browse-page-note .browse-section-heading { margin-bottom: 32px; padding: 0; border: 0; }
+.browse-page-note .browse-section-heading h2 { font-size: 30px; font-weight: 400; }
+.browse-page-note .browse-section-heading p { font-size: 10px; color: var(--brand-link); }
+.browse-page-note .browse-section-heading > span { font-size: 12px; }
+.browse-page-note .note-journal { border: 0; }
+.browse-page-note .note-journal-period { grid-template-columns: 144px minmax(0, 1fr); gap: 40px; border: 0; margin-bottom: 48px; }
+.browse-page-note .note-journal-period > header { padding: 24px 0; }
+.browse-page-note .note-journal-period > header p { font-size: 10px; }
+.browse-page-note .note-journal-period > header strong { font-size: 44px; font-weight: 400; }
+.browse-page-note .note-journal-period > header small { margin-top: 20px; font-size: 11px; }
+.browse-page-note .note-journal-entries { display: block; min-width: 0; border: 0; }
+.browse-page-note .note-journal-entries > .post-card-journal {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 24px;
+  min-height: 0;
+  padding: 28px 0 32px;
+  border: 0;
+  background: transparent;
+}
+.browse-page-note .note-journal-entries > .post-card-journal + .post-card-journal { border-top: 1px solid var(--border); }
+.browse-page-note .note-journal-entries > .post-card-journal.post-card-with-cover { grid-template-columns: 56px minmax(0, 1fr) 180px; }
+.browse-page-note .post-card-journal > .post-card-content { grid-column: 2; grid-row: 1; min-width: 0; }
+.browse-page-note .post-card-journal > button { grid-column: 3; grid-row: 1; }
+.browse-page-note .note-journal-entries > .post-card-journal > button,
+.browse-page-note .note-journal-entries .post-card-journal .card-cover { width: 180px; height: 144px; margin: 0; border-radius: 0; object-fit: cover; filter: none; }
+.browse-page-note .post-card-journal .post-card-meta { display: none; }
+.browse-page-note .note-journal-entries .post-card-journal .note-card-text { max-width: 48em; margin: 0 0 18px; font-size: 18px; line-height: 1.9; }
+.browse-page-note .note-journal-entries .note-card-date strong { font-size: 36px; font-weight: 400; }
+.browse-page-note .note-card-date small { font-size: 11px; }
+.browse-page-note .note-card-date i { display: none; }
+.browse-page-note .post-card-journal .post-card-details { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; line-height: 1.8; }
+.browse-page-note .post-card-context:empty { display: none; }
+.browse-page-note .post-card-context .tag { padding: 0; border: 0; background: transparent; font-size: 12px; }
+.browse-page-note a:focus-visible, .browse-page-note button:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+@media (max-width: 900px) {
+  .browse-page-note .browse-hero { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .browse-page-note .browse-hero-index { grid-column: 1 / -1; padding: 0; border: 0; }
+  .browse-page-note .browse-hero-index > .tabular { display: inline; margin-right: 12px; font-size: 30px; }
+  .browse-page-note .browse-hero-index > div { display: inline-block; }
+  .browse-page-note .browse-hero-index p { display: none; }
+  .browse-page-note .browse-hero-index nav { margin-top: 12px; }
+  .browse-page-note .note-journal-period { grid-template-columns: 100px minmax(0, 1fr); gap: 24px; }
+  .browse-page-note .note-journal-entries > .post-card-journal.post-card-with-cover { grid-template-columns: 44px minmax(0, 1fr); }
+  .browse-page-note .post-card-journal > button { grid-column: 2; grid-row: 2; }
+  .browse-page-note .note-journal-entries > .post-card-journal > button,
+  .browse-page-note .note-journal-entries .post-card-journal .card-cover { width: min(100%, 320px); height: 200px; }
+  .browse-page-note .post-filters-controls.is-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .browse-page-note { width: calc(100% - 32px); padding: 24px 0 72px; }
+  .browse-page-note .browse-hero { gap: 20px 8px; padding-bottom: 32px; }
+  .browse-page-note .browse-hero-copy { grid-column: 1 / -1; }
+  .browse-page-note .browse-hero-copy h1 { font-size: 36px; margin: 16px 0; }
+  .notes-opening-sketch { grid-column: 2; grid-row: 2; width: 150px; justify-self: end; }
+  .notes-opening-sketch > p { font-size: 17px; margin-left: 0; }
+  .browse-page-note .browse-hero-index { grid-column: 1; grid-row: 2; }
+  .browse-page-note .browse-hero-index > .tabular { display: block; margin-bottom: 8px; }
+  .browse-page-note .browse-hero-index strong { font-size: 12px; }
+  .browse-page-note .browse-hero-jump { display: none; }
+  .browse-page-note .post-filters-heading { gap: 16px; }
+  .browse-page-note .post-filters-heading > span { display: none; }
+  .browse-page-note .post-filters-heading > small { font-size: 10px; }
+  .browse-page-note .post-filters-controls.is-open { grid-template-columns: 1fr; }
+  .browse-page-note .browse-editorial-section { margin-top: 40px; }
+  .browse-page-note .browse-section-heading { align-items: start; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .browse-page-note .browse-section-heading h2 { font-size: 26px; }
+  .browse-page-note .note-journal-period { grid-template-columns: 1fr; gap: 0; }
+  .browse-page-note .note-journal-period > header { position: static; display: flex; flex-direction: row; align-items: baseline; gap: 12px; padding: 12px 0 8px; }
+  .browse-page-note .note-journal-period > header strong { font-size: 32px; }
+  .browse-page-note .note-journal-period > header small { margin: 0 0 0 auto; }
+  .browse-page-note .note-journal-entries > .post-card-journal { grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
+  .browse-page-note .note-journal-entries .post-card-journal .note-card-text { font-size: 16px; }
+  .browse-page-note .note-journal-entries .note-card-date strong { font-size: 30px; }
+}

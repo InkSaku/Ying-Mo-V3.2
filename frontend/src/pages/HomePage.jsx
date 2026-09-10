@@ -2,12 +2,13 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { HomeFeed } from "../components/HomeFeed";
 import { QuickNoteComposer } from "../components/QuickNoteComposer";
-import { HomeCollage } from "../components/HomeCollage";
 import { HomeClosing } from "../components/HomeClosing";
+import { HomeInkLandscape, HomeWritingSketch } from "../components/HomeSketches";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
 import "../styles/home.css";
+import "../styles/home-editorial.css";
 
 const feedFilters = [["all", "全部"], ["note", "随记"], ["article", "文章"]];
 
@@ -52,27 +53,27 @@ export function HomePage() {
   };
 
   return (
-    <main ref={pageRef} className="page-shell home-page home-feed-page home-journal">
-      <header className="home-frontispiece">
-        <p className="home-welcome">又见面了，今天想留下一点什么？</p>
-        <div className="home-frontispiece-copy">
-          <h1>映墨</h1>
-          <p className="home-manifesto">写下此刻，<br />读到彼此。</p>
-          <p className="home-introduction">文章、随记与共同经历，<br />在这里，慢慢汇成日常。</p>
-          <nav aria-label="首页延伸入口">
-            <Link to="/on-this-day">往年今日 <span aria-hidden="true">↗</span></Link>
-            <Link to="/explore">漫游内容 <span aria-hidden="true">↗</span></Link>
-            <Link to="/collections">我的合集 <span aria-hidden="true">↗</span></Link>
-          </nav>
-        </div>
-        <HomeCollage posts={homeSnapshot?.items} />
+    <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
+      <header className="home-edition-heading">
+        <div className="home-edition-copy"><p>映墨 · 日常来信</p><h1>日子缓缓，<br />读到彼此。</h1><p className="home-edition-note">一些近况，一点想念。这里收着朋友们的日常。</p></div>
+        <HomeInkLandscape />
+        <p className="home-edition-hand" aria-hidden="true">Good things<br /><span>take time.</span></p>
+      </header>
+      <div className="home-editorial-columns">
+      <aside id="home-writing" className="home-writing-margin" aria-label="书写与回望">
+        <HomeWritingSketch />
         <div className="home-compose-layout">
           <QuickNoteComposer appearance="paper" autoFocus={params.get("compose") === "note"} onPublished={setPublishedPost} onCollectionsLoaded={setCollections} />
         </div>
-      </header>
-
+        <nav className="home-margin-nav" aria-label="首页延伸入口">
+          <Link to="/on-this-day"><span>往年今日</span><small>翻回曾经的这一页</small><b aria-hidden="true">↗</b></Link>
+          <Link to="/collections"><span>共同的册页</span><small>把片刻，慢慢汇成册</small><b aria-hidden="true">↗</b></Link>
+          <Link to="/me/posts"><span>我的文稿</span><small>拾起上次未写完的那一页</small><b aria-hidden="true">↗</b></Link>
+        </nav>
+      </aside>
+      <section className="home-reading-column" aria-label="朋友的记录">
       <div className="home-feed-toolbar">
-        <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">时间流</h2><span>日常，陆续发生。</span></div>
+        <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">近来的记录</h2></div>
         <div className="home-feed-filters" aria-label="筛选时间流">
           {feedFilters.map(([value, label]) => (
             <button key={value} type="button" className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => selectType(value)}>{label}</button>
@@ -81,6 +82,8 @@ export function HomePage() {
       </div>
 
       <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} />
+      </section>
+      </div>
       <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
     </main>
   );

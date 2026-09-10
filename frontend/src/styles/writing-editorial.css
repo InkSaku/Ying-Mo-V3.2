@@ -1,0 +1,630 @@
+/* A working sheet: quiet, tactile and consistent with authentication, Home and reading. */
+html:not([data-theme="dark"]):has(.editor-page) {
+  --page: #f8f7f3;
+  --surface: #fbfaf6;
+  --surface-2: #f2f1eb;
+  --text: #242520;
+  --text-2: #41423c;
+  --text-3: #72716b;
+  --text-4: #72716b;
+  --border: #deded5;
+  --border-soft: #e9e8e1;
+  --brand-link: #334b76;
+}
+
+.app-frame:has(.editor-page) .btn { border-radius: 2px; }
+.app-frame:has(.editor-page) .btn-primary {
+  color: var(--page) !important;
+  background: var(--text);
+  box-shadow: none;
+  -webkit-text-fill-color: var(--page);
+}
+
+.editor-page {
+  width: min(100%, 1320px) !important;
+  padding: 20px 48px 88px !important;
+}
+
+.editor-page .editor-publication-bar {
+  min-height: 72px;
+  margin-bottom: 38px;
+  padding: 8px 0;
+  background: color-mix(in srgb, var(--page) 96%, transparent);
+}
+
+.editor-page .editor-back-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding-right: 24px;
+  color: var(--brand-link);
+  text-decoration: none;
+}
+
+.editor-page .editor-document-identity > span {
+  color: var(--text-3);
+  letter-spacing: .12em;
+}
+
+.editor-page .editor-document-identity strong {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.editor-page .editor-document-identity small i {
+  background: var(--brand-link);
+}
+
+.editor-page .editor-view-switch {
+  min-height: 38px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.editor-page .editor-view-switch button {
+  min-width: 58px;
+  padding-inline: 12px;
+}
+
+.editor-page .editor-view-switch button.active {
+  color: var(--brand-link);
+  background: transparent;
+  box-shadow: inset 0 -2px var(--brand-link);
+}
+
+.editor-page .editor-save-action {
+  color: var(--brand-link);
+}
+
+.editor-page .editor-publication-bar .editor-top-actions .btn-primary {
+  min-width: 92px;
+}
+
+.editor-page .editor-feedback {
+  margin: -18px 0 26px;
+  border-radius: 0;
+}
+
+.editor-page .editor-layout {
+  grid-template-columns: minmax(0, 824px) minmax(276px, 300px);
+  gap: clamp(44px, 5vw, 72px);
+  justify-content: center;
+}
+
+.editor-page .editor-main { gap: 28px; }
+
+.editor-page .editor-paper {
+  position: relative;
+  padding: 34px 44px 58px 54px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 78%, var(--page));
+}
+
+.editor-page .editor-paper::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 24px;
+  display: block;
+  width: 1px;
+  background: color-mix(in srgb, var(--brand-link) 18%, var(--border));
+  content: "";
+  pointer-events: none;
+}
+
+.editor-page .editor-paper::after {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  display: block;
+  color: var(--text-4);
+  font: 9px/1 var(--mono);
+  letter-spacing: .12em;
+  content: "YING MO / DRAFT";
+}
+
+.editor-page .editor-paper-masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 138px auto;
+  align-items: start;
+  gap: 22px;
+  min-height: 118px;
+  padding: 0 0 24px;
+}
+
+.editor-paper-opening {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.editor-page .editor-paper-index {
+  color: var(--text-3);
+  letter-spacing: .16em;
+}
+
+.editor-paper-whisper {
+  max-width: 18em;
+  margin: 2px 0 0 8px;
+  color: var(--brand-link);
+  font: 21px/1.22 "Snell Roundhand", "Segoe Script", cursive;
+  letter-spacing: 0;
+  transform: rotate(-5deg);
+}
+
+.editor-paper-whisper span { margin-left: 13px; }
+
+.writing-desk-sketch {
+  width: 132px;
+  height: auto;
+  margin-top: -6px;
+  color: var(--text);
+  opacity: .72;
+  pointer-events: none;
+}
+
+.writing-desk-sketch path,
+.writing-cover-sketch path { vector-effect: non-scaling-stroke; }
+
+.writing-sketch-paper,
+.writing-sketch-ink,
+.writing-sketch-pen,
+.writing-cover-sketch > g:first-child {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.15;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.writing-sketch-paper path:not(:first-child) {
+  opacity: .4;
+  stroke-width: .75;
+}
+
+.writing-sketch-blue,
+.writing-cover-sketch-blue {
+  fill: none;
+  stroke: var(--brand-link);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.editor-page .editor-type-switch {
+  justify-self: end;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-page .editor-type-switch label {
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 0;
+}
+
+.editor-page .editor-type-switch label.selected {
+  color: var(--brand-link);
+  background: transparent;
+  box-shadow: inset 0 -2px var(--brand-link);
+}
+
+.editor-page .editor-paper-field {
+  padding: 34px 0 30px;
+}
+
+.editor-page .editor-paper-field > span,
+.editor-page .editor-note-dateline label > span {
+  color: var(--text-3);
+  letter-spacing: .1em;
+}
+
+.editor-page .editor-title-field input {
+  font-size: clamp(42px, 4.2vw, 58px);
+  font-weight: 400;
+  line-height: 1.34;
+  letter-spacing: .04em;
+}
+
+.editor-page .editor-title-field input::placeholder {
+  color: color-mix(in srgb, var(--text-3) 45%, transparent);
+}
+
+.editor-page .editor-summary-inline {
+  padding: 22px 0 24px;
+}
+
+.editor-page .editor-summary-inline textarea {
+  min-height: 58px;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.editor-page .editor-paper .editor-body-section {
+  padding: 28px 0 18px;
+  border-bottom: 0;
+}
+
+.editor-page .editor-paper .editor-body-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-body-heading-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.editor-page .editor-body-heading-copy > span {
+  color: var(--text);
+  font-size: 16px;
+  letter-spacing: .08em;
+}
+
+.editor-page .editor-body-heading-copy > small {
+  color: var(--text-3);
+  font: 9px/1.5 var(--mono);
+  letter-spacing: .1em;
+}
+
+.editor-page .editor-inline-shortcuts {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  gap: 0;
+  padding: 4px 0 0;
+}
+
+.editor-page .editor-inline-shortcuts .markdown-shortcut-button {
+  min-height: 34px;
+  padding-inline: 10px;
+  border-right-color: var(--border-soft);
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.editor-page .editor-inline-shortcuts .editor-inline-image-button {
+  background: color-mix(in srgb, var(--surface) 82%, var(--page));
+  color: var(--brand-link);
+  font-weight: 500;
+}
+
+.editor-page .editor-immersive-action {
+  min-height: 40px;
+  color: var(--brand-link);
+  font-size: 11px;
+}
+
+.editor-page .editor-body-visual {
+  min-height: 560px;
+  border: 0;
+}
+
+.editor-page .editor-body-visual .visual-markdown-mode-switch {
+  justify-content: flex-start;
+  padding: 8px 0 3px;
+  border-bottom: 0;
+}
+
+.editor-page .editor-body-visual .visual-markdown-mode-switch button {
+  padding-inline: 7px;
+  border-radius: 0;
+  font-size: 10px;
+}
+
+.editor-page .editor-body-visual .visual-markdown-mode-switch button[aria-pressed="true"] {
+  border-color: transparent;
+  color: var(--brand-link);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.editor-page .editor-body-visual .visual-markdown-blocks {
+  padding: 12px 0 38px;
+}
+
+.editor-page .editor-body-visual .visual-markdown-text-block {
+  padding: 12px 4px;
+  color: var(--text-2);
+  font-size: 18px;
+  line-height: 1.95;
+  letter-spacing: .025em;
+}
+
+.editor-page .editor-body-visual .visual-markdown-text-block:focus,
+.editor-page .editor-body-visual .visual-markdown-source:focus {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--brand-link) 45%, transparent);
+}
+
+.editor-page .editor-body-help {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.editor-page .editor-media-drawer {
+  margin-top: 2px;
+  background: transparent;
+}
+
+.editor-page .editor-media-drawer > summary {
+  min-height: 64px;
+}
+
+.editor-page .editor-sidebar {
+  top: calc(var(--header-h) + 92px);
+  max-height: calc(100dvh - var(--header-h) - 110px);
+  padding: 8px 0 36px 28px;
+  border-left: 1px solid var(--border);
+}
+
+.editor-page .editor-sidebar-heading h2 {
+  font-size: 25px;
+  font-weight: 400;
+  letter-spacing: .04em;
+}
+
+.editor-page .editor-sidebar-heading span { line-height: 1.75; }
+
+.editor-page .editor-publication-status {
+  padding: 14px 0 10px;
+}
+
+.editor-page .editor-sidebar-section {
+  gap: 20px;
+  padding: 25px 0;
+}
+
+.editor-page .editor-sidebar-section > header strong { font-weight: 500; }
+
+.editor-page .editor-sidebar input,
+.editor-page .editor-sidebar .custom-select-trigger {
+  min-height: 42px;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.editor-page .editor-tag-preview i {
+  border: 0;
+  border-radius: 0;
+  color: var(--brand-link);
+  background: transparent;
+}
+
+.editor-page .editor-tag-preview i::before { content: "#"; }
+
+.editor-page .editor-cover-panel {
+  border-radius: 0;
+  background: transparent;
+}
+
+.editor-page .editor-cover-preview,
+.editor-page .protected-image-placeholder.editor-cover-preview,
+.editor-page .editor-cover-placeholder {
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+}
+
+.editor-page .editor-cover-placeholder {
+  position: relative;
+  min-height: 138px;
+  align-content: end;
+  padding-bottom: 13px;
+  background: color-mix(in srgb, var(--surface) 68%, var(--page));
+}
+
+.writing-cover-sketch {
+  position: absolute;
+  inset: 10px 12px auto;
+  width: calc(100% - 24px);
+  height: 83px;
+  color: var(--text);
+  opacity: .55;
+  pointer-events: none;
+}
+
+.editor-page .editor-cover-placeholder span,
+.editor-page .editor-cover-placeholder strong {
+  position: relative;
+  z-index: 1;
+}
+
+.editor-page .editor-publish-readiness strong { color: var(--brand-link); }
+
+.editor-page a:focus-visible,
+.editor-page button:focus-visible,
+.editor-page input:focus-visible,
+.editor-page textarea:focus-visible {
+  outline: 2px solid var(--brand-link);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1099px) {
+  .editor-page .editor-layout { display: block; }
+
+  .editor-page .editor-main {
+    width: min(100%, 824px);
+    margin-inline: auto;
+  }
+
+  .editor-page .editor-settings-trigger { display: inline-flex; }
+  .editor-page .editor-view-switch { display: none; }
+
+  .editor-page .editor-sidebar {
+    display: none;
+    position: fixed;
+    z-index: 96;
+    inset: 0 0 0 auto;
+    width: min(410px, calc(100vw - 40px));
+    max-height: none;
+    padding: 34px 34px 60px;
+    border-left: 1px solid var(--border);
+    background: var(--page);
+    box-shadow: -24px 0 70px rgb(0 0 0 / 18%);
+  }
+
+  .editor-page .editor-sidebar.is-open { display: block; }
+  .editor-page .editor-sidebar-scrim { display: block; }
+  .editor-page .editor-sidebar-heading > button { display: block; }
+}
+
+@media (max-width: 767px) {
+  .editor-page {
+    padding: 16px 24px 150px !important;
+  }
+
+  .editor-page .editor-publication-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+    margin-bottom: 24px;
+  }
+
+  .editor-page .editor-publication-bar .editor-top-actions,
+  .editor-page .editor-heading .editor-top-actions {
+    grid-template-columns: auto 1fr 1fr;
+  }
+
+  .editor-page .editor-paper {
+    padding: 24px 0 42px;
+    border-width: 1px 0 0;
+    background: transparent;
+  }
+
+  .editor-page .editor-paper::before { display: none; }
+  .editor-page .editor-paper::after { right: 0; }
+
+  .editor-page .editor-paper-masthead {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 112px;
+    gap: 16px;
+  }
+
+  .writing-desk-sketch {
+    position: absolute;
+    top: 56px;
+    right: 4px;
+    width: 104px;
+    opacity: .58;
+  }
+
+  .editor-page .editor-type-switch {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .editor-page .editor-type-switch label { padding-inline: 9px; }
+  .editor-page .editor-type-switch label span small { display: none; }
+  .editor-page .editor-type-switch > small { display: none; }
+
+  .editor-page .editor-paper-whisper {
+    max-width: 15em;
+    margin-left: 4px;
+    font-size: 17px;
+  }
+
+  .editor-page .editor-title-field { padding: 26px 0 24px; }
+
+  .editor-page .editor-paper .editor-title-field input {
+    font-size: clamp(34px, 10vw, 43px);
+    line-height: 1.4;
+  }
+
+  .editor-page .editor-summary-inline textarea {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+
+  .editor-page .editor-paper .editor-body-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .editor-page .editor-inline-shortcuts {
+    width: calc(100vw - 48px);
+  }
+
+  .editor-page .editor-body-visual {
+    min-height: 470px;
+  }
+
+  .editor-page .editor-body-visual .visual-markdown-text-block {
+    padding-inline: 0;
+    font-size: 17px;
+    line-height: 1.9;
+  }
+
+  .editor-page .editor-sidebar {
+    width: 100%;
+    padding: 26px 20px 110px;
+  }
+}
+
+@media (max-width: 360px) {
+  .editor-page { padding-inline: 20px !important; }
+  .editor-page .editor-inline-shortcuts { width: calc(100vw - 40px); }
+  .writing-desk-sketch { display: none; }
+}
+
+/* Writing is the primary surface; publication settings sit in the margin. */
+.editor-page { width: min(100%, 1440px) !important; padding: 16px 48px 88px !important; }
+.editor-page .editor-publication-bar { min-height: 76px; margin-bottom: 24px; background: var(--page); backdrop-filter: none; }
+.editor-page .editor-layout { grid-template-columns: minmax(0, 860px) minmax(240px, 280px); gap: 48px; }
+.editor-page .editor-paper { padding: 12px 32px 48px; border: 0; background: transparent; }
+.editor-page .editor-paper::before, .editor-page .editor-paper::after { display: none; }
+.editor-page .editor-paper-masthead { grid-template-columns: minmax(0, 1fr) auto; align-items: center; min-height: 0; gap: 20px; padding: 8px 0 0; border: 0; }
+.editor-page .editor-paper-opening { gap: 6px; }
+.editor-page .editor-paper-whisper { margin: 0; font-size: 19px; }
+.editor-page .editor-type-switch { grid-column: 2; grid-row: 1; }
+.editor-page .editor-cat-perch { margin: 0 0 16px; }
+.editor-page .editor-cat-perch .article-archive-cat { height: 72px; border-bottom-color: var(--border); }
+.editor-page .editor-title-field { padding: 20px 0 24px; border: 0; }
+.editor-page .editor-title-field input { font-size: clamp(32px, 3.2vw, 46px); }
+.editor-summary-drawer { margin-bottom: 12px; }
+.editor-summary-drawer > summary { min-height: 44px; display: flex; align-items: center; gap: 14px; color: var(--text-3); cursor: pointer; font-size: 13px; list-style: none; }
+.editor-summary-drawer > summary::-webkit-details-marker { display: none; }
+.editor-summary-drawer > summary::before { content: "+"; color: var(--brand-link); }
+.editor-summary-drawer[open] > summary::before { content: "−"; }
+.editor-summary-drawer > summary span { font-size: 11px; }
+.editor-page .editor-summary-inline { padding: 8px 0 16px; border: 0; }
+.editor-page .editor-paper .editor-body-section { padding-top: 12px; border: 0; }
+.editor-page .editor-paper .editor-body-toolbar { padding: 8px 0 12px; border-bottom: 1px solid var(--border); }
+.editor-page .editor-body-heading-copy > small { display: none; }
+.editor-page .editor-inline-shortcuts { flex-wrap: wrap; gap: 2px; }
+.editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-height: 36px; border: 0; }
+.editor-page .editor-body-visual { min-height: 620px; }
+.editor-page .editor-body-help { border: 0; color: var(--text-3); line-height: 1.8; }
+.editor-page .editor-sidebar { padding-left: 24px; }
+.editor-page .editor-sidebar-heading h2 { font-size: 21px; }
+.editor-page .editor-sidebar-section { padding: 22px 0; border-top: 0; }
+.editor-page .editor-publication-status { border: 0; }
+.editor-page .editor-cover-placeholder { min-height: 110px; }
+.editor-page summary:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+.editor-page .editor-paper-preview .editor-paper-masthead { margin-bottom: 32px; }
+@media (max-width: 1099px) {
+  .editor-page .editor-layout { display: block; }
+  .editor-page .editor-main { width: min(100%, 860px); }
+  .editor-page .editor-view-switch { display: inline-flex; }
+  .editor-page .editor-sidebar { padding: 32px 28px 100px; }
+}
+@media (max-width: 767px) {
+  .editor-page { padding: 12px 20px 170px !important; }
+  .editor-page .editor-publication-bar { margin-bottom: 12px; }
+  .editor-page .editor-paper { padding: 12px 0 32px; }
+  .editor-page .editor-paper-masthead { gap: 12px; min-height: 0; }
+  .editor-page .editor-paper-whisper { font-size: 17px; }
+  .editor-page .editor-cat-perch .article-archive-cat { height: 64px; }
+  .editor-page .editor-cat-perch .article-archive-cat-runner { width: 100px; height: 60px; }
+  .editor-page .editor-paper .editor-title-field input { font-size: 32px; }
+  .editor-page .editor-inline-shortcuts { width: 100%; }
+  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-height: 44px; }
+  .editor-page .editor-body-visual { min-height: 480px; }
+  .editor-page .editor-publication-bar .editor-top-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; background: var(--page); backdrop-filter: none; }
+  .editor-page .editor-top-actions .editor-view-switch { grid-column: 1 / -1; grid-row: 1; justify-content: center; border: 0; }
+  .editor-page .editor-view-switch button { min-height: 40px; min-width: 76px; }
+  .editor-page .editor-sidebar { padding: 24px 20px 140px; }
+}
+.editor-page .editor-paper-index { margin: 0; font-size: 11px; line-height: 1.5; }

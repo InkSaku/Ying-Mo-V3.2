@@ -11,6 +11,7 @@ import { MemberCard } from "../components/MemberCard";
 import { PostCard } from "../components/PostCard";
 import { ProtectedImage } from "../components/ProtectedImage";
 import { ErrorState } from "../components/States";
+import { ExploreSketch } from "../components/ExploreSketch";
 import "../styles/explore.css";
 
 function ExploreEmpty({ children }) {
@@ -41,7 +42,7 @@ function ExploreOpening({ article, note }) {
             <Link className="explore-opening-visual" to={postHref(article)} aria-label={`从这里开始：${article.title || "未命名文章"}`}>
               <ProtectedImage
                 media={media}
-                alt=""
+                alt={media.alt_text ?? ""}
                 fallback={<span className="explore-opening-media-error" role="status">影像暂时无法读取</span>}
               />
             </Link>
@@ -126,6 +127,7 @@ export function ExplorePage() {
           <h1>漫游</h1>
           <p className="explore-manifesto">换一条路，<br />遇见彼此。</p>
           <p className="explore-introduction">从朋友们留下的文章、随记与共同记录里，随机翻开几页。</p>
+          <div className="explore-walk-margin"><ExploreSketch /><p aria-hidden="true">A little detour.<br /><span>A new discovery.</span></p></div>
           <button className="explore-shuffle" type="button" disabled={state.loading} onClick={shuffle}>
             <span>{state.loading ? "正在换一条路" : "换一批内容"}</span>
             <span aria-hidden="true">↻</span>
@@ -224,7 +226,7 @@ export function ExplorePage() {
       </section>
 
       <section className="explore-section explore-member-section">
-        <ExploreSectionHeading number="06" title="新朋友" description="最近加入的成员，只展示公开资料，不做活跃度或贡献排名。" />
+        <ExploreSectionHeading number="06" title="新朋友" description="在这里，认识最近开始记录生活的朋友。" />
         {data.recent_members?.length
           ? <div className="explore-member-grid">{data.recent_members.map((member) => <MemberCard key={member.id} member={member} />)}</div>
           : <ExploreEmpty>暂时还没有其他成员。</ExploreEmpty>}

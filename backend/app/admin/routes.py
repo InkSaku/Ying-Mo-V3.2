@@ -255,6 +255,8 @@ def delete_post(post_id):
     post = db.session.get(Post, post_id)
     if post is None or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    from app.posts.memory_contributions import invalidate_links_for_post
+    invalidate_links_for_post(post.id, "post_deleted")
     post.deleted_at = utcnow()
     record_admin_log(actor, "post.soft_delete", "post", post.id, before={"deleted_at": None}, after={"deleted_at": isoformat_utc(post.deleted_at)}, reason=reason)
     db.session.commit()

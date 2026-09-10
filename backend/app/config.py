@@ -59,6 +59,7 @@ class BaseConfig:
     RATE_LIMIT_PASSWORD_RESET_CONFIRM = os.getenv("RATE_LIMIT_PASSWORD_RESET_CONFIRM", "10 per hour")
 
     REGISTRATION_INVITE_CODE = os.getenv("REGISTRATION_INVITE_CODE", "").strip()
+    MEMORY_CONTRIBUTIONS_ENABLED = _env_bool("MEMORY_CONTRIBUTIONS_ENABLED", False)
     UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", BASE_DIR / "uploads")).expanduser()
     MEDIA_STORAGE_BACKEND = os.getenv("MEDIA_STORAGE_BACKEND", "local").strip().lower()
     S3_BUCKET = os.getenv("S3_BUCKET", "").strip()
@@ -105,6 +106,7 @@ class TestingConfig(BaseConfig):
     JWT_COOKIE_CSRF_PROTECT = False
     SQLALCHEMY_ENGINE_OPTIONS = {}
     MAIL_BACKEND = "memory"
+    MEMORY_CONTRIBUTIONS_ENABLED = True
 
     @classmethod
     def database_uri(cls):

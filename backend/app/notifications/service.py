@@ -14,6 +14,7 @@ IMPORTANT_COLLECTION_KINDS = DIRECT_COLLECTION_KINDS | {
     "post_comment",
     "comment_reply",
     "comment_mention",
+    "memory_contribution_added",
 }
 
 

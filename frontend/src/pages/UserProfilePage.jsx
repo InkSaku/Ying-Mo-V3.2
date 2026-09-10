@@ -9,6 +9,7 @@ import { CollectionCard } from "../components/CollectionCard";
 import { Pagination } from "../components/Pagination";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import { ProtectedImage } from "../components/ProtectedImage";
+import "../styles/profile-editorial.css";
 
 const PAGE_SIZE = 12;
 
@@ -82,13 +83,18 @@ export function UserProfilePage() {
     <main className="page-shell profile-page" aria-busy={loadingCurrentProfile || undefined}>
       {loadingCurrentProfile ? <div className="profile-refresh" role="status">正在更新这一页内容…</div> : null}
       <header className="profile-hero">
-        <ProtectedImage
-          media={data.user.avatar_media}
-          alt={`${data.user.nickname}的头像`}
-          className="profile-avatar"
-          fallback={<div className="profile-monogram" aria-hidden="true">{(data.user.nickname || data.user.username).slice(0, 1)}</div>}
-        />
+        <div className="profile-hero-kicker"><span>MEMBER / PROFILE</span><small>映墨成员页</small></div>
+        <figure className="profile-portrait">
+          <ProtectedImage
+            media={data.user.avatar_media}
+            alt={`${data.user.nickname}的头像`}
+            className="profile-avatar"
+            fallback={<div className="profile-monogram" aria-hidden="true">{(data.user.nickname || data.user.username).slice(0, 1)}</div>}
+          />
+          <figcaption aria-hidden="true">PORTRAIT / {data.user.username}</figcaption>
+        </figure>
         <div className="profile-copy">
+          <p className="profile-copy-label">记录者</p>
           <h1>{data.user.nickname}</h1>
           <p className="profile-handle">@{data.user.username}</p>
           {data.user.bio ? <p className="profile-bio">{data.user.bio}</p> : <p className="muted">这位成员还没有填写简介。</p>}
@@ -101,16 +107,22 @@ export function UserProfilePage() {
         </dl>
       </header>
 
+      <nav className="profile-local-nav" aria-label="个人主页目录">
+        <a href="#profile-posts"><span>01</span>记录目录</a>
+        <a href="#profile-collections"><span>02</span>共同书册</a>
+      </nav>
+
       <section className="content-section profile-section" id="profile-posts" aria-labelledby="profile-posts-heading">
         <div className="profile-section-heading">
           <div>
-            <h2 id="profile-posts-heading">Posts</h2>
+            <p className="profile-section-kicker">WRITING / NOTES</p>
+            <h2 id="profile-posts-heading">记录目录</h2>
             <p>该成员发布且你当前有权阅读的文章与随记。</p>
           </div>
           <span className="tabular">共 {data.visible_post_count} 篇</span>
         </div>
         {data.posts?.length
-          ? <div className="note-stream">{data.posts.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
+          ? <div className="profile-post-catalogue">{data.posts.map((post, index) => <PostCard key={post.id} post={post} variant="profile" index={(postsPage - 1) * PAGE_SIZE + index} />)}</div>
           : <EmptyState title="当前没有你可见的内容" description="私密内容、草稿和无权 Collection 内容不会出现在这里。" />}
         <Pagination
           page={postsPagination.page || postsPage}
@@ -122,13 +134,14 @@ export function UserProfilePage() {
       <section className="content-section profile-section" id="profile-collections" aria-labelledby="profile-collections-heading">
         <div className="profile-section-heading">
           <div>
-            <h2 id="profile-collections-heading">Collections</h2>
+            <p className="profile-section-kicker">SHARED VOLUMES</p>
+            <h2 id="profile-collections-heading">共同书册</h2>
             <p>你有权进入，并且该成员创建或参与的 Collection。</p>
           </div>
           <span className="tabular">共 {data.visible_collection_count} 个</span>
         </div>
         {data.collections?.length
-          ? <div className="collection-grid">{data.collections.map((item) => <CollectionCard key={item.id} collection={item} />)}</div>
+          ? <div className="profile-collection-shelf">{data.collections.map((item, index) => <CollectionCard key={item.id} collection={item} variant="shelf" index={(collectionsPage - 1) * PAGE_SIZE + index} />)}</div>
           : <EmptyState title="当前没有共同可见的 Collection" description="这里不会透露你无权进入的 Collection 名称或数量。" />}
         <Pagination
           page={collectionsPagination.page || collectionsPage}

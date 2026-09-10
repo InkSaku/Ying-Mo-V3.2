@@ -9,7 +9,7 @@ export function NoteExperience({ experience }) {
   return (
     <section className="note-experience" aria-labelledby="note-experience-title">
       <header className="note-experience-heading">
-        <h2 id="note-experience-title">同一段共同经历</h2>
+        <h2 id="note-experience-title">合集里的前后记录</h2>
         <p>这条随记收在 <Link to={`/collections/${collection.slug}`}>{collection.name}</Link> 中。</p>
       </header>
 
@@ -36,7 +36,7 @@ export function NoteExperience({ experience }) {
             );
           })}
         </div>
-      ) : <p className="note-experience-empty">这段经历暂时只有这一条记录，可以从 Collection 继续补充。</p>}
+      ) : <p className="note-experience-empty">这附近暂时没有其他记录，可以从 Collection 继续查看。</p>}
 
       <p className="note-experience-collection-link"><Link to={`/collections/${collection.slug}`}>查看完整 Collection</Link></p>
     </section>

@@ -2,7 +2,7 @@
 
 更新时间：2026-08-15
 
-当前阶段、剩余任务和下一次启动步骤见 `docs/frontend/DEVELOPMENT_HANDOFF.md`。
+本文保留各阶段的实现与联调历史，覆盖至 V3.9 Note 阶段六。下文的提交、迁移版本、测试数量及环境阻塞均属于当时记录，不代表当前工作区。开发入口见根 `README.md`；业务规则见 `docs/product.md`，视觉规范见 `docs/frontend/DESIGN.md`。共同回忆补全的实施与剩余上线条件见 `docs/SHARED_MEMORY_DEVELOPMENT_PLAN.md` 第 13 节。
 
 ## 基线约定
 
@@ -20,7 +20,7 @@
 - `GET /api/v1/categories/options` 返回全部 active Category，供 Article 编辑器选择；它不承担 ACL Facet 计数职责。
 - `/categories` 与 `/tags` 返回受保护 SPA Shell，使列表页可直接刷新。
 
-后续阶段应继续以 `docs/product.md`、`docs/frontend/SKILL.md` 和 `docs/frontend/DESIGN.md` 为约束，并在每个阶段分别记录构建与真实接口验证结果。
+后续开发以 `docs/product.md` 和 `docs/frontend/DESIGN.md` 为约束；验证结果应注明实际执行范围，不把历史通过结果作为当前发布证明。
 
 ## 第二阶段：认证、会话与受保护媒体
 

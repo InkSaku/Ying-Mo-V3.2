@@ -158,7 +158,7 @@ def reserve_article_slug(post, slug):
         db.session.add(ArticleSlug(post_id=post.id, current_post_id=post.id, slug=slug, is_current=True))
 
 
-def publish_post(post, actor_id, slug=None):
+def publish_post(post, actor_id, slug=None, *, memory_root=None):
     if post.author_id != actor_id:
         raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     if post.collection_id is not None and not is_collection_member(actor_id, post.collection):
@@ -182,15 +182,21 @@ def publish_post(post, actor_id, slug=None):
             recipient_ids.update(db.session.scalars(db.select(CollectionMember.user_id).where(
                 CollectionMember.collection_id == post.collection_id,
             )).all())
+            memory_root_author_id = memory_root.author_id if memory_root is not None else None
             for recipient_id in recipient_ids - {actor_id}:
+                is_root_author = recipient_id == memory_root_author_id
                 add_collection_notification(
                     user_id=recipient_id,
                     actor_id=actor_id,
-                    kind="collection_new_post",
+                    kind="memory_contribution_added" if is_root_author else "collection_new_post",
                     target_type="post",
                     post_id=post.id,
                     collection_id=post.collection_id,
-                    message=f"Collection「{post.collection.name}」有一篇新的成员投稿。",
+                    message=(
+                        f"有人补充了你在 Collection「{post.collection.name}」中的共同回忆。"
+                        if is_root_author
+                        else f"Collection「{post.collection.name}」有一篇新的成员投稿。"
+                    ),
                 )
     if post.category and post.category.first_used_at is None:
         post.category.first_used_at = utcnow()

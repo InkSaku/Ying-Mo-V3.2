@@ -1,15 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { AuthStory } from "../components/AuthStory";
-import { PublicHeader } from "../components/PublicHeader";
+import inkWaterside from "../assets/auth/ink-waterside.webp";
+import "../styles/login.css";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
-
-const LOGIN_FEATURES = [
-  { icon: "lock", title: "私密邀请制", description: "仅限受邀成员加入" },
-  { icon: "pen", title: "持续记录", description: "每日书写，持续沉淀" },
-  { icon: "archive", title: "有序归档", description: "让回忆清晰可循" },
-];
 
 export function LoginPage() {
   usePageMeta("登录");
@@ -36,70 +30,60 @@ export function LoginPage() {
   };
 
   return (
-    <>
-      <PublicHeader />
-      <main className="auth-page auth-editorial-page">
-        <div className="auth-editorial-layout">
-          <AuthStory
-            step="01"
-            eyebrow="成员入口"
-            title="继续书写你的映墨"
-            description="映墨是为朋友们准备的私密书写空间，在这里，文字被认真对待，记忆被妥帖安放，思想得以缓慢生长。"
-            quote="像在好纸上写字那样，慢一点，也更认真。"
-            features={LOGIN_FEATURES}
-          />
+    <main className="login-paper">
+      <header className="login-masthead">
+        <Link to="/" className="login-wordmark" aria-label="映墨首页">映墨 <span>YING MO</span></Link>
+        <span className="login-edition">文字与日常 · 私人留存</span>
+      </header>
 
-          <form className="auth-card auth-editorial-card" onSubmit={submit}>
-            <header className="auth-card-intro">
-              <p className="auth-badge">Member Entry</p>
-              <h1>登录映墨</h1>
-              <p>使用用户名或邮箱继续你的记录。</p>
+      <div className="login-spread">
+        <section className="login-story" aria-label="记录生活，也保留此刻的自己">
+          <div className="login-story-copy">
+            <p className="login-ink" aria-hidden="true">墨</p>
+            <p className="login-manifesto">记录生活，<br />也保留此刻的自己。</p>
+            <p className="login-english">A QUIETER<br />PLACE TO WRITE.</p>
+          </div>
+          <figure className="login-landscape">
+            <div className="login-landscape-art">
+              <img src={inkWaterside} alt="淡墨绘成的临水老树、亭子与远山" />
+            </div>
+            <figcaption>日子缓缓，文字长留。</figcaption>
+          </figure>
+          <p className="login-handwritten" aria-hidden="true">Write a softer<br /><span>tomorrow.</span></p>
+        </section>
+
+        <section className="login-entry" aria-labelledby="login-title">
+          <form className="login-form" onSubmit={submit}>
+            <header className="login-intro">
+              <p className="login-overline">拾起上次的那一页</p>
+              <h1 id="login-title">好久不见。</h1>
+              <p>从这里，继续你的记录。</p>
             </header>
-
-            {error ? <div className="inline-error" role="alert">{error}</div> : null}
-
-            <label className="auth-field">
+            {error ? <div className="login-error" role="alert">{error}</div> : null}
+            <label className="login-field" htmlFor="login-identifier">
               <span>用户名或邮箱</span>
-              <input
-                required
-                autoComplete="username"
-                placeholder="请输入用户名或邮箱"
-                value={form.identifier}
-                onChange={(event) => setForm({ ...form, identifier: event.target.value })}
-              />
+              <input id="login-identifier" required autoComplete="username"
+                placeholder="你的名字，或邮箱地址" value={form.identifier}
+                onChange={(event) => setForm({ ...form, identifier: event.target.value })} />
             </label>
-
-            <div className="auth-field">
-              <div className="auth-label-row">
+            <div className="login-field">
+              <div className="login-label-row">
                 <label htmlFor="login-password">密码</label>
                 <Link to="/forgot-password">忘记密码？</Link>
               </div>
-              <input
-                id="login-password"
-                required
-                type="password"
-                autoComplete="current-password"
-                placeholder="请输入密码"
-                value={form.password}
-                onChange={(event) => {
-                  setForm({ ...form, password: event.target.value });
-                  setError("");
-                }}
-              />
+              <input id="login-password" required type="password" autoComplete="current-password"
+                placeholder="输入你的密码" value={form.password}
+                onChange={(event) => { setForm({ ...form, password: event.target.value }); setError(""); }} />
             </div>
-
-            <button className="btn btn-primary btn-wide auth-primary-action" type="submit" disabled={busy}>
-              {busy ? "登录中" : "登录"}
+            <button className="login-submit" type="submit" disabled={busy}>
+              <span>{busy ? "正在翻开…" : "登录，继续书写"}</span><span aria-hidden="true">⟶</span>
             </button>
-
-            <Link className="btn btn-wide auth-outline-action" to="/register">
-              使用邀请码注册
-            </Link>
-
-            <p className="auth-foot">还没有账号？<Link to="/register">使用邀请码加入映墨。</Link></p>
+            <p className="login-join">第一次来？ <Link to="/register">使用邀请码加入</Link></p>
           </form>
-        </div>
-      </main>
-    </>
+          <p className="login-postscript">不必写下所有，<br />留住你想记得的就好。</p>
+        </section>
+      </div>
+      <footer className="login-colophon"><span>映墨 · 留给生活的一页</span><span>A LITTLE LIFE, IN WORDS.</span></footer>
+    </main>
   );
 }

@@ -1,0 +1,98 @@
+/* The archive shares the paper palette of Articles and Notes. */
+html:not([data-theme="dark"]):has(.archive-publication-page) {
+  --page: #f8f7f3; --surface: #fbfaf6; --text: #242520; --text-2: #41423c;
+  --text-3: #72716b; --text-4: #72716b; --border: #deded5; --brand-link: #334b76;
+}
+.archive-publication-page { width: min(calc(100% - clamp(32px, 8vw, 128px)), 1120px); padding: 48px 0 96px; }
+.archive-publication-page .archive-publication-hero { grid-template-columns: 1.2fr 1fr .8fr; align-items: center; min-height: 0; gap: 40px; margin: 0; padding: 12px 0 48px; border: 0; }
+.archive-publication-page .archive-kicker { margin: 0 0 20px; font: 10px/1.6 var(--mono); letter-spacing: .14em; }
+.archive-publication-page .archive-publication-copy h1 { margin-bottom: 20px; font-size: 50px; font-weight: 400; line-height: 1.4; letter-spacing: .04em; }
+.archive-publication-page .archive-publication-copy > p:last-child { max-width: 28em; font-size: 14px; line-height: 1.9; }
+.archive-opening-sketch { color: var(--text); }
+.archive-opening-sketch > p { margin: 0 0 8px 8px; color: var(--brand-link); font: 23px/1.4 "Snell Roundhand", "Segoe Script", cursive; transform: rotate(-5deg); }
+.archive-opening-sketch svg { display: block; width: 100%; }
+.archive-publication-page .archive-publication-facts { padding-left: 24px; border: 0; border-left: 1px solid var(--border); }
+.archive-publication-page .archive-publication-facts > div { grid-template-columns: 1fr; gap: 4px; padding: 10px 0; border: 0; }
+.archive-publication-page .archive-publication-facts dt { font-size: 11px; }
+.archive-publication-page .archive-publication-facts dd { font-size: 16px; }
+.archive-publication-page .archive-publication-facts dd.tabular { color: var(--brand-link); font: 30px/1.2 var(--western-serif); }
+.archive-publication-page .archive-filter-shelf { display: block; margin: 0 0 48px; padding: 0; border: 0; border-block: 1px solid var(--border); }
+.archive-filter-shelf summary { display: flex; align-items: center; gap: 24px; min-height: 64px; cursor: pointer; list-style: none; }
+.archive-filter-shelf summary::-webkit-details-marker { display: none; }
+.archive-filter-shelf summary > span { font: 10px/1.5 var(--mono); letter-spacing: .08em; color: var(--brand-link); }
+.archive-filter-shelf summary strong { font-size: 14px; font-weight: 400; }
+.archive-filter-shelf summary small { margin-left: auto; color: var(--text-3); font-size: 12px; }
+.archive-filter-shelf summary i { width: 20px; color: var(--brand-link); font-size: 20px; font-style: normal; text-align: center; }
+.archive-filter-shelf summary i::before { content: "+"; }
+.archive-filter-shelf[open] summary i::before { content: "−"; }
+.archive-publication-page .archive-filter-shelf .post-filters { padding: 12px 0 24px; }
+.archive-publication-page .archive-layout { grid-template-columns: 180px minmax(0, 1fr); gap: 64px; }
+.archive-publication-page .archive-facets { top: calc(var(--header-h) + 24px); }
+.archive-publication-page .archive-facets > header { padding: 0; border: 0; margin-bottom: 24px; }
+.archive-publication-page .archive-facets > header h2 { font-size: 19px; font-weight: 400; }
+.archive-publication-page .archive-facets > header p { font-size: 12px; line-height: 1.8; }
+.archive-publication-page .archive-facets .archive-year-list button,
+.archive-publication-page .archive-facets .archive-month-list button { min-height: 44px; border: 0; padding: 12px; }
+.archive-publication-page .archive-facets button.current,
+.archive-publication-page .archive-facets button.active { box-shadow: none; border-left: 2px solid var(--brand-link); padding-left: 10px; color: var(--brand-link); }
+.archive-publication-page .archive-facets button .tabular { font-size: 12px; }
+.archive-publication-page .archive-month-index { margin-top: 24px; padding-top: 0; border: 0; }
+.archive-publication-page .archive-month-list { gap: 4px; }
+.archive-publication-page .archive-results-heading { border: 0; padding: 0; margin-bottom: 32px; }
+.archive-publication-page .archive-results-heading h2 { font-size: 30px; font-weight: 400; }
+.archive-publication-page .archive-results-heading p { line-height: 1.8; }
+.archive-publication-page .archive-issue-group { display: block; }
+.archive-publication-page .archive-issue-group > header { position: static; padding: 0 0 16px; border: 0; }
+.archive-publication-page .archive-issue-group > header > div { display: flex; align-items: baseline; gap: 14px; }
+.archive-publication-page .archive-issue-group > header strong { font: 28px/1.2 var(--western-serif); }
+.archive-publication-page .archive-issue-group > header span,
+.archive-publication-page .archive-issue-group > header small { font-size: 12px; }
+.archive-publication-page .archive-issue-list { gap: 40px; }
+.archive-publication-page .archive-issue-entry { grid-template-columns: 40px minmax(0, 1fr); gap: 20px; border: 0; }
+.archive-publication-page .archive-issue-entry + .archive-issue-entry { border-top: 1px solid var(--border); }
+.archive-publication-page .archive-entry-day { padding-top: 26px; font: 24px/1.3 var(--western-serif); }
+.archive-publication-page .archive-issue-entry .post-card { min-width: 0; padding: 24px 0; }
+.archive-publication-page .archive-issue-entry .post-card-compact h3 { font-size: 22px; font-weight: 400; line-height: 1.6; margin: 8px 0 12px; }
+.archive-publication-page .archive-issue-entry .post-card-compact .note-card-text { font-size: 17px; line-height: 1.9; }
+.archive-publication-page .archive-issue-entry .post-card-compact .card-cover { border-radius: 0; filter: none; }
+.archive-publication-page .post-card-details { font-size: 12px; line-height: 1.8; }
+.archive-publication-page .post-card-context:empty { display: none; }
+.archive-publication-page .post-card-context .tag { padding: 0; border: 0; background: transparent; font-size: 12px; }
+.archive-publication-page a:focus-visible,
+.archive-publication-page button:focus-visible,
+.archive-publication-page summary:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+@media (max-width: 979px) {
+  .archive-publication-page .archive-publication-hero { grid-template-columns: 1.2fr 1fr; gap: 32px; }
+  .archive-publication-page .archive-publication-facts { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 0; border: 0; }
+  .archive-publication-page .archive-publication-facts > div { display: block; }
+  .archive-publication-page .archive-publication-facts dd { margin-top: 8px; }
+  .archive-publication-page .archive-layout { grid-template-columns: 150px minmax(0, 1fr); gap: 32px; }
+  .archive-publication-page .archive-filter-shelf .post-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .archive-publication-page { width: calc(100% - 32px); padding: 24px 0 72px; }
+  .archive-publication-page .archive-publication-hero { grid-template-columns: 1fr; gap: 24px; padding: 8px 0 32px; }
+  .archive-publication-page .archive-publication-copy h1 { font-size: 36px; }
+  .archive-opening-sketch { width: 170px; justify-self: end; }
+  .archive-opening-sketch > p { font-size: 18px; }
+  .archive-publication-page .archive-publication-facts { gap: 12px; }
+  .archive-publication-page .archive-publication-facts dd { font-size: 14px; }
+  .archive-publication-page .archive-publication-facts dd.tabular { font-size: 26px; }
+  .archive-filter-shelf summary { gap: 12px; }
+  .archive-filter-shelf summary > span { display: none; }
+  .archive-filter-shelf summary small { font-size: 10px; }
+  .archive-publication-page .archive-filter-shelf .post-filters { grid-template-columns: 1fr; }
+  .archive-publication-page .archive-filter-shelf { margin-bottom: 32px; }
+  .archive-publication-page .archive-layout { grid-template-columns: 1fr; gap: 32px; }
+  .archive-publication-page .archive-facets { position: static; display: block; }
+  .archive-publication-page .archive-facets > header { margin-bottom: 12px; }
+  .archive-publication-page .archive-facets > header p { display: none; }
+  .archive-publication-page .archive-year-list { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .archive-publication-page .archive-month-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .archive-publication-page .archive-results-heading h2 { font-size: 26px; }
+  .archive-publication-page .archive-issue-entry { grid-template-columns: 30px minmax(0, 1fr); gap: 12px; }
+  .archive-publication-page .archive-issue-entry .post-card-compact.post-card-with-cover { grid-template-columns: 1fr; gap: 16px; }
+  .archive-publication-page .archive-issue-entry .post-card-compact .card-cover { width: 100%; height: 160px; object-fit: cover; }
+  .archive-publication-page .archive-issue-entry .post-card-compact h3 { font-size: 20px; }
+  .archive-publication-page .archive-issue-entry .post-card-compact .note-card-text { font-size: 16px; }
+}

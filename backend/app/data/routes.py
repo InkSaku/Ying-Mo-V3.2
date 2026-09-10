@@ -9,11 +9,11 @@ from sqlalchemy import exists, or_
 
 from app.common.auth import current_user
 from app.common.responses import error_response
-from app.access import readable_post_predicate
+from app.access import can_read_post, readable_post_predicate
 from app.extensions import db
 from app.models import (
     Collection, CollectionMember, Comment, CommentMention, CommentReaction,
-    ContentFavorite, Media, Notification, Post, PostReaction,
+    ContentFavorite, Media, Notification, Post, PostMemoryLink, PostReaction,
 )
 from app.posts.service import current_article_slug
 from app.storage import get_storage
@@ -84,6 +84,17 @@ def export_my_data():
         Media.owner_id == actor.id,
         Media.deleted_at.is_(None),
     ).order_by(Media.id.asc())).all()
+    memory_links = [
+        item for item in db.session.scalars(
+            db.select(PostMemoryLink).where(
+                PostMemoryLink.author_id == actor.id,
+                PostMemoryLink.invalidated_at.is_(None),
+                PostMemoryLink.detached_at.is_(None),
+            ).order_by(PostMemoryLink.id.asc())
+        ).all()
+        if can_read_post(actor.id, item.root_post, include_archived=True)
+        and can_read_post(actor.id, item.contribution_post, include_archived=True)
+    ]
 
     archive = SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b")
     with ZipFile(archive, "w", compression=ZIP_DEFLATED) as bundle:
@@ -101,6 +112,7 @@ def export_my_data():
                 "mentions_received": len(mentions),
                 "notifications": len(notifications),
                 "media": len(media),
+                "memory_links": len(memory_links),
             },
         }
         bundle.writestr("manifest.json", _json_bytes(manifest))
@@ -128,6 +140,15 @@ def export_my_data():
             } for item in mentions],
         }))
         bundle.writestr("notifications.json", _json_bytes([item.to_dict() for item in notifications]))
+        bundle.writestr("memory_links.json", _json_bytes({
+            "version": 1,
+            "items": [{
+                "root_post_id": item.root_post_id,
+                "contribution_post_id": item.contribution_post_id,
+                "collection_id": item.collection_id,
+                "created_at": item.created_at,
+            } for item in memory_links],
+        }))
         for post in posts:
             slug = current_article_slug(post.id) if post.post_type == "article" else None
             title = post.title or f"note-{post.id}"

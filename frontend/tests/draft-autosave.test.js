@@ -66,6 +66,7 @@ test("labels draft and published save states without hiding local failures", () 
 
 test("writing desk keeps creation, publication and media concerns visibly separated", () => {
   const page = readFileSync(new URL("../src/pages/WritePage.jsx", import.meta.url), "utf8");
+  const sketches = readFileSync(new URL("../src/components/WritingSketches.jsx", import.meta.url), "utf8");
 
   assert.match(page, /editor-publication-bar/);
   assert.match(page, /editor-paper editor-paper-/);
@@ -73,6 +74,10 @@ test("writing desk keeps creation, publication and media concerns visibly separa
   assert.match(page, /editor-media-drawer/);
   assert.match(page, /进入沉浸写作/);
   assert.match(page, /PUBLICATION/);
+  assert.match(page, /ArticleArchiveCat/);
+  assert.match(page, /WritingCoverSketch/);
+  assert.match(sketches, /aria-hidden="true"/);
+  assert.doesNotMatch(sketches, /<img|\.png|\.jpe?g/);
 });
 
 test("both writing surfaces expose cursor-aware image insertion and shared autosave", () => {

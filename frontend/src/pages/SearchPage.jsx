@@ -9,6 +9,8 @@ import { ProtectedImage } from "../components/ProtectedImage";
 import { Pagination } from "../components/Pagination";
 import { EmptyState, ErrorState } from "../components/States";
 import { clampPageToTotal } from "../lib/pagination";
+import { SearchSketch } from "../components/SearchSketch";
+import "../styles/search-editorial.css";
 
 const SUGGESTION_DELAY = 300;
 const PAGE_SIZE = 20;
@@ -253,6 +255,8 @@ export function SearchPage() {
           <h1>{q ? "继续寻找。" : "在共同记忆里，\n找到那一页。"}</h1>
           <p>从文章、随记、合集与成员中检索。结果始终遵循你当前拥有的访问权限。</p>
         </div>
+
+        <SearchSketch />
 
         <form
         className="search-form search-hero-form"

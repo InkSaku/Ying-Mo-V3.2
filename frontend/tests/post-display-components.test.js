@@ -103,18 +103,24 @@ test("Note detail owns its content-first hierarchy instead of reusing the Articl
 test("Article detail uses one continuous cover, metadata, contents and reading structure", () => {
   const page = source("../src/pages/PostDetailPage.jsx");
   const layout = source("../src/components/ArticleReadingLayout.jsx");
+  const sketches = source("../src/components/ArticleSketches.jsx");
 
   assert.match(page, /article-detail-hero.*has-cover.*without-cover/);
   assert.ok(page.indexOf("article-detail-heading") < page.indexOf("article-detail-cover-frame"));
   assert.ok(page.indexOf("article-detail-folio") < page.indexOf("article-detail-cover-frame"));
+  assert.match(page, /ArticleOpeningSketch/);
+  assert.match(page, /ArticleEndMark/);
   assert.match(layout, /article-toc-index/);
   assert.match(layout, /padStart\(2, "0"\)/);
+  assert.match(layout, /ArticleTocSketch/);
+  assert.match(sketches, /aria-hidden="true"/);
+  assert.doesNotMatch(sketches, /<img|\.png|\.jpe?g/);
 });
 
 test("Note experience follows explicit Collection relations with mixed content links", () => {
   const experience = source("../src/components/NoteExperience.jsx");
 
-  assert.match(experience, /同一段共同经历/);
+  assert.match(experience, /合集里的前后记录/);
   assert.match(experience, /collection\.slug/);
   assert.match(experience, /postHref\(item\)/);
   assert.match(experience, /item\.post_type === "article"/);

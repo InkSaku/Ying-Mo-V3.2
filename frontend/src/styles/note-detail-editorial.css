@@ -1,0 +1,581 @@
+/* A Note detail is a dated journal leaf: lighter and more immediate than an Article. */
+html:not([data-theme="dark"]):has(.note-reading-page) {
+  --page: #f8f7f3;
+  --surface: #fbfaf6;
+  --text: #242520;
+  --text-2: #41423c;
+  --text-3: #72716b;
+  --text-4: #72716b;
+  --border: #deded5;
+  --border-soft: #e9e8e1;
+  --brand-link: #334b76;
+}
+
+.note-reading-page {
+  width: min(100%, 1240px) !important;
+  padding: 32px 56px 96px !important;
+}
+
+.note-reading-page .home-feed-back {
+  width: min(100%, 1040px);
+  min-height: 40px;
+  margin: 0 auto 12px;
+  color: var(--brand-link);
+}
+
+.note-reading-page .note-detail {
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+.note-reading-page .note-detail-header {
+  position: relative;
+  padding: 24px 0 68px;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.note-detail-topline {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.note-detail-topline > p {
+  margin: 0;
+  color: var(--text-3);
+  font-family: var(--western-serif);
+  font-size: 9px;
+  letter-spacing: .18em;
+}
+
+.note-reading-page .note-detail-back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  color: var(--brand-link);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+.note-reading-page .note-detail-opening {
+  display: block;
+  margin-top: 38px;
+}
+
+.note-detail-margin {
+  position: absolute;
+  top: 106px;
+  left: 0;
+  width: 180px;
+  min-width: 0;
+}
+
+.note-reading-page .note-detail-date {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  padding: 0;
+  border: 0;
+}
+
+.note-reading-page .note-detail-date::before {
+  content: "RECORDED";
+  width: 38px;
+  margin-bottom: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--brand-link);
+  color: var(--text-3);
+  font-family: var(--western-serif);
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+
+.note-reading-page .note-detail-date strong {
+  color: var(--brand-link);
+  font-family: var(--western-serif);
+  font-size: 82px;
+  font-weight: 400;
+  line-height: .82;
+}
+
+.note-reading-page .note-detail-date span {
+  margin-top: 16px;
+  color: var(--text);
+  font-size: 15px;
+  letter-spacing: .08em;
+}
+
+.note-reading-page .note-detail-date small {
+  margin-top: 5px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.note-detail-margin .notes-opening-sketch {
+  width: 146px;
+  margin-top: 52px;
+  padding: 0;
+  color: var(--text);
+  opacity: .62;
+}
+
+.note-detail-margin .notes-opening-sketch > p {
+  margin: 0 0 -7px 4px;
+  color: var(--brand-link);
+  font: 18px/1.35 "Snell Roundhand", "Segoe Script", cursive;
+  transform: rotate(-5deg);
+}
+
+.note-detail-margin .notes-opening-sketch svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.note-reading-page .note-detail.without-title .note-detail-margin .notes-opening-sketch {
+  width: 104px;
+  margin-top: 30px;
+}
+
+.note-detail-margin .notes-sketch-trail {
+  fill: none;
+  stroke: var(--brand-link);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 7;
+  stroke-linecap: round;
+}
+
+.note-reading-page .note-detail-intro {
+  align-self: start;
+  width: min(100%, 760px);
+  margin-left: auto;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.note-reading-page .note-detail-byline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.note-reading-page .note-detail-avatar-link,
+.note-reading-page .note-detail-avatar,
+.note-reading-page .note-detail-avatar-fallback,
+.note-reading-page .protected-image-placeholder.note-detail-avatar {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+}
+
+.note-reading-page .note-detail-author {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.note-reading-page .note-detail-byline p {
+  margin: 4px 0 0;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.note-reading-page .note-detail-header h1 {
+  max-width: 720px;
+  margin: 38px 0 0;
+  color: var(--text);
+  font-size: clamp(38px, 4.6vw, 54px);
+  font-weight: 400;
+  line-height: 1.38;
+  letter-spacing: .055em;
+  text-wrap: balance;
+}
+
+.note-reading-page .note-detail-moment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 30px;
+  margin: 30px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.note-reading-page .note-detail-moment > div {
+  display: flex;
+  gap: 9px;
+}
+
+.note-reading-page .note-detail-moment dt {
+  color: var(--text-3);
+}
+
+.note-reading-page .note-detail-moment dd { margin: 0; }
+
+.note-reading-page .note-detail-content,
+.note-reading-page .note-detail-context,
+.note-reading-page .note-detail > .interaction-region {
+  width: min(100%, 760px);
+  margin-left: auto;
+}
+
+.note-detail-body-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 38px;
+  color: var(--text-3);
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+
+.note-detail-body-label::after {
+  content: "";
+  order: 2;
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.note-detail-body-label span:first-child {
+  order: 1;
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: .1em;
+}
+
+.note-detail-body-label span:last-child { order: 3; }
+
+.note-reading-page .note-detail-content .prose {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 2;
+  letter-spacing: .035em;
+}
+
+.note-reading-page .note-detail-content .prose p {
+  margin-block: 0 1.55em;
+}
+
+.note-reading-page .note-detail-content .prose h2 {
+  margin-top: 2.8em;
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 400;
+}
+
+.note-reading-page .note-detail-cover,
+.note-reading-page .protected-image-placeholder.note-detail-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 820px;
+  aspect-ratio: auto;
+  margin: 42px 0 0;
+  border-radius: 0;
+  object-fit: contain;
+  object-position: left center;
+  background: transparent;
+}
+
+.note-reading-page .note-detail-content > .media-lightbox-trigger {
+  display: block;
+  width: 100%;
+}
+
+.note-reading-page .note-detail-content .post-media-gallery {
+  margin-top: 34px;
+  gap: 28px;
+}
+
+.note-reading-page .post-media-image,
+.note-reading-page .protected-image-placeholder.post-media-image,
+.note-reading-page .post-media-video,
+.note-reading-page .protected-image-placeholder.post-media-video {
+  border-radius: 0;
+  background: var(--surface);
+}
+
+.note-reading-page .note-detail-context {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 56px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.note-reading-page .note-detail-context .post-context,
+.note-reading-page .note-detail-context .post-facts {
+  margin: 0;
+}
+
+.note-reading-page .note-detail-context .post-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.note-reading-page .note-detail-context .tag {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--brand-link);
+  background: transparent;
+  font-size: 11px;
+}
+
+.note-reading-page .note-detail-context .post-facts {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-reading-page .note-detail > .interaction-region {
+  margin-top: 26px;
+}
+
+.note-reading-page .note-detail > .interaction-region .interaction-bar {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.note-reading-page .note-experience,
+.note-reading-page > .shared-memory,
+.note-reading-page > .comments-panel {
+  width: min(100%, 760px);
+  max-width: none;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.note-reading-page .note-experience {
+  margin-top: 80px;
+  padding-top: 34px;
+  border-top: 1px solid var(--border);
+}
+
+.note-reading-page .note-experience-heading,
+.note-reading-page .note-experience-description,
+.note-reading-page .note-experience-trail,
+.note-reading-page .note-experience-empty,
+.note-reading-page .note-experience-collection-link {
+  width: 100%;
+  margin-left: 0;
+}
+
+.note-reading-page .note-experience-heading {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: end;
+  gap: 30px;
+}
+
+.note-reading-page .note-experience-heading h2 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 400;
+}
+
+.note-reading-page .note-experience-heading p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.note-reading-page .note-experience-description {
+  margin-top: 20px;
+  color: var(--text-3);
+  line-height: 1.8;
+}
+
+.note-reading-page .note-experience-trail {
+  margin-top: 28px;
+}
+
+.note-reading-page .note-experience-item,
+.note-reading-page .note-experience-item + .note-experience-item {
+  padding: 26px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.note-reading-page .note-experience-item.has-media {
+  grid-template-columns: 132px minmax(0, 1fr);
+}
+
+.note-reading-page .note-experience-media,
+.note-reading-page .protected-image-placeholder.note-experience-media {
+  width: 132px;
+  height: 94px;
+  border-radius: 0;
+}
+
+.note-reading-page .note-experience-collection-link {
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+.note-reading-page > .shared-memory {
+  margin-top: 76px;
+  padding: 34px 0 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+}
+
+.note-reading-page > .comments-panel {
+  margin-top: 76px;
+}
+
+.note-reading-page a:focus-visible,
+.note-reading-page button:focus-visible {
+  outline: 2px solid var(--brand-link);
+  outline-offset: 4px;
+}
+
+@media (max-width: 900px) {
+  .note-reading-page { padding-inline: 40px !important; }
+
+  .note-reading-page .note-detail-opening {
+    display: block;
+  }
+
+  .note-detail-margin { width: 140px; }
+
+  .note-reading-page .note-detail-intro { width: calc(100% - 184px); }
+
+  .note-reading-page .note-detail-date strong { font-size: 68px; }
+  .note-detail-margin .notes-opening-sketch { width: 118px; }
+
+  .note-reading-page .note-detail-content,
+  .note-reading-page .note-detail-context,
+  .note-reading-page .note-detail > .interaction-region,
+  .note-reading-page .note-experience,
+  .note-reading-page > .shared-memory,
+  .note-reading-page > .comments-panel {
+    width: calc(100% - 184px);
+  }
+}
+
+@media (max-width: 640px) {
+  .note-reading-page { padding: 18px 20px 64px !important; }
+
+  .note-reading-page .note-detail-header {
+    padding: 14px 0 48px;
+  }
+
+  .note-detail-topline > p { display: none; }
+
+  .note-reading-page .note-detail-opening {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    margin-top: 28px;
+  }
+
+  .note-detail-margin {
+    position: static;
+    width: auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .note-reading-page .note-detail-date {
+    grid-template-columns: auto auto auto;
+    align-items: end;
+    gap: 9px;
+  }
+
+  .note-reading-page .note-detail-date::before { display: none; }
+  .note-reading-page .note-detail-date strong { font-size: 54px; }
+
+  .note-reading-page .note-detail-date span,
+  .note-reading-page .note-detail-date small {
+    margin: 0 0 5px;
+  }
+
+  .note-detail-margin .notes-opening-sketch {
+    width: 106px;
+    margin: 0 -4px -8px 0;
+  }
+
+  .note-detail-margin .notes-opening-sketch > p { display: none; }
+
+  .note-reading-page .note-detail-header h1 {
+    margin-top: 30px;
+    font-size: clamp(31px, 9.5vw, 40px);
+    line-height: 1.45;
+  }
+
+  .note-reading-page .note-detail-intro {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .note-reading-page .note-detail-moment {
+    margin-top: 24px;
+  }
+
+  .note-reading-page .note-detail-content,
+  .note-reading-page .note-detail-context,
+  .note-reading-page .note-detail > .interaction-region,
+  .note-reading-page .note-experience,
+  .note-reading-page > .shared-memory,
+  .note-reading-page > .comments-panel {
+    width: 100%;
+  }
+
+  .note-detail-body-label { margin-bottom: 32px; }
+  .note-detail-body-label span:last-child { display: none; }
+
+  .note-reading-page .note-detail-content .prose {
+    font-size: 17px;
+    line-height: 1.96;
+  }
+
+  .note-reading-page .note-detail-cover,
+  .note-reading-page .protected-image-placeholder.note-detail-cover {
+    margin-top: 34px;
+  }
+
+  .note-reading-page .note-detail-context {
+    display: grid;
+    gap: 16px;
+    margin-top: 44px;
+  }
+
+  .note-reading-page .note-experience { margin-top: 64px; }
+
+  .note-reading-page .note-experience-heading {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .note-reading-page .note-experience-item.has-media {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .note-reading-page .note-experience-media,
+  .note-reading-page .protected-image-placeholder.note-experience-media {
+    width: 96px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 360px) {
+  .note-reading-page { padding-inline: 18px !important; }
+  .note-reading-page .note-detail-date strong { font-size: 48px; }
+  .note-detail-margin .notes-opening-sketch { width: 90px; }
+}
