@@ -15,9 +15,9 @@ async function register(request, username) {
 
 async function login(page, username) {
   await page.goto("/login");
-  await page.getByPlaceholder("请输入用户名或邮箱").fill(username);
-  await page.getByPlaceholder("请输入密码").fill("password123");
-  await page.getByRole("button", { name: "登录", exact: true }).click();
+  await page.getByLabel("用户名或邮箱").fill(username);
+  await page.getByLabel("密码", { exact: true }).fill("password123");
+  await page.getByRole("button", { name: "登录，继续书写" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 

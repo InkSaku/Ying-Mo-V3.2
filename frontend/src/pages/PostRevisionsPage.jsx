@@ -119,7 +119,7 @@ export function PostRevisionsPage() {
   };
 
   return (
-    <main className="page-shell">
+    <main className="page-shell personal-page-shell">
       <PersonalNav />
       <header className="page-heading revision-page-heading">
         <div>

@@ -146,10 +146,11 @@ export function MyPostsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell" aria-busy={pageNeedsClamp || actionBusy || undefined}>
+    <main className="page-shell personal-page-shell" aria-busy={pageNeedsClamp || actionBusy || undefined}>
       <PersonalNav />
       <header className="page-heading">
         <div>
+          <p className="section-kicker">WRITING DESK / ARCHIVE</p>
           <h1>我的内容</h1>
           <p>这里是作者管理入口，即使你已被移出某个 Collection，自己的历史 Post 仍会保留最小管理能力。</p>
         </div>

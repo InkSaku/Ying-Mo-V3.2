@@ -34,7 +34,7 @@ export function MyCollectionsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell collection-library-page collection-library-page-editorial collection-library-personal" aria-busy={pageNeedsClamp || undefined}>
+    <main className="page-shell personal-page-shell collection-library-page collection-library-page-editorial collection-library-personal" aria-busy={pageNeedsClamp || undefined}>
       <PersonalNav />
       <header className="collection-library-hero collection-library-hero-compact collection-library-hero-editorial">
         <div className="collection-library-copy">

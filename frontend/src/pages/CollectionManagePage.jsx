@@ -290,12 +290,20 @@ export function CollectionManagePage() {
         <Link className="btn btn-secondary" to={`/collections/${collection.slug}`}>返回 Collection</Link>
       </header>
 
+      <nav className="collection-manage-index" aria-label="管理区段">
+        <a href="#collection-details">基本资料</a>
+        <a href="#collection-highlights">关键记录</a>
+        <a href="#collection-members">共同成员</a>
+        <a href="#collection-order">内容顺序</a>
+        <a href="#collection-side-settings">封面与权限</a>
+      </nav>
+
       {message ? <div className="inline-success collection-manage-feedback" role="status">{message}</div> : null}
       {error ? <div className="inline-error collection-manage-feedback" role="alert">{error}</div> : null}
 
       <div className="collection-manage-layout">
         <div className="collection-manage-main">
-          <section className="collection-manage-section">
+          <section className="collection-manage-section" id="collection-details">
             <h2>基本资料</h2>
             <form className="editor-form" onSubmit={saveDetails}>
               <label><span>名称</span><input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
@@ -309,7 +317,7 @@ export function CollectionManagePage() {
             </form>
           </section>
 
-          <section className="collection-manage-section">
+          <section className="collection-manage-section" id="collection-highlights">
             <div className="section-header">
               <div><h2>关键记录</h2><p>最多选择 6 条共同片段，并用上下移动确定展示顺序。</p></div>
               <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveHighlights}>{busy === "highlights" ? "正在保存" : "保存关键记录"}</button>
@@ -325,7 +333,7 @@ export function CollectionManagePage() {
             </div> : <div className="collection-manage-empty">发布共同内容后，可以从这里挑选关键记录。</div>}
           </section>
 
-          <section className="collection-manage-section">
+          <section className="collection-manage-section" id="collection-members">
             <div className="section-header">
               <div><h2>共同成员</h2><p>成员关系同时决定阅读权和投稿权。</p></div>
               <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={requestMemberSave}>{busy === "members" ? "正在保存" : "保存成员"}</button>
@@ -359,7 +367,7 @@ export function CollectionManagePage() {
             </fieldset>
           </section>
 
-          <section className="collection-manage-section">
+          <section className="collection-manage-section" id="collection-order">
             <div className="section-header">
               <div><h2>内容顺序</h2><p>上下移动后保存，排序请求会完整覆盖当前可展示 Post。</p></div>
               {orderedPosts.length ? <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveOrder}>{busy === "order" ? "正在保存" : "保存顺序"}</button> : null}
@@ -386,7 +394,7 @@ export function CollectionManagePage() {
           </section>
         </div>
 
-        <aside className="collection-manage-aside">
+        <aside className="collection-manage-aside" id="collection-side-settings">
           <CollectionCoverManager collection={collection} onChange={handleCoverChange} />
           <section className="collection-transfer-zone">
             <h2>转让创建者</h2>

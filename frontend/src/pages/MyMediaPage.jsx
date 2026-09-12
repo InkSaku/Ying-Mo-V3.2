@@ -51,9 +51,9 @@ export function MyMediaPage() {
   };
   if (state.loading && !state.data) return <PageLoader label="正在读取媒体库" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
-  return <main className="page-shell media-library-page">
+  return <main className="page-shell personal-page-shell media-library-page">
     <PersonalNav />
-    <header className="page-heading"><div><h1>我的媒体</h1><p>整理原件、补充 ALT 文本，并发现重复上传；已绑定媒体不会被批量隐藏。</p></div><div className="media-library-filters"><CustomSelect aria-label="媒体类型" value={kind} onChange={(event) => { setKind(event.target.value); setPage(1); }}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect><CustomSelect aria-label="媒体状态" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="active">正常</option><option value="hidden">已隐藏</option><option value="all">全部</option></CustomSelect></div></header>
+    <header className="page-heading"><div><p className="section-kicker">IMAGE ARCHIVE</p><h1>影像资料</h1><p>整理原件、补充 ALT 文本，并发现重复上传；已绑定媒体不会被批量隐藏。</p></div><div className="media-library-filters"><CustomSelect aria-label="媒体类型" value={kind} onChange={(event) => { setKind(event.target.value); setPage(1); }}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect><CustomSelect aria-label="媒体状态" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="active">正常</option><option value="hidden">已隐藏</option><option value="all">全部</option></CustomSelect></div></header>
     {duplicates.data?.length ? <div className="inline-success" role="status">发现 {duplicates.data.length} 组重复文件，可根据文件名和绑定状态人工整理。</div> : null}
     {feedback.error ? <div className="inline-error" role="alert">{feedback.error}</div> : null}{feedback.message ? <div className="inline-success" role="status">{feedback.message}</div> : null}
     {selected.length ? <div className="media-batch-bar"><span>已选择 {selected.length} 项</span><button className="btn btn-secondary" type="button" onClick={() => { void batch(status === "hidden" ? "restore" : "hide"); }}>{status === "hidden" ? "批量恢复" : "批量隐藏未绑定媒体"}</button></div> : null}

@@ -106,15 +106,36 @@ test("reading page forms a complete editorial opening and a focused reading colu
     const heading = document.querySelector(".article-detail-heading").getBoundingClientRect();
     const toc = document.querySelector(".article-toc").getBoundingClientRect();
     const body = document.querySelector(".article-reading-column").getBoundingClientRect();
-    return { cover, heading, toc, body };
+    const rail = document.querySelector(".article-reading-rail").getBoundingClientRect();
+    return { cover, heading, toc, body, rail };
   });
   expect(geometry.cover.width).toBeGreaterThan(geometry.heading.width);
   expect(geometry.cover.top).toBeGreaterThan(geometry.heading.bottom);
   expect(geometry.toc.right).toBeLessThan(geometry.body.left);
-  expect(geometry.body.width).toBeLessThanOrEqual(720);
+  expect(geometry.body.width).toBeGreaterThanOrEqual(760);
+  expect(geometry.body.width).toBeLessThanOrEqual(820);
+  expect(geometry.body.right).toBeLessThan(geometry.rail.left);
+  await expect(page.locator(".article-reading-rail")).toContainText("已读");
+  await expect(page.locator(".article-reading-rail-current")).toContainText("从一条熟悉的路开始");
+  await expect(page.locator(".article-reading-companion")).toContainText("慢慢读");
+  await expect(page.locator(".article-reading-cat-runner")).toHaveAttribute("data-direction", "right");
   await expectNoOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("reading-desktop.png"), fullPage: true });
 
+  const catStart = await page.locator(".article-reading-cat-runner").boundingBox();
+  await page.evaluate(() => {
+    const column = document.querySelector(".article-reading-column");
+    const top = column.getBoundingClientRect().top + window.scrollY;
+    const range = Math.max(0, column.scrollHeight - window.innerHeight);
+    window.scrollTo(0, top + range * .72);
+  });
+  await expect.poll(async () => Number.parseInt(await page.locator(".article-reading-rail-value strong").textContent(), 10)).toBeGreaterThan(50);
+  await expect(page.locator(".article-reading-cat-runner")).toHaveAttribute("data-running", "false");
+  const catLater = await page.locator(".article-reading-cat-runner").boundingBox();
+  expect(catLater.x).toBeGreaterThan(catStart.x + 24);
+  await page.screenshot({ path: testInfo.outputPath("reading-companion-desktop.png") });
+
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.setViewportSize({ width: 390, height: 844 });
   const mobileOrder = await page.evaluate(() => {
     const top = (selector) => document.querySelector(selector).getBoundingClientRect().top;

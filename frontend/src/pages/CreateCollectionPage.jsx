@@ -54,32 +54,39 @@ export function CreateCollectionPage() {
   };
 
   return (
-    <main className="page-shell narrow-page">
+    <main className="page-shell collection-create-page">
       <header className="page-heading">
         <div>
-          <h1>创建 Collection</h1>
+          <p className="hero-kicker">New shared book</p>
+          <h1>创建共同书册</h1>
           <p>成员名单同时决定阅读权和投稿权。一键全选只保存当前时刻的成员快照。</p>
         </div>
       </header>
 
-      <form className="editor-form" onSubmit={submit}>
+      <form className="editor-form collection-create-form" onSubmit={submit}>
         {status.error ? <div className="inline-error" role="alert">{status.error}</div> : null}
-        <label>
-          <span>名称</span>
-          <input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-        </label>
-        <label>
-          <span>Slug</span>
-          <input required placeholder="trip-2026" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase() })} aria-invalid={Boolean(form.slug) && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)} />
-          <small>首次共享后后端会锁定 Slug。</small>
-        </label>
-        <label>
-          <span>说明</span>
-          <textarea maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-        </label>
+        <section className="collection-create-details" aria-labelledby="collection-details-title">
+          <div>
+            <p className="section-kicker">01 / DETAILS</p>
+            <h2 id="collection-details-title">书册资料</h2>
+          </div>
+          <label>
+            <span>名称</span>
+            <input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+          </label>
+          <label>
+            <span>Slug</span>
+            <input required placeholder="trip-2026" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase() })} aria-invalid={Boolean(form.slug) && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)} />
+            <small>首次共享后后端会锁定 Slug。</small>
+          </label>
+          <label>
+            <span>说明</span>
+            <textarea maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
+          </label>
+        </section>
 
         <fieldset className="member-fieldset">
-          <legend>共同成员</legend>
+          <legend><span className="section-kicker">02 / MEMBERS</span>共同成员</legend>
           {memberState.error ? (
             <div className="inline-error" role="alert">
               <p>{memberState.error}</p>
@@ -112,7 +119,7 @@ export function CreateCollectionPage() {
         </fieldset>
 
         <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={status.busy}>{status.busy ? "创建中" : "创建合集"}</button>
+          <button className="btn btn-primary" type="submit" disabled={status.busy}>{status.busy ? "创建中" : "创建共同书册"}</button>
         </div>
       </form>
     </main>

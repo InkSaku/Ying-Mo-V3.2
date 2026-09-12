@@ -32,10 +32,10 @@ export function MyCommentsPage() {
   if (state.loading) return <PageLoader label="正在读取我的评论" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   return (
-    <main className="page-shell" aria-busy={pageNeedsClamp || undefined}>
+    <main className="page-shell personal-page-shell" aria-busy={pageNeedsClamp || undefined}>
       <PersonalNav />
       <header className="page-heading">
-        <div><h1>我的评论</h1><p>仅展示你当前仍能读取其所属 Post 的评论记录。</p></div>
+        <div><p className="section-kicker">CONVERSATIONS</p><h1>我的评论</h1><p>仅展示你当前仍能读取其所属 Post 的评论记录。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>
       </header>
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (

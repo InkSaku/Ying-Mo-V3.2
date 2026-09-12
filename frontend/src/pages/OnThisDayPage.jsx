@@ -8,6 +8,7 @@ import { cleanMemoryPage, groupMemories, memoryDayLabel } from "../lib/onThisDay
 import { MemoryCard } from "../components/MemoryCard";
 import { Pagination } from "../components/Pagination";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
+import { PersonalNav } from "../components/PersonalNav";
 
 const PAGE_SIZE = 20;
 
@@ -37,7 +38,8 @@ export function OnThisDayPage() {
 
   const groups = groupMemories(state.data?.items);
   return (
-    <main className="page-shell on-this-day-page" aria-busy={state.loading || undefined}>
+    <main className="page-shell personal-page-shell on-this-day-page" aria-busy={state.loading || undefined}>
+      <PersonalNav />
       <header className="memory-hero">
         <div>
           <p className="hero-kicker">On this day</p>

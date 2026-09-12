@@ -9,6 +9,7 @@ import { initializePwaInstall } from "./lib/pwaInstall";
 import "@fontsource-variable/noto-serif-sc/wght.css";
 import "@fontsource-variable/jetbrains-mono/wght.css";
 import "./styles/index.css";
+import "./styles/p1-editorial.css";
 
 initializePwaInstall();
 

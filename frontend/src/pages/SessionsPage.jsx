@@ -87,7 +87,7 @@ export function SessionsPage() {
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell sessions-page">
+    <main className="page-shell personal-page-shell sessions-page">
       <PersonalNav />
       <header className="page-heading">
         <div>

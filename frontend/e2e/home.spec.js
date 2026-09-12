@@ -51,6 +51,13 @@ test("home keeps chronological order, cursor paging and the reading position", a
   await page.setViewportSize({ width: 1440, height: 900 });
   const response = page.waitForResponse((res) => res.url().includes("/home/feed?") && res.ok());
   await login(page);
+  const desktopPrimaryNav = page.locator(".desktop-nav > a");
+  await expect(desktopPrimaryNav).toHaveCount(3);
+  await expect(desktopPrimaryNav).toHaveText(["首页", "漫游", "合集"]);
+  await page.locator(".discover-menu > summary").click();
+  await expect(page.locator(".discover-menu-panel")).toBeVisible();
+  await expect(page.locator(".discover-menu-panel nav a")).toHaveCount(6);
+  await page.locator(".discover-menu > summary").click();
   const items = (await (await response).json()).data.items;
   const entries = page.locator(".home-feed-entry[data-feed-post-id]");
   await expect(entries).toHaveCount(items.length);
@@ -90,6 +97,15 @@ test("home keeps chronological order, cursor paging and the reading position", a
 test("home fits narrow screens and publishes an image note through the existing composer", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
+  const mobileNav = page.locator(".mobile-bottom-nav");
+  await expect(mobileNav).toBeVisible();
+  await expect(mobileNav.locator(":scope > a")).toHaveText(["首页", "发现", "写作", "我的"]);
+  const mobileNavBox = await mobileNav.boundingBox();
+  expect(Math.abs(mobileNavBox.y + mobileNavBox.height - 844)).toBeLessThanOrEqual(1);
+  await page.locator(".mobile-menu > summary").click();
+  await expect(page.locator(".mobile-menu-panel")).toBeVisible();
+  await expect(page.locator(".mobile-menu-panel nav a", { hasText: "搜索" })).toBeVisible();
+  await page.locator(".mobile-menu > summary").click();
   const first = page.locator(".home-feed-entry").first();
   await expect(first).toBeVisible();
   await page.evaluate(() => document.fonts.ready);

@@ -23,7 +23,7 @@ export function MePage() {
   ];
 
   return (
-    <main className="page-shell">
+    <main className="page-shell personal-page-shell personal-overview-page">
       <PersonalNav />
       <header className="profile-hero me-hero">
         <ProtectedImage
@@ -33,6 +33,7 @@ export function MePage() {
           fallback={<div className="profile-monogram" aria-hidden="true">{(user.nickname || user.username).slice(0, 1)}</div>}
         />
         <div>
+          <p className="hero-kicker">Personal archive</p>
           <h1>{user.nickname}</h1>
           <p className="profile-handle">@{user.username}</p>
           {user.bio ? <p>{user.bio}</p> : <p className="muted">还没有填写个人简介。</p>}

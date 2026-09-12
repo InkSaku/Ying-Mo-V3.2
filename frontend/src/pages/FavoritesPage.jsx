@@ -70,10 +70,10 @@ export function FavoritesPage() {
   if (state.loading && !state.data) return <PageLoader label="正在读取收藏" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   return (
-    <main className="page-shell" aria-busy={state.loading || Boolean(busyId) || undefined}>
+    <main className="page-shell personal-page-shell" aria-busy={state.loading || Boolean(busyId) || undefined}>
       <PersonalNav />
       <header className="page-heading">
-        <div><h1>收藏</h1><p>只保留你当前仍有权访问的收藏内容。</p></div>
+        <div><p className="section-kicker">SAVED READING</p><h1>收藏</h1><p>只保留你当前仍有权访问的收藏内容。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 篇</span>
       </header>
       {actionError ? <div className="inline-error favorite-feedback" role="alert">{actionError}</div> : null}

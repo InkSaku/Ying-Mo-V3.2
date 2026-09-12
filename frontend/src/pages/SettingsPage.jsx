@@ -88,7 +88,7 @@ export function SettingsPage() {
   }
 
   return (
-    <main className="page-shell settings-page">
+    <main className="page-shell personal-page-shell settings-page">
       <PersonalNav />
       <header className="page-heading">
         <div><h1>个人资料</h1><p>这里编辑其他成员能看到的资料；用户名、角色与账户状态不能在此修改。</p></div>

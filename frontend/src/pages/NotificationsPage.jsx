@@ -70,10 +70,10 @@ export function NotificationsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell" aria-busy={state.loading || Boolean(busy) || pageNeedsClamp || undefined}>
+    <main className="page-shell personal-page-shell" aria-busy={state.loading || Boolean(busy) || pageNeedsClamp || undefined}>
       <PersonalNav />
       <header className="page-heading">
-        <div><h1>通知</h1><p>通知目标同样经过后端 ACL 处理，无权目标不会泄露地址。</p></div>
+        <div><p className="section-kicker">INBOX</p><h1>通知</h1><p>通知目标同样经过后端 ACL 处理，无权目标不会泄露地址。</p></div>
         {state.data?.some((item) => !item.is_read) ? (
           <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("all"); }}>
             {busy === "all" ? "处理中" : "全部已读"}

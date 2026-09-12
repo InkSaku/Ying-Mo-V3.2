@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
+import { calculateReadingProgress, hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
+import ArchiveCatDrawing from "./ArchiveCatDrawing";
 import { ArticleTocSketch } from "./ArticleSketches";
 
 function decodeHash(value) {
@@ -16,6 +17,12 @@ export function ArticleReadingLayout({ outline, children }) {
   const showToc = hasArticleToc(normalizedOutline);
   const [activeId, setActiveId] = useState(normalizedOutline[0]?.id || "");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [catRunning, setCatRunning] = useState(false);
+  const [catDirection, setCatDirection] = useState("right");
+  const previousProgressRef = useRef(0);
+  const activeIndex = Math.max(0, normalizedOutline.findIndex((item) => item.id === activeId));
+  const activeItem = normalizedOutline[activeIndex];
 
   useEffect(() => {
     setActiveId(normalizedOutline[0]?.id || "");
@@ -48,6 +55,47 @@ export function ArticleReadingLayout({ outline, children }) {
       setActiveId(targetId);
     });
     return () => window.cancelAnimationFrame(frame);
+  }, [normalizedOutline]);
+
+  useEffect(() => {
+    let frame = 0;
+    let catIdleTimer = 0;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateProgress = () => {
+      frame = 0;
+      const content = contentRef.current;
+      if (!content) return;
+      const bounds = content.getBoundingClientRect();
+      const nextProgress = calculateReadingProgress({
+        scrollTop: window.scrollY,
+        contentTop: bounds.top + window.scrollY,
+        contentHeight: bounds.height,
+        viewportHeight: window.innerHeight,
+      });
+      if (nextProgress > previousProgressRef.current + .1) setCatDirection("right");
+      if (nextProgress < previousProgressRef.current - .1) setCatDirection("left");
+      previousProgressRef.current = nextProgress;
+      setProgress(Math.round(nextProgress));
+    };
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateProgress);
+    };
+    const handleScroll = () => {
+      requestUpdate();
+      if (reducedMotion.matches) return;
+      setCatRunning(true);
+      window.clearTimeout(catIdleTimer);
+      catIdleTimer = window.setTimeout(() => setCatRunning(false), 180);
+    };
+    requestUpdate();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", requestUpdate);
+      window.clearTimeout(catIdleTimer);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, [normalizedOutline]);
 
   return (
@@ -95,6 +143,42 @@ export function ArticleReadingLayout({ outline, children }) {
           </header>
           {children}
         </div>
+        <aside className="article-reading-rail" aria-label="阅读进度">
+          <p className="article-reading-rail-eyebrow" aria-hidden="true">READING FLOW</p>
+          <div className="article-reading-rail-value">
+            <strong>{progress}%</strong>
+            <span>已读</span>
+          </div>
+          <div className="article-reading-rail-track" aria-hidden="true">
+            <span style={{ "--reading-progress": `${progress}%` }} />
+          </div>
+          {activeItem ? (
+            <div className="article-reading-rail-current">
+              <span>正在读</span>
+              <p>{activeItem.label}</p>
+              <small>{String(activeIndex + 1).padStart(2, "0")} / {String(normalizedOutline.length).padStart(2, "0")}</small>
+            </div>
+          ) : null}
+          <button type="button" onClick={() => window.scrollTo({
+            top: 0,
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+          })}>
+            <span aria-hidden="true">↑</span> 回到篇首
+          </button>
+          <div className="article-reading-companion" aria-hidden="true">
+            <p><span>READING COMPANION</span><span>{progress >= 100 ? "读完啦" : "慢慢读"}</span></p>
+            <div className="article-reading-cat-track">
+              <div
+                className="article-archive-cat-runner article-reading-cat-runner"
+                data-running={catRunning}
+                data-direction={catDirection}
+                style={{ left: `${progress}%`, transform: `translateX(-${progress}%)` }}
+              >
+                <ArchiveCatDrawing />
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </>
   );

@@ -23,7 +23,7 @@ export function DataExportPage() {
     }
   };
 
-  return <main className="page-shell settings-page">
+  return <main className="page-shell personal-page-shell settings-page">
     <PersonalNav />
     <header className="page-heading"><div><h1>数据导出</h1><p>把自己的长期记录带走，不依赖某一个运行中的站点。</p></div></header>
     <section className="settings-security-section">
