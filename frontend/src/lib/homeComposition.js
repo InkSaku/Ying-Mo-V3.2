@@ -13,3 +13,15 @@ export function homeCollagePhotos(posts = []) {
   }
   return photos;
 }
+
+export function homeFeaturePost(posts = []) {
+  const hasImage = (post) => Boolean(
+    post?.display_media?.read_path || post?.display_media?.thumbnail_path
+    || post?.cover_media?.read_path || post?.cover_media?.thumbnail_path
+  );
+  return posts.find((post) => post.post_type === "article" && hasImage(post))
+    || posts.find(hasImage)
+    || posts.find((post) => post.post_type === "article")
+    || posts[0]
+    || null;
+}

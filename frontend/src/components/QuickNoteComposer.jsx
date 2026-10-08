@@ -52,6 +52,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
   const [post, setPost] = useState(null);
   const postRef = useRef(null);
   const [expanded, setExpanded] = useState(Boolean(restoredRef.current));
+  const [promptOpen, setPromptOpen] = useState(appearance !== "homePrompt" || Boolean(restoredRef.current) || autoFocus);
   const [collections, setCollections] = useState([]);
   const [optionsError, setOptionsError] = useState("");
   const [busy, setBusy] = useState("");
@@ -175,6 +176,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
       replacePost(null);
       setForm(initialQuickNoteForm());
       setExpanded(false);
+      setPromptOpen(false);
       setMessage("随记已发布，并已加入下方的最新记录。");
       onPublished?.(published);
     } catch (publishError) {
@@ -284,16 +286,37 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     form.collection_id && !collections.some((item) => String(item.id) === form.collection_id)
   );
 
+  if (appearance === "homePrompt" && !promptOpen) {
+    const hasDraft = quickNoteHasLocalContent(form, post?.id);
+    return <section className="quick-note-composer is-paper is-home-prompt" aria-labelledby="quick-note-title">
+      <button type="button" className="home-prompt-activate" onClick={() => {
+        setPromptOpen(true);
+        window.requestAnimationFrame(() => bodyInputRef.current?.focus());
+      }}>
+        <span className="home-prompt-symbol" aria-hidden="true">✳</span>
+        <span className="home-prompt-label"><strong id="quick-note-title">此刻，留下一笔</strong><small>像给朋友写一句近况</small></span>
+        <span className="home-prompt-placeholder">{hasDraft ? "草稿已暂存，接着写……" : "今天想记住什么？"}</span>
+        <span className="home-prompt-action">{hasDraft ? "继续写" : "开始写"} ↗</span>
+      </button>
+      {message ? <p className="home-prompt-status" role="status">{message}</p> : null}
+      {!online ? <p className="home-prompt-status">离线中：文字仍会保存在这台设备。</p> : null}
+      {optionsError ? <p className="home-prompt-status" role="alert">Collection 读取失败：{optionsError}</p> : null}
+    </section>;
+  }
+
   return (
-    <section className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" ? "is-paper" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
+    <section className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" || appearance === "homePrompt" ? "is-paper" : ""} ${appearance === "homePrompt" ? "is-home-prompt is-prompt-open" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
       <div className="quick-note-heading">
         <div>
           <p className="hero-kicker">Quick Note</p>
-          <h2 id="quick-note-title">{appearance === "paper" ? "此刻，留下一笔" : "现在，记点什么？"}</h2>
+          <h2 id="quick-note-title">{appearance === "paper" || appearance === "homePrompt" ? "此刻，留下一笔" : "现在，记点什么？"}</h2>
         </div>
-        <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setExpanded((current) => !current)}>
-          {expanded ? "收起补充项" : "补充时间与状态"}
-        </button>
+        <div className="quick-note-heading-actions">
+          <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setExpanded((current) => !current)}>
+            {expanded ? "收起补充项" : "补充时间与状态"}
+          </button>
+          {appearance === "homePrompt" ? <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setPromptOpen(false)}>收起</button> : null}
+        </div>
       </div>
 
       <textarea
@@ -301,7 +324,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         className="quick-note-body"
         value={form.body}
         maxLength={20000}
-        placeholder={appearance === "paper" ? "写点什么，或留下一张照片……" : "写下此刻的想法、见闻或生活片段……"}
+        placeholder={appearance === "paper" || appearance === "homePrompt" ? "写点什么，或留下一张照片……" : "写下此刻的想法、见闻或生活片段……"}
         aria-label="快速随记正文"
         onFocus={() => setExpanded(true)}
         onChange={set("body")}

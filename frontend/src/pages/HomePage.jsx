@@ -3,9 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { HomeFeed } from "../components/HomeFeed";
 import { QuickNoteComposer } from "../components/QuickNoteComposer";
 import { HomeClosing } from "../components/HomeClosing";
-import { HomeInkLandscape, HomeWritingSketch } from "../components/HomeSketches";
+import { HomeOpeningFeature } from "../components/HomeOpeningFeature";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { homeFeaturePost } from "../lib/homeComposition";
 import { HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
 import "../styles/home.css";
 import "../styles/home-editorial.css";
@@ -21,6 +22,8 @@ export function HomePage() {
   const [homeSnapshot, setHomeSnapshot] = useState(() => readHomeFeedCache(user.id, type));
   const [collections, setCollections] = useState(null);
   const pageRef = useRef(null);
+  const feature = homeFeaturePost(homeSnapshot?.items);
+  const editionDate = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric" }).format(new Date());
   // Keep the opening composition stable while readers filter or load more.
   const receiveSnapshot = useCallback((snapshot) => {
     setHomeSnapshot((current) => current?.items?.length ? current : snapshot);
@@ -54,37 +57,41 @@ export function HomePage() {
 
   return (
     <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
-      <header className="home-edition-heading">
-        <div className="home-edition-copy"><p>映墨 · 日常来信</p><h1>日子缓缓，<br />读到彼此。</h1><p className="home-edition-note">一些近况，一点想念。这里收着朋友们的日常。</p></div>
-        <HomeInkLandscape />
-        <p className="home-edition-hand" aria-hidden="true">Good things<br /><span>take time.</span></p>
-      </header>
-      <div className="home-editorial-columns">
-      <aside id="home-writing" className="home-writing-margin" aria-label="书写与回望">
-        <HomeWritingSketch />
-        <div className="home-compose-layout">
-          <QuickNoteComposer appearance="paper" autoFocus={params.get("compose") === "note"} onPublished={setPublishedPost} onCollectionsLoaded={setCollections} />
+      <section className="home-edition-heading" aria-label="映墨日常来信">
+        <div className="home-edition-copy">
+          <p className="home-edition-eyebrow">映墨 / {editionDate} · 今日来信</p>
+          <h1>生活正在<br /><span>被我们写下。</span></h1>
+          <p className="home-edition-note">朋友们的近况、路上的风景，和那些想留给未来的片刻。今天，从这一页读起。</p>
+          <div className="home-edition-cue" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none"><path d="m20 3 2.9 12.1L35 18l-11.5 4.3L21 36l-5.2-11.6L5 21l11.5-4.1L20 3Z" /><path d="M3 31c5 0 7 2 9 6" /></svg>
+            <span>一封信，从某个人真实的今天开始。</span>
+          </div>
         </div>
-        <nav className="home-margin-nav" aria-label="首页延伸入口">
-          <Link to="/on-this-day"><span>往年今日</span><small>翻回曾经的这一页</small><b aria-hidden="true">↗</b></Link>
-          <Link to="/collections"><span>共同的册页</span><small>把片刻，慢慢汇成册</small><b aria-hidden="true">↗</b></Link>
-          <Link to="/me/posts"><span>我的文稿</span><small>拾起上次未写完的那一页</small><b aria-hidden="true">↗</b></Link>
-        </nav>
-      </aside>
-      <section className="home-reading-column" aria-label="朋友的记录">
-      <div className="home-feed-toolbar">
-        <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">近来的记录</h2></div>
-        <div className="home-feed-filters" aria-label="筛选时间流">
-          {feedFilters.map(([value, label]) => (
-            <button key={value} type="button" className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => selectType(value)}>{label}</button>
-          ))}
-        </div>
-      </div>
-
-      <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} />
+        <HomeOpeningFeature post={feature} loading={!homeSnapshot} />
       </section>
+      <div id="home-writing" className="home-compose-layout">
+        <QuickNoteComposer appearance="homePrompt" autoFocus={params.get("compose") === "note"} onPublished={(post) => {
+          setPublishedPost(post);
+          setHomeSnapshot((current) => current ? { ...current, items: [post, ...(current.items || [])] } : { items: [post], memoryInterlude: null });
+        }} onCollectionsLoaded={setCollections} />
       </div>
-      <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
+      <div className="home-editorial-columns">
+        <section className="home-reading-column" aria-label="朋友的记录">
+          <div className="home-feed-toolbar">
+            <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">朋友们刚刚留下</h2></div>
+            <div className="home-feed-filters" aria-label="筛选时间流">
+              {feedFilters.map(([value, label]) => (
+                <button key={value} type="button" className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => selectType(value)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} />
+        </section>
+        <aside className="home-side-rail" aria-label="回望与共同记录">
+          <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
+          <Link className="home-side-drafts" to="/me/posts">接着写我的文稿 ↗</Link>
+        </aside>
+      </div>
     </main>
   );
 }

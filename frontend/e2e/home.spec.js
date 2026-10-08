@@ -23,6 +23,11 @@ test.beforeAll(async ({ request }) => {
   expect(registered.status()).toBe(201);
   const { access_token: token } = (await registered.json()).data;
   const headers = { Authorization: `Bearer ${token}` };
+  const cover = await request.post("/api/v1/uploads/images", { headers, multipart: {
+    file: { name: "home-feature.jpg", mimeType: "image/jpeg", buffer: await readFile(new URL("../src/assets/home/train.jpg", import.meta.url)) },
+  } });
+  expect(cover.status()).toBe(201);
+  const coverId = (await cover.json()).data.id;
   const notes = [
     "雨停以后，沿着河边走了一小段路。树叶还在滴水，风里有一点秋天的凉意。",
     "把周末留给一本没读完的书，也给那些暂时没有答案的问题。",
@@ -35,6 +40,7 @@ test.beforeAll(async ({ request }) => {
       ...(article ? {
         title: index === 12 ? "在忙碌的日常里，为缓慢而持久的事留一点位置" : `阅读与生活之间：第 ${index + 1} 次记录`,
         summary: "关于阅读、散步和持续记录的一点思考。把注意力还给那些具体的事，也许就能重新找到自己的节奏。",
+        ...(index === 12 ? { cover_media_id: coverId } : {}),
       } : { location: "河边", occurred_at: new Date().toISOString() }),
       body: article ? "## 留出一点时间\n\n记录帮助我们看见平常被忽略的小事。\n\n## 慢慢继续\n\n不急于完成，先开始。" : notes[index % notes.length],
     } });
@@ -64,11 +70,11 @@ test("home keeps chronological order, cursor paging and the reading position", a
   expect(await entries.evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.feedPostId)))).toEqual(items.map((post) => post.id));
   expect(items[0].post_type).toBe("note");
   await expect(page.locator(".home-edition-heading h1")).toBeInViewport();
-  await expect(page.locator(".home-ink-landscape")).toBeVisible();
-  await expect(page.locator(".home-writing-sketch")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeInViewport();
+  await expect(page.locator(".home-opening-feature h2")).toContainText("在忙碌的日常里");
+  await expect(page.locator(".home-opening-feature-image")).toBeVisible();
+  await expect(page.locator(".home-prompt-activate")).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
-  await page.locator(".home-collage img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
+  await page.locator(".home-opening-feature-image").evaluate((image) => image.decode());
   await noOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("home-desktop.png"), fullPage: false });
   await page.screenshot({ path: testInfo.outputPath("home-desktop-full.png"), fullPage: true });
@@ -110,15 +116,17 @@ test("home fits narrow screens and publishes an image note through the existing 
   await expect(first).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await expect(page.locator(".home-edition-heading h1")).toBeInViewport();
-  await expect(page.locator(".home-ink-landscape")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeInViewport();
-  await page.locator(".home-collage img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
+  await expect(page.locator(".home-opening-feature-image")).toBeVisible();
+  await expect(page.locator(".home-prompt-activate")).toBeVisible();
+  await page.locator(".home-opening-feature-image").evaluate((image) => image.decode());
   await page.screenshot({ path: testInfo.outputPath("home-mobile.png") });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await noOverflow(page);
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator(".home-prompt-activate").click();
+  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeVisible();
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator(".quick-note-audience .custom-select-trigger")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
@@ -136,7 +144,7 @@ test("home fits narrow screens and publishes an image note through the existing 
   await page.getByRole("button", { name: "发布随记", exact: true }).click();
   await expect(page.locator(".home-feed-entry").first()).toContainText(body);
   await expect(page.locator(".home-feed-entry").first().locator("img.home-feed-media")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "快速随记正文" })).toHaveValue("");
+  await expect(page.locator(".home-prompt-activate")).toBeVisible();
   await noOverflow(page);
   await page.reload();
   await expect(page.locator(".home-feed-entry").first()).toContainText(body);
@@ -155,6 +163,7 @@ test("home keeps empty and failed feeds usable", async ({ page }) => {
   fail = false;
   await page.getByRole("button", { name: "重新读取" }).click();
   await expect(page.getByRole("heading", { name: "时间流还是空的" })).toBeVisible();
+  await page.locator(".home-prompt-activate").click();
   await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeVisible();
   await noOverflow(page);
 });
