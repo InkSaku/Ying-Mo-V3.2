@@ -1,4 +1,19 @@
 /* Article reading follows the same warm paper and ink language as authentication and Home. */
+.article-reading-page .article-detail-back-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.article-reading-preview-status {
+  width: min(100%, 1160px);
+  margin: -36px auto 0;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
 html:not([data-theme="dark"]):has(.article-reading-page) {
   --page: #f8f7f3;
   --surface: #fbfaf6;

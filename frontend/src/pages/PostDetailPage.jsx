@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -20,15 +20,76 @@ import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
 import { ArticleEndMark, ArticleOpeningSketch } from "../components/ArticleSketches";
+import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
 import "../styles/reading-editorial.css";
 import "../styles/note-detail-editorial.css";
+
+function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryItem, transitionId, onBack }) {
+  return (
+    <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
+      <aside className="article-detail-margin" aria-label="阅读导航">
+        {onBack
+          ? <button className="article-detail-back article-detail-back-button" type="button" onClick={onBack}><span aria-hidden="true">←</span> 返回文章目录</button>
+          : <Link className="article-detail-back" to="/articles"><span aria-hidden="true">←</span> 返回文章目录</Link>}
+        <ArticleOpeningSketch />
+        <p className="article-detail-hand" aria-hidden="true">Read slowly.<br /><span>Keep what stays.</span></p>
+      </aside>
+      <div className="article-detail-heading">
+        <p className="article-detail-kicker"><span>{postTypeLabel(post.post_type)}</span><span>YING MO / READING</span></p>
+        <h1 style={transitionId ? { viewTransitionName: "article-title" } : undefined}>{post.title || "未命名文章"}</h1>
+        {post.summary ? <p className="lede">{post.summary}</p> : null}
+        <aside className="article-detail-folio" aria-label="文章信息">
+          <div className="post-detail-meta">
+            <span>撰文</span>
+            {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : <span>匿名</span>}
+          </div>
+          <dl className="post-facts">
+            <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
+            <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
+            {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
+          </dl>
+          <div className="post-context">
+            {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
+            {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
+            {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
+          </div>
+        </aside>
+      </div>
+
+      <div className="article-detail-page-mark" aria-hidden="true"><span>READING / PAGE</span><strong>01</strong></div>
+
+      {post.cover_media ? (
+        <figure className="article-detail-cover-frame" style={transitionId ? { viewTransitionName: "article-cover" } : undefined}>
+          {preview ? (
+            <div className="media-lightbox-trigger" aria-hidden="true">
+              <ProtectedImage media={post.cover_media} alt="" className="post-detail-cover article-detail-cover" />
+            </div>
+          ) : (
+            <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面">
+              <ProtectedImage media={post.cover_media} useOriginal alt={post.cover_media.alt_text ?? null} className="post-detail-cover article-detail-cover" />
+            </MediaOpenButton>
+          )}
+          {post.cover_media.caption ? <figcaption>{post.cover_media.caption}</figcaption> : null}
+        </figure>
+      ) : null}
+    </header>
+  );
+}
 
 export function PostDetailPage({ type }) {
   const params = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const path = type === "article" ? `/posts/slug/${encodeURIComponent(params.slug)}` : `/posts/${params.id}`;
+  const articlePreview = type === "article" && location.state?.articlePreview?.slug === params.slug
+    ? location.state.articlePreview : null;
+  const transitionId = articlePreview?.id;
+  const onBackToArticles = location.state?.fromArticleList
+    ? () => navigateWithArticleTransition(
+      () => navigate(-1),
+      transitionId ? `.browse-page-article [data-article-id="${transitionId}"]` : ".browse-page-article"
+    ) : null;
   const state = useAsyncData(() => api.get(path), [path]);
   const post = state.data?.redirect ? null : state.data;
   const galleryItems = useMemo(() => logicalMediaFromRaw(post?.bound_media, post), [post]);
@@ -38,9 +99,13 @@ export function PostDetailPage({ type }) {
 
   useEffect(() => {
     if (state.data?.redirect && state.data?.canonical) {
-      navigate(state.data.canonical, { replace: true });
+      navigate(state.data.canonical, { replace: true, state: location.state });
     }
-  }, [state.data, navigate]);
+  }, [state.data, navigate, location.state]);
+
+  useLayoutEffect(() => {
+    if (type === "article" && articlePreview) window.scrollTo({ top: 0, behavior: "instant" });
+  }, [path, type, articlePreview]);
 
   useEffect(() => {
     if (!postId) return undefined;
@@ -54,6 +119,14 @@ export function PostDetailPage({ type }) {
     if (galleryItems.length) hydrateGallery({ items: galleryItems, context: "post" });
   }, [galleryItems, hydrateGallery]);
 
+  if (state.loading && articlePreview) return (
+    <main className="page-shell reading-page reading-page-with-tools article-reading-page article-reading-preview" aria-busy="true">
+      <article className="post-detail post-detail-with-tools article-detail">
+        <ArticleHero post={articlePreview} preview transitionId={transitionId} onBack={onBackToArticles} />
+      </article>
+      <p className="article-reading-preview-status" role="status">正在展开正文…</p>
+    </main>
+  );
   if (state.loading || state.data?.redirect) return <PageLoader />;
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   if (!post) return null;
@@ -114,50 +187,7 @@ export function PostDetailPage({ type }) {
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
-        <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
-          <aside className="article-detail-margin" aria-label="阅读导航">
-            <Link className="article-detail-back" to="/articles"><span aria-hidden="true">←</span> 返回文章目录</Link>
-            <ArticleOpeningSketch />
-            <p className="article-detail-hand" aria-hidden="true">Read slowly.<br /><span>Keep what stays.</span></p>
-          </aside>
-          <div className="article-detail-heading">
-            <p className="article-detail-kicker"><span>{postTypeLabel(post.post_type)}</span><span>YING MO / READING</span></p>
-            <h1>{post.title || "未命名文章"}</h1>
-            {post.summary ? <p className="lede">{post.summary}</p> : null}
-            <aside className="article-detail-folio" aria-label="文章信息">
-              <div className="post-detail-meta">
-                <span>撰文</span>
-                {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : <span>匿名</span>}
-              </div>
-              <dl className="post-facts">
-                <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
-                <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
-                {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
-              </dl>
-              <div className="post-context">
-                {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
-                {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
-                {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
-              </div>
-            </aside>
-          </div>
-
-          <div className="article-detail-page-mark" aria-hidden="true"><span>READING / PAGE</span><strong>01</strong></div>
-
-          {post.cover_media ? (
-            <figure className="article-detail-cover-frame">
-              <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看封面">
-                <ProtectedImage
-                  media={post.cover_media}
-                  useOriginal
-                  alt={post.cover_media.alt_text ?? null}
-                  className="post-detail-cover article-detail-cover"
-                />
-              </MediaOpenButton>
-              {post.cover_media.caption ? <figcaption>{post.cover_media.caption}</figcaption> : null}
-            </figure>
-          ) : null}
-        </header>
+        <ArticleHero post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} transitionId={post.id === transitionId ? transitionId : null} onBack={onBackToArticles} />
 
         <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
       </article>

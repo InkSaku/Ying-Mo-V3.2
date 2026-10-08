@@ -135,3 +135,57 @@ test("Articles presents a clear opening story, recommendation rail and readable 
     await expectNoOverflow(page);
   }
 });
+
+test("opening an article and returning preserves the selected row and filters", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await login(page);
+  await page.goto("/articles");
+  const opening = page.locator(".articles-lead-story");
+  const titleLink = opening.locator("h3 a");
+  await titleLink.scrollIntoViewIfNeeded();
+  const title = await titleLink.textContent();
+  const startTop = (await opening.boundingBox()).y;
+  await page.evaluate(() => {
+    if (!document.startViewTransition) return;
+    const original = document.startViewTransition;
+    window.articleTransitionCalls = 0;
+    document.startViewTransition = function (...args) {
+      window.articleTransitionCalls += 1;
+      return original.apply(this, args);
+    };
+  });
+  await page.route("**/api/v1/posts/slug/**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.continue();
+  });
+
+  await titleLink.click();
+  await expect(page.locator(".article-reading-preview h1")).toHaveText(title);
+  await expect(page.locator(".app-header")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("article-transition-preview.png") });
+  await expect(page.locator(".article-reading-page:not(.article-reading-preview) h1")).toHaveText(title);
+  if (await page.evaluate(() => Boolean(document.startViewTransition))) {
+    expect(await page.evaluate(() => window.articleTransitionCalls)).toBeGreaterThan(0);
+  }
+  await page.getByRole("button", { name: "返回文章目录" }).click();
+  await expect(page).toHaveURL(/\/articles$/);
+  await expect(opening.locator("h3 a")).toHaveText(title);
+  await expect.poll(async () => (await opening.boundingBox()).y).toBeGreaterThan(startTop - 8);
+  expect((await opening.boundingBox()).y).toBeLessThan(startTop + 8);
+  await expect(page.locator(".app-header")).toBeVisible();
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/articles?sort=oldest");
+  const plainTitle = page.locator(".articles-lead-story h3 a");
+  await plainTitle.scrollIntoViewIfNeeded();
+  await expect(plainTitle).toBeVisible();
+  const plainText = await plainTitle.textContent();
+  expect(await plainTitle.evaluate((node) => getComputedStyle(node.parentElement).viewTransitionName)).toBe("none");
+  await plainTitle.click();
+  await expect(page.locator(".article-reading-page:not(.article-reading-preview) h1")).toHaveText(plainText);
+  await expectNoOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("article-transition-mobile.png") });
+  await page.getByRole("button", { name: "返回文章目录" }).click();
+  await expect(page).toHaveURL(/\/articles\?sort=oldest$/);
+});

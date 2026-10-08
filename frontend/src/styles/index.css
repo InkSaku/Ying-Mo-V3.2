@@ -73,8 +73,9 @@
 }
 
 .media-lightbox-backdrop {
+  --lightbox-backdrop-opacity: 0.96;
   align-items: center;
-  background: rgb(9 10 12 / 96%);
+  background: rgb(9 10 12 / var(--lightbox-backdrop-opacity));
   display: flex;
   inset: 0;
   justify-content: center;
@@ -115,6 +116,7 @@
   cursor: pointer;
   padding: 8px 14px;
 }
+.media-lightbox-close { justify-self: start; }
 
 .media-lightbox-stage {
   align-items: center;
@@ -133,7 +135,53 @@
   min-height: 0;
   overflow: hidden;
   position: relative;
+}
+
+.media-lightbox-viewport {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
   touch-action: none;
+  width: 100%;
+  cursor: grab;
+}
+.media-lightbox-viewport[data-zoomed="true"] { cursor: move; }
+.media-lightbox-viewport:active { cursor: grabbing; }
+.media-lightbox-track {
+  height: 100%;
+  position: relative;
+  width: 100%;
+  will-change: transform;
+}
+.media-lightbox-slide {
+  height: 100%;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+.media-lightbox-slide-previous { left: -100%; }
+.media-lightbox-slide-current { left: 0; }
+.media-lightbox-slide-next { left: 100%; }
+.media-lightbox-adjacent {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+.media-lightbox-adjacent img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+.media-lightbox-viewport.is-settling .media-lightbox-track,
+.media-lightbox-viewport.is-settling .media-lightbox-image img,
+.media-lightbox-viewport.is-settling .media-lightbox-live img,
+.media-lightbox-viewport.is-settling .media-lightbox-live video,
+.media-lightbox-backdrop.is-settling {
+  transition: transform 180ms cubic-bezier(.2, .8, .2, 1), background-color 180ms ease;
 }
 
 .media-lightbox-image img,
@@ -142,7 +190,6 @@
   max-height: 100%;
   max-width: 100%;
   object-fit: contain;
-  transition: transform 180ms ease, opacity 160ms ease;
   user-select: none;
 }
 
@@ -150,7 +197,9 @@
   height: 100%;
   inset: 0;
   opacity: 0;
+  pointer-events: none;
   position: absolute;
+  transition: opacity 160ms ease;
   width: 100%;
 }
 .media-lightbox-live video.active { opacity: 1; }
@@ -239,6 +288,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .media-lightbox-viewport.is-settling .media-lightbox-track,
+  .media-lightbox-viewport.is-settling .media-lightbox-image img,
+  .media-lightbox-viewport.is-settling .media-lightbox-live img,
+  .media-lightbox-viewport.is-settling .media-lightbox-live video,
+  .media-lightbox-backdrop.is-settling,
   .media-lightbox-image img,
   .media-lightbox-live img,
   .media-lightbox-live video { transition: none; }

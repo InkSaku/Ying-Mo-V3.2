@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
+import { canAnimateArticleNavigation, navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import { PostCardMedia } from "./PostCardMedia";
 
 function compactDate(value) {
@@ -26,16 +27,50 @@ function ArticleCredits({ post, compact = false, showDate = true }) {
   );
 }
 
-export function ArticleLeadStory({ post, index }) {
+function ArticleReadingLink({ post, onOpen, fromArticleList, children, className, label }) {
+  const navigate = useNavigate();
+  const href = postHref(post);
+  const state = {
+      fromArticleList,
+      articlePreview: {
+        id: post.id,
+        slug: post.slug,
+        post_type: "article",
+        title: post.title,
+        summary: post.summary,
+        cover_media: post.cover_media,
+        author: post.author,
+        published_at: post.published_at,
+        updated_at: post.updated_at,
+        reading_minutes: post.reading_minutes,
+        category: post.category,
+        tags: post.tags,
+        collection: post.collection,
+      },
+  };
+  const preload = () => { void import("../pages/PostDetailPage"); };
+  const open = (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    onOpen?.(post);
+    if (!canAnimateArticleNavigation()) return;
+    event.preventDefault();
+    void import("../pages/PostDetailPage").then(() => {
+      navigateWithArticleTransition(() => navigate(href, { state }), ".article-reading-page h1");
+    }).catch(() => navigate(href, { state }));
+  };
+  return <Link to={href} state={state} className={className} aria-label={label} onClick={open} onPointerEnter={preload} onFocus={preload}>{children}</Link>;
+}
+
+export function ArticleLeadStory({ post, index, onOpen, fromArticleList, selected }) {
   const media = post.cover_media || post.display_media;
   const summary = excerpt(post);
   return (
-    <article className={`articles-lead-story ${media ? "has-media" : "without-media"}`} data-post-type="article">
+    <article className={`articles-lead-story ${media ? "has-media" : "without-media"}`} data-post-type="article" data-article-id={post.id}>
       <span className="articles-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-      {media ? <div className="articles-lead-visual"><PostCardMedia post={post} media={media} label={`查看${post.title || "本页首篇"}的封面`} /></div> : null}
+      {media ? <div className="articles-lead-visual" style={selected && post.cover_media ? { viewTransitionName: "article-cover" } : undefined}><PostCardMedia post={post} media={media} label={`查看${post.title || "本页首篇"}的封面`} /></div> : null}
       <div className="articles-lead-copy">
         <ArticleTypeLine post={post} />
-        <h3><Link to={postHref(post)}>{post.title || "未命名文章"}</Link></h3>
+        <h3 style={selected ? { viewTransitionName: "article-title" } : undefined}><ArticleReadingLink post={post} onOpen={onOpen} fromArticleList={fromArticleList}>{post.title || "未命名文章"}</ArticleReadingLink></h3>
         {summary ? <p>{summary}</p> : null}
         <ArticleCredits post={post} />
       </div>
@@ -43,14 +78,14 @@ export function ArticleLeadStory({ post, index }) {
   );
 }
 
-export function ArticleMarginStory({ post, index }) {
+export function ArticleMarginStory({ post, index, onOpen, fromArticleList, selected }) {
   const summary = excerpt(post);
   return (
-    <article className="articles-margin-story" data-post-type="article">
+    <article className="articles-margin-story" data-post-type="article" data-article-id={post.id}>
       <span className="articles-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
       <div>
         <ArticleTypeLine post={post} />
-        <h3><Link to={postHref(post)}>{post.title || "未命名文章"}</Link></h3>
+        <h3 style={selected ? { viewTransitionName: "article-title" } : undefined}><ArticleReadingLink post={post} onOpen={onOpen} fromArticleList={fromArticleList}>{post.title || "未命名文章"}</ArticleReadingLink></h3>
         {summary ? <p>{summary}</p> : null}
         <ArticleCredits post={post} compact />
       </div>
@@ -58,18 +93,18 @@ export function ArticleMarginStory({ post, index }) {
   );
 }
 
-export function ArticleIndexRow({ post }) {
+export function ArticleIndexRow({ post, onOpen, fromArticleList, selected }) {
   const summary = excerpt(post);
   return (
     <li>
-      <article className="articles-index-row" data-post-type="article">
+      <article className="articles-index-row" data-post-type="article" data-article-id={post.id}>
         <time className="articles-entry-date tabular" dateTime={post.published_at || undefined}>{compactDate(post.published_at)}</time>
         <div className="articles-index-copy">
           <ArticleTypeLine post={post} />
-          <h3><Link to={postHref(post)}>{post.title || "未命名文章"}</Link></h3>
+          <h3 style={selected ? { viewTransitionName: "article-title" } : undefined}><ArticleReadingLink post={post} onOpen={onOpen} fromArticleList={fromArticleList}>{post.title || "未命名文章"}</ArticleReadingLink></h3>
           {summary ? <p>{summary}</p> : null}
         </div>
-        <div className="articles-index-meta"><ArticleCredits post={post} showDate={false} /><Link className="articles-index-arrow" to={postHref(post)} aria-label={`阅读${post.title || "未命名文章"}`}>→</Link></div>
+        <div className="articles-index-meta"><ArticleCredits post={post} showDate={false} /><ArticleReadingLink post={post} onOpen={onOpen} fromArticleList={fromArticleList} className="articles-index-arrow" label={`阅读${post.title || "未命名文章"}`}>→</ArticleReadingLink></div>
       </article>
     </li>
   );

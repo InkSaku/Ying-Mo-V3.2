@@ -1,0 +1,53 @@
+/* Keep the shell still while a selected article becomes the reading page. */
+.browse-page-article .is-opening h3 a {
+  color: var(--text) !important;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .browse-page-article,
+  .article-reading-page { view-transition-name: article-page; }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: 0.01ms; }
+
+  ::view-transition-old(article-page) { animation: 110ms ease-out both article-page-out; }
+  ::view-transition-new(article-page) { animation: 170ms 100ms ease-out both article-page-in; }
+
+  ::view-transition-group(article-title),
+  ::view-transition-group(article-cover) {
+    animation-duration: 300ms;
+    animation-timing-function: cubic-bezier(.22, .75, .25, 1);
+  }
+
+  ::view-transition-old(article-title) { animation: 300ms linear both article-title-old; }
+  ::view-transition-new(article-title) { animation: 300ms linear both article-title-new; }
+}
+
+@keyframes article-page-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes article-page-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes article-title-old {
+  0%, 48% { opacity: 1; }
+  54%, 100% { opacity: 0; }
+}
+
+@keyframes article-title-new {
+  0%, 48% { opacity: 0; }
+  54%, 100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browse-page-article h3,
+  .browse-page-article .articles-lead-visual,
+  .article-reading-page h1,
+  .article-reading-page .article-detail-cover-frame { view-transition-name: none !important; }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: 0.01ms !important; }
+}

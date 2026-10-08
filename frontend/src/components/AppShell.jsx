@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useUnreadNotifications } from "../hooks/useUnreadNotifications";
@@ -13,6 +13,7 @@ import {
 } from "../lib/navigation";
 import { unreadBadgeText } from "../lib/notificationCount";
 import { ThemeControl } from "./ThemeControl";
+import { PageLoader } from "./States";
 
 function NavLinks({ items, onNavigate }) {
   return items.map(({ to, label }) => (
@@ -180,7 +181,9 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <Outlet />
+      <Suspense fallback={<PageLoader label="正在读取页面" />}>
+        <Outlet />
+      </Suspense>
 
       <footer className="site-footer">
         <div className="footer-inner">

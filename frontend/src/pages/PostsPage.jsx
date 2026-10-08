@@ -1,6 +1,7 @@
-import { useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useLayoutEffect } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { PostFilters } from "../components/PostFilters";
@@ -16,6 +17,7 @@ import "../styles/notes.css";
 import { NoteSketch } from "../components/NoteSketch";
 import { CollectionSketch } from "../components/CollectionSketch";
 import { ArticleArchiveCat } from "../components/ArticleSketches";
+import { articleBrowseSnapshot, rememberArticleBrowse, restoreArticleBrowse } from "../lib/articleBrowseTransition";
 
 const PAGE_SIZE = 12;
 
@@ -95,7 +97,7 @@ function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
   );
 }
 
-function ArticleMagazine({ posts, page, total, sort }) {
+function ArticleMagazine({ posts, page, total, sort, onOpen, fromArticleList, selectedId }) {
   const lead = posts[0];
   const secondary = posts.slice(1, 3);
   const indexPosts = posts.slice(3);
@@ -108,11 +110,11 @@ function ArticleMagazine({ posts, page, total, sort }) {
         <div className="article-magazine-opening">
           <div className="article-magazine-opening-main">
             <p className="article-magazine-opening-label">{openingLabel} <span>本页首篇</span></p>
-            <ArticleLeadStory post={lead} index={(page - 1) * PAGE_SIZE} />
+            <ArticleLeadStory post={lead} index={(page - 1) * PAGE_SIZE} onOpen={onOpen} fromArticleList={fromArticleList} selected={lead.id === selectedId} />
           </div>
           {secondary.length ? <aside className="article-magazine-rail" aria-label="延伸阅读篇目">
             <header><span>READ NEXT</span><strong>接着阅读</strong><small>{secondary.length} 篇延伸阅读</small></header>
-            {secondary.map((post, index) => <ArticleMarginStory key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} />)}
+            {secondary.map((post, index) => <ArticleMarginStory key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} onOpen={onOpen} fromArticleList={fromArticleList} selected={post.id === selectedId} />)}
           </aside> : null}
         </div>
         {archiveGroups.length ? <section className="article-magazine-index-section" aria-label="文章年份目录">
@@ -122,7 +124,7 @@ function ArticleMagazine({ posts, page, total, sort }) {
             {archiveGroups.map((group) => <section className="article-year-group" key={group.year} aria-labelledby={`article-year-${group.year}`}>
               <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong><span>{group.items.length} STORIES</span></header>
               <ol className="article-magazine-index-list">
-                {group.items.map((post) => <ArticleIndexRow key={post.id} post={post} />)}
+                {group.items.map((post) => <ArticleIndexRow key={post.id} post={post} onOpen={onOpen} fromArticleList={fromArticleList} selected={post.id === selectedId} />)}
               </ol>
             </section>)}
           </div>
@@ -153,6 +155,8 @@ function NoteJournal({ posts, page, total }) {
 export function PostsPage({ type }) {
   const isArticle = type === "article";
   usePageMeta(isArticle ? "文章" : "随记");
+  const location = useLocation();
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const filters = readPostFilters(params, type);
   const { page } = filters;
@@ -163,11 +167,21 @@ export function PostsPage({ type }) {
     [path]
   );
   const optionState = useAsyncData(() => api.get(`/posts/filter-options?post_type=${type}`), [type]);
+  const snapshot = isArticle ? articleBrowseSnapshot(location.key, user?.id, path) : null;
+  const displayData = state.loading && snapshot ? snapshot.result.data : state.data;
+  const displayMeta = state.loading && snapshot ? snapshot.result.meta : state.meta;
 
-  const pagination = state.meta?.pagination || {};
+  const pagination = displayMeta?.pagination || {};
   const totalPages = pagination.total_pages || 0;
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
-  const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const pageNeedsClamp = Boolean(displayMeta) && clampedPage !== page;
+
+  useLayoutEffect(() => {
+    if (!snapshot || !displayData?.length || pageNeedsClamp) return undefined;
+    restoreArticleBrowse(snapshot);
+    const frame = window.requestAnimationFrame(() => restoreArticleBrowse(snapshot));
+    return () => window.cancelAnimationFrame(frame);
+  }, [snapshot, displayData, pageNeedsClamp]);
 
   useEffect(() => {
     if (params.toString() !== canonicalParams) setParams(canonicalParams, { replace: true });
@@ -185,23 +199,32 @@ export function PostsPage({ type }) {
     setParams(postFilterSearchParams({ ...filters, [key]: value, page: 1 }));
   };
 
-  if (state.loading && !state.data) return <PageLoader />;
+  if (state.loading && !displayData) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
+
+  const fromArticleList = `${location.pathname}${location.search}`;
+  const onOpenArticle = (post) => rememberArticleBrowse({
+    locationKey: location.key,
+    userId: user?.id,
+    path,
+    result: { data: displayData, meta: displayMeta },
+    postId: post.id,
+  });
 
   return (
     <main className={`page-shell browse-page browse-page-${isArticle ? "article" : "note"}`} aria-busy={state.loading || pageNeedsClamp || undefined}>
-      <BrowseHero isArticle={isArticle} total={pagination.total || 0} latestPost={state.data?.[0]} sort={filters.sort} />
+      <BrowseHero isArticle={isArticle} total={pagination.total || 0} latestPost={displayData?.[0]} sort={filters.sort} />
 
       <PostFilters editorial type={type} filters={filters} options={optionState.data || {}} loading={optionState.loading} onChange={changeFilter} onClear={() => setParams("")} />
 
       {pageNeedsClamp ? (
         <div className="profile-refresh" role="status">正在返回有效页码…</div>
-      ) : !state.data?.length ? (
+      ) : !displayData?.length ? (
         <EmptyState title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : "这里只会出现你有权读取的已发布或归档内容。"} />
       ) : (
         isArticle
-          ? <ArticleMagazine posts={state.data} page={pagination.page || page} total={pagination.total || state.data.length} sort={filters.sort} />
-          : <NoteJournal posts={state.data} page={pagination.page || page} total={pagination.total || state.data.length} />
+          ? <ArticleMagazine posts={displayData} page={pagination.page || page} total={pagination.total || displayData.length} sort={filters.sort} onOpen={onOpenArticle} fromArticleList={fromArticleList} selectedId={snapshot?.postId} />
+          : <NoteJournal posts={displayData} page={pagination.page || page} total={pagination.total || displayData.length} />
       )}
 
       <Pagination page={pagination.page || page} totalPages={totalPages} disabled={pageNeedsClamp} onChange={(next) => {

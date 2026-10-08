@@ -9,6 +9,7 @@ import {
 } from "../lib/api";
 import { revokeAllProtectedMedia } from "../lib/protectedMedia";
 import { AUTH_INVALIDATION_STORAGE_KEY, authInvalidationReason } from "../lib/authInvalidation";
+import { clearArticleBrowseSnapshots } from "../lib/articleBrowseTransition";
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,7 @@ export function AuthProvider({ children }) {
     const endLocalSession = () => {
       if (!active) return;
       revokeAllProtectedMedia();
+      clearArticleBrowseSnapshots();
       setUser(null);
       setStatus("anonymous");
     };
@@ -60,6 +62,7 @@ export function AuthProvider({ children }) {
 
   const login = async ({ identifier, password }) => {
     const result = await api.authPost("/auth/login", { identifier, password });
+    clearArticleBrowseSnapshots();
     setAccessToken(result.data.access_token);
     setUser(result.data.user);
     setStatus("authenticated");
@@ -68,6 +71,7 @@ export function AuthProvider({ children }) {
 
   const register = async (payload) => {
     const result = await api.authPost("/auth/register", payload);
+    clearArticleBrowseSnapshots();
     setAccessToken(result.data.access_token);
     setUser(result.data.user);
     setStatus("authenticated");
@@ -77,6 +81,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     await logoutRequest();
     revokeAllProtectedMedia();
+    clearArticleBrowseSnapshots();
     setUser(null);
     setStatus("anonymous");
   };
@@ -85,6 +90,7 @@ export function AuthProvider({ children }) {
     const result = await api.post("/auth/logout-all", {});
     clearLocalAccess("LOGOUT_ALL");
     revokeAllProtectedMedia();
+    clearArticleBrowseSnapshots();
     setUser(null);
     setStatus("anonymous");
     return result.data;
@@ -93,6 +99,7 @@ export function AuthProvider({ children }) {
   const endLocalSession = () => {
     clearLocalAccess("SESSION_REVOKED");
     revokeAllProtectedMedia();
+    clearArticleBrowseSnapshots();
     setUser(null);
     setStatus("anonymous");
   };
