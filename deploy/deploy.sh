@@ -294,7 +294,7 @@ fi
 
 
 
-if ! grep -q 'href="/favicon.png"' "$FRONTEND_DIR/dist/index.html"; then
+if ! grep -q 'href="/ink-mark.svg"' "$FRONTEND_DIR/dist/index.html"; then
 
     fail "Frontend favicon metadata missing"
 
