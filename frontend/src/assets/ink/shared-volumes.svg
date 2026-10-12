@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" fill="none" aria-hidden="true" focusable="false">
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A stack of volumes, held between two little companions. -->
+    <path d="m103 89 104-7 3 21-104 7-3-21Zm-5 26 114-6 2 20-114 6-2-20Zm7 25 102-6 2 18-102 6-2-18Z"/>
+    <path d="m114 96 82-6m-79 12 78-5m-84 20 90-5m-89 12 87-5m-84 25 81-5M108 90l3 20m-8 5 3 20m6 5 2 17" opacity=".55"/>
+    <path d="M95 104c-14-2-18 5-12 11l16 4m113-18c17-7 23-4 21 3l-19 12M64 130c-7 9-13 18-12 26-11 1-15 6-7 7l19-1 8-19m13-13 7 26c11-3 17 2 9 5l-16 2M244 128l-1 24c-10 0-16 5-9 8l19 1 5-23m16-13 8 26c11 1 16 6 8 8l-19-1-9-15"/>
+    <path d="M36 170c78-5 159-6 251-3" opacity=".35"/>
+    <!-- Loose photographs tucked into the top book. -->
+    <path d="m129 79-4-35 40-5 4 37m-34-5-2-17 23-3 2 17-23 3Zm53 7 3-23 20 3-2 16m-54-18 5-6 6 4 4-3 5 5"/>
+  </g>
+  <path d="M47 125c-10-11-8-27 0-41 7-12 21-19 33-13 14 6 21 24 17 39-5 20-33 31-50 15ZM226 121c-7-9-4-22 2-37 8-18 18-28 33-26 18 3 27 22 24 42-2 15-12 31-28 34-14 1-25-4-31-13Z" fill="currentColor"/>
+  <g stroke="var(--page, #f8f7f3)" stroke-width="2.4" stroke-linecap="round">
+    <path d="m71 92 1 3m13-4 1 3m-12 11c4 3 8 2 10-1m157-16 1 3m14-1 1 3m-14 10c4 3 8 4 12 0"/>
+  </g>
+  <g stroke="var(--brand-link, #334b76)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m178 86 1 18 5-4 5 3-1-18M102 47c7-12 17-20 29-23m-11 0 12-1-4 11"/>
+    <path d="M218 38c4-9 9-12 13-17m-1 22 13-7m-64-19 1-7"/>
+  </g>
+</svg>

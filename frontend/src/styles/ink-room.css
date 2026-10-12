@@ -1,0 +1,120 @@
+/* The small jobs around the writing desk: pack, receive, keep and return. */
+.app-frame .data-export-page > .page-heading {
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--border);
+}
+.ink-export-sheet {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(0, 1.8fr);
+  gap: 42px;
+  padding: 38px 0 32px;
+  border-bottom: 1px solid var(--border);
+}
+.ink-export-art { margin: 16px 0 0; align-self: start; }
+.ink-export-art > .ink-sketch { max-width: 280px; margin: 0 auto 20px; }
+.ink-export-art figcaption,
+.ink-install-art figcaption {
+  color: var(--text-3);
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 12px;
+  line-height: 1.9;
+}
+.ink-export-copy { min-width: 0; }
+.ink-export-copy .section-kicker { margin-bottom: 9px; color: var(--brand-link); font-size: 11px; }
+.ink-export-copy h2 { margin: 0 0 10px; font-size: 28px; font-weight: 400; }
+.ink-export-copy header > p:last-child { margin-bottom: 24px; color: var(--text-3); line-height: 1.85; }
+.ink-export-manifest { margin: 0; border-top: 1px solid var(--border); }
+.ink-export-manifest > div { padding: 16px 0; border-bottom: 1px solid var(--border-soft); }
+.ink-export-manifest dt { display: flex; gap: 12px; align-items: baseline; color: var(--text); font-family: var(--serif); font-size: 15px; }
+.ink-export-manifest dt > span { color: var(--brand-link); font-family: var(--mono); font-size: 10px; }
+.ink-export-manifest dd { margin: 5px 0 0 27px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.ink-export-note { margin: 24px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.9; }
+.ink-export-copy .settings-security-actions { align-items: center; gap: 14px 20px; }
+.ink-export-format { color: var(--text-4); font-family: var(--mono); font-size: 10px; }
+
+.app-frame .pwa-install-section {
+  padding: 28px 0;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.ink-install-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+.app-frame .pwa-install-section h2 { font-weight: 400; }
+.ink-install-art { margin: 6px 0 0; }
+.ink-install-art figcaption { margin-top: 12px; }
+.ink-install-copy { min-width: 0; }
+.ink-install-copy > p { margin: 0 0 18px; color: var(--text-3); line-height: 1.9; }
+.ink-install-copy .settings-security-details > div { grid-template-columns: 62px minmax(0, 1fr); gap: 12px; }
+.ink-install-copy .settings-security-details dd { font-size: 12px; line-height: 1.8; }
+.pwa-install-section .pwa-install-guidance { font-size: 12px; line-height: 1.9; margin: 20px 0 0; }
+
+.ink-inbox-summary, .ink-session-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 24px;
+  flex-wrap: wrap;
+  padding: 12px 0 20px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.ink-inbox-summary p, .ink-session-summary p { margin: 0; }
+.ink-inbox-summary .tabular, .ink-session-summary .tabular { color: var(--text); font-family: var(--serif); font-size: 24px; margin-right: 5px; }
+.ink-inbox-unread { display: inline-block; margin-left: 20px; color: var(--brand-link); font-size: 11px; }
+.app-frame .ink-inbox-page .notification-list { gap: 0; }
+.app-frame .ink-inbox-page .notification-list article { padding: 26px 0; border-radius: 0; }
+.app-frame .ink-inbox-page .notification-list article.unread { padding-inline: 18px; }
+.ink-inbox-page .notification-message-row { gap: 12px; }
+.ink-inbox-page .notification-copy > time { display: block; margin-top: 10px; font-family: var(--mono); font-size: 10px; }
+.ink-inbox-page .notification-actions { gap: 14px; }
+.ink-inbox-page .notification-actions :is(a, button) { min-height: 36px; display: inline-flex; align-items: center; }
+
+.app-frame .sessions-page .session-list { gap: 0; border-top: 1px solid var(--text); }
+.app-frame .sessions-page .session-card {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) auto;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 28px 0;
+  gap: 24px;
+  background: transparent;
+}
+.sessions-page .session-device, .sessions-page .session-times > div { min-width: 0; }
+.sessions-page .session-device h2 { font-family: var(--serif); font-weight: 400; }
+.sessions-page .session-current { border: 1px solid var(--brand-border); background: transparent; color: var(--brand-link); }
+.sessions-page .session-times { gap: 14px; }
+.sessions-page .session-times dd { line-height: 1.8; }
+.app-frame .revision-preview-empty { display: grid; align-items: center; padding: 20px; background: transparent; }
+.app-frame .revision-preview-empty > .empty-state { padding: 28px 12px; border: 0; }
+.revision-preview-empty .ink-sketch { width: 180px; }
+
+@media (max-width: 1100px) {
+  .ink-export-sheet { gap: 24px; }
+  .app-frame .sessions-page .session-card { grid-template-columns: minmax(0, 1fr) auto; gap: 20px; }
+  .sessions-page .session-times { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 640px) {
+  .ink-export-sheet { grid-template-columns: minmax(0, 1fr); gap: 28px; padding-top: 12px; }
+  .ink-export-art { display: flex; align-items: center; gap: 20px; margin: 0; }
+  .ink-export-art > .ink-sketch { width: 132px; flex: 0 0 132px; margin: 0; }
+  .ink-export-art figcaption { text-align: left; font-size: 11px; }
+  .ink-export-copy h2 { font-size: 24px; }
+  .ink-export-copy .settings-security-actions { align-items: flex-start; flex-direction: column; }
+  .ink-install-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .ink-install-art { display: flex; gap: 20px; align-items: center; margin: 0; }
+  .ink-install-art > .ink-sketch { width: 110px; flex: 0 0 110px; }
+  .ink-install-art figcaption { margin: 0; text-align: left; }
+  .app-frame .pwa-install-section > header { flex-direction: row; gap: 16px; }
+  .ink-inbox-summary, .ink-session-summary { font-size: 11px; padding-bottom: 16px; }
+  .ink-inbox-unread { margin-left: 12px; }
+  .app-frame .sessions-page .session-card { grid-template-columns: minmax(0, 1fr); }
+  .sessions-page .session-times { grid-row: auto; }
+  .sessions-page .session-card > .btn { width: 100%; }
+}
+@media (max-width: 380px) {
+  .sessions-page .session-times { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .sessions-page .session-times > div { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+  .sessions-page .session-times dd { margin: 0; }
+}

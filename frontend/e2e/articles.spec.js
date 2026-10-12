@@ -86,6 +86,7 @@ test("Articles presents a clear opening story, recommendation rail and readable 
   await expect(page.locator(".articles-index-row")).toHaveCount(9);
   await expect(page.locator(".article-archive-cat")).toBeVisible();
   const cat = page.locator(".article-archive-cat-runner");
+  await expect(cat.locator(".bookroom-cat")).toBeVisible();
   await cat.scrollIntoViewIfNeeded();
   const track = await page.locator(".article-archive-cat").boundingBox();
   const initialCat = await cat.boundingBox();
@@ -95,11 +96,15 @@ test("Articles presents a clear opening story, recommendation rail and readable 
   await page.mouse.move(track.x + track.width - 8, track.y + 20);
   await expect(cat).toHaveAttribute("data-direction", "right");
   await expect(cat).toHaveAttribute("data-running", "false", { timeout: 12000 });
+  await expect.poll(() => cat.locator(".archive-cat-stretch").evaluate((element) => getComputedStyle(element).visibility)).toBe("visible");
+  await expect.poll(() => cat.locator(".archive-cat-pose-0").evaluate((element) => getComputedStyle(element).visibility)).toBe("visible");
   const stoppedCat = await cat.boundingBox();
   expect(stoppedCat.x + stoppedCat.width).toBeLessThanOrEqual(track.x + track.width + 1);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.mouse.move(track.x, track.y);
   await expect(cat).toHaveAttribute("data-running", "false");
+  await expect(cat.locator(".archive-cat-pose-0")).toHaveCSS("visibility", "visible");
+  await expect(cat.locator(".archive-cat-stretch")).toHaveCSS("visibility", "hidden");
   expect((await cat.boundingBox()).x).toBe(stoppedCat.x);
   await page.emulateMedia({ reducedMotion: "no-preference" });
 

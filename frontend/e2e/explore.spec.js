@@ -99,16 +99,21 @@ test("Explore keeps text-led content readable without a fake cover or overlappin
   });
   expect(overlap).toBe(0);
 
-  for (const width of [320, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    await expectNoOverflow(page);
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme });
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expectNoOverflow(page);
+    }
   }
 
   await page.getByRole("button", { name: "换一批内容" }).click();
   await expect(page).toHaveURL(/\/explore\?seed=batch-[a-z0-9]+/);
-  await page.screenshot({ path: testInfo.outputPath("explore-desktop.png"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.screenshot({ path: testInfo.outputPath("explore-desktop.png"), fullPage: true, style: ".app-header, .mobile-bottom-nav { visibility: hidden !important; }" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: testInfo.outputPath("explore-mobile.png"), fullPage: true });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({ path: testInfo.outputPath("explore-mobile.png"), fullPage: true, style: ".app-header, .mobile-bottom-nav { visibility: hidden !important; }" });
 });
 
 test("Explore uses one useful empty state when every source is empty", async ({ page }) => {
@@ -123,5 +128,74 @@ test("Explore uses one useful empty state when every source is empty", async ({ 
   await expect(page.getByRole("heading", { name: "还没有可以偶遇的内容" })).toBeVisible();
   await expect(page.locator(".explore-opening, .explore-section")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "返回首页" })).toBeVisible();
+  await expectNoOverflow(page);
+});
+
+test("mixed roaming content keeps covers, links and seed history through refresh", async ({ page }, testInfo) => {
+  const media = { public_id: "explore-layout-cover", media_type: "image", thumbnail_path: "/api/v1/uploads/explore-layout/thumbnail", read_path: "/api/v1/uploads/explore-layout/thumbnail" };
+  const collection = { id: 51, slug: "quiet-seasons", name: "一起走过的四季", description: "把平常的日子，收进共同的一册。", creator: populatedExplore.recent_members[0] };
+  const mixed = {
+    ...populatedExplore,
+    random_articles: populatedExplore.random_articles.map((post, index) => ({ ...post, cover_media: index % 2 === 0 ? media : null })),
+    random_notes: populatedExplore.random_notes.map((post, index) => ({ ...post, display_media: index % 2 === 0 ? media : null })),
+    featured_collections: [collection, { ...collection, id: 52, slug: "old-bookshop", name: "旧书店与一下午", cover_media: media }],
+    on_this_day: { month: 9, day: 7, items: [{ ...article(91, "一年前的今天，也在慢慢记录"), years_ago: 1, memory_year: 2025 }], total: 1 },
+  };
+  let hold = false;
+  let release;
+  await page.route("**/api/v1/uploads/explore-layout/thumbnail", (route) => route.fulfill({ contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320"><rect width="480" height="320" fill="#d8ddd1"/><path d="M0 255 110 130 250 240 340 170 480 270V320H0Z" fill="#8d9d89"/><circle cx="350" cy="76" r="30" fill="#f7edc9"/></svg>' }));
+  await page.route("**/api/v1/explore**", async (route) => {
+    const seed = new URL(route.request().url()).searchParams.get("seed");
+    if (hold) await new Promise((resolve) => { release = resolve; });
+    const data = { ...mixed, random_articles: mixed.random_articles.map((post, index) => index === 0 && seed !== "batch-first" ? { ...post, title: "另一条路，也有新的风景" } : post) };
+    await route.fulfill({ json: { data } });
+  });
+  await login(page);
+  await page.goto("/explore?seed=batch-first");
+  await expect(page.locator(".explore-opening-visual img")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "往年今日", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "一起走过的四季", exact: true })).toHaveAttribute("href", "/collections/quiet-seasons");
+  await expect(page.getByRole("navigation", { name: "漫游标签" }).getByRole("link").first()).toHaveAttribute("href", "/tags/daily");
+  for (const theme of ["light", "dark"]) {
+    await page.emulateMedia({ colorScheme: theme });
+    for (const width of [1440, 1024, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expectNoOverflow(page);
+      const overlap = await page.evaluate(() => {
+        const story = document.querySelector(".explore-opening-story").getBoundingClientRect();
+        const note = document.querySelector(".explore-opening-note").getBoundingClientRect();
+        return Math.max(0, Math.min(story.right, note.right) - Math.max(story.left, note.left)) * Math.max(0, Math.min(story.bottom, note.bottom) - Math.max(story.top, note.top));
+      });
+      expect(overlap).toBe(0);
+      if (theme === "light" && width === 1440 || theme === "dark" && width === 390) {
+        await page.screenshot({ path: testInfo.outputPath(`explore-mixed-${theme}-${width}.png`), fullPage: true, style: ".app-header, .mobile-bottom-nav { visibility: hidden !important; }" });
+      }
+    }
+  }
+  hold = true;
+  await page.getByRole("button", { name: "换一批内容" }).click();
+  await expect(page.getByRole("button", { name: "正在换一条路" })).toBeDisabled();
+  await expect(page.locator(".explore-opening-caption h2")).toContainText("一条反复走过的路");
+  await expect.poll(() => typeof release).toBe("function");
+  hold = false;
+  release();
+  await expect(page.getByRole("heading", { name: "另一条路，也有新的风景" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/seed=batch-first$/);
+  await expect(page.locator(".explore-opening-caption h2")).toContainText("一条反复走过的路");
+});
+
+test("partial sources stay visible without a row of empty sections", async ({ page }) => {
+  let data = { random_articles: [], random_notes: [note(31, "只有一则随记，也可以从这里开始。")], roaming_tags: [], featured_collections: [], on_this_day: { items: [] }, recent_members: [] };
+  await page.route("**/api/v1/explore**", (route) => route.fulfill({ json: { data } }));
+  await login(page);
+  await page.goto("/explore");
+  await expect(page.getByRole("link", { name: "只有一则随记，也可以从这里开始。" })).toBeVisible();
+  await expect(page.locator(".explore-section, .explore-all-empty")).toHaveCount(0);
+  data = { ...data, random_notes: [], roaming_tags: populatedExplore.roaming_tags };
+  await page.reload();
+  await expect(page.getByRole("navigation", { name: "漫游标签" })).toBeVisible();
+  await expect(page.locator(".explore-opening, .explore-all-empty")).toHaveCount(0);
+  await page.setViewportSize({ width: 320, height: 900 });
   await expectNoOverflow(page);
 });

@@ -248,6 +248,7 @@ export function MarkdownEditorDialog({
               }}
             >
               <VisualMarkdownEditor
+                showSourcePreview={false}
                 ref={textareaRef}
                 className="markdown-editor-visual"
                 value={value}

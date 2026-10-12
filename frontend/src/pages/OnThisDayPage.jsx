@@ -1,3 +1,4 @@
+import { InkSketch } from "../components/InkSketch";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -41,6 +42,7 @@ export function OnThisDayPage() {
     <main className="page-shell personal-page-shell on-this-day-page" aria-busy={state.loading || undefined}>
       <PersonalNav />
       <header className="memory-hero">
+        <InkSketch variant="memory" className="ink-page-sketch" />
         <div>
           <p className="hero-kicker">On this day</p>
           <h1>往年今日</h1>

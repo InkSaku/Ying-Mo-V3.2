@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
@@ -20,7 +21,8 @@ export function YearReviewPage() {
   const maxMonthTotal = Math.max(1, ...data.months.map((item) => item.total));
   return <main className="page-shell personal-page-shell year-review-page" aria-busy={state.loading || undefined}>
     <PersonalNav />
-    <header className="page-heading"><div><p className="section-kicker">Year in review</p><h1>{year} 年度回顾</h1><p>只使用你自己的记录，并继续服从当前 Collection 权限。</p></div><CustomSelect aria-label="回顾年份" value={year} onChange={(event) => setYear(Number(event.target.value))}>{years.map((item) => <option key={item} value={item}>{item}</option>)}</CustomSelect></header>
+    <header className="page-heading">
+        <InkPageSketch /><div><p className="section-kicker">Year in review</p><h1>{year} 年度回顾</h1><p>只使用你自己的记录，并继续服从当前 Collection 权限。</p></div><CustomSelect aria-label="回顾年份" value={year} onChange={(event) => setYear(Number(event.target.value))}>{years.map((item) => <option key={item} value={item}>{item}</option>)}</CustomSelect></header>
     <section className="year-review-stats" aria-label="年度统计">
       {[['记录', data.summary.total], ['Article', data.summary.articles], ['Note', data.summary.notes], ['影像', data.summary.media], ['活跃月份', data.summary.active_months], ['地点', data.summary.locations]].map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}
     </section>

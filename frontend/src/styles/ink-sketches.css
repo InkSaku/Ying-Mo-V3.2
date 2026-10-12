@@ -1,0 +1,13 @@
+/* Small original ink companions for the paper margins of Ying Mo. */
+.ink-sketch { display: block; color: var(--text); pointer-events: none; }
+.ink-sketch > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ink-sketch path { vector-effect: non-scaling-stroke; }
+.empty-state .ink-sketch { width: 128px; max-width: 100%; margin: 0 auto 18px; }
+.article-reading-page .ink-sketch.article-opening-sketch { width: 176px; max-width: 100%; opacity: .9; }
+.collection-library-drawing .ink-sketch { width: 100%; max-width: 360px; margin-inline: auto; }
+@media (max-width: 1199px) {
+  .article-reading-page .ink-sketch.article-opening-sketch { display: none; }
+}
+@media print {
+  .ink-sketch { display: none !important; }
+}

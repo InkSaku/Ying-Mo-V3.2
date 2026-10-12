@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePwaInstall } from "../hooks/usePwaInstall";
+import { InkSketch } from "./InkSketch";
 
 const MODE_LABELS = {
   installed: "已安装",
@@ -57,12 +58,17 @@ export function PwaInstallPanel() {
           {MODE_LABELS[mode]}
         </span>
       </header>
-      <p>安装后可以从桌面、Dock、开始菜单或手机主屏幕打开映墨，并以独立窗口运行。</p>
-      <dl className="settings-security-details">
-        <div><dt>启动方式</dt><dd>独立应用窗口，仍连接当前映墨服务器</dd></div>
-        <div><dt>隐私边界</dt><dd>只缓存应用外壳；API、文章内容和受保护媒体不进入离线缓存</dd></div>
-        <div><dt>快捷入口</dt><dd>支持从应用图标进入写随记、写文章和搜索</dd></div>
-      </dl>
+      <div className="ink-install-layout">
+        <figure className="ink-install-art"><InkSketch variant="pocket" /><figcaption>把书房装进口袋。</figcaption></figure>
+        <div className="ink-install-copy">
+          <p>安装后可以从桌面、Dock、开始菜单或手机主屏幕打开映墨，并以独立窗口运行。</p>
+          <dl className="settings-security-details">
+            <div><dt>启动方式</dt><dd>独立应用窗口，仍连接当前映墨服务器</dd></div>
+            <div><dt>隐私边界</dt><dd>只缓存应用外壳；API、文章内容和受保护媒体不进入离线缓存</dd></div>
+            <div><dt>快捷入口</dt><dd>支持从应用图标进入写随记、写文章和搜索</dd></div>
+          </dl>
+        </div>
+      </div>
       {action.error ? <div className="inline-error" role="alert">{action.error}</div> : null}
       {action.message ? <div className="inline-success" role="status">{action.message}</div> : null}
       <InstallationGuidance mode={mode} />

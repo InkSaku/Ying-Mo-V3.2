@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -90,6 +91,7 @@ export function SessionsPage() {
     <main className="page-shell personal-page-shell sessions-page">
       <PersonalNav />
       <header className="page-heading">
+        {sessions.length ? <InkPageSketch /> : null}
         <div>
           <p className="hero-kicker">账户安全</p>
           <h1>登录会话</h1>
@@ -100,10 +102,12 @@ export function SessionsPage() {
 
       {actionError ? <div className="inline-error" role="alert">{actionError}</div> : null}
 
+      {sessions.length ? <div className="ink-session-summary"><p><span className="tabular">{sessions.length}</span> 个有效登录会话</p><span>当前设备排在最前。</span></div> : null}
+
       {sessions.length ? (
         <section className="session-list" aria-label="有效登录会话">
           {sessions.map((session) => (
-            <article className="session-card" key={session.id}>
+            <article className={`session-card${session.current ? " session-card-current" : ""}`} key={session.id}>
               <div className="session-device">
                 <div>
                   <h2>{deviceLabel(session.user_agent)}</h2>
@@ -122,7 +126,7 @@ export function SessionsPage() {
             </article>
           ))}
         </section>
-      ) : <EmptyState title="没有有效的登录会话" description="下次登录后，会话会显示在这里。" />}
+      ) : <EmptyState sketch="keys" title="没有有效的登录会话" description="下次登录后，会话会显示在这里。" />}
 
       <ConfirmDialog
         open={Boolean(target)}

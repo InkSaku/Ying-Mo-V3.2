@@ -18,7 +18,7 @@ const sourceRules = {
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**"],
+    ignores: ["dist/**", "node_modules/**", "test-results/**", "playwright-report/**"],
   },
   {
     files: ["src/**/*.{js,jsx}"],

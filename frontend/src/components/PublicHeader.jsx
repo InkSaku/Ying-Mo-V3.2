@@ -1,3 +1,4 @@
+import { InkBrandMark } from "./InkBrandMark";
 import { Link, NavLink } from "react-router-dom";
 import { ThemeControl } from "./ThemeControl";
 
@@ -10,7 +11,7 @@ export function PublicHeader() {
     <header className="site-header">
       <div className="header-inner">
         <Link className="brand" to="/" aria-label="Ying-Mo 首页">
-          映墨 <span>Ying-Mo</span>
+          <InkBrandMark />映墨 <span>Ying-Mo</span>
         </Link>
         <nav className="public-nav" aria-label="公开导航">
           <NavLink className={publicNavClass} to="/about">关于</NavLink>

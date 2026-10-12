@@ -1,5 +1,5 @@
 import { createElement, lazy, Suspense, useMemo } from "react";
-import { isIgnorableMarkdownWhitespace } from "../lib/markdownRender";
+import { isIgnorableMarkdownWhitespace, sameHeadingText } from "../lib/markdownRender";
 import { mediaPresentation } from "../lib/postMedia";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedVideo } from "./ProtectedVideo";
@@ -210,15 +210,20 @@ function renderNode(node, key, index, management, galleryItems, parentTag = "") 
   return createElement(tag, props, ...children);
 }
 
-export function ProtectedMarkdown({ html, media = [], management = false, galleryItems = [], className = "prose" }) {
+export function ProtectedMarkdown({ html, media = [], management = false, galleryItems = [], className = "prose", suppressLeadingTitle }) {
   const index = useMemo(() => mediaIndex(media), [media]);
   const content = useMemo(() => {
     if (!html || typeof DOMParser === "undefined") return [];
     const documentNode = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
-    return Array.from(documentNode.body.childNodes).map((node, nodeIndex) => (
-      renderNode(node, `markdown-${nodeIndex}`, index, management, galleryItems)
-    ));
-  }, [galleryItems, html, index, management]);
+    const nodes = Array.from(documentNode.body.childNodes);
+    const first = nodes.find((node) => node.nodeType === ELEMENT_NODE || node.textContent.trim());
+    return nodes.map((node, nodeIndex) => {
+      if (node === first && node.nodeType === ELEMENT_NODE && node.tagName === "H1" && sameHeadingText(node.textContent, suppressLeadingTitle)) {
+        return node.id ? <span key={`markdown-${nodeIndex}`} id={node.id} className="article-body-title-anchor" aria-hidden="true" /> : null;
+      }
+      return renderNode(node, `markdown-${nodeIndex}`, index, management, galleryItems);
+    });
+  }, [galleryItems, html, index, management, suppressLeadingTitle]);
 
   return <div className={className}>{content}</div>;
 }

@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -73,6 +74,7 @@ export function FavoritesPage() {
     <main className="page-shell personal-page-shell" aria-busy={state.loading || Boolean(busyId) || undefined}>
       <PersonalNav />
       <header className="page-heading">
+        <InkPageSketch />
         <div><p className="section-kicker">SAVED READING</p><h1>收藏</h1><p>只保留你当前仍有权访问的收藏内容。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 篇</span>
       </header>
@@ -101,7 +103,7 @@ export function FavoritesPage() {
             ))}
           </div>
         )
-        : <EmptyState title="还没有可见收藏" description="收藏内容失去访问权限后，不会在这里泄漏正文或 Collection 信息。" />}
+        : <EmptyState sketch="reader" title="还没有可见收藏" description="收藏内容失去访问权限后，不会在这里泄漏正文或 Collection 信息。" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}

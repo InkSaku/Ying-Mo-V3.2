@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 220" fill="none" aria-hidden="true" focusable="false">
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A chair, drawn as a slightly crooked continuous line. -->
+    <path d="M154 94c14-8 26-6 27 9l-5 63c-16 8-41 9-67 4M177 164l9 27m-65-19-5 22M97 163c21-4 49-2 77 1M176 109l10-9"/>
+    <!-- Open book: the two halves have deliberately unequal curves. -->
+    <path d="M63 112c18-9 38-8 57 3 19-9 40-9 61-1l-8 40c-20-7-36-4-55 6-16-10-33-13-50-9l-5-39Z"/>
+    <path d="m120 115-2 45M70 119c15-5 29-3 42 4m-40 7c14-3 25-1 35 3m25-10c13-5 25-6 39-2m-40 12c12-5 23-5 36-3M68 155c17-3 31 1 49 10 20-11 39-12 56-7"/>
+    <!-- Feet and the little hand holding a page. -->
+    <path d="M96 163c-2 13-11 18-22 19-7 1-8 7 0 8l28 1m22-24c5 13 14 16 26 14 9-1 10 5 3 8l-26 4M68 137c-8 2-10-9-3-12m108 15c9 0 13-6 9-12"/>
+    <!-- Cup on a tiny side table. -->
+    <path d="M23 165c14-2 28-1 39 1m-26 1-4 27m20-27 5 24M31 148l2 13c6 3 13 3 18 0l2-14c-6-2-15-2-22 1Zm22 2c10-3 13 8-2 9M39 139c-5-5 5-8 0-13"/>
+    <path d="M33 202c39-3 88-2 134-1m12 1 21 1" opacity=".35"/>
+  </g>
+  <!-- The ink companion has an organic silhouette, not a geometric circle. -->
+  <path d="M79 111c-9-7-10-21-5-33 6-17 18-30 35-33 17-4 35 4 43 20 7 13 8 29 0 43-11-1-22 1-32 7-14-8-28-10-41-4Z" fill="currentColor"/>
+  <g stroke="var(--page, #f8f7f3)" stroke-width="2.4" stroke-linecap="round">
+    <path d="m99 83 1 4m24-4 1 4m-20 11c5 4 10 4 14-1"/>
+  </g>
+  <g stroke="var(--brand-link, #334b76)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m148 119-2 27 6-4 5 4 3-28M79 34c3-8 7-12 12-15m-28 21-8-5m80-11 3-9"/>
+    <path d="m190 51 3 8 9 3-9 3-3 9-3-9-8-3 8-3 3-8Z"/>
+  </g>
+</svg>

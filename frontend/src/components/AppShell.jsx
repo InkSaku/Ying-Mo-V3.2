@@ -1,3 +1,4 @@
+import { InkBrandMark } from "./InkBrandMark";
 import { Suspense, useEffect } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -79,7 +80,7 @@ export function AppShell() {
       <header className="site-header app-header">
         <div className="header-inner">
           <Link className="brand" to="/home">
-            映墨 <span>Ying-Mo</span>
+            <InkBrandMark />映墨 <span>Ying-Mo</span>
           </Link>
 
           <nav className="desktop-nav" aria-label="成员导航">

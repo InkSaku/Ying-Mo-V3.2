@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { articleSlugFromTitle, articleSlugWithSuffix, updateTitleAndSlug, usesAutomaticArticleSlug } from "../lib/articleSlug";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
+import { PublishDialog } from "../components/PublishDialog";
+import { TagPicker } from "../components/TagPicker";
+import { selectedTagNames } from "../lib/tagSelection";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
 import { ProtectedImage } from "../components/ProtectedImage";
@@ -48,6 +52,7 @@ const MARKDOWN_SHORTCUTS = [
   { action: "code", label: "代码", hint: "插入代码块" },
   { action: "table", label: "表格", hint: "插入表格模板" },
 ];
+const COMMON_MARKDOWN_ACTIONS = new Set(["heading", "bold", "italic", "quote", "list", "link"]);
 
 function toLocalDatetime(value) {
   if (!value) return "";
@@ -69,13 +74,16 @@ function initialForm(type = "article", collectionId = "") {
     mood: "",
     external_video_url: "",
     slug: "",
+    slug_auto: true,
     collection_id: collectionId,
     category_id: "",
-    tag_names: "",
+    tag_names: [],
   };
 }
 
 function formFromPost(post) {
+  const savedSlug = post.slug || post.slug_candidate || "";
+  const generatedSlug = articleSlugFromTitle(post.title);
   return {
     post_type: post.post_type,
     title: post.title || "",
@@ -86,10 +94,11 @@ function formFromPost(post) {
     location: post.location || "",
     mood: post.mood || "",
     external_video_url: post.external_video_url || "",
-    slug: post.slug || post.slug_candidate || "",
+    slug: savedSlug || (post.post_type === "article" && !post.published_at ? generatedSlug : ""),
+    slug_auto: !post.published_at && (!savedSlug || savedSlug === generatedSlug),
     collection_id: post.collection_id ? String(post.collection_id) : "",
     category_id: post.category?.id ? String(post.category.id) : "",
-    tag_names: (post.tags || []).map((tag) => tag.name).join(", "),
+    tag_names: (post.tags || []).map((tag) => tag.name),
   };
 }
 
@@ -129,6 +138,9 @@ export function WritePage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [publicationOpen, setPublicationOpen] = useState(false);
+  const publicationPanelRef = useRef(null);
+  const publicationTriggerRef = useRef(null);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState("write");
   const [bodyEditorOpen, setBodyEditorOpen] = useState(false);
   const [editorBody, setEditorBody] = useState("");
@@ -148,6 +160,31 @@ export function WritePage() {
   const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
   const bodyEditorRef = useRef(null);
   const inlineBodyRef = useRef(null);
+
+  useEffect(() => {
+    if (!publicationOpen) return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = requestAnimationFrame(() => publicationPanelRef.current?.querySelector("button[aria-label='关闭文稿信息']")?.focus());
+    const handleKey = (event) => {
+      if (event.defaultPrevented) return;
+      if (event.key === "Escape") { event.preventDefault(); setPublicationOpen(false); return; }
+      if (event.key !== "Tab") return;
+      const controls = [...(publicationPanelRef.current?.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href], summary, [tabindex='0']") || [])].filter((element) => element.getClientRects().length);
+      if (!controls.length) { event.preventDefault(); return; }
+      const first = controls[0]; const last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [publicationOpen]);
   const inlineImageInputRef = useRef(null);
   const editorUploadAbortRef = useRef(null);
   const editorUploadRetryRef = useRef(null);
@@ -159,6 +196,7 @@ export function WritePage() {
   const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
   const payloadRef = useRef(initialPayload);
   const savedPostRef = useRef(null);
+  const createdRouteRef = useRef(null);
   const lastSavedFingerprintRef = useRef(draftFingerprint(initialPayload));
   const autosaveBlockedRef = useRef(false);
   const saveQueueRef = useRef(Promise.resolve());
@@ -212,13 +250,21 @@ export function WritePage() {
     });
 
     if (postId) {
+      // The first autosave already returned this draft. Keep any newer typing
+      // or publication choices when moving from /write to /write/:id.
+      if (createdRouteRef.current === Number(postId) && savedPostRef.current?.id === Number(postId)) {
+        createdRouteRef.current = null;
+        routeReadyRef.current = true;
+        setLoading(false);
+        return () => { active = false; };
+      }
       setLoading(true);
       setLoadError(null);
       api.get(`/posts/me/${postId}`)
         .then((result) => {
           if (!active) return;
           const loadedForm = formFromPost(result.data);
-          const loadedFingerprint = draftFingerprint(draftPayloadFromForm(loadedForm));
+          const loadedFingerprint = draftFingerprint(draftPayloadFromForm({ ...loadedForm, slug: result.data.slug || result.data.slug_candidate || "" }));
           const preserveSavedState = savedPostRef.current?.id === result.data.id
             && lastSavedFingerprintRef.current === loadedFingerprint;
           savedPostRef.current = result.data;
@@ -377,6 +423,7 @@ export function WritePage() {
         });
         if (currentMatches) removeOfflineDraft(window.localStorage, offlineKeyRef.current);
         if (!currentPost) {
+          createdRouteRef.current = saved.id;
           if (!currentMatches) {
             const nextKey = offlineDraftKey(user?.id, saved.id);
             if (writeOfflineDraft(window.localStorage, nextKey, offlineFormRef.current)) {
@@ -412,7 +459,7 @@ export function WritePage() {
   const savedPostStatus = savedPost?.status;
 
   useEffect(() => {
-    if (loading || !routeReadyRef.current || autosaveBlockedRef.current) return undefined;
+    if (loading || busy || !routeReadyRef.current || autosaveBlockedRef.current) return undefined;
     if (savedPostStatus && savedPostStatus !== "draft") return undefined;
     const fingerprint = draftFingerprint(payload);
     if (fingerprint === lastSavedFingerprintRef.current) return undefined;
@@ -422,7 +469,7 @@ export function WritePage() {
       saveDraftSnapshot(payload, { automatic: true }).catch(() => {});
     }, AUTOSAVE_DELAY);
     return () => window.clearTimeout(timer);
-  }, [autosaveRetryKey, loading, payload, savedPostStatus, saveDraftSnapshot]);
+  }, [autosaveRetryKey, busy, loading, payload, savedPostStatus, saveDraftSnapshot]);
 
   useEffect(() => {
     if (!bodyEditorOpen || autosave.status !== "saved") return;
@@ -435,7 +482,10 @@ export function WritePage() {
   const set = (key) => (event) => {
     setError("");
     setMessage("");
-    setForm((current) => ({ ...current, [key]: event.target.value }));
+    const value = event.target.value;
+    setForm((current) => key === "title"
+      ? updateTitleAndSlug(current, value, Boolean(savedPostRef.current?.published_at))
+      : { ...current, [key]: value });
   };
 
   const restoreOfflineCopy = () => {
@@ -483,8 +533,14 @@ export function WritePage() {
 
   const openMediaDrawer = () => {
     if (!mediaDrawerRef.current) return;
+    setPublicationOpen(false);
     mediaDrawerRef.current.open = true;
-    mediaDrawerRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      const drawer = mediaDrawerRef.current;
+      if (!drawer) return;
+      drawer.querySelector("summary")?.focus();
+      drawer.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    }, 0);
   };
 
   const updateEditorBody = (value) => {
@@ -563,7 +619,7 @@ export function WritePage() {
     }
   };
 
-  const validatePublish = () => {
+  const validatePublish = (checkCollection = true) => {
     const tags = payload.tag_names || [];
     if (tags.length > 20) return "Tags 最多填写 20 项。";
     if (form.post_type === "article") {
@@ -577,7 +633,7 @@ export function WritePage() {
       }
       if (!validExternalUrl(form.external_video_url.trim())) return "外部视频链接必须是有效的 HTTP 或 HTTPS 地址。";
     }
-    if (collectionUnavailable) return "你已无法访问原 Collection。请先选择“不加入 Collection”并保存，再发布内容。";
+    if (checkCollection && collectionUnavailable) return "原合集当前不可投稿，请重新选择合集或单独发布。";
     return "";
   };
 
@@ -591,16 +647,37 @@ export function WritePage() {
     }
     setBusy(true);
     try {
-      const post = await saveDraftSnapshot(payloadRef.current);
+      const snapshot = draftPayloadFromForm(form);
+      const post = await saveDraftSnapshot(snapshot);
       const publishPayload = { expected_version: post.edit_version };
       if (form.post_type === "article") publishPayload.slug = form.slug.trim();
-      const published = await api.post(`/posts/${post.id}/publish`, publishPayload);
+      let published;
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        try {
+          published = await api.post(`/posts/${post.id}/publish`, publishPayload);
+          break;
+        } catch (publishError) {
+          const canChooseAlternative = publishError.code === "DUPLICATE_RESOURCE"
+            && form.post_type === "article" && usesAutomaticArticleSlug(form) && !isPublished && attempt < 3;
+          if (!canChooseAlternative) throw publishError;
+          publishPayload.slug = articleSlugWithSuffix(form.slug.trim(), attempt ? `${post.id}-${attempt + 1}` : post.id);
+        }
+      }
       navigate(published.data.post_type === "article" ? `/articles/${published.data.slug}` : `/notes/${published.data.id}`, { replace: true });
     } catch (publishError) {
       if (publishError.code !== "EDIT_CONFLICT") setError(publishError.message);
     } finally {
       setBusy(false);
     }
+  };
+
+  const requestPublish = () => {
+    setError("");
+    setMessage("");
+    const validationError = validatePublish(false);
+    if (validationError) { setError(validationError); return; }
+    setPublicationOpen(false);
+    setPublishDialogOpen(true);
   };
 
   const detachMemoryDraft = async () => {
@@ -639,6 +716,7 @@ export function WritePage() {
 
   const applyMarkdownFormat = (action) => {
     const textarea = bodyEditorOpen ? bodyEditorRef.current : inlineBodyRef.current;
+    if (textarea?.applyFormat?.(action)) return;
     const source = bodyEditorOpen ? editorBodyRef.current : form.body;
     const selectionStart = textarea ? textarea.selectionStart : source.length;
     const selectionEnd = textarea ? textarea.selectionEnd : selectionStart;
@@ -846,11 +924,10 @@ export function WritePage() {
         <Link className="editor-back-link" to="/me/posts">← 返回内容</Link>
         <div className="editor-document-identity">
           <span>写作台 · {form.post_type === "article" ? "文章" : "随记"}</span>
-          <strong>{form.title.trim() || (postId ? "未命名草稿" : "一篇新的记录")}</strong>
           <small><i aria-hidden="true" />{autosaveStatusLabel(autosave, !savedPost || savedPost.status === "draft")}</small>
         </div>
         <div className="editor-top-actions">
-          <button className="btn btn-secondary editor-settings-trigger" type="button" aria-expanded={publicationOpen} onClick={() => setPublicationOpen(true)}>
+          <button ref={publicationTriggerRef} className="btn btn-secondary editor-settings-trigger" type="button" aria-expanded={publicationOpen} aria-haspopup="dialog" onClick={() => setPublicationOpen(true)}>
             文稿信息
           </button>
           <div className="editor-view-switch" role="tablist" aria-label="写作视图">
@@ -860,7 +937,7 @@ export function WritePage() {
           <button className="editor-save-action" type="button" disabled={busy} onClick={() => persistDraft(true)}>
             {busy ? "正在保存" : savedPost ? "保存修改" : "保存草稿"}
           </button>
-          <button className="btn btn-primary" type="button" disabled={busy} onClick={publish}>
+          <button className="btn btn-primary" type="button" disabled={busy} onClick={requestPublish}>
             {busy ? "正在处理" : savedPost?.status === "archived" ? "重新发布" : savedPost?.status === "published" ? "保存并发布" : "发布"}
           </button>
         </div>
@@ -902,30 +979,24 @@ export function WritePage() {
           {workspaceMode === "write" ? (
           <section className={`editor-paper editor-paper-${form.post_type}`} aria-label={`${title} 写作画布`}>
             <div className="editor-paper-masthead">
-              <div className="editor-paper-opening">
-                <p className="editor-paper-index">{form.post_type === "article" ? "ARTICLE" : "NOTE"} / 01</p>
-                <p className="editor-paper-whisper" aria-hidden="true">Take your time.</p>
-              </div>
               <fieldset className="segmented-field editor-type-switch" disabled={isPublished || Boolean(memoryLink)}>
                 <legend className="sr-only">内容类型</legend>
                 <label className={form.post_type === "article" ? "selected" : ""}>
                   <input type="radio" name="post_type" value="article" checked={form.post_type === "article"}
-                    onChange={() => setForm((current) => ({ ...current, post_type: "article", occurred_at: "", location: "", mood: "", external_video_url: "" }))} />
+                    onChange={() => setForm((current) => ({ ...current, post_type: "article", occurred_at: "", location: "", mood: "", external_video_url: "", slug: current.slug || articleSlugFromTitle(current.title), slug_auto: usesAutomaticArticleSlug(current) }))} />
                   <span>文章 <small>Article</small></span>
                 </label>
                 <label className={form.post_type === "note" ? "selected" : ""}>
                   <input type="radio" name="post_type" value="note" checked={form.post_type === "note"}
-                    onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "" }))} />
+                    onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "", slug_auto: true }))} />
                   <span>随记 <small>Note</small></span>
                 </label>
                 {isPublished ? <small>首次发布后类型锁定</small> : (memoryLink ? <small>共同回忆补充固定为随记</small> : null)}
               </fieldset>
             </div>
 
-            <div className="editor-cat-perch"><ArticleArchiveCat /></div>
-
             <label className="editor-paper-field editor-title-field">
-              <span>标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
+              <span className="sr-only">标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
               <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下值得被慢慢读完的事" : "给此刻留下一行标题"} />
             </label>
 
@@ -957,7 +1028,7 @@ export function WritePage() {
               onDrop={handleInlineDrop}
             >
               <div className="editor-body-toolbar">
-                <div className="editor-body-heading-copy">
+                <div className="editor-body-heading-copy sr-only">
                   <span id="editor-body-heading">正文</span>
                   <small>BODY / 在纸上慢慢展开</small>
                 </div>
@@ -975,7 +1046,11 @@ export function WritePage() {
                   >
                     {editorUploading ? "上传中" : "图片"}
                   </button>
-                  {MARKDOWN_SHORTCUTS.map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
+                  {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
+                  <details className="editor-more-formats" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
+                    <summary>更多 <span aria-hidden="true">⌄</span></summary>
+                    <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{item.label}</button>)}</div>
+                  </details>
                   <input
                     ref={inlineImageInputRef}
                     className="editor-inline-file-input"
@@ -1007,6 +1082,8 @@ export function WritePage() {
               <div className="editor-inline-drop-hint" aria-hidden={!inlineDraggingImage}>松开即可上传并插入到当前位置</div>
               <small id="editor-body-help" className="editor-body-help">可以直接粘贴或拖入图片；选中文字后使用上方工具排版。</small>
             </section>
+
+            <div className="editor-cat-perch"><ArticleArchiveCat /></div>
 
             {form.post_type === "note" ? (
               <details className="editor-abstract-drawer">
@@ -1054,7 +1131,7 @@ export function WritePage() {
         </div>
 
         {publicationOpen ? <button className="editor-sidebar-scrim" type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)} /> : null}
-        <aside className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} aria-label="文稿信息">
+        <aside ref={publicationPanelRef} className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} role="dialog" aria-modal={publicationOpen || undefined} aria-label="文稿信息" aria-hidden={!publicationOpen || undefined}>
           <header className="editor-sidebar-heading"><div><p>文稿信息 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>归属与访问设置会随草稿一起保存。</span></div><button type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)}>×</button></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <section className="editor-publication-status" aria-label="发布状态">
@@ -1066,9 +1143,17 @@ export function WritePage() {
             <header><span>01</span><strong>网址与分类</strong></header>
             <label>
               <span>文章网址</span>
-              <input value={form.slug} onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} aria-invalid={Boolean(form.slug) && !slugPattern.test(form.slug.trim())} placeholder="article-slug" />
-              <small>发布时必填；历史 Slug 由后端保留。</small>
+              <input aria-label="文章网址" aria-describedby="article-slug-help" value={form.slug} maxLength={180} onChange={(event) => {
+                const value = event.target.value.toLowerCase();
+                setForm((current) => ({ ...current, slug: value, slug_auto: false }));
+              }} aria-invalid={Boolean(form.slug) && !slugPattern.test(form.slug.trim())} placeholder="填写标题后自动生成" />
+              <small id="article-slug-help">{isPublished ? "修改标题会保留当前网址，旧网址仍可访问。" : usesAutomaticArticleSlug(form) ? "根据标题自动生成，中文会转为拼音。" : "已使用自定义网址，修改标题会保留它。"}</small>
             </label>
+            <button className="text-button" type="button" disabled={busy || !form.title.trim()} onClick={() => {
+              setForm((current) => ({ ...current, slug: articleSlugFromTitle(current.title), slug_auto: true }));
+              setError("");
+              setMessage("");
+            }}>按标题重新生成</button>
             <label>
               <span>分类</span>
               <CustomSelect value={form.category_id} onChange={set("category_id")}>
@@ -1107,12 +1192,10 @@ export function WritePage() {
 
           <section className="editor-sidebar-section editor-sidebar-tags">
           <header><span>03</span><strong>标签与封面</strong></header>
-          <label>
-            <span>标签</span>
-            {payload.tag_names?.length ? <span className="editor-tag-preview" aria-label="当前标签">{payload.tag_names.map((tag) => <i key={tag}>{tag}</i>)}</span> : null}
-            <input value={form.tag_names} onChange={set("tag_names")} placeholder="学习, Python, 随想" />
-            <small>使用英文逗号分隔，最多 20 个。</small>
-          </label>
+          <details className="editor-tag-settings">
+            <summary>标签 · 已选 {selectedTagNames(form.tag_names).length} 个</summary>
+            <TagPicker value={form.tag_names} initialTags={savedPost?.tags || []} disabled={busy} onChange={(names) => setForm((current) => ({ ...current, tag_names: names }))} />
+          </details>
           <div className="editor-cover-panel">
             {savedPost?.cover_media ? <ProtectedImage media={savedPost.cover_media} alt="当前文稿封面" className="editor-cover-preview" /> : <div className="editor-cover-placeholder"><WritingCoverSketch /><span>封面图片</span><strong>尚未设置</strong></div>}
             <button type="button" onClick={openMediaDrawer}>{savedPost?.cover_media ? "更换封面" : "设置封面"}</button>
@@ -1126,6 +1209,20 @@ export function WritePage() {
           </footer>
         </aside>
       </form>
+
+      <PublishDialog
+        open={publishDialogOpen}
+        form={form}
+        collections={collections}
+        initialTags={savedPost?.tags || []}
+        lockedCollection={Boolean(memoryLink)}
+        busy={busy}
+        error={error}
+        unavailable={collectionUnavailable}
+        onChange={(patch) => { setForm((current) => ({ ...current, ...patch })); setError(""); }}
+        onClose={() => { if (!busy) { setPublishDialogOpen(false); setError(""); } }}
+        onConfirm={publish}
+      />
 
       <MarkdownEditorDialog
         open={bodyEditorOpen}

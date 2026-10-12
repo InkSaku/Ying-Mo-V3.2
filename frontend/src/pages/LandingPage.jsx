@@ -1,5 +1,6 @@
+import { InkBrandMark } from "../components/InkBrandMark";
 import { Link } from "react-router-dom";
-import inkGardenPath from "../assets/auth/ink-garden-path.webp";
+import { InkSketch } from "../components/InkSketch";
 import { usePageMeta } from "../hooks/usePageMeta";
 import "../styles/login.css";
 import "../styles/landing.css";
@@ -25,7 +26,7 @@ export function LandingPage() {
   return (
     <main className="login-paper landing-paper">
       <header className="login-masthead landing-masthead">
-        <Link to="/" className="login-wordmark" aria-label="映墨欢迎页">映墨 <span>YING MO</span></Link>
+        <Link to="/" className="login-wordmark" aria-label="映墨欢迎页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <nav className="landing-nav" aria-label="公开导航">
           <Link to="/about">关于映墨</Link>
           <Link className="landing-nav-login" to="/login">登录 <span aria-hidden="true">↗</span></Link>
@@ -44,10 +45,10 @@ export function LandingPage() {
           <p className="landing-trust"><span>凭邀请相聚</span><span>由你决定谁能看见</span></p>
         </div>
 
-        <div className="landing-illustration" aria-label="通往映墨小院的水墨小径">
+        <div className="landing-illustration" aria-label="墨团推开书房的门">
           <p className="landing-page-number" aria-hidden="true">第 〇 页&nbsp; / &nbsp;从这里开始</p>
           <div className="landing-ink-wash" aria-hidden="true" />
-          <img src={inkGardenPath} alt="淡墨绘成的竹篱小径、枝叶与院门" />
+          <InkSketch variant="welcome" className="ink-entry-art" />
           <p className="landing-handwritten" aria-hidden="true">Come in,<br /><span>stay awhile.</span></p>
           <blockquote>“日子不是为了被展示，<br />是为了被记得。”</blockquote>
           <span className="landing-seal" aria-hidden="true">映</span>

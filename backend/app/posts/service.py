@@ -46,6 +46,8 @@ def apply_tags(post, tag_names):
         if not isinstance(raw, str) or not raw.strip():
             raise DomainError("VALIDATION_ERROR", "Tag 名称不能为空。", 422)
         name = " ".join(raw.strip().split())
+        if len(name) > 80:
+            raise DomainError("VALIDATION_ERROR", "标签名称最多 80 字。", 422)
         normalized = normalize_name(name)
         if normalized in seen:
             continue

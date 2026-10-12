@@ -1,6 +1,7 @@
+import { InkBrandMark } from "../components/InkBrandMark";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import inkGardenPath from "../assets/auth/ink-garden-path.webp";
+import { InkSketch } from "../components/InkSketch";
 import "../styles/login.css";
 import "../styles/register.css";
 import { useAuth } from "../contexts/AuthContext";
@@ -43,7 +44,7 @@ export function RegisterPage() {
   return (
     <main className="login-paper register-paper">
       <header className="login-masthead">
-        <Link to="/" className="login-wordmark" aria-label="映墨首页">映墨 <span>YING MO</span></Link>
+        <Link to="/" className="login-wordmark" aria-label="映墨首页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <span className="login-edition">文字与日常 · 从此开始</span>
       </header>
       <div className="login-spread register-spread">
@@ -53,7 +54,7 @@ export function RegisterPage() {
           <p className="register-story-note">一些念头，一点生活，<br />从你的第一行字开始。</p>
           <figure className="register-photo">
             <div className="register-art">
-              <img src={inkGardenPath} alt="淡墨绘成的竹篱小径、初生枝叶与远处屋檐" />
+              <InkSketch variant="welcome" className="ink-entry-art" />
             </div>
             <figcaption>循着小径，在新的一页落笔。</figcaption>
           </figure>

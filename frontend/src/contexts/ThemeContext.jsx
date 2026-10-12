@@ -20,7 +20,7 @@ export function ThemeProvider({ children }) {
       document.documentElement.dataset.theme = next;
       document.documentElement.style.colorScheme = next;
       const themeMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeMeta) themeMeta.setAttribute("content", next === "dark" ? "#141413" : "#f5f4ed");
+      if (themeMeta) themeMeta.setAttribute("content", next === "dark" ? "#20231f" : "#f8f7f3");
     };
     apply();
     media.addEventListener?.("change", apply);

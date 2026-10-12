@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
-from sqlalchemy import func
+from sqlalchemy import func, or_, case
 
 from app.access import readable_post_predicate
 from app.admin.service import admin_reason, record_admin_log
@@ -17,22 +17,61 @@ from app.posts.browsing import serialize_browse_posts
 bp=Blueprint("tags",__name__)
 
 
+def _visible_tag_counts(actor_id):
+    return (
+        db.select(post_tags.c.tag_id, func.count(Post.id).label("visible_post_count"))
+        .select_from(Post).join(post_tags, post_tags.c.post_id == Post.id)
+        .where(readable_post_predicate(actor_id, include_archived=True))
+        .group_by(post_tags.c.tag_id).subquery()
+    )
+
+
+@bp.get("/options/search")
+@jwt_required(locations=["headers"])
+def tag_options():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    query = request.args.get("q", "").strip()
+    if len(query) > 80:
+        return error_response("VALIDATION_ERROR", "标签名称最多 80 字。", 422)
+    try:
+        limit = int(request.args.get("limit", 10))
+    except (TypeError, ValueError):
+        return error_response("VALIDATION_ERROR", "标签数量不合法。", 422)
+    if not 1 <= limit <= 20:
+        return error_response("VALIDATION_ERROR", "标签数量应在 1 到 20 之间。", 422)
+    counts = _visible_tag_counts(actor.id)
+    own_tags = db.select(post_tags.c.tag_id).join(Post, Post.id == post_tags.c.post_id).where(
+        Post.author_id == actor.id, Post.deleted_at.is_(None),
+    )
+    count = func.coalesce(counts.c.visible_post_count, 0)
+    normalized = normalize_name(query)
+    stmt = db.select(Tag, count).outerjoin(counts, counts.c.tag_id == Tag.id).where(
+        or_(Tag.is_active.is_(True), Tag.name_normalized == normalized) if normalized else Tag.is_active.is_(True),
+        or_(count > 0, Tag.id.in_(own_tags)),
+    )
+    if normalized:
+        stmt = stmt.where(Tag.name_normalized.contains(normalized, autoescape=True))
+    stmt = stmt.order_by(
+        case((Tag.name_normalized == normalized, 0), else_=1),
+        count.desc(), Tag.name_normalized.asc(), Tag.id.asc(),
+    ).limit(limit)
+    items = [{**tag.to_dict(), "visible_post_count": usage} for tag, usage in db.session.execute(stmt)]
+    return success_response(items)
+
+
 @bp.get("")
 @jwt_required(locations=["headers"])
 def list_tags():
     actor=current_user()
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
-    tags=db.session.scalars(db.select(Tag).where(Tag.is_active.is_(True)).order_by(Tag.name.asc())).all()
-    result=[]
-    for tag in tags:
-        count=db.session.scalar(
-            db.select(func.count(Post.id)).select_from(Post).join(post_tags,post_tags.c.post_id==Post.id).where(
-                post_tags.c.tag_id==tag.id,readable_post_predicate(actor.id,include_archived=True)
-            )
-        ) or 0
-        if count:
-            item=tag.to_dict(); item["visible_post_count"]=count; result.append(item)
+    counts = _visible_tag_counts(actor.id)
+    rows = db.session.execute(db.select(Tag, counts.c.visible_post_count).join(
+        counts, counts.c.tag_id == Tag.id,
+    ).where(Tag.is_active.is_(True)).order_by(counts.c.visible_post_count.desc(), Tag.name_normalized.asc()))
+    result = [{**tag.to_dict(), "visible_post_count": count} for tag, count in rows]
     return success_response(result)
 
 
@@ -56,13 +95,19 @@ def tag_detail(slug):
     total=db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     if total==0:
         return error_response("RESOURCE_NOT_FOUND","Tag 不存在。",404)
+    post_type = request.args.get("post_type", "")
+    if post_type and post_type not in {"article", "note"}:
+        return error_response("VALIDATION_ERROR", "内容类型不合法。", 422)
+    if post_type:
+        stmt = stmt.where(Post.post_type == post_type)
+    filtered_total = db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     posts=db.session.scalars(stmt.order_by(Post.published_at.desc(),Post.id.desc()).offset((page-1)*size).limit(size)).all()
     items=serialize_browse_posts(posts,actor_id=actor.id)
     return success_response({
         "tag":tag.to_dict(),
         "posts":items,
         "visible_post_count":total,
-    },meta=pagination_meta(page,size,total))
+    },meta=pagination_meta(page,size,filtered_total))
 
 
 @bp.patch("/<int:tag_id>")

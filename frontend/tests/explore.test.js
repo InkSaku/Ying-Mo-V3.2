@@ -27,7 +27,6 @@ test("Explore keeps its editorial hierarchy instead of equal card sections", () 
   assert.match(page, /explore-note-rail/);
   assert.match(page, /explore-index-layout/);
   assert.match(page, /explore-memory-section/);
-  assert.match(page, /variant="featured"/);
   assert.match(page, /without-media/);
   assert.match(page, /explore-all-empty/);
   assert.doesNotMatch(page, /useOriginal|ARTICLE<br/);

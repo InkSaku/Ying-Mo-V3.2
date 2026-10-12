@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -19,24 +19,23 @@ import { useMediaLightbox } from "../contexts/MediaLightboxContext";
 import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
-import { ArticleEndMark, ArticleOpeningSketch } from "../components/ArticleSketches";
 import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
 import "../styles/reading-editorial.css";
 import "../styles/note-detail-editorial.css";
 
-function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryItem, transitionId, onBack }) {
+function ArticleBackNavigation({ onBack }) {
+  return <nav className="article-detail-navigation" aria-label="阅读导航">{onBack
+    ? <button className="article-detail-back article-detail-back-button" type="button" onClick={onBack}><span aria-hidden="true">←</span> 返回文章目录</button>
+    : <Link className="article-detail-back" to="/articles"><span aria-hidden="true">←</span> 返回文章目录</Link>}
+  </nav>;
+}
+
+function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryItem, transitionId }) {
   return (
     <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
-      <aside className="article-detail-margin" aria-label="阅读导航">
-        {onBack
-          ? <button className="article-detail-back article-detail-back-button" type="button" onClick={onBack}><span aria-hidden="true">←</span> 返回文章目录</button>
-          : <Link className="article-detail-back" to="/articles"><span aria-hidden="true">←</span> 返回文章目录</Link>}
-        <ArticleOpeningSketch />
-        <p className="article-detail-hand" aria-hidden="true">Read slowly.<br /><span>Keep what stays.</span></p>
-      </aside>
       <div className="article-detail-heading">
-        <p className="article-detail-kicker"><span>{postTypeLabel(post.post_type)}</span><span>YING MO / READING</span></p>
+        <p className="article-detail-kicker">{postTypeLabel(post.post_type)}{post.reading_minutes ? ` · 阅读约 ${post.reading_minutes} 分钟` : ""}</p>
         <h1 style={transitionId ? { viewTransitionName: "article-title" } : undefined}>{post.title || "未命名文章"}</h1>
         {post.summary ? <p className="lede">{post.summary}</p> : null}
         <aside className="article-detail-folio" aria-label="文章信息">
@@ -45,9 +44,8 @@ function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryIte
             {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : <span>匿名</span>}
           </div>
           <dl className="post-facts">
-            <div><dt>发布</dt><dd><time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time></dd></div>
-            <div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div>
-            {post.reading_minutes ? <div><dt>阅读</dt><dd>约 {post.reading_minutes} 分钟</dd></div> : null}
+            <div><dt>发布</dt><dd><time dateTime={post.published_at} title={formatDate(post.published_at, true)}>{formatDate(post.published_at)}</time></dd></div>
+            <div><dt>更新</dt><dd><time dateTime={post.updated_at} title={formatDate(post.updated_at, true)}>{formatDate(post.updated_at)}</time></dd></div>
           </dl>
           <div className="post-context">
             {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
@@ -57,7 +55,6 @@ function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryIte
         </aside>
       </div>
 
-      <div className="article-detail-page-mark" aria-hidden="true"><span>READING / PAGE</span><strong>01</strong></div>
 
       {post.cover_media ? (
         <figure className="article-detail-cover-frame" style={transitionId ? { viewTransitionName: "article-cover" } : undefined}>
@@ -95,6 +92,7 @@ export function PostDetailPage({ type }) {
   const galleryItems = useMemo(() => logicalMediaFromRaw(post?.bound_media, post), [post]);
   const { hydrateGallery } = useMediaLightbox();
   const postId = post?.id;
+  const [articleFavorite, setArticleFavorite] = useState(null);
   usePageMeta(post?.title || (type === "article" ? "文章" : "随记"));
 
   useEffect(() => {
@@ -122,7 +120,8 @@ export function PostDetailPage({ type }) {
   if (state.loading && articlePreview) return (
     <main className="page-shell reading-page reading-page-with-tools article-reading-page article-reading-preview" aria-busy="true">
       <article className="post-detail post-detail-with-tools article-detail">
-        <ArticleHero post={articlePreview} preview transitionId={transitionId} onBack={onBackToArticles} />
+        <ArticleBackNavigation onBack={onBackToArticles} />
+        <ArticleHero post={articlePreview} preview transitionId={transitionId} />
       </article>
       <p className="article-reading-preview-status" role="status">正在展开正文…</p>
     </main>
@@ -147,7 +146,7 @@ export function PostDetailPage({ type }) {
   }
 
   const renderedBody = post.rendered_html ? (
-    <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} />
+    <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} suppressLeadingTitle={post.title} />
   ) : post.body ? <div className="prose"><p>{post.body}</p></div> : null;
   const postContent = (
     <>
@@ -159,9 +158,7 @@ export function PostDetailPage({ type }) {
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
       ) : null}
 
-      <ArticleEndMark />
-
-      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} />
+      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} />
 
       {post.post_type === "article" && (post.previous || post.next) ? (
         <nav className="article-nav" aria-label="相邻文章">
@@ -187,9 +184,10 @@ export function PostDetailPage({ type }) {
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
-        <ArticleHero post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} transitionId={post.id === transitionId ? transitionId : null} onBack={onBackToArticles} />
-
-        <ArticleReadingLayout outline={post.outline}>{postContent}</ArticleReadingLayout>
+        <ArticleBackNavigation onBack={onBackToArticles} />
+        <ArticleReadingLayout outline={post.outline} favorite={articleFavorite?.postId === post.id ? articleFavorite : null} opening={<ArticleHero post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} transitionId={post.id === transitionId ? transitionId : null} />}>
+          {postContent}
+        </ArticleReadingLayout>
       </article>
 
       <SharedMemorySection post={post} onPostChanged={state.reload} />

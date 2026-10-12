@@ -220,7 +220,7 @@ export function PostsPage({ type }) {
       {pageNeedsClamp ? (
         <div className="profile-refresh" role="status">正在返回有效页码…</div>
       ) : !displayData?.length ? (
-        <EmptyState title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : "这里只会出现你有权读取的已发布或归档内容。"} />
+        <EmptyState illustrated title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : "这里只会出现你有权读取的已发布或归档内容。"} />
       ) : (
         isArticle
           ? <ArticleMagazine posts={displayData} page={pagination.page || page} total={pagination.total || displayData.length} sort={filters.sort} onOpen={onOpenArticle} fromArticleList={fromArticleList} selectedId={snapshot?.postId} />

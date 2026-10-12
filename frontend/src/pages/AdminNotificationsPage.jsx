@@ -44,7 +44,7 @@ export function AdminNotificationsPage() {
   };
 
   return (
-    <AdminPageFrame title="系统通知" description="向全部 active 成员或明确选中的成员发送站内系统通知。发送结果和正文会进入结构化操作日志。" busy={users.loading || busy}>
+    <AdminPageFrame title="系统通知" description="向正常成员发送站内通知，可选择全部或指定成员。发送内容和结果会留下操作记录。" busy={users.loading || busy}>
       {success ? <div className="inline-success admin-feedback" role="status">{success}</div> : null}
       {error && !confirmOpen ? <div className="inline-error admin-feedback" role="alert">{error}</div> : null}
       <form className="admin-notification-form" onSubmit={requestSend}>

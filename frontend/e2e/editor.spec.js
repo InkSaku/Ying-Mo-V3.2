@@ -30,19 +30,23 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   await page.goto("/write?type=article");
 
   await page.getByPlaceholder("写下值得被慢慢读完的事").fill("编辑器端到端验收");
-  const body = page.locator(".editor-body-visual .visual-markdown-text-block").first();
+  const body = page.locator(".editor-body-visual .rich-markdown-content").first();
   await body.fill("第一段\n\n第二段");
   await expect(page.getByText(/已自动保存/).first()).toBeVisible({ timeout: 12_000 });
   await expect(page).toHaveURL(/\/write\/\d+/);
 
   await body.evaluate((element) => {
     element.focus();
-    element.setSelectionRange(4, 4);
-    element.dispatchEvent(new Event("select", { bubbles: true }));
+    const text = element.querySelector("p")?.firstChild || element.firstChild;
+    const range = document.createRange();
+    range.setStart(text, Math.min(3, text.textContent.length));
+    range.collapse(true);
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    document.dispatchEvent(new Event("selectionchange"));
   });
   await uploadInlineImage(page);
   await expect(page.locator(".editor-body-visual .visual-media-block")).toHaveCount(1);
-  await expect(page.locator(".editor-body-visual")).not.toContainText("[[ym-media:");
+  await expect(page.locator(".editor-body-visual .visual-markdown-blocks")).not.toContainText("[[ym-media:");
   await expect(page.locator(".editor-body-visual img.visual-media-block-image")).toHaveCount(1);
 
   const firstBlock = page.locator(".editor-body-visual .visual-media-block").first();
@@ -79,7 +83,7 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   const imageButton = page.getByRole("button", { name: "图片", exact: true });
   await expect(imageButton).toBeVisible();
-  await expect(page.locator(".editor-body-visual .visual-markdown-text-block").first()).toHaveCSS("font-size", "17px");
+  await expect(page.locator(".editor-body-visual .rich-markdown-content").first()).toHaveCSS("font-size", "17px");
   const mobileMediaWidths = await page.locator(".editor-body-visual .visual-media-block").first().evaluate((element) => ({
     media: element.getBoundingClientRect().width,
     editor: element.parentElement.getBoundingClientRect().width,

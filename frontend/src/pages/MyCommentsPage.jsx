@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -35,6 +36,7 @@ export function MyCommentsPage() {
     <main className="page-shell personal-page-shell" aria-busy={pageNeedsClamp || undefined}>
       <PersonalNav />
       <header className="page-heading">
+        <InkPageSketch />
         <div><p className="section-kicker">CONVERSATIONS</p><h1>我的评论</h1><p>仅展示你当前仍能读取其所属 Post 的评论记录。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>
       </header>

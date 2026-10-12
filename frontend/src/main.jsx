@@ -11,6 +11,8 @@ import "@fontsource-variable/jetbrains-mono/wght.css";
 import "./styles/index.css";
 import "./styles/p1-editorial.css";
 import "./styles/article-transitions.css";
+import "./styles/ink-system.css";
+import "./styles/ink-room.css";
 
 initializePwaInstall();
 

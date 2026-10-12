@@ -23,12 +23,13 @@ export function TaxonomyPage({ kind }) {
   const { slug } = useParams();
   const [params, setParams] = useSearchParams();
   const page = cleanPage(params.get("page"));
+  const postType = ["article", "note"].includes(params.get("type")) ? params.get("type") : "";
   const isCategory = kind === "category";
   const label = isCategory ? "栏目" : "主题";
   const basePath = isCategory ? "/categories" : "/tags";
   const state = useAsyncData(
-    () => api.get(`${basePath}/${encodeURIComponent(slug)}?page=${page}&page_size=${PAGE_SIZE}`),
-    [basePath, page, slug]
+    () => api.get(`${basePath}/${encodeURIComponent(slug)}?page=${page}&page_size=${PAGE_SIZE}${!isCategory && postType ? `&post_type=${postType}` : ""}`),
+    [basePath, page, slug, isCategory, postType]
   );
   const taxonomy = state.data?.[kind] || null;
   const pagination = state.meta?.pagination || {};
@@ -39,9 +40,11 @@ export function TaxonomyPage({ kind }) {
 
   useEffect(() => {
     if (pageNeedsClamp) {
-      setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
+      const next = new URLSearchParams(params);
+      if (clampedPage === 1) next.delete("page"); else next.set("page", String(clampedPage));
+      setParams(next, { replace: true });
     }
-  }, [clampedPage, pageNeedsClamp, setParams]);
+  }, [clampedPage, pageNeedsClamp, params, setParams]);
 
   if (state.loading) return <PageLoader label={`正在读取 ${label}`} />;
   if (state.error) {
@@ -81,6 +84,8 @@ export function TaxonomyPage({ kind }) {
         </div>
       </header>
 
+      {!isCategory ? <nav className="taxonomy-topic-tabs" aria-label="主题记录类型">{[["", "全部记录"], ["article", "文章"], ["note", "随记"]].map(([type, title]) => <button key={type} type="button" aria-pressed={postType === type} onClick={() => setParams(type ? { type } : {})}>{title}</button>)}</nav> : null}
+
       <section className="taxonomy-reading-section" aria-labelledby="taxonomy-reading-title">
         <header className="taxonomy-reading-heading">
           <h2 id="taxonomy-reading-title">{isCategory ? "栏目文章" : "主题阅读"}</h2>
@@ -119,7 +124,9 @@ export function TaxonomyPage({ kind }) {
         totalPages={totalPages}
         disabled={pageNeedsClamp}
         onChange={(nextPage) => {
-          setParams(nextPage === 1 ? {} : { page: String(nextPage) });
+          const next = new URLSearchParams(params);
+          if (nextPage === 1) next.delete("page"); else next.set("page", String(nextPage));
+          setParams(next);
           const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
         }}

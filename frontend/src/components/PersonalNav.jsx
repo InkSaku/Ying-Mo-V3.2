@@ -1,3 +1,4 @@
+import { InkPageSketch } from "./InkPageSketch";
 import { NavLink, useLocation } from "react-router-dom";
 
 const personalNavGroups = [
@@ -59,6 +60,7 @@ export function PersonalNav() {
       <nav className="personal-nav" aria-label="个人中心">
         <PersonalLinks />
       </nav>
+      <InkPageSketch className="ink-personal-margin" />
       <details className="personal-nav-mobile" data-header-menu>
         <summary><span>个人中心</span><strong>{current?.label || "更多页面"}</strong><i aria-hidden="true">⌄</i></summary>
         <nav aria-label="个人中心移动导航">

@@ -1,3 +1,5 @@
+import { InkSketch } from "./InkSketch";
+
 export function PageLoader({ label = "正在读取内容" }) {
   return (
     <main className="page-shell" aria-busy="true" aria-live="polite">
@@ -11,9 +13,10 @@ export function PageLoader({ label = "正在读取内容" }) {
   );
 }
 
-export function EmptyState({ title = "这里还没有内容", description, action }) {
+export function EmptyState({ title = "这里还没有内容", description, action, illustrated = true, sketch = "letter" }) {
   return (
     <div className="empty-state">
+      {illustrated ? <InkSketch variant={sketch} /> : null}
       <h3>{title}</h3>
       {description ? <p>{description}</p> : null}
       {action ? <div className="empty-action">{action}</div> : null}
@@ -28,6 +31,7 @@ export function ErrorState({ error, onRetry }) {
     : "";
   return (
     <div className="error-state" role="alert">
+      <InkSketch variant="wanderer" />
       <h3>没有成功读取内容</h3>
       <p>{message}</p>
       {diagnostic ? <p className="meta-text">{diagnostic}</p> : null}

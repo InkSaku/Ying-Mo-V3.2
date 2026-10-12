@@ -240,11 +240,11 @@ export function filterAdminTaxonomy(items, { q = "", status = "" }) {
 
 const METRICS = [
   ["users", "用户"],
-  ["posts", "Post"],
-  ["articles", "Article"],
-  ["notes", "Note"],
+  ["posts", "内容"],
+  ["articles", "文章"],
+  ["notes", "随记"],
   ["drafts", "草稿"],
-  ["collections", "Collection"],
+  ["collections", "合集"],
   ["comments", "评论"],
   ["media", "媒体"],
 ];

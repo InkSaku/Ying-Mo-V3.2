@@ -19,13 +19,13 @@ export default defineConfig({
         start_url: "/home?source=pwa",
         scope: "/",
         display: "standalone",
-        background_color: "#f5f4ed",
-        theme_color: "#f5f4ed",
+        background_color: "#f8f7f3",
+        theme_color: "#f8f7f3",
         categories: ["lifestyle", "social", "productivity"],
         icons: [
-          { src: "/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-          { src: "/pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-          { src: "/pwa-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          { src: "/ink-app-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/ink-app-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "/ink-app-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
         shortcuts: [
           {
@@ -33,21 +33,21 @@ export default defineConfig({
             short_name: "写随记",
             description: "创建一条新的生活随记",
             url: "/home?compose=note&source=pwa-shortcut",
-            icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
+            icons: [{ src: "/ink-app-192.png", sizes: "192x192", type: "image/png" }],
           },
           {
             name: "写文章",
             short_name: "写文章",
             description: "创建一篇新的文章",
             url: "/write?type=article&source=pwa-shortcut",
-            icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
+            icons: [{ src: "/ink-app-192.png", sizes: "192x192", type: "image/png" }],
           },
           {
             name: "搜索映墨",
             short_name: "搜索",
             description: "搜索有权访问的记录",
             url: "/search?source=pwa-shortcut",
-            icons: [{ src: "/pwa-192.png", sizes: "192x192", type: "image/png" }],
+            icons: [{ src: "/ink-app-192.png", sizes: "192x192", type: "image/png" }],
           },
         ],
       },
@@ -78,5 +78,14 @@ export default defineConfig({
   build: {
     manifest: true,
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        onlyExplicitManualChunks: true,
+        manualChunks(id) {
+          if (id.includes("/node_modules/pinyin-pro/")) return "article-pinyin";
+          if (/\/node_modules\/(?:@tiptap\/|prosemirror-|marked\/|orderedmap\/|w3c-keyname\/|rope-sequence\/)/.test(id)) return "rich-editor";
+        },
+      },
+    },
   },
 });

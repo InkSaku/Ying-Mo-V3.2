@@ -37,7 +37,7 @@ test("builds the exact normalized payload used by draft saves", () => {
     body: "body",
     visibility: "private",
     collection_id: 7,
-    tag_names: ["Python", "Notes", "Python"],
+    tag_names: ["Python", "Notes"],
     title: "Paper",
     summary: null,
     slug: null,
@@ -67,6 +67,7 @@ test("labels draft and published save states without hiding local failures", () 
 test("writing desk keeps creation, publication and media concerns visibly separated", () => {
   const page = readFileSync(new URL("../src/pages/WritePage.jsx", import.meta.url), "utf8");
   const sketches = readFileSync(new URL("../src/components/WritingSketches.jsx", import.meta.url), "utf8");
+  const inkSketch = readFileSync(new URL("../src/components/InkSketch.jsx", import.meta.url), "utf8");
 
   assert.match(page, /editor-publication-bar/);
   assert.match(page, /editor-paper editor-paper-/);
@@ -76,7 +77,8 @@ test("writing desk keeps creation, publication and media concerns visibly separa
   assert.match(page, /PUBLICATION/);
   assert.match(page, /ArticleArchiveCat/);
   assert.match(page, /WritingCoverSketch/);
-  assert.match(sketches, /aria-hidden="true"/);
+  assert.match(sketches, /InkSketch/);
+  assert.match(inkSketch, /aria-hidden="true"/);
   assert.doesNotMatch(sketches, /<img|\.png|\.jpe?g/);
 });
 

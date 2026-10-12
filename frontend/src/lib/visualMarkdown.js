@@ -1,14 +1,34 @@
 const MEDIA_TOKEN_RE = /\[\[ym-media:(\d+)\]\]/g;
 
+function codeRanges(source) {
+  const ranges = [];
+  let cursor = 0; let fence = null;
+  for (const line of source.split(/(?<=\n)/)) {
+    const match = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (match) {
+      if (!fence) fence = { start: cursor, marker: match[1] };
+      else if (match[1][0] === fence.marker[0] && match[1].length >= fence.marker.length && !line.slice(match[0].length).trim()) {
+        ranges.push([fence.start, cursor + line.length]); fence = null;
+      }
+    }
+    cursor += line.length;
+  }
+  if (fence) ranges.push([fence.start, source.length]);
+  for (const match of source.matchAll(/(`+)(?!`)([^\n]*?)\1(?!`)/g)) ranges.push([match.index, match.index + match[0].length]);
+  return ranges;
+}
+
 export function visualMarkdownBlocks(value) {
   const source = String(value || "");
   const blocks = [];
   let cursor = 0;
   let textIndex = 0;
   let mediaIndex = 0;
+  const protectedRanges = codeRanges(source);
   MEDIA_TOKEN_RE.lastIndex = 0;
   let match;
   while ((match = MEDIA_TOKEN_RE.exec(source))) {
+    if (protectedRanges.some(([start, end]) => match.index >= start && match.index < end)) continue;
     blocks.push({
       type: "text",
       key: `text-${textIndex++}`,

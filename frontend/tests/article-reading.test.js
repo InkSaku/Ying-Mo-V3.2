@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   activeHeadingAt,
   calculateReadingProgress,
+  groupArticleOutline,
   hasArticleToc,
   normalizeArticleOutline,
 } from "../src/lib/articleReading.js";
@@ -21,6 +22,17 @@ test("normalizes article outline levels and rejects duplicate or malformed entri
     { id: "child", label: "子节", level: 3 },
     { id: "deep", label: "深入", level: 4 },
   ]);
+});
+
+test("groups nested headings without losing orphan or heading-only outlines", () => {
+  const item = (id, level) => ({ id, label: id, level });
+  assert.deepEqual(groupArticleOutline([item("orphan", 3), item("one", 2), item("child", 3), item("deep", 4), item("two", 2)]), [
+    { ...item("orphan", 3), children: [] },
+    { ...item("one", 2), children: [item("child", 3), item("deep", 4)] },
+    { ...item("two", 2), children: [] },
+  ]);
+  assert.deepEqual(groupArticleOutline([item("a", 3), item("b", 4)]), [{ ...item("a", 3), children: [item("b", 4)] }]);
+  assert.deepEqual(groupArticleOutline([]), []);
 });
 
 test("hides an empty or single-heading table of contents", () => {

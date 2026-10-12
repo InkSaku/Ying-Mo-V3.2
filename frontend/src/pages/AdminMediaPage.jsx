@@ -100,7 +100,7 @@ export function AdminMediaPage() {
   };
 
   return (
-    <AdminPageFrame title="媒体" description="审阅私有媒体、绑定目标与 Live Photo 配对状态。Admin 预览独立审计，普通内容 ACL 不会因此放宽。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 组</span>}>
+    <AdminPageFrame title="媒体" description="检查影像、所属记录与 Live Photo 配对状态。管理员预览会单独留下操作记录。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 组</span>}>
       <form className="admin-content-filters admin-media-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ owner_id: ownerValue.replace(/\D/g, ""), page: 1 }); }}>
         <label className="admin-filter-search"><span>所有者用户 ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={ownerValue} onChange={(event) => setOwnerValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
         <label><span>类型</span><CustomSelect value={filters.kind} onChange={(event) => updateFilters({ kind: event.target.value, page: 1 })}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect></label>

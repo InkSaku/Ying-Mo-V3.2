@@ -21,6 +21,17 @@ export function hasArticleToc(outline) {
   return Array.isArray(outline) && outline.length >= 2;
 }
 
+export function groupArticleOutline(outline) {
+  const items = normalizeArticleOutline(outline);
+  const primaryLevel = Math.min(...items.map((item) => item.level));
+  const groups = [];
+  for (const item of items) {
+    if (item.level === primaryLevel || !groups.length) groups.push({ ...item, children: [] });
+    else groups.at(-1).children.push(item);
+  }
+  return groups;
+}
+
 export function calculateReadingProgress({ scrollTop, contentTop, contentHeight, viewportHeight }) {
   const start = Number(contentTop) || 0;
   const end = start + Math.max(0, Number(contentHeight) || 0) - Math.max(0, Number(viewportHeight) || 0);

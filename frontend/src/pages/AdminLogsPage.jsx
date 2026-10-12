@@ -43,7 +43,7 @@ export function AdminLogsPage() {
   const apply = (updates) => setParams(adminLogSearchParams({ ...filters, ...updates, page: updates.page || 1 }));
 
   return (
-    <AdminPageFrame title="操作日志" description="按操作者、动作、对象和请求 ID 追溯管理操作；修改前后数据只在独立 Admin API 中提供。" busy={state.loading || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
+    <AdminPageFrame title="操作日志" description="按操作者、动作与对象回看管理记录，核对修改前后的内容。" busy={state.loading || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <form className="admin-log-filters" role="search" onSubmit={(event) => { event.preventDefault(); apply({ ...draft, page: 1 }); }}>
         <label className="admin-filter-search"><span>全文筛选</span><input maxLength={100} value={draft.q} onChange={(event) => setDraft({ ...draft, q: event.target.value })} placeholder="动作、对象 ID、Request ID 或原因" /></label>
         <label><span>动作</span><input maxLength={80} value={draft.action} onChange={(event) => setDraft({ ...draft, action: event.target.value })} placeholder="例如 settings.update" /></label>

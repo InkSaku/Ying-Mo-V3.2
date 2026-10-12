@@ -1,0 +1,192 @@
+/* Ying Mo's shared ink room. Drawings are decorative; controls keep their semantics. */
+:root {
+  --page: #f8f7f3;
+  --surface: #fbfaf6;
+  --surface-2: #eeede6;
+  --text: #242520;
+  --text-2: #41423c;
+  --text-3: #72716b;
+  --text-4: #72716b;
+  --brand: #334b76;
+  --brand-link: #334b76;
+  --border: #deded5;
+  --border-soft: #e9e8e1;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+}
+:root[data-theme="dark"] {
+  --page: #20231f;
+  --surface: #282c26;
+  --surface-2: #343a31;
+  --text: #e5e5dc;
+  --text-2: #d3d5ca;
+  --text-3: #b1b3aa;
+  --text-4: #b1b3aa;
+  --brand-link: #9cb4db;
+  --border: #42483e;
+  --border-soft: #373d33;
+}
+
+/* A small signature, readable even at navigation size. */
+.brand, .login-wordmark { display: inline-flex; align-items: center; gap: 9px; }
+.ink-brand-mark { display: block; width: 27px; height: 30px; flex: none; }
+.brand .ink-brand-mark { color: var(--text); }
+.site-header .brand > span, .login-wordmark > span { margin-left: 4px; }
+.app-frame .site-header { box-shadow: none; background: var(--page); border-bottom-color: var(--border); }
+.app-frame .header-menu-panel, .app-frame .mobile-menu-panel { border-radius: 3px; background: var(--surface); box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 8%, transparent); }
+.app-frame .site-footer .footer-inner { align-items: center; }
+
+/* Buttons, dialogs and input sheets share one quiet edge treatment. */
+.app-frame .btn, .public-main .btn, .auth-page .btn { border-radius: 2px; box-shadow: none; font-weight: 400; }
+.app-frame .btn-primary, .public-main .btn-primary, .auth-page .btn-primary {
+  background: var(--text); border-color: var(--text); color: var(--page); -webkit-text-fill-color: var(--page);
+}
+.app-frame .btn-primary:hover { background: color-mix(in srgb, var(--text) 86%, var(--page)); }
+.app-frame .btn-secondary { background: transparent; border: 1px solid var(--border-strong); }
+.app-frame :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+  border-radius: 2px;
+  box-shadow: none;
+}
+.app-frame :is(input, textarea, select):focus-visible { outline-color: var(--brand-link); }
+.app-frame :is(.confirm-dialog, .custom-select-menu, .quick-note-composer, .settings-form, .data-export-panel) { border-radius: 3px; box-shadow: none; }
+.app-frame .section-header h2, .app-frame .admin-section-heading h2 { font-weight: 400; }
+
+/* Task-specific drawings live in the heading, with room for actions alongside. */
+.app-frame .page-heading:has(> .ink-page-sketch),
+.app-frame .memory-hero:has(> .ink-page-sketch) {
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+  padding-bottom: 28px; border-bottom: 1px solid var(--border);
+}
+.app-frame .page-heading > .ink-page-sketch,
+.app-frame .memory-hero > .ink-page-sketch { order: 2; width: 145px; flex: 0 0 145px; margin-left: auto; }
+.app-frame .page-heading > div:first-of-type,
+.app-frame .memory-hero > div:first-of-type { order: 1; flex: 1 1 240px; min-width: 0; }
+.app-frame .page-heading > :not(div):not(.ink-page-sketch),
+.app-frame .page-heading > .page-heading-actions,
+.app-frame .page-heading > .admin-heading-actions,
+.app-frame .memory-hero > .memory-hero-date { order: 3; }
+.app-frame .page-heading h1 { font-weight: 400; letter-spacing: .04em; }
+.app-frame .page-heading p { max-width: 58ch; line-height: 1.85; }
+.personal-navigation .ink-personal-margin { width: 120px; margin: 24px 0 0 14px; opacity: .85; }
+/* Headings carry the scene on working pages; identity pages use the margin instead. */
+.personal-page-shell:has(> .page-heading) .ink-personal-margin,
+.personal-page-shell:has(> .memory-hero) .ink-personal-margin { display: none; }
+
+/* Empty sheets: warm, spacious and easy to return from. */
+.app-frame .empty-state, .app-frame .error-state, .ink-not-found {
+  padding: 32px 24px; border: 0; border-block: 1px solid var(--border);
+  border-radius: 0; background: transparent; text-align: center;
+}
+.app-frame .empty-state p, .app-frame .error-state p, .ink-not-found p { margin-inline: auto; line-height: 1.85; }
+.app-frame .empty-state h3, .app-frame .error-state h3 { font-weight: 400; font-size: 20px; }
+.error-state .ink-sketch { width: 150px; max-width: 100%; margin: 0 auto 20px; }
+.app-frame .comments-panel > .empty-state { text-align: left; padding: 24px 0; }
+.app-frame .comments-panel > .empty-state .ink-sketch { display: none; }
+.app-frame .comments-panel > .empty-state p { margin-inline: 0; }
+.ink-not-found .ink-sketch { width: 220px; margin: 0 auto 28px; }
+
+/* The admin desk reads like a ledger, with illustrations only at the top. */
+.app-frame .admin-page { max-width: 1280px; }
+.app-frame .admin-heading { margin: 28px 0 36px; }
+.app-frame .admin-heading h1 { font-size: clamp(32px, 4vw, 48px); }
+.app-frame .admin-heading .hero-kicker { color: var(--brand-link); letter-spacing: .14em; font-size: 10px; }
+.app-frame .admin-metric-grid { gap: 0; border-block: 1px solid var(--border-strong); }
+.app-frame .admin-metric-grid > div { border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; padding: 24px; }
+.app-frame .admin-metric-grid > div:last-child { border-right: 0; }
+.app-frame .admin-metric-grid dd { color: var(--text); font-size: 34px; font-weight: 400; }
+.app-frame .admin-filter-form, .app-frame .admin-settings-form { background: transparent; border-radius: 0; }
+.app-frame .admin-nav { border-top: 1px solid var(--border); }
+.app-frame .admin-status { border-radius: 2px; }
+
+/* Replace the former raster entry scenes with authored, theme-aware ink. */
+.login-paper .login-landscape::before,
+.login-paper .register-photo::before,
+.login-paper.landing-paper::before,
+.login-paper.landing-paper::after { display: none; }
+.login-paper { --page: #f8f7f3; --brand-link: #334b76; }
+.login-paper .login-landscape { width: 100%; margin: 16px 0 0; }
+.login-paper .login-landscape-art { aspect-ratio: auto; }
+.login-paper .login-landscape-art .ink-entry-art { width: 260px; max-width: 90%; margin: 0 auto; }
+.login-paper .login-landscape figcaption { margin: 12px 0 0; text-align: center; }
+.login-paper .register-art { aspect-ratio: auto; }
+.login-paper .register-photo { width: 100%; margin: 0; }
+.login-paper .register-art .ink-entry-art { width: 330px; max-width: 100%; margin: 0 auto; }
+.login-paper .register-photo figcaption { text-align: center; margin-left: 0; }
+.login-paper .landing-illustration .ink-entry-art { position: absolute; inset: auto 0 54px; width: 100%; z-index: 2; }
+.login-paper .landing-illustration .ink-entry-art svg { width: 100%; max-width: 460px; margin: 0 auto; }
+.login-paper .landing-ink-wash, .login-paper .landing-flight { display: none; }
+.login-paper .landing-illustration blockquote { background: var(--page); color: var(--text-2); box-shadow: none; border-left: 1px solid var(--border); transform: none; }
+.login-paper .landing-illustration blockquote::before { display: none; }
+.login-paper .landing-seal { color: var(--brand-link); border-color: var(--brand-link); }
+.ink-security-art { width: 210px; max-width: 100%; margin: 32px 0 0; }
+.ink-about-art { float: right; width: 230px; max-width: 45%; margin: 0 0 30px 32px; }
+.public-main .about-article h1 { font-weight: 400; letter-spacing: .06em; }
+.public-main .about-article h2 { font-size: 23px; font-weight: 400; padding-top: 24px; border-top: 1px solid var(--border); }
+
+html[data-theme="dark"] .login-paper {
+  --page: #20231f; --text: #e5e5dc; --text-2: #d3d5ca; --text-3: #b1b3aa; --text-4: #b1b3aa;
+  --login-muted: #b1b3aa; --brand-link: #9cb4db; --landing-ink: #e5e5dc; --landing-blue: #9cb4db;
+  --landing-line: #42483e; background: var(--page); color: var(--text); color-scheme: dark;
+}
+html[data-theme="dark"] .login-paper :is(.login-field input, .login-join a, .landing-copy h1, .landing-primary, .landing-secondary) { color: var(--text); }
+html[data-theme="dark"] .login-paper .login-submit { color: var(--page); background: var(--text); border-color: var(--text); }
+html[data-theme="dark"] .login-paper :is(.login-handwritten, .register-handwritten, .landing-handwritten) { color: var(--brand-link); }
+html[data-theme="dark"] .login-paper .login-field input { border-color: var(--border); }
+html[data-theme="dark"] .login-paper :is(.landing-primary, .landing-secondary) { background: var(--surface); border-color: var(--border); }
+html[data-theme="dark"] .login-paper .landing-closing { background: var(--surface); }
+
+/* A scene stays inside its allotted margin at every size. */
+.app-frame .home-opening-feature-visual > .ink-sketch { display: grid; place-items: center; padding: 16px; }
+.app-frame .home-opening-feature-visual > .ink-sketch > svg { width: min(100%, 330px); max-height: 100%; }
+.app-frame .ink-sketch.writing-cover-sketch { width: 140px; }
+@media (max-width: 979px) {
+  .personal-navigation .ink-personal-margin { display: none; }
+  .app-frame .page-heading > .ink-page-sketch, .app-frame .memory-hero > .ink-page-sketch { width: 120px; flex-basis: 120px; }
+}
+@media (max-width: 640px) {
+  .ink-brand-mark { width: 23px; height: 27px; }
+  .app-frame .page-heading:has(> .ink-page-sketch), .app-frame .memory-hero:has(> .ink-page-sketch) { gap: 16px; }
+  .app-frame .page-heading > .ink-page-sketch, .app-frame .memory-hero > .ink-page-sketch { width: 96px; flex-basis: 96px; }
+  .app-frame .page-heading > div:first-of-type, .app-frame .memory-hero > div:first-of-type { flex-basis: calc(100% - 112px); }
+  .app-frame .page-heading > .admin-heading-actions { flex-basis: 100%; }
+  .app-frame .admin-metric-grid > div { padding: 18px 12px; }
+  .app-frame .empty-state, .app-frame .error-state { padding: 28px 12px; }
+  .login-paper .login-landscape { position: absolute; width: 42%; right: 0; top: 12px; }
+  .login-paper .login-landscape-art .ink-entry-art { width: 100%; max-width: none; }
+  .login-paper .login-landscape figcaption { display: none; }
+  .login-paper .register-photo { position: absolute; width: 42%; right: 0; top: 10px; }
+  .login-paper .register-art .ink-entry-art { width: 100%; }
+  .login-paper .register-photo figcaption { display: none; }
+  .login-paper .landing-illustration .ink-entry-art { bottom: 36px; }
+  .ink-security-art { width: 140px; margin-top: 20px; }
+  .ink-about-art { float: none; width: 190px; max-width: 100%; margin: 16px auto 28px; }
+}
+@media print {
+  .ink-page-sketch, .ink-personal-margin, .ink-brand-mark { display: none !important; }
+}
+
+.app-frame .home-edition-cue .ink-home-signature { width: 110px; flex: none; }
+.app-frame .editor-paper-opening { position: relative; padding-right: 128px; min-height: 78px; }
+.app-frame .editor-paper-opening > .writing-desk-sketch { display: block; position: absolute; top: 0; right: 8px; width: 104px; opacity: .9; }
+.app-frame .profile-copy { position: relative; }
+.app-frame .profile-copy .ink-profile-signature { float: right; width: 130px; margin: 0 0 14px 22px; }
+@media (max-width: 767px) {
+  .app-frame .editor-paper-opening { padding-right: 0; min-height: 0; }
+  .app-frame .editor-paper-opening > .writing-desk-sketch { display: none; }
+  .app-frame .home-edition-cue .ink-home-signature { width: 86px; }
+  .app-frame .profile-copy .ink-profile-signature { width: 100px; }
+}
+.app-frame .page-heading > :where(:not(.ink-page-sketch)) { order: 3; }
+html[data-theme="dark"] .login-paper a:hover { color: var(--brand-link); }
+@media (max-width: 640px) {
+  .login-paper .login-handwritten, .login-paper .register-handwritten { display: none; }
+  .login-paper .login-manifesto { max-width: 60%; font-size: clamp(16px, 4.8vw, 19px); }
+  .login-paper .register-story h2 { max-width: 58%; }
+}
+/* Opening copy is immediately readable, including on a slow first visit. */
+.login-paper .landing-copy > * { animation: none; }
+@media (max-width: 640px) {
+  .app-frame .page-heading:has(> .ink-page-sketch), .app-frame .memory-hero:has(> .ink-page-sketch) { flex-direction: row; }
+  .app-frame .year-review-page > .page-heading > div:first-of-type { flex-basis: 100%; }
+}

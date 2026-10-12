@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -34,6 +35,7 @@ const CONFIG = {
 };
 
 export function TaxonomyIndexPage({ kind }) {
+  const [query, setQuery] = useState("");
   const config = CONFIG[kind];
   usePageMeta(config.title);
   const state = useAsyncData(() => api.get(config.endpoint), [config.endpoint]);
@@ -44,6 +46,7 @@ export function TaxonomyIndexPage({ kind }) {
   }
 
   const items = state.data || [];
+  const displayedItems = kind === "tag" ? items.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase())) : items;
   const summary = summarizeTaxonomyItems(items);
 
   return (
@@ -62,6 +65,8 @@ export function TaxonomyIndexPage({ kind }) {
           <div><dt>编排方式</dt><dd>{kind === "category" ? "编辑顺序" : "主题频次"}</dd></div>
         </dl>
       </header>
+
+      {kind === "tag" ? <label className="taxonomy-topic-search"><span aria-hidden="true">#</span><input aria-label="搜索主题" placeholder="寻找一个词，比如「旅行」" value={query} maxLength={80} onChange={(event) => setQuery(event.target.value)} /></label> : null}
 
       {items.length ? (
         <section className="taxonomy-register" aria-labelledby="taxonomy-register-title">
@@ -88,7 +93,7 @@ export function TaxonomyIndexPage({ kind }) {
             </ol>
           ) : (
             <div className="taxonomy-tag-register">
-              {items.map((item) => (
+              {displayedItems.map((item) => (
                 <Link
                   className={`taxonomy-tag-entry is-${taxonomyTagProminence(item, summary.maxCount)}`}
                   key={item.id}
@@ -104,6 +109,7 @@ export function TaxonomyIndexPage({ kind }) {
       ) : (
         <EmptyState title={config.emptyTitle} description={config.emptyDescription} />
       )}
+      {kind === "tag" && items.length > 0 && !displayedItems.length ? <EmptyState title="没有找到这个主题" description="换一个词，再沿着书页找一找。" /> : null}
     </main>
   );
 }

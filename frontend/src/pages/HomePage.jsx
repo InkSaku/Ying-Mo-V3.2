@@ -1,3 +1,4 @@
+import { InkSketch } from "../components/InkSketch";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { HomeFeed } from "../components/HomeFeed";
@@ -63,7 +64,7 @@ export function HomePage() {
           <h1>生活正在<br /><span>被我们写下。</span></h1>
           <p className="home-edition-note">朋友们的近况、路上的风景，和那些想留给未来的片刻。今天，从这一页读起。</p>
           <div className="home-edition-cue" aria-hidden="true">
-            <svg viewBox="0 0 40 40" fill="none"><path d="m20 3 2.9 12.1L35 18l-11.5 4.3L21 36l-5.2-11.6L5 21l11.5-4.1L20 3Z" /><path d="M3 31c5 0 7 2 9 6" /></svg>
+            <InkSketch variant="writer" className="ink-home-signature" />
             <span>一封信，从某个人真实的今天开始。</span>
           </div>
         </div>

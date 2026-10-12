@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { CollectionCoverManager } from "../components/CollectionCoverManager";
@@ -282,6 +283,7 @@ export function CollectionManagePage() {
   return (
     <main className="page-shell collection-manage-page">
       <header className="page-heading">
+        <InkPageSketch />
         <div>
           <p className="hero-kicker">Collection 管理</p>
           <h1>{collection.name}</h1>

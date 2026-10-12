@@ -1,3 +1,4 @@
+import { InkSketch } from "./InkSketch";
 import { PublicHeader } from "./PublicHeader";
 
 export function AccountSecurityLayout({ eyebrow, title, description, children, aside }) {
@@ -10,6 +11,7 @@ export function AccountSecurityLayout({ eyebrow, title, description, children, a
             <p className="hero-kicker">{eyebrow}</p>
             <h1 id="account-security-title">{title}</h1>
             <p>{description}</p>
+            <InkSketch variant="garden" className="ink-security-art" />
             {aside ? <div className="account-security-aside">{aside}</div> : null}
           </section>
           <section className="auth-card account-security-card">{children}</section>

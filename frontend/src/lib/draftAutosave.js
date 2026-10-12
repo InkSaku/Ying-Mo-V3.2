@@ -1,9 +1,9 @@
+import { selectedTagNames } from "./tagSelection.js";
+
 export const AUTOSAVE_DELAY = 1200;
 
 export function draftPayloadFromForm(form) {
-  const tagNames = form.tag_names
-    ? form.tag_names.split(",").map((item) => item.trim()).filter(Boolean)
-    : [];
+  const tagNames = selectedTagNames(form.tag_names);
   const inCollection = Boolean(form.collection_id);
   const common = {
     post_type: form.post_type,

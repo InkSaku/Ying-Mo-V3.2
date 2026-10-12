@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -122,6 +123,7 @@ export function PostRevisionsPage() {
     <main className="page-shell personal-page-shell">
       <PersonalNav />
       <header className="page-heading revision-page-heading">
+        {listState.data?.length && revisionId ? <InkPageSketch /> : null}
         <div>
           <p className="hero-kicker">内容恢复</p>
           <h1>版本历史</h1>
@@ -135,7 +137,7 @@ export function PostRevisionsPage() {
 
       {feedback ? <div className="inline-success revision-feedback" role="status">{feedback}</div> : null}
       {!listState.data?.length ? (
-        <EmptyState title="还没有历史版本" description="这篇内容下一次成功保存修改时，会在这里保留修改前的版本。" />
+        <EmptyState sketch="rewind" title="还没有历史版本" description="这篇内容下一次成功保存修改时，会在这里保留修改前的版本。" />
       ) : (
         <div className="revision-layout">
           <aside className="revision-timeline" aria-label="历史版本列表">
@@ -162,7 +164,7 @@ export function PostRevisionsPage() {
             <RevisionPreview key={`${revisionId}-${reloadKey}`} post={post} revisionId={revisionId} onRestored={restored} />
           ) : (
             <section className="revision-preview revision-preview-empty">
-              <p>选择左侧版本，查看当时保存的内容并决定是否恢复。</p>
+              <EmptyState sketch="rewind" title="翻一翻写过的路" description="从版本列表选择一页，查看当时的内容，再决定是否恢复。" />
             </section>
           )}
         </div>

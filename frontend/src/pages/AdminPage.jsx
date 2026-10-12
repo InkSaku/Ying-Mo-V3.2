@@ -24,7 +24,7 @@ export function AdminPage() {
   return (
     <AdminPageFrame
       title="系统管理"
-      description="后台扩展读取只通过 Admin API 提供，普通内容接口仍遵守成员 ACL。"
+      description="整理成员、内容与共同记录，照料这间书房的日常。"
       busy={state.loading}
     >
       {state.loading && !state.data ? <DashboardLoader /> : null}
@@ -61,7 +61,7 @@ export function AdminPage() {
                     </article>
                   ))}
                 </div>
-              ) : <EmptyState title="还没有 Post" />}
+              ) : <EmptyState illustrated={false} title="还没有内容" />}
             </section>
 
             <section className="admin-section" aria-labelledby="recent-comments-heading">
@@ -84,7 +84,7 @@ export function AdminPage() {
                     </article>
                   ))}
                 </div>
-              ) : <EmptyState title="还没有评论" />}
+              ) : <EmptyState illustrated={false} title="还没有评论" />}
             </section>
           </div>
 

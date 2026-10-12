@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
@@ -56,6 +57,7 @@ export function CreateCollectionPage() {
   return (
     <main className="page-shell collection-create-page">
       <header className="page-heading">
+        <InkPageSketch />
         <div>
           <p className="hero-kicker">New shared book</p>
           <h1>创建共同书册</h1>

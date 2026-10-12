@@ -1,16 +1,17 @@
+import { InkPageSketch } from "./InkPageSketch";
 import { useId } from "react";
 import { NavLink } from "react-router-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { adminLabels } from "../lib/admin";
 
 const adminNavItems = [
-  ["/admin", "Dashboard", true],
+  ["/admin", "概览", true],
   ["/admin/users", "用户", false],
-  ["/admin/posts", "Post", false],
-  ["/admin/collections", "Collection", false],
+  ["/admin/posts", "内容", false],
+  ["/admin/collections", "合集", false],
   ["/admin/comments", "评论", false],
-  ["/admin/categories", "Category", false],
-  ["/admin/tags", "Tag", false],
+  ["/admin/categories", "分类", false],
+  ["/admin/tags", "标签", false],
   ["/admin/media", "媒体", false],
   ["/admin/featured", "精选", false],
   ["/admin/settings", "站点设置", false],
@@ -35,6 +36,7 @@ export function AdminPageFrame({ title, description, actions, busy = false, chil
     <main className="page-shell admin-page" aria-busy={busy || undefined}>
       <AdminNav />
       <header className="page-heading admin-heading">
+        <InkPageSketch />
         <div>
           <p className="hero-kicker">System administration</p>
           <h1>{title}</h1>

@@ -94,7 +94,7 @@ export function AdminPostsPage() {
   };
 
   return (
-    <AdminPageFrame title="Post" description="检索所有发布状态和可见性的内容；预览会写入审计日志，治理操作不会改写作者或 ACL。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
+    <AdminPageFrame title="内容" description="查找文章与随记，查看发布状态和访问范围；预览与管理操作会留下记录。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <PostFilters filters={filters} searchValue={searchValue} loading={state.loading} onSearchValue={setSearchValue} onChange={(updates) => updateFilters({ ...updates, page: 1 })} onSubmit={submitSearch} />
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取 Post 列表</span><div className="skeleton-block" /></div> : null}

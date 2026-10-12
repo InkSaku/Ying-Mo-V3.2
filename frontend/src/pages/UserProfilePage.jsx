@@ -1,3 +1,4 @@
+import { InkSketch } from "../components/InkSketch";
 import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -95,6 +96,7 @@ export function UserProfilePage() {
         </figure>
         <div className="profile-copy">
           <p className="profile-copy-label">记录者</p>
+          <InkSketch variant="writer" className="ink-profile-signature" />
           <h1>{data.user.nickname}</h1>
           <p className="profile-handle">@{data.user.username}</p>
           {data.user.bio ? <p className="profile-bio">{data.user.bio}</p> : <p className="muted">这位成员还没有填写简介。</p>}

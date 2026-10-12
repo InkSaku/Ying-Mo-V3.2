@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" aria-hidden="true" focusable="false">
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- The unwritten letter becomes a little kite. -->
+    <path d="m119 25 69 11-7 44-69-10 7-45Z"/>
+    <path d="m120 28 28 27 36-17m-69 29 25-17m17 6 22 21M130 40l4 4m36 4-4 3"/>
+    <path d="M94 123c9 1 16-4 21-10m-32 32-9 18c-10 0-13 5-7 7l18-2 8-18m9-3 7 16c10-2 15 3 8 5l-16 3-10-15M42 176c48-3 105-3 157-1"/>
+    <!-- A folded blank sheet beside the companion. -->
+    <path d="m148 135 27-5 13 9 4 26-38 6-6-36Zm27-5 1 12 12-3"/>
+  </g>
+  <path d="M62 140c-6-10-3-22 4-33 8-13 17-20 30-17 15 3 23 19 19 35-3 12-11 24-25 27-12 2-22-3-28-12Z" fill="currentColor"/>
+  <g stroke="var(--page, #f8f7f3)" stroke-width="2.4" stroke-linecap="round"><path d="m89 112 1 3m13-5 1 3m-15 12c4 4 9 4 12 0"/></g>
+  <g stroke="var(--brand-link, #334b76)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M146 76c-24 9-16 21-29 30-5 3-10 2-14 0m23-14 8 2-3 6m-16 10 4 5-7 2"/>
+    <path d="M60 46c7-10 17-16 30-20m-27 37 14-7m124 36 8 2m-9 8 5 5"/>
+  </g>
+</svg>

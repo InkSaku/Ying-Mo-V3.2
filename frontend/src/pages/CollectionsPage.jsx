@@ -55,7 +55,7 @@ export function CollectionsPage() {
               </div>
             </div>
           </section>
-        : <EmptyState title="第一册，等你翻开" description="创建一个合集，或让朋友邀请你一起记录。" />}
+        : <EmptyState illustrated title="第一册，等你翻开" description="创建一个合集，或让朋友邀请你一起记录。" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 1}

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { ReactionPicker } from "./ReactionPicker";
 
-export function InteractionBar({ postId, initialState }) {
+export function InteractionBar({ postId, initialState, onFavoriteState }) {
   const mounted = useRef(true);
   const [favorited, setFavorited] = useState(Boolean(initialState?.favorited));
   const [favoriteReady, setFavoriteReady] = useState(false);
@@ -27,7 +27,7 @@ export function InteractionBar({ postId, initialState }) {
     return () => { mounted.current = false; };
   }, [initialState?.favorited, postId]);
 
-  const toggleFavorite = async () => {
+  const toggleFavorite = useCallback(async () => {
     setBusy(true);
     setMessage("");
     setError("");
@@ -41,7 +41,11 @@ export function InteractionBar({ postId, initialState }) {
     } finally {
       if (mounted.current) setBusy(false);
     }
-  };
+  }, [postId]);
+
+  useEffect(() => {
+    onFavoriteState?.({ postId, favorited, ready: favoriteReady, busy, message, error, toggleFavorite });
+  }, [postId, favorited, favoriteReady, busy, message, error, toggleFavorite, onFavoriteState]);
 
   return (
     <section className="interaction-region" aria-label="内容互动">

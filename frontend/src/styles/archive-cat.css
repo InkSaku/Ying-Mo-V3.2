@@ -20,30 +20,45 @@
 .archive-cat-outline, .archive-cat-accents, .archive-cat-speed {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.65;
+  stroke-width: 1.25;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.bookroom-cat path { vector-effect: non-scaling-stroke; }
 .archive-cat-ink { fill: currentColor; }
 .archive-cat-accents, .archive-cat-speed { stroke: var(--brand-link); }
 .archive-cat-speed { opacity: 0; }
-.archive-cat-pose { visibility: hidden; }
+.archive-cat-pose, .archive-cat-stretch { visibility: hidden; }
 .archive-cat-pose-0 { visibility: visible; }
 .article-archive-cat-runner[data-running="true"] .archive-cat-pose {
-  animation: archive-cat-frames .6s step-end infinite;
+  animation: archive-cat-frames .64s step-end infinite;
 }
-.article-archive-cat-runner[data-running="true"] .archive-cat-pose-0 { visibility: hidden; animation-delay: 0s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-0 { animation-delay: 0s; }
 .article-archive-cat-runner[data-running="true"] .archive-cat-pose-1 { animation-delay: -.48s; }
-.article-archive-cat-runner[data-running="true"] .archive-cat-pose-2 { animation-delay: -.24s; }
-.article-archive-cat-runner[data-running="true"] .archive-cat-pose-3 { animation-delay: -.36s; }
-.article-archive-cat-runner[data-running="true"] .archive-cat-pose-4 { animation-delay: -.12s; }
-.article-archive-cat-runner[data-running="true"] .archive-cat-speed { opacity: .8; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-2 { animation-delay: -.32s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-pose-3 { animation-delay: -.16s; }
+.article-archive-cat-runner[data-running="true"] .archive-cat-speed { opacity: .6; }
+/* One quiet stretch after settling, then return to the approved standing pose. */
+.article-archive-cat-runner[data-running="false"] .archive-cat-pose-0 { animation: archive-cat-idle-standing 3.2s step-end; }
+.article-archive-cat-runner[data-running="false"] .archive-cat-stretch { animation: archive-cat-idle-stretch 3.2s step-end; }
 @keyframes archive-cat-frames {
-  0%, 19.999% { visibility: visible; }
-  20%, 100% { visibility: hidden; }
+  0%, 24.999% { visibility: visible; }
+  25%, 100% { visibility: hidden; }
 }
-
+@keyframes archive-cat-idle-standing {
+  0%, 34.999% { visibility: visible; }
+  35%, 84.999% { visibility: hidden; }
+  85%, 100% { visibility: visible; }
+}
+@keyframes archive-cat-idle-stretch {
+  0%, 34.999% { visibility: hidden; }
+  35%, 84.999% { visibility: visible; }
+  85%, 100% { visibility: hidden; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .article-archive-cat-runner * { animation: none !important; }
+  .archive-cat-pose, .archive-cat-stretch { visibility: hidden !important; }
+  .archive-cat-pose-0 { visibility: visible !important; }
+  .archive-cat-speed { opacity: 0 !important; }
 }

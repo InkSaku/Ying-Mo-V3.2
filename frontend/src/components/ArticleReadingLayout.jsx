@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { calculateReadingProgress, hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
+import { calculateReadingProgress, groupArticleOutline, hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
 import ArchiveCatDrawing from "./ArchiveCatDrawing";
-import { ArticleTocSketch } from "./ArticleSketches";
+import { useTheme } from "../contexts/ThemeContext";
+import { useReadingPanels } from "../hooks/useReadingPanels";
+import "../styles/archive-cat.css";
 
 function decodeHash(value) {
   try {
@@ -11,23 +13,47 @@ function decodeHash(value) {
   }
 }
 
-export function ArticleReadingLayout({ outline, children }) {
+export function ArticleReadingLayout({ outline, children, opening, favorite }) {
   const contentRef = useRef(null);
+  const columnRef = useRef(null);
   const normalizedOutline = useMemo(() => normalizeArticleOutline(outline), [outline]);
   const showToc = hasArticleToc(normalizedOutline);
+  const outlineGroups = useMemo(() => groupArticleOutline(normalizedOutline), [normalizedOutline]);
+  const hasSubheadings = outlineGroups.some((group) => group.children.length);
+  const [subheadingsOpen, setSubheadingsOpen] = useState(false);
+  const { resolved, setMode } = useTheme();
+  const [fontSize, setFontSize] = useState(() => {
+    try {
+      const value = Number(localStorage.getItem("yingmo-reading-font-size"));
+      return Number.isInteger(value) && value >= 16 && value <= 24 ? value : null;
+    } catch { return null; }
+  });
+  const panels = useReadingPanels(showToc);
   const [activeId, setActiveId] = useState(normalizedOutline[0]?.id || "");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const [catRunning, setCatRunning] = useState(false);
   const [catDirection, setCatDirection] = useState("right");
   const previousProgressRef = useRef(0);
-  const activeIndex = Math.max(0, normalizedOutline.findIndex((item) => item.id === activeId));
-  const activeItem = normalizedOutline[activeIndex];
 
   useEffect(() => {
     setActiveId(normalizedOutline[0]?.id || "");
     setMobileOpen(false);
+    setSubheadingsOpen(false);
   }, [normalizedOutline]);
+
+  useEffect(() => {
+    try {
+      if (fontSize === null) localStorage.removeItem("yingmo-reading-font-size");
+      else localStorage.setItem("yingmo-reading-font-size", String(fontSize));
+    } catch { /* Font controls work without storage. */ }
+  }, [fontSize]);
+
+  const changeFontSize = (delta) => {
+    const prose = contentRef.current?.querySelector(".prose");
+    const current = fontSize ?? (prose ? Number.parseFloat(getComputedStyle(prose).fontSize) : 19);
+    setFontSize(Math.min(24, Math.max(16, Math.round(current) + delta)));
+  };
 
   useEffect(() => {
     if (!showToc || typeof IntersectionObserver === "undefined") return undefined;
@@ -88,9 +114,13 @@ export function ArticleReadingLayout({ outline, children }) {
       catIdleTimer = window.setTimeout(() => setCatRunning(false), 180);
     };
     requestUpdate();
+    const contentObserver = new ResizeObserver(requestUpdate);
+    if (contentRef.current) contentObserver.observe(contentRef.current);
+    if (columnRef.current) contentObserver.observe(columnRef.current);
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", requestUpdate);
     return () => {
+      contentObserver.disconnect();
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", requestUpdate);
       window.clearTimeout(catIdleTimer);
@@ -100,12 +130,11 @@ export function ArticleReadingLayout({ outline, children }) {
 
   return (
     <>
-      <div className="reading-progress" aria-hidden="true"><span /></div>
-      <div className={`article-reading-layout ${showToc ? "has-toc" : ""}`}>
+      <div ref={panels.layoutRef} style={{ ...panels.style, ...(fontSize !== null ? { "--reading-font-size": `${fontSize}px` } : {}) }} className={`article-reading-layout ${showToc ? "has-toc" : ""} ${panels.resizable ? "is-resizable" : ""} ${panels.dragging ? "is-resizing" : ""}`}>
         {showToc ? (
           <aside className={`article-toc ${mobileOpen ? "is-open" : ""}`} aria-label="文章目录">
-            <p className="article-toc-eyebrow" aria-hidden="true">ON THIS PAGE</p>
             <p className="article-toc-label">文章目录</p>
+            <p className="article-toc-hint">主要章节</p>
             <button
               type="button"
               className="article-toc-toggle"
@@ -114,51 +143,50 @@ export function ArticleReadingLayout({ outline, children }) {
               onClick={() => setMobileOpen((value) => !value)}
             >
               <span>文章目录</span>
-              <span aria-hidden="true">{mobileOpen ? "收起" : `${normalizedOutline.length} 节`}</span>
+              <span aria-hidden="true">{mobileOpen ? "收起" : `${outlineGroups.length} 节`}</span>
             </button>
             <nav id="article-toc-list" className="article-toc-list" aria-label="正文目录">
-              {normalizedOutline.map((item, index) => (
+              {outlineGroups.map((group) => <div className="article-toc-group" key={group.id}>
                 <a
-                  key={item.id}
-                  href={`#${encodeURIComponent(item.id)}`}
-                  className={`toc-level-${item.level}`}
-                  aria-current={activeId === item.id ? "location" : undefined}
+                  href={`#${encodeURIComponent(group.id)}`}
+                  aria-current={activeId === group.id || (!subheadingsOpen && group.children.some((item) => item.id === activeId)) ? "location" : undefined}
                   onClick={() => {
-                    setActiveId(item.id);
+                    setActiveId(group.id);
                     setMobileOpen(false);
                   }}
                 >
-                  <span className="article-toc-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-                  <span>{item.label}</span>
+                  {group.label}
                 </a>
-              ))}
+                {group.children.length ? <div className="article-toc-children" hidden={!subheadingsOpen}>
+                  {group.children.map((item) => <a key={item.id} href={`#${encodeURIComponent(item.id)}`} className={`toc-level-${item.level}`} aria-current={subheadingsOpen && activeId === item.id ? "location" : undefined} onClick={() => { setActiveId(item.id); setMobileOpen(false); }}>{item.label}</a>)}
+                </div> : null}
+              </div>)}
             </nav>
-            <ArticleTocSketch />
+            {hasSubheadings ? <button className="article-toc-subheadings-toggle" type="button" aria-expanded={subheadingsOpen} aria-controls="article-toc-list" onClick={() => setSubheadingsOpen((value) => !value)}>{subheadingsOpen ? "收起子标题" : "展开子标题"}<span aria-hidden="true">⌄</span></button> : null}
           </aside>
         ) : null}
-        <div ref={contentRef} className="article-reading-column">
-          <header className="article-reading-start" aria-hidden="true">
-            <span>正文</span>
-            <span>READ FROM HERE</span>
-          </header>
-          {children}
+        {showToc ? <div className="article-panel-divider article-panel-divider-left" {...panels.separatorProps("toc")}><span aria-hidden="true" /></div> : null}
+        <div ref={columnRef} className="article-reading-column">
+          {opening}
+          <div ref={contentRef} className="article-reading-content">{children}</div>
         </div>
+        <div className="article-panel-divider article-panel-divider-right" {...panels.separatorProps("rail")}><span aria-hidden="true" /></div>
         <aside className="article-reading-rail" aria-label="阅读进度">
-          <p className="article-reading-rail-eyebrow" aria-hidden="true">READING FLOW</p>
+          <p className="article-reading-rail-eyebrow">阅读工具</p>
           <div className="article-reading-rail-value">
             <strong>{progress}%</strong>
             <span>已读</span>
           </div>
-          <div className="article-reading-rail-track" aria-hidden="true">
-            <span style={{ "--reading-progress": `${progress}%` }} />
-          </div>
-          {activeItem ? (
-            <div className="article-reading-rail-current">
-              <span>正在读</span>
-              <p>{activeItem.label}</p>
-              <small>{String(activeIndex + 1).padStart(2, "0")} / {String(normalizedOutline.length).padStart(2, "0")}</small>
+          <details className="article-reading-settings" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+            <summary><span aria-hidden="true">Aa</span>阅读设置</summary>
+            <div className="article-reading-settings-panel">
+              <div><span>字号</span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => changeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => changeFontSize(1)}>A＋</button></div>
+              <button type="button" onClick={() => setFontSize(null)}>恢复默认字号</button>
+              <button type="button" onClick={() => setMode(resolved === "dark" ? "light" : "dark")}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
             </div>
-          ) : null}
+          </details>
+          <button type="button" className="article-reading-favorite" disabled={!favorite?.ready || favorite.busy} aria-pressed={favorite?.favorited || false} onClick={() => { void favorite?.toggleFavorite(); }}><span aria-hidden="true">{favorite?.favorited ? "♥" : "♡"}</span>{favorite?.busy ? "处理中" : favorite?.favorited ? "已收藏" : "收藏文章"}</button>
+          {favorite?.error ? <p className="article-reading-tool-error" role="alert">{favorite.error}</p> : null}
           <button type="button" onClick={() => window.scrollTo({
             top: 0,
             behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",

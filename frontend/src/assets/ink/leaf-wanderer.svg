@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 170" fill="none" aria-hidden="true" focusable="false">
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- One generous leaf makes an umbrella. -->
+    <path d="M133 61c16-30 54-47 95-37-5 30-38 61-77 50-8-2-14-6-18-13Z"/>
+    <path d="M137 68c27-14 56-30 84-40m-64 30 2-23m16 15 4-22m-11 28 23 5m0-16 19 2M162 62l-3 54c-2 9-8 10-12 5"/>
+    <!-- Long, quiet winding path. -->
+    <path d="M8 151c46-20 77-8 113-4 41 5 51-20 82-26 41-7 63 17 95 4 17-7 36-10 55-8M10 165c47-12 77-5 114-1 41 3 57-16 84-19 42-7 73 17 102 4 14-6 27-9 43-9" opacity=".5"/>
+    <path d="M124 126c-10 5-12 13-18 17-10 0-14 6-7 8l20-2 15-16m12-6 13 16c10-3 18 0 13 5l-19 4-18-17M151 111c13 1 16-6 8-10"/>
+    <!-- A house far away, and a tiny plant along the path. -->
+    <path d="m273 108-2-42 31-1 3 37m-40-37 19-19 24 17m-23 41-1-18 10-1 2 18m-19-30 11-1 1 10-12 1M45 137c1-17-2-29-7-42m5 22c-16-3-20-11-15-18 10 1 16 9 15 18Zm1 10c12-1 19-7 17-15-10 1-15 7-17 15Z"/>
+    <path d="m84 47 1 5m25-26 1 6m138 41 1 5m-11 15 1 5m-15-4 1 5" opacity=".45"/>
+  </g>
+  <path d="M107 122c-9-8-8-22-1-35 7-14 17-22 31-20 16 2 24 17 24 33-1 15-9 29-25 32-12 2-23-3-29-10Z" fill="currentColor"/>
+  <g stroke="var(--page, #f8f7f3)" stroke-width="2.4" stroke-linecap="round"><path d="m134 93 1 3m13-4 1 3m-14 11c5 3 9 2 12-2"/></g>
+  <g stroke="var(--brand-link, #334b76)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m165 132 8-3m8-3 8-2m8-2 7-1m10-1 7 1"/>
+    <path d="m316 25 2 7 8 2-7 3-2 8-3-7-7-3 7-2 2-8Z"/>
+  </g>
+</svg>

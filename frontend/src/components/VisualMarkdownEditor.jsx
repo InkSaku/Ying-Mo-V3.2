@@ -1,10 +1,16 @@
 import {
   forwardRef,
+  lazy,
+  Suspense,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { api } from "../lib/api";
+import { ProtectedMarkdown } from "./ProtectedMarkdown";
+import "../styles/rich-markdown.css";
 import { removeMediaPlaceholders } from "../lib/internalMedia";
 import { manageableMediaRows, mediaPresentation } from "../lib/postMedia";
 import {
@@ -15,6 +21,8 @@ import {
 } from "../lib/visualMarkdown";
 import { MediaPresentationEditor } from "./MediaPresentationEditor";
 import { ProtectedImage } from "./ProtectedImage";
+
+const RichMarkdownBlock = lazy(() => import("./RichMarkdownBlock"));
 
 function emitValue(onChange, value) {
   onChange?.({ target: { value } });
@@ -39,6 +47,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   onKeyDown,
   onPaste,
   onUpdateMedia,
+  showSourcePreview = true,
 }, ref) {
   const source = String(value || "");
   const blocks = useMemo(() => visualMarkdownBlocks(source), [source]);
@@ -52,14 +61,29 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   const rawTextareaRef = useRef(null);
   const [sourceMode, setSourceMode] = useState(false);
   const [draggingMediaId, setDraggingMediaId] = useState(null);
+  const [sourcePreview, setSourcePreview] = useState({ html: "", error: "", loading: false });
+  const [previewRetry, setPreviewRetry] = useState(0);
   const [editingMediaId, setEditingMediaId] = useState(null);
   const [savingMediaId, setSavingMediaId] = useState(null);
   blocksRef.current = blocks;
 
-  const syncSelection = (block, element) => {
-    const start = block.start + element.selectionStart;
-    const end = block.start + element.selectionEnd;
-    selectionRef.current = [start, end];
+  useEffect(() => {
+    if (!sourceMode || !showSourcePreview) return undefined;
+    const controller = new AbortController();
+    setSourcePreview((current) => ({ ...current, loading: true, error: "" }));
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await api.post("/posts/preview", { body: source }, { signal: controller.signal });
+        if (!controller.signal.aborted) setSourcePreview({ html: result.data.rendered_html || "", error: "", loading: false });
+      } catch (error) {
+        if (!controller.signal.aborted) setSourcePreview((current) => ({ ...current, error: error.message, loading: false }));
+      }
+    }, 220);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [sourceMode, showSourcePreview, source, previewRetry]);
+
+  const syncSelection = (block, start, end) => {
+    selectionRef.current = [block.start + start, block.start + end];
     activeTextKeyRef.current = block.key;
   };
 
@@ -96,29 +120,30 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
       const fallback = blocksRef.current.find((block) => block.type === "text");
       (active || textareasRef.current.get(fallback?.key))?.focus();
     },
+    applyFormat(action) {
+      if (sourceMode) return false;
+      const active = textareasRef.current.get(activeTextKeyRef.current);
+      const first = blocksRef.current.find((block) => block.type === "text");
+      return (active || textareasRef.current.get(first?.key))?.applyFormat(action) || false;
+    },
     get selectionStart() {
+      const block = blocksRef.current.find((item) => item.key === activeTextKeyRef.current);
+      const editor = textareasRef.current.get(block?.key);
       return sourceMode && rawTextareaRef.current
         ? rawTextareaRef.current.selectionStart
-        : selectionRef.current[0];
+        : editor ? block.start + editor.selectionStart : selectionRef.current[0];
     },
     get selectionEnd() {
+      const block = blocksRef.current.find((item) => item.key === activeTextKeyRef.current);
+      const editor = textareasRef.current.get(block?.key);
       return sourceMode && rawTextareaRef.current
         ? rawTextareaRef.current.selectionEnd
-        : selectionRef.current[1];
+        : editor ? block.start + editor.selectionEnd : selectionRef.current[1];
     },
     setSelectionRange(start, end) {
       focusSelection(start, end);
     },
   }));
-
-  const updateTextBlock = (block, event) => {
-    const nextValue = replaceVisualTextBlock(source, block, event.target.value);
-    const nextStart = block.start + event.target.selectionStart;
-    const nextEnd = block.start + event.target.selectionEnd;
-    selectionRef.current = [nextStart, nextEnd];
-    activeTextKeyRef.current = block.key;
-    emitValue(onChange, nextValue);
-  };
 
   const moveMedia = (mediaId, direction) => {
     const index = mediaIds.indexOf(mediaId);
@@ -144,8 +169,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
         <button type="button" aria-pressed={!sourceMode} onClick={() => setSourceMode(false)}>可视编辑</button>
         <button type="button" aria-pressed={sourceMode} onClick={() => setSourceMode(true)}>Markdown 源码</button>
       </div>
-      {sourceMode ? (
-        <textarea
+      <div hidden={!sourceMode} className={`visual-source-workspace ${showSourcePreview ? "has-preview" : ""}`}><textarea
           ref={rawTextareaRef}
           className="visual-markdown-source"
           value={source}
@@ -158,32 +182,33 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
           aria-label={`${ariaLabel} Markdown 源码`}
           aria-describedby={ariaDescribedBy}
         />
-      ) : (
-        <div className="visual-markdown-blocks" aria-label={`${ariaLabel}可视编辑区`}>
+        {showSourcePreview ? <section className="visual-source-preview" aria-label="Markdown 实时预览" aria-busy={sourcePreview.loading}>
+          <header>实时预览 {sourcePreview.loading ? <span>正在更新…</span> : null}</header>
+          {sourcePreview.error ? <div role="alert">{sourcePreview.error}<button type="button" onClick={() => setPreviewRetry((value) => value + 1)}>重试预览</button></div> : <ProtectedMarkdown html={sourcePreview.html} media={media} management={management} />}
+        </section> : null}</div>
+        <div hidden={sourceMode} className="visual-markdown-blocks" aria-label={`${ariaLabel}可视编辑区`}>
           {blocks.map((block, index) => {
             if (block.type === "text") {
               const onlyText = blocks.length === 1;
-              const rowsCount = Math.max(onlyText ? 12 : 3, Math.min(24, block.value.split("\n").length + 2));
               return (
-                <textarea
-                  key={block.key}
-                  ref={(element) => {
-                    if (element) textareasRef.current.set(block.key, element);
-                    else textareasRef.current.delete(block.key);
-                  }}
-                  className="visual-markdown-text-block"
-                  value={block.value}
-                  rows={rowsCount}
-                  spellCheck={spellCheck}
-                  onChange={(event) => updateTextBlock(block, event)}
-                  onKeyDown={onKeyDown}
-                  onPaste={onPaste}
-                  onFocus={(event) => syncSelection(block, event.currentTarget)}
-                  onSelect={(event) => syncSelection(block, event.currentTarget)}
-                  placeholder={block.value ? "" : index === 0 ? placeholder : "在图片前后继续写……"}
-                  aria-label={onlyText ? ariaLabel : `${ariaLabel}文字段 ${Math.floor(index / 2) + 1}`}
-                  aria-describedby={ariaDescribedBy}
-                />
+                <Suspense key={block.key} fallback={<div className="rich-markdown-loading" role="status">正在展开可视编辑…</div>}>
+                  <RichMarkdownBlock
+                    ref={(element) => {
+                      if (element) textareasRef.current.set(block.key, element);
+                      else textareasRef.current.delete(block.key);
+                    }}
+                    value={block.value}
+                    spellCheck={spellCheck}
+                    onChange={(value) => emitValue(onChange, replaceVisualTextBlock(source, block, value))}
+                    onKeyDown={onKeyDown}
+                    onPaste={onPaste}
+                    onFocus={() => { activeTextKeyRef.current = block.key; }}
+                    onSelection={(start, end) => syncSelection(block, start, end)}
+                    placeholder={block.value ? "" : index === 0 ? placeholder : "在图片前后继续写……"}
+                    ariaLabel={onlyText ? ariaLabel : `${ariaLabel}文字段 ${Math.floor(index / 2) + 1}`}
+                    ariaDescribedBy={ariaDescribedBy}
+                  />
+                </Suspense>
               );
             }
 
@@ -247,7 +272,6 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
             );
           })}
         </div>
-      )}
     </div>
   );
 });

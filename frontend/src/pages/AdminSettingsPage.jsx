@@ -50,7 +50,7 @@ export function AdminSettingsPage() {
   };
 
   return (
-    <AdminPageFrame title="站点设置" description="维护站点名称、说明、关于文本、页脚和注册提示。字段类型与长度由后端 schema 统一定义。" busy={state.loading || busy} actions={state.data?.updated_at ? <span className="personal-page-total">最近更新 {formatDate(state.data.updated_at, true)}</span> : null}>
+    <AdminPageFrame title="站点设置" description="调整站点名称、介绍、页脚与注册提示，让每一处文字都延续映墨的气质。" busy={state.loading || busy} actions={state.data?.updated_at ? <span className="personal-page-total">最近更新 {formatDate(state.data.updated_at, true)}</span> : null}>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取站点设置</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}

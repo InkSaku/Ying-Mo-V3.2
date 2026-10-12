@@ -13,14 +13,14 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const CONFIG = {
   category: {
-    title: "Category",
+    title: "分类",
     description: "维护稳定的主分类、排序与可用状态；首次被已发布内容使用后 Slug 永久锁定。",
     listPath: "/admin/categories",
     writePath: "/categories",
   },
   tag: {
-    title: "Tag",
-    description: "纠正、停用或合并成员创建的 Tag；合并只迁移关系，不删除 Post 或复用源 Slug。",
+    title: "标签",
+    description: "整理成员创建的标签；合并标签会迁移关联内容，不会删除原记录。",
     listPath: "/admin/tags",
     writePath: "/tags",
   },

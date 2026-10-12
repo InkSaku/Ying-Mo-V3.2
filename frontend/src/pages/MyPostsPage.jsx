@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -149,6 +150,7 @@ export function MyPostsPage() {
     <main className="page-shell personal-page-shell" aria-busy={pageNeedsClamp || actionBusy || undefined}>
       <PersonalNav />
       <header className="page-heading">
+        <InkPageSketch />
         <div>
           <p className="section-kicker">WRITING DESK / ARCHIVE</p>
           <h1>我的内容</h1>

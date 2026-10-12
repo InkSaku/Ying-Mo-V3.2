@@ -399,7 +399,7 @@ export function SearchPage() {
           </nav>
 
           {!hasVisibleResults ? (
-            <EmptyState title={`“${resultTabs.find((tab) => tab.id === resultView)?.label}”中没有匹配内容`} description="可以切换到“全部”查看其他类型的结果。" action={<button className="text-button" type="button" onClick={() => setResultView("all")}>查看全部结果</button>} />
+            <EmptyState sketch="search" title={`“${resultTabs.find((tab) => tab.id === resultView)?.label}”中没有匹配内容`} description="可以切换到“全部”查看其他类型的结果。" action={<button className="text-button" type="button" onClick={() => setResultView("all")}>查看全部结果</button>} />
           ) : null}
 
           {hasVisibleResults && (resultView === "all" || resultView === "posts") ? (

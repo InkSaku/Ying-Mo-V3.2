@@ -1,3 +1,4 @@
+import { InkPageSketch } from "../components/InkPageSketch";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
@@ -91,6 +92,7 @@ export function SettingsPage() {
     <main className="page-shell personal-page-shell settings-page">
       <PersonalNav />
       <header className="page-heading">
+        <InkPageSketch />
         <div><h1>个人资料</h1><p>这里编辑其他成员能看到的资料；用户名、角色与账户状态不能在此修改。</p></div>
       </header>
       <AvatarManager profile={profile} onChange={async (updated) => {

@@ -1,6 +1,7 @@
+import { InkBrandMark } from "../components/InkBrandMark";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import inkWaterside from "../assets/auth/ink-waterside.webp";
+import { InkSketch } from "../components/InkSketch";
 import "../styles/login.css";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -32,7 +33,7 @@ export function LoginPage() {
   return (
     <main className="login-paper">
       <header className="login-masthead">
-        <Link to="/" className="login-wordmark" aria-label="映墨首页">映墨 <span>YING MO</span></Link>
+        <Link to="/" className="login-wordmark" aria-label="映墨首页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <span className="login-edition">文字与日常 · 私人留存</span>
       </header>
 
@@ -45,7 +46,7 @@ export function LoginPage() {
           </div>
           <figure className="login-landscape">
             <div className="login-landscape-art">
-              <img src={inkWaterside} alt="淡墨绘成的临水老树、亭子与远山" />
+              <InkSketch variant="reader" className="ink-entry-art" />
             </div>
             <figcaption>日子缓缓，文字长留。</figcaption>
           </figure>

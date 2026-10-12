@@ -63,7 +63,7 @@ export function AdminCollectionsPage() {
   };
 
   return (
-    <AdminPageFrame title="Collection" description="查看创建者、成员和内容规模；治理操作由后端统一执行成员访问收口与 Post 脱离。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 个</span>}>
+    <AdminPageFrame title="合集" description="查看共同书册的创建者、成员和内容，管理书册的开放与保留状态。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 个</span>}>
       <form className="admin-content-filters admin-collection-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ q: searchValue.trim(), page: 1 }); }}>
         <label className="admin-filter-search"><span>搜索 Collection</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称或 slug" /></label>
         <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>

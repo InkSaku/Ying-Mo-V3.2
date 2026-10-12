@@ -126,7 +126,7 @@ export function AdminFeaturedPage() {
   };
 
   return (
-    <AdminPageFrame title="首页精选" description="配置 Article 与 Collection 的首页顺序和启用状态。首页查询会再次应用每位成员的真实 ACL。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
+    <AdminPageFrame title="首页精选" description="为首页挑选文章与共同书册，调整展示顺序。每位成员只会看到向自己开放的内容。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取首页精选</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
