@@ -119,6 +119,13 @@ fi
 
 success "Environment check passed"
 
+# The spark worker must not execute old code against a new schema.
+SPARK_SERVICE_INSTALLED=false
+if systemctl cat yingmo-spark.service >/dev/null 2>&1; then
+    SPARK_SERVICE_INSTALLED=true
+    sudo systemctl stop yingmo-spark
+fi
+
 
 
 
@@ -197,6 +204,7 @@ pip install -r requirements.txt
 info "Running database migration..."
 
 
+
 flask --app run.py db upgrade
 
 
@@ -236,6 +244,11 @@ fi
 
 
 success "Backend restarted"
+
+if [ "$SPARK_SERVICE_INSTALLED" = true ]; then
+    sudo systemctl restart yingmo-spark
+    systemctl is-active --quiet yingmo-spark || fail "Spark worker failed to restart"
+fi
 
 
 

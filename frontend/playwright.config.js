@@ -17,6 +17,7 @@ export default defineConfig({
     {
       command: "../backend/.venv/bin/python scripts/run_e2e_server.py",
       cwd: "../backend",
+      env: { SPARK_E2E: "1" },
       url: "http://127.0.0.1:8775/api/v1/health",
       reuseExistingServer: false,
       timeout: 30_000,

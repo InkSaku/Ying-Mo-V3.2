@@ -55,6 +55,7 @@ const AdminFeaturedPage = lazyNamed(() => import("./pages/AdminFeaturedPage"), "
 const AdminSettingsPage = lazyNamed(() => import("./pages/AdminSettingsPage"), "AdminSettingsPage");
 const AdminNotificationsPage = lazyNamed(() => import("./pages/AdminNotificationsPage"), "AdminNotificationsPage");
 const AdminLogsPage = lazyNamed(() => import("./pages/AdminLogsPage"), "AdminLogsPage");
+const SparkPage = lazyNamed(() => import("./pages/SparkPage"), "SparkPage");
 const NotFoundPage = lazyNamed(() => import("./pages/NotFoundPage"), "NotFoundPage");
 
 export function App() {
@@ -93,6 +94,7 @@ export function App() {
         <Route path="/tags/:slug" element={<TaxonomyPage kind="tag" />} />
         <Route path="/write" element={<WritePage />} />
         <Route path="/write/:postId" element={<WritePage />} />
+        <Route path="/tools/spark" element={<SparkPage />} />
         <Route path="/me" element={<MePage />} />
         <Route path="/me/posts" element={<MyPostsPage />} />
         <Route path="/me/posts/:postId/revisions" element={<PostRevisionsPage />} />

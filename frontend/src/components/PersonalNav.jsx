@@ -22,6 +22,10 @@ const personalNavGroups = [
     ],
   },
   {
+    label: "工具",
+    items: [{ to: "/tools/spark", label: "续火花助手" }],
+  },
+  {
     label: "账户",
     items: [
       { to: "/me/settings", label: "个人资料" },

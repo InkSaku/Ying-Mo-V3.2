@@ -29,6 +29,24 @@ def main():
                 "UPLOAD_ROOT": root / "uploads",
             },
         )
+        if os.getenv("SPARK_E2E") == "1":
+            # Only this isolated testing server can use the offline test driver.
+            assert app.testing
+            import threading
+            import time
+            from cryptography.fernet import Fernet
+            from app.spark.worker import claim_job, heartbeat
+            from app.spark.executor import execute_job
+            from spark_e2e_driver import SparkE2EDriver
+            app.config["SPARK_CREDENTIAL_KEY"] = Fernet.generate_key().decode()
+            def spark_loop():
+                while True:
+                    with app.app_context():
+                        heartbeat()
+                        job = claim_job()
+                        if job:
+                            execute_job(job.id, SparkE2EDriver, sleep=lambda _: None)
+                    time.sleep(0.2)
         with app.app_context():
             db.create_all()
             user = User(
@@ -42,6 +60,9 @@ def main():
             user.set_password("password123")
             db.session.add(user)
             db.session.commit()
+
+        if os.getenv("SPARK_E2E") == "1":
+            threading.Thread(target=spark_loop, daemon=True).start()
 
         app.run(host="127.0.0.1", port=8775, use_reloader=False)
 

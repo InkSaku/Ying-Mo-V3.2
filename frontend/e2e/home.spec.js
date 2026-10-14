@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-const account = { username: "home_layout_e2e", password: "password123" };
+const account = { username: `home_layout_${Date.now().toString(36)}`, password: "password123" };
 let seededItems;
+let expectedFeedIds;
 
 async function login(page) {
   await page.goto("/login");
@@ -18,7 +19,7 @@ async function noOverflow(page) {
 
 test.beforeAll(async ({ request }) => {
   const registered = await request.post("/api/v1/auth/register", { data: {
-    ...account, nickname: "林间", email: "home-layout@example.com", invite_code: "e2e-invite",
+    ...account, nickname: "林间", email: `${account.username}@example.com`, invite_code: "e2e-invite",
   } });
   expect(registered.status()).toBe(201);
   const { access_token: token } = (await registered.json()).data;
@@ -46,11 +47,21 @@ test.beforeAll(async ({ request }) => {
     } });
     expect(draft.status()).toBe(201);
     const { id } = (await draft.json()).data;
-    const published = await request.post(`/api/v1/posts/${id}/publish`, { headers, data: article ? { slug: `home-layout-${index}` } : {} });
+    const published = await request.post(`/api/v1/posts/${id}/publish`, { headers, data: article ? { slug: `${account.username.replaceAll("_", "-")}-${index}` } : {} });
     expect(published.ok()).toBeTruthy();
   }
   const feed = await request.get("/api/v1/home/feed?type=all&page_size=12", { headers });
   seededItems = (await feed.json()).data.items;
+  // Pagination must reflect the actual member feed, including earlier specs.
+  expectedFeedIds = seededItems.map((item) => item.id);
+  let cursor = (await feed.json()).data.next_cursor;
+  while (cursor) {
+    const next = await request.get(`/api/v1/home/feed?type=all&page_size=12&cursor=${encodeURIComponent(cursor)}`, { headers });
+    expect(next.ok()).toBeTruthy();
+    const data = (await next.json()).data;
+    expectedFeedIds.push(...data.items.map((item) => item.id));
+    cursor = data.next_cursor;
+  }
 });
 
 test("home keeps chronological order, cursor paging and the reading position", async ({ page }, testInfo) => {
@@ -89,7 +100,12 @@ test("home keeps chronological order, cursor paging and the reading position", a
   await expect.poll(async () => Math.abs((await target.boundingBox()).y - before.y)).toBeLessThan(6);
 
   await entries.last().scrollIntoViewIfNeeded();
-  await expect(entries).toHaveCount(15);
+  while (await entries.count() < expectedFeedIds.length) {
+    const previous = await entries.count();
+    await entries.last().scrollIntoViewIfNeeded();
+    await expect.poll(() => entries.count()).toBeGreaterThan(previous);
+  }
+  expect(await entries.evaluateAll((nodes) => nodes.map((node) => Number(node.dataset.feedPostId)))).toEqual(expectedFeedIds);
   const toolbar = page.locator(".home-feed-toolbar");
   expect(Math.abs((await toolbar.boundingBox()).y - (await page.locator(".app-header").boundingBox()).height)).toBeLessThan(2);
   await page.getByRole("button", { name: "文章", exact: true }).click();
@@ -97,7 +113,7 @@ test("home keeps chronological order, cursor paging and the reading position", a
   await expect(page.locator(".home-feed-post[data-post-type=note]")).toHaveCount(0);
   await expect(page.locator(".home-feed-post[data-post-type=article]").first()).toBeVisible();
   await page.getByRole("button", { name: "全部", exact: true }).click();
-  await expect(entries).toHaveCount(15);
+  await expect(entries).toHaveCount(expectedFeedIds.length);
 });
 
 test("home fits narrow screens and publishes an image note through the existing composer", async ({ page }, testInfo) => {
