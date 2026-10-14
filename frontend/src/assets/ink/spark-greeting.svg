@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" fill="none" style="color:var(--ink,#242520)" role="img" aria-labelledby="spark-greeting-title">
+  <title id="spark-greeting-title">墨团接住一封带火花的问候</title>
+  <g stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m151 53 87 14-10 56-87-15 10-55Zm2 4 34 34 48-19m-92 33 29-22m25 12 28 23M124 141c21 0 32-8 37-19"/>
+    <path d="m109 173-9 17c-12 0-15 5-7 7l20-2 10-17m9-6 10 18c13-2 18 3 9 6l-19 1-10-19M52 204c73-4 135-4 220-1"/>
+  </g>
+  <g transform="translate(84 101) scale(1.05)">
+    <path d="M8 56C-2 45 0 32 8 17 16 3 27-2 40 2 56 7 63 21 61 38 59 52 50 65 34 66 22 66 13 63 8 56Z" fill="currentColor"/>
+    <path d="m33 27 1 3m14-4 1 3m-15 11c4 4 9 4 12-1" stroke="var(--page,#f8f7f3)" stroke-width="2.4" stroke-linecap="round"/>
+  </g>
+  <g stroke="var(--brand-link,#334b76)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M190 43c1 9-7 12-6 20 3-1 5-4 6-8 7 7 10 13 6 18-4 6-12 6-16 0-4-6 1-12 3-18 1 4 2 6 4 7-2-8 2-14 3-19Z"/>
+    <path d="M178 121c-2 16-21 18-28 27m-81-61 12-7m-8 21 9-2m163 34 8 3m-7 11 5 4m-28-6 2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5Z"/>
+  </g>
+</svg>

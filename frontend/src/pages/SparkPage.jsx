@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { CustomSelect } from "../components/CustomSelect";
 import { SparkBinding } from "../components/SparkBinding";
 import { SparkQueue, SparkRunBadge } from "../components/SparkQueue";
+import { InkSketch } from "../components/InkSketch";
 import { ErrorState, PageLoader } from "../components/States";
 import { sparkJobDuration, sparkJobPhase, sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
 import "../styles/spark.css";
@@ -208,9 +209,9 @@ export function SparkPage() {
           <div className="spark-status-line"><span className={`spark-status-dot is-${data.session_status}`} />{sparkStatusLabels[data.session_status]}
             <span>·</span><span>{data.worker.online ? "后台服务在线" : "后台服务暂未连接"}</span></div>
         </div>
-        <div className="spark-next-time">
-          <svg viewBox="0 0 80 100" aria-hidden="true"><path d="M40 8c7 24-11 30-4 46 5-4 9-12 11-18 20 16 29 34 16 50-12 17-38 14-48-3C4 63 22 46 25 31c1 10 5 15 8 17C27 30 37 22 40 8Z" /><path d="M38 67c-8 9-10 21 1 25 13-2 16-13 5-23-1 5-4 7-6 9" /></svg>
-          <span>{data.config.auto_run_enabled ? "每日计划已开启" : "每日计划未开启"}</span><strong>{data.next_run_at ? sparkTime(data.next_run_at) : "等你安排"}</strong><small>{data.next_run_at ? "下次问候 · 北京时间" : "完成模拟检查后，即可开启"}</small>
+        <div className="spark-hero-scene">
+          <InkSketch variant="spark" className="spark-hero-companion" />
+          <div className="spark-next-time"><span>{data.config.auto_run_enabled ? "下次问候" : "每日计划未开启"}</span><strong>{data.config.auto_run_enabled && data.next_run_at ? sparkTime(data.next_run_at) : "等你安排"}</strong><small>{data.config.auto_run_enabled && data.next_run_at ? "北京时间" : "检查通过后，开启每日问候"}</small></div>
         </div>
       </header>
 
@@ -221,15 +222,15 @@ export function SparkPage() {
       {data.jobs.some((job) => job.status === "unknown") ? <p className="spark-service-note">存在发送结果待确认的记录，请到抖音私信查看。助手不会自动重发这些消息。</p> : null}
       <nav className="spark-steps" aria-label="续火花设置步骤">{["连接抖音", "选择好友", "设置问候", "检查并开启"].map((label, index) => <a href={`#spark-step-${index + 1}`} key={label} className={stepComplete[index] ? "is-complete" : ""} aria-current={currentStep === index ? "step" : undefined}><span>{stepComplete[index] ? "✓" : `0${index + 1}`}</span><div>{label}<small>{stepComplete[index] ? "已完成" : currentStep === index ? "下一步" : "待完成"}</small></div></a>)}</nav>
 
-      <section id="spark-step-1" className="spark-section" aria-labelledby="spark-binding">
-        <div className="spark-section-heading"><span>01</span><div><h2 id="spark-binding">连接你的抖音</h2><p>用手机抖音扫描网页二维码，在手机上确认登录，再核对连接的账号。</p></div></div>
+      <section id="spark-step-1" className={`spark-section spark-connection${data.bound ? " is-bound" : ""}`} aria-labelledby="spark-binding">
+        <div className={data.bound ? "sr-only" : "spark-section-heading"}><span>01</span><div><h2 id="spark-binding">连接你的抖音</h2><p>用手机抖音扫描网页二维码，在手机上确认登录，再核对连接的账号。</p></div></div>
         <SparkBinding data={data} busy={busy} onStart={() => { void startLogin(); }}
           onCancel={() => { void action("cancel-login", async () => { const response = await api.post(`/spark/login-sessions/${data.login_session.id}/cancel`, {}); acceptData(response.data); }, "连接已取消。"); }}
           onConfirm={() => { void action("confirm-login", async () => { const response = await api.post(`/spark/login-sessions/${data.login_session.id}/confirm`, {}); acceptData(response.data, true); }, "账号已连接，正在同步联系人。每日发送尚未开启。"); }} />
-        {data.bound ? <details className="spark-help spark-account-management"><summary>管理连接</summary><button className="text-button danger-text" disabled={Boolean(busy)} onClick={() => setConfirm("unbind")}>解绑并删除登录态</button>
+        <div className="spark-connection-tools">{data.bound ? <details className="spark-help spark-account-management"><summary>管理连接</summary><button className="text-button danger-text" disabled={Boolean(busy)} onClick={() => setConfirm("unbind")}>解绑并删除登录态</button>
           <p>解绑会停止任务并删除保存的账号与好友名单。</p></details> : null}
         {!data.credential_storage_ready ? <p className="inline-error">管理员尚未启用加密存储，暂时无法连接抖音。</p> : null}
-        <details className="spark-help"><summary>备用方式：电脑脚本导出并上传登录态</summary>
+        <details className="spark-help"><summary>备用登录方式</summary><p>在电脑上运行扫码脚本，导出登录态后上传到这里。</p>
         <div className="spark-actions">
           <button className="btn btn-primary" disabled={Boolean(busy) || !data.credential_storage_ready} onClick={() => fileInput.current?.click()}>{data.bound ? "更新登录态" : "导入登录态"}</button>
           <input ref={fileInput} type="file" accept="application/json,.json" hidden onChange={importState} aria-label="登录态文件" />
@@ -240,16 +241,14 @@ export function SparkPage() {
           <pre>python -m pip install playwright{"\n"}python -m playwright install chromium{"\n"}python yingmo_extract_cookie.py</pre>
           <p>macOS 如提示找不到 python，请把命令中的 python 换成 python3。用手机抖音扫描弹出窗口中的二维码；完成后，将脚本旁 data 文件夹中的 state.json 导入这里。</p>
           <p>导入后先同步联系人，再模拟运行。登录过期时重新扫码并更新文件。助手通过浏览器执行操作，可能遇到平台验证或账号限制。</p>
-        </details>
+        </details></div>
       </section>
 
       <div className="spark-workspace">
         <section id="spark-step-2" className="spark-section spark-friends" aria-labelledby="spark-friends-heading">
-          <div className="spark-section-heading"><span>02</span><div><h2 id="spark-friends-heading">把问候留给谁</h2><p>选中的好友才会收到消息。修改后请保存选择。</p></div></div>
-          <div className="spark-actions spark-friends-tools"><button className="btn btn-secondary" disabled={!canQueue} onClick={() => { void queue("sync"); }}>{busy === "sync" ? "正在提交" : "同步联系人"}</button>
-            <details className="spark-help spark-inline-help"><summary>更多操作</summary><button className="text-button" disabled={!canQueue} onClick={() => { void queue("harvest"); }}>采集抖音号</button><p>需要匹配尚无会话的好友时使用。</p></details></div>
-          {queueHint ? <p className="spark-meta">{queueHint}</p> : null}
-          {data.contacts_updated_at ? <p className="spark-meta">已读取 {data.contacts.length} 位联系人，请选择需要问候的朋友。</p> : data.bound ? <p className="spark-meta">账号已连接。联系人同步尚未完成，可点击“同步联系人”重试，无需重新扫码。</p> : null}
+          <div className="spark-section-heading"><span>02</span><div><h2 id="spark-friends-heading">把问候留给谁</h2><p>选中的好友才会收到消息。修改后请保存。</p></div><button className="btn btn-secondary spark-heading-action" disabled={!canQueue} onClick={() => { void queue("sync"); }}>{busy === "sync" ? "正在提交" : "同步联系人"}</button></div>
+          {activeJobs.length ? <a className="spark-friends-queue-link" href="#spark-queue">{sparkKindLabels[activeJobs[0].kind]} · {sparkJobPhase(activeJobs[0], data.worker.online, now).label}，查看进度 →</a> : null}
+          {!data.contacts_updated_at && data.bound ? <p className="spark-meta">账号已连接。联系人同步尚未完成，可点击“同步联系人”重试，无需重新扫码。</p> : null}
           {data.reconnection_diff.missing_selected.length ? <p className="spark-service-note">本次同步未找到：{data.reconnection_diff.missing_selected.join("、")}。请核对，尚不能确认这些好友已失效。</p> : null}
           <label className="spark-search"><span className="sr-only">搜索好友</span><input type="search" placeholder="搜索名字或抖音号" value={search} onChange={(event) => setSearch(event.target.value)} /></label>
           <div className="spark-list-toolbar"><div className="spark-filters" role="group" aria-label="筛选好友">{[["all", `全部 ${data.contacts.length}`], ["selected", `已选 ${selectedCount}`], ["review", `需核对 ${reviewCount}`]].map(([value, label]) => <button type="button" key={value} aria-pressed={contactFilter === value} onClick={() => setContactFilter(value)}>{label}</button>)}</div>
@@ -268,6 +267,8 @@ export function SparkPage() {
             {data.contacts.length && !visibleContacts.length ? <p className="spark-empty">{contactFilter === "selected" && !selectedCount ? "还没有选中的好友，切换到“全部”开始选择。" : contactFilter === "review" && !reviewCount ? "目前没有需要核对的好友。" : "没有匹配的好友，试试其他名字或筛选条件。"}</p> : null}
           </div>
           <div className="spark-actions spark-selection-footer"><span><strong>{selectedCount}</strong> 位好友已选<small>{contactsDirty.current ? "有更改，请保存" : "选择已保存"}</small></span><button className="btn btn-primary" disabled={Boolean(busy) || !data.bound || !contactsDirty.current} onClick={() => { void saveContacts(); }}>{busy === "contacts" ? "正在保存" : "保存好友选择"}</button></div>
+          <details className="spark-help spark-friends-more"><summary>更多好友操作</summary>
+          <div className="spark-harvest-action"><button className="text-button" disabled={!canQueue} onClick={() => { void queue("harvest"); }}>采集抖音号</button><p className="spark-meta">需要匹配尚无会话的好友时使用。</p></div>
           <details className="spark-help"><summary>好友台账概览</summary>
             <p>共 {data.ledger_stats.total} 位 · 已采集抖音号 {data.ledger_stats.with_short_id} 位 · 身份已匹配 {data.ledger_stats.confidence.high} 位</p>
             <p>尚无会话：{data.ledger_stats.no_conversation.join("、") || "无"}</p>
@@ -282,16 +283,16 @@ export function SparkPage() {
               acceptData(response.data);
               setNewName("");
             }, "好友已加入。没有聊天会话的好友需要采集身份并启用首条消息通道。");
-          }}><label>完整备注或昵称<input value={newName} maxLength={191} onChange={(event) => setNewName(event.target.value)} /></label><button className="btn btn-secondary" disabled={!data.bound || Boolean(busy) || !newName.trim() || contactsDirty.current}>添加好友</button>{contactsDirty.current ? <p>请先保存当前好友选择，再添加好友。</p> : null}</form></details>
+          }}><label>完整备注或昵称<input value={newName} maxLength={191} onChange={(event) => setNewName(event.target.value)} /></label><button className="btn btn-secondary" disabled={!data.bound || Boolean(busy) || !newName.trim() || contactsDirty.current}>添加好友</button>{contactsDirty.current ? <p>请先保存当前好友选择，再添加好友。</p> : null}</form></details></details>
         </section>
 
         <div className="spark-plan-column"><section id="spark-step-3" className="spark-section spark-plan" aria-labelledby="spark-plan-heading">
-          <div className="spark-section-heading"><span>03</span><div><h2 id="spark-plan-heading">安排每天的问候</h2><p>所有时间按北京时间。多条模板会随机选择一条。</p></div></div>
+          <div className="spark-section-heading"><span>03</span><div><h2 id="spark-plan-heading">安排每天的问候</h2><p>定一个时间，留一句问候。</p></div><InkSketch variant="sparkCalendar" className="spark-plan-sketch" /></div>
           <form className="spark-plan-form" onSubmit={saveConfig}>
             {planDirty ? <p className="spark-meta">问候设置尚未保存。请先保存，再检查和开启。</p> : null}
             <label>每天发送时间<span className="spark-time-field"><input type="time" required value={config.schedule_time} onChange={(event) => changeConfig("schedule_time", event.target.value)} /><small>北京时间</small></span></label>
             <label>消息模板（每行一条）<textarea rows={3} required value={messages} onChange={(event) => setMessages(event.target.value)} placeholder="今天也要开心哦" /></label>
-            <div className="spark-message-preview"><span>问候预览 · {sparkMessages(messages).length} 条模板</span><p>{sparkMessages(messages)[0] || "写一句想送给朋友的问候"}</p><small>每次随机选择一条，按保存后的内容发送。</small></div>
+            <div className="spark-message-preview"><span>问候预览 · {sparkMessages(messages).length} 条模板</span><p>{sparkMessages(messages)[0] || "写一句想送给朋友的问候"}</p><small>每次随机选择一条，按保存后的内容发送。</small><InkSketch variant="sparkGreeting" className="spark-message-sketch" /></div>
             <details className="spark-help"><summary>发送节奏与双通道设置</summary><div className="spark-advanced-grid">
               {numericFields.map(([key, label, min, max]) => <label key={key}>{label}<input type="number" min={min} max={max} required value={config[key]} onChange={(event) => changeConfig(key, event.target.value === "" ? "" : Number(event.target.value))} /></label>)}
               <label className="spark-switch"><input type="checkbox" checked={config.allow_first_message} onChange={(event) => changeConfig("allow_first_message", event.target.checked)} /><span>允许对尚无会话的好友发送首条消息</span></label>
@@ -304,18 +305,19 @@ export function SparkPage() {
             </div></details>
             <div className="spark-actions spark-plan-footer"><span className="spark-meta">{planDirty ? "修改后需要重新模拟检查" : data.step_progress.completed[2] ? "每日计划已保存" : "保存后继续模拟检查"}</span><button className="btn btn-primary" disabled={Boolean(busy) || (!planDirty && data.step_progress.completed[2])}>{busy === "config" ? "正在保存" : "保存每日计划"}</button></div>
           </form>
-        </section>
-      <section id="spark-step-4" className="spark-section" aria-labelledby="spark-runs-heading">
+        </section></div></div>
+      <section id="spark-step-4" className="spark-section spark-launch" aria-labelledby="spark-runs-heading">
         <div className="spark-section-heading"><span>04</span><div><h2 id="spark-runs-heading">检查并开启</h2><p>先模拟检查，再开启每天的问候。</p></div></div>
+        <div className="spark-launch-main"><div className="spark-readiness" aria-label="开启前的准备状态">{[[data.bound, "账号已连接"], [data.selected_count > 0 && !contactsDirty.current, `已选 ${data.selected_count} 位好友`], [data.step_progress.completed[2] && !planDirty, "计划已保存"], [data.validation_ready && !planDirty && !contactsDirty.current, "模拟检查通过"]].map(([done, label]) => <span key={label} className={done ? "is-done" : ""}><i aria-hidden="true">{done ? "✓" : "○"}</i>{label}</span>)}</div>
         <div className={`spark-check-status${data.validation_ready && !planDirty && !contactsDirty.current ? " is-ready" : ""}`}><strong>{runningCheck ? data.worker.online ? "模拟检查正在进行" : "模拟检查状态待同步" : data.validation_ready && !planDirty && !contactsDirty.current ? "✓ 模拟检查已通过" : "完成检查，就准备好了"}</strong><p id="spark-check-hint">{checkHint}</p>
           {runningCheck?.result.progress ? <div className="spark-current-progress" aria-live="polite"><p>已检查 {runningCheck.result.progress.completed}/{runningCheck.result.progress.total} 位{!data.worker.online ? " · 等待状态同步" : runningCheck.result.progress.current_name ? ` · 正在检查 ${runningCheck.result.progress.current_name}` : " · 正在整理结果"}</p><progress className="spark-progress" value={runningCheck.result.progress.completed} max={runningCheck.result.progress.total || 1} aria-label="当前模拟检查进度" /></div> : null}
           {activeJobs.length ? <a className="spark-history-link" href="#spark-queue">查看排队与进度 →</a> : null}
           {waitingRetry ? <button className="text-button danger-text" disabled={Boolean(busy) || waitingRetry.cancel_requested} onClick={() => { void cancelJob(waitingRetry); }}>{waitingRetry.cancel_requested ? "正在停止" : "停止补发任务"}</button> : null}</div>
         <div className="spark-actions spark-activation-actions" aria-describedby="spark-check-hint"><button className="btn btn-secondary" disabled={!canCheck} onClick={() => { void queue("dry_run"); }}>{busy === "dry_run" ? "正在提交" : "模拟运行"}</button>
           <button className="btn btn-primary" disabled={Boolean(busy) || (!data.config.auto_run_enabled && !canActivate)} onClick={() => { void togglePlan(); }}>{data.config.auto_run_enabled ? "暂停每日计划" : data.account_profile.plan_was_enabled ? "恢复每日计划" : "开启每日自动续火花"}</button></div>
+        <p className="spark-launch-footnote">开启后，关闭网页也会执行。修改账号、好友或模板后，需要重新检查。</p></div>
         <div className="spark-manual-send"><div><strong>想现在打个招呼？</strong><p>{!activeJobs.length && data.validation_ready && !data.pending_send.length ? "今日可发送对象已完成或有待确认结果，助手不会重复发送。" : `按已保存的计划，预计向 ${data.pending_send.length} 位好友发送。今日已发送或待确认的好友会跳过。`}</p></div><button className="btn btn-secondary" disabled={!canSend} onClick={() => setConfirm("send")}>立即续火花</button></div>
-        <p className="spark-meta">开启后，关闭网页也会执行。修改账号、好友或模板后，需要重新检查。</p>
-      </section></div></div>
+      </section>
 
       <SparkQueue data={data} now={now} busy={busy} onCancel={(job) => { void cancelJob(job); }} />
       <section id="spark-history" className="spark-section spark-history" aria-labelledby="spark-history-heading">

@@ -287,7 +287,7 @@ def test_second_step_without_cookie_is_unfinished_login_not_assumed_sms(chat_pag
     with pytest.raises(LoginBrowserError) as error:
         observe_login(lambda _: None, lambda *args: None, lambda: None, timeout=2)
     assert error.value.status == 'interrupted'
-    assert '尚未获取有效登录态' in error.value.reason
+    assert '未取得有效登录凭证' in error.value.reason
     assert '短信' not in error.value.reason
 
 
@@ -297,8 +297,11 @@ def test_verification_method_diagnostics_keep_only_known_enums():
         {'verify_way': 'push_verify', 'mobile': 'private-phone', 'verify_ticket': 'private-ticket'},
         {'verify_way': 'mobile_sms_verify'}, 'sms', 'private-phone', {'verify_way': 2046}, None,
     ]}) == ['mobile_sms_verify', 'push_verify', 'sms']
-    assert '已登录设备确认' in login_handoff_reason({'verification_methods': ['push_verify']})
-    assert '短信验证要求' in login_handoff_reason({'verification_methods': ['mobile_sms_verify']})
+    from app.spark.login_browser import login_handoff_prompt
+    for methods in (['push_verify'], ['mobile_sms_verify', 'face_verify'], ['sms']):
+        assert '短信' not in login_handoff_reason({'verification_methods': methods})
+        assert '设备确认' not in login_handoff_prompt(methods)
+        assert '短信' not in login_handoff_prompt(methods)
 
 
 def test_late_old_qr_decision_does_not_block_current_qr(chat_page, monkeypatch):
@@ -324,3 +327,40 @@ def test_late_old_qr_decision_does_not_block_current_qr(chat_page, monkeypatch):
                              lambda: None, timeout=6)
     assert any(cookie['name'] == 'sessionid' for cookie in state['cookies'])
     assert not any(signal['scan_signal'].get('data_error_code') == 2046 for signal in signals)
+
+
+def test_visible_browser_keeps_challenge_open_until_user_completes(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login
+    closed = mock_login_browser(chat_page, monkeypatch, """<p>请进行安全验证</p><script>
+        fetch('/passport/web/check_qrconnect/');
+        setTimeout(() => { document.cookie = 'sessionid=fixture;path=/;secure'; }, 600);
+        </script>""", {'/passport/web/check_qrconnect/': {'data': {
+            'error_code': 2046, 'verify_ways': ['mobile_sms_verify', 'face_verify']}}})
+    statuses = []
+    state, _ = observe_login(lambda _: None, lambda status, details=None: statuses.append((status, details)),
+                             lambda: None, timeout=6, headless=False)
+    assert any(cookie['name'] == 'sessionid' for cookie in state['cookies'])
+    assert any(status == 'verifying' and details and details['browser_visible'] for status, details in statuses)
+    assert closed == [True]
+
+
+def test_challenge_in_visible_iframe_is_detected_but_hidden_frame_is_ignored(chat_page):
+    from app.spark.login_browser import browser_challenge
+    chat_page.set_content('<iframe srcdoc="<p>请进行安全验证</p>"></iframe>')
+    chat_page.frame_locator('iframe').get_by_text('请进行安全验证').wait_for()
+    assert browser_challenge(chat_page.context)
+    chat_page.locator('iframe').evaluate("e => e.style.display = 'none'")
+    assert not browser_challenge(chat_page.context)
+
+
+def test_login_browser_visibility_is_explicit_and_headless_outside_app():
+    from flask import Flask
+    from app.spark.login_browser import login_browser_headless
+    assert login_browser_headless() is True
+    app = Flask(__name__)
+    with app.app_context():
+        assert login_browser_headless() is True
+        app.config['SPARK_LOGIN_HEADLESS'] = False
+        assert login_browser_headless() is False
+        app.config['SPARK_LOGIN_HEADLESS'] = True
+        assert login_browser_headless() is True

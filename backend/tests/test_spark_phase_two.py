@@ -77,17 +77,17 @@ def test_qr_confirm_is_atomic_private_idempotent_and_syncs_without_enabling(clie
     assert not config_for(account)["auto_run_enabled"]
 
 
-def test_pending_device_confirmation_is_visible_and_success_keeps_safe_diagnostics(client):
+def test_pending_official_window_is_visible_and_success_keeps_safe_diagnostics(client):
     _, token = member(client, "handoffmember")
     session_id = start(client, token).get_json()["data"]["id"]
     claim_login()
     def observer(on_qr, on_status, check):
         check()
         on_status("diagnostic", {"cookie_names": ["sessionid"], "scan_signal": {"data_error_code": 0}})
-        on_status("verifying", {"verification_methods": ["push_verify"]})
+        on_status("verifying", {"browser_visible": True})
         data = client.get("/api/v1/spark", headers=auth(token)).get_json()["data"]["login_session"]
         assert data["status"] == "verifying"
-        assert "已登录设备确认" in data["reason"]
+        assert "已打开的抖音官方浏览器窗口" in data["reason"]
         assert "短信" not in data["reason"]
         assert "diagnostics" not in data["detected_account"]
         state = state_for()

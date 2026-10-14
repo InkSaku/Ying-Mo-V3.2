@@ -75,6 +75,27 @@ test("spark workspace explains queued retries and keeps filtered selections", as
 
   await page.getByRole("button", { name: "停止补发任务", exact: true }).click();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeEnabled();
+  await expect(page.locator("#spark-queue")).toHaveCount(0);
+  await expect(page.locator(".spark-hero-companion")).toBeVisible();
+  await expect(page.locator(".spark-plan-sketch")).toBeVisible();
+  await expect(page.locator(".spark-message-sketch")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const hero = await page.locator(".spark-hero").boundingBox();
+  const launch = await page.locator("#spark-step-4").boundingBox();
+  const workspace = await page.locator(".spark-workspace").boundingBox();
+  expect(hero.y).toBeLessThan(130);
+  expect(hero.y).toBeGreaterThanOrEqual(0);
+  expect(launch.y).toBeGreaterThanOrEqual(workspace.y + workspace.height);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-desktop.png"), fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-full.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".spark-hero-companion")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-mobile.png"), fullPage: true });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-dark-mobile.png"), fullPage: true });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("group", { name: "筛选好友" }).getByRole("button", { name: "已选 3", exact: true }).click();
   await expect(page.locator(".spark-contact")).toHaveCount(3);
   await page.getByRole("group", { name: "筛选好友" }).getByRole("button", { name: "全部 20", exact: true }).click();

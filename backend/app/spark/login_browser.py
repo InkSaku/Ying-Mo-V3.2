@@ -88,20 +88,39 @@ def verification_methods(data):
 
 
 def login_handoff_reason(signal):
-    methods = signal.get("verification_methods", [])
-    if any(method in methods for method in ("sms", "mobile_sms_verify", "mobile_sms_check_or_verify")):
-        return "抖音网页登录返回了短信验证要求，手机扫码确认后尚未生成登录态。请在官方电脑网页完成提示，或使用备用扫码脚本完成登录后导入。"
-    if "push_verify" in methods:
-        return "抖音网页登录还需要已登录设备确认，尚未生成登录态。请检查抖音内的登录确认通知；也可在官方电脑网页或备用扫码脚本中完成登录。"
-    return "已收到扫码登录响应，但抖音网页没有完成登录，尚未获取有效登录态。请在官方电脑网页查看具体提示，或使用备用扫码脚本完成登录后导入。"
+    # verify_ways lists available methods, not a chosen/displayed challenge.
+    return "抖音网页登录未完成，未取得有效登录凭证。本次连接已超时，请重新连接；若仍失败，请使用备用登录方式查看官方页面的实际提示。"
 
 
-def login_handoff_prompt(methods):
-    if "push_verify" in methods:
-        return "抖音正在等待已登录设备确认，请留意抖音里的登录确认通知。确认后保持此页打开，等待网页登录完成。"
-    if any(method in methods for method in ("sms", "mobile_sms_verify", "mobile_sms_check_or_verify")):
-        return "抖音网页登录返回了短信验证要求，正在等待官方页面处理。若本页不能继续，可使用备用扫码脚本，在官方浏览器中完成验证后导入。"
-    return "已收到扫码登录响应，正在等待抖音网页写入登录凭证，请保持此页打开。"
+def login_handoff_prompt(methods=None, *, browser_visible=False, visible_challenge=False):
+    # Neither SMS nor device confirmation can be inferred from offered enums.
+    if browser_visible:
+        return "请查看已打开的抖音官方浏览器窗口，按实际页面提示完成登录。完成后本页会自动更新，无需导出登录文件。"
+    if visible_challenge:
+        return "抖音官方页面显示了验证提示，当前连接尚未完成。请使用备用登录方式，在官方浏览器中本人完成后导入。"
+    return "已收到扫码登录响应，正在等待抖音网页完成登录；目前尚未取得登录凭证。"
+
+
+def login_browser_headless():
+    from flask import current_app, has_app_context
+    return current_app.config.get("SPARK_LOGIN_HEADLESS", True) if has_app_context() else True
+
+
+def browser_challenge(context):
+    """Inspect visible frames/popups as well as the original page."""
+    for page in context.pages:
+        if page.is_closed():
+            continue
+        for frame in page.frames:
+            try:
+                if frame != page.main_frame and not frame.frame_element().is_visible():
+                    continue
+                if login_challenge(frame):
+                    return True
+            except Exception:
+                # Frames may be detached while the official SDK changes steps.
+                continue
+    return False
 
 
 def clean_browser_state(captured):
@@ -110,9 +129,10 @@ def clean_browser_state(captured):
     return validate_state(json.dumps({**captured, "cookies": [c for c in captured["cookies"] if c.get("name")]}).encode())
 
 
-def observe_login(on_qr, on_status, assert_current, timeout=170):
+def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=None):
     # Leave time to commit a specific outcome before the worker's 180s lease.
     from playwright.sync_api import sync_playwright
+    headless = login_browser_headless() if headless is None else headless
     display = {}
     scan_signal = {}
     issue_signal = {}
@@ -120,11 +140,11 @@ def observe_login(on_qr, on_status, assert_current, timeout=170):
     issued_token = None
     handoff_observed = False
     status = None
-    reported_methods = None
+    reported_prompt = None
     signal_revision = 0
     deadline = time.monotonic() + timeout
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, chromium_sandbox=True, args=["--disable-dev-shm-usage"])
+        browser = p.chromium.launch(headless=headless, chromium_sandbox=True, args=["--disable-dev-shm-usage"])
         try:
             context = browser.new_context(viewport={"width": 1366, "height": 800}, locale="zh-CN")
             page = context.new_page()
@@ -174,7 +194,7 @@ def observe_login(on_qr, on_status, assert_current, timeout=170):
                         display.update({k: user[k] for k in ("nickname", "unique_id") if isinstance(user.get(k), str)})
                 except Exception:
                     pass
-            page.on("response", observe_profile)
+            context.on("response", observe_profile)
             # The chat route renders the official login modal without navigating home.
             page.goto("https://www.douyin.com/chat", wait_until="domcontentloaded", timeout=30000)
             previous = None
@@ -182,19 +202,26 @@ def observe_login(on_qr, on_status, assert_current, timeout=170):
             sampled_revision = -1
             while time.monotonic() < deadline:
                 assert_current()
+                if not context.pages:
+                    raise LoginBrowserError("cancelled", "抖音登录窗口已关闭，本次连接已结束。")
+                if page.is_closed():
+                    page = context.pages[0]
                 cookies = context.cookies()
                 has_session = any(c["name"].startswith("sessionid") and c["value"] for c in cookies)
+                visible_challenge = browser_challenge(context)
                 if time.monotonic() - sampled_at > 4 or sampled_revision != signal_revision or has_session:
                     # Only cookie names and structural signals, never cookie values,
                     # profile text, response URLs with queries, or contact names.
                     url = urlsplit(page.url)
-                    visible_challenge = login_challenge(page)
                     diagnostics = {"cookie_names": sorted({c["name"] for c in cookies}),
                         "page_host": url.hostname, "page_path": url.path,
                         "qr_nodes": page.locator("#animate_qrcode_container").count(),
                         "conversation_nodes": page.locator(".conversationConversationItemtitle").count(),
                         "scan_signal": dict(scan_signal), "issue_signal": dict(issue_signal),
-                        "visible_challenge": visible_challenge, "handoff_observed": handoff_observed}
+                        "visible_challenge": visible_challenge, "handoff_observed": handoff_observed,
+                        "browser_visible": not headless,
+                        "page_count": len(context.pages),
+                        "frame_hosts": sorted({urlsplit(f.url).hostname for p in context.pages for f in p.frames if urlsplit(f.url).hostname})}
                     on_status("diagnostic", diagnostics)
                     sampled_at = time.monotonic()
                     sampled_revision = signal_revision
@@ -209,19 +236,19 @@ def observe_login(on_qr, on_status, assert_current, timeout=170):
                         raise LoginBrowserError("cancelled", "抖音扫码登录已被拒绝，本次连接已结束。")
                     if scan_signal.get("data_status") in ("expired", "5", 5):
                         raise LoginBrowserError("expired", "抖音登录二维码已过期，请重新连接。")
-                if login_challenge(page):
+                if visible_challenge and headless:
                     raise LoginBrowserError("blocked", "抖音官方网页显示了安全验证，登录尚未完成。请使用备用扫码脚本，在弹出的官方浏览器中本人完成验证后导入登录态。")
                 # The official SDK handles 2046 through its verification flow.
                 # Keep that browser alive for late cookies / phone confirmation;
                 # never turn the protocol response itself into a successful login.
-                next_status = "verifying" if handoff_observed else "waiting_scan"
-                methods = scan_signal.get("verification_methods", [])
-                if handoff_observed and (status != next_status or methods != reported_methods):
-                    on_status(next_status, {"verification_methods": methods})
+                next_status = "verifying" if handoff_observed or visible_challenge else "waiting_scan"
+                prompt = {"browser_visible": not headless, "visible_challenge": visible_challenge}
+                if next_status == "verifying" and (status != next_status or prompt != reported_prompt):
+                    on_status(next_status, prompt)
                     status = next_status
-                    reported_methods = methods
+                    reported_prompt = prompt
                 qr = qr_locator(page)
-                if qr and not handoff_observed:
+                if qr and not handoff_observed and not visible_challenge:
                     for text in ("二维码已失效", "二维码失效", "二维码已过期", "刷新二维码"):
                         message = page.get_by_text(text, exact=False)
                         if message.count() and message.first.is_visible():

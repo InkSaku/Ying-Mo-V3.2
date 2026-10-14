@@ -6,7 +6,7 @@ from app.extensions import db
 from app.models import SparkAccount, SparkLoginSession, User
 from app.models.spark import now_utc
 from .credentials import CredentialError, credential_cipher, decrypt_state, encrypt_state
-from .login_browser import identity_profile, LoginBrowserError, observe_login, login_handoff_prompt
+from .login_browser import identity_profile, LoginBrowserError, observe_login, login_handoff_prompt, login_browser_headless
 from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, reset_schedule
 
 LIVE = ("queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation")
@@ -125,7 +125,7 @@ def run_login(session_id, observer=observe_login):
                 session.detected_account = {**(session.detected_account or {}), "diagnostics": diagnostics}
             else:
                 session.status = value
-                session.reason = login_handoff_prompt(diagnostics.get("verification_methods", [])) if value == "verifying" and diagnostics else ""
+                session.reason = login_handoff_prompt(browser_visible=diagnostics.get("browser_visible", False), visible_challenge=diagnostics.get("visible_challenge", False)) if value == "verifying" and diagnostics else ""
             if value == "verifying":
                 session.qr_ciphertext = None
             db.session.commit()
@@ -135,7 +135,7 @@ def run_login(session_id, observer=observe_login):
             _, session = assert_login_active(session_id)
             session.qr_ciphertext = credential_cipher().encrypt(image).decode()
             session.qr_updated_at, session.status = now_utc(), "waiting_scan"
-            session.reason = ""
+            session.reason = "" if login_browser_headless() else "请用手机扫描本页或已打开的抖音官方窗口中的二维码，并确认登录。请保持官方窗口打开，完成后本页会自动更新。"
             db.session.commit()
         state, profile = observer(qr, status, check)
         account, session = assert_login_active(session_id)

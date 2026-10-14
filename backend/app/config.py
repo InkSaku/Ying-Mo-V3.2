@@ -1,5 +1,6 @@
 import os
 import secrets
+import sys
 from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -70,6 +71,7 @@ class BaseConfig:
     S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "").strip()
     SPARK_CREDENTIAL_KEY = os.getenv("SPARK_CREDENTIAL_KEY", "").strip()
     SPARK_WORKER_LOCK = os.getenv("SPARK_WORKER_LOCK", str(BASE_DIR / "instance/spark-worker.lock"))
+    SPARK_LOGIN_HEADLESS = _env_bool("SPARK_LOGIN_HEADLESS", True)
     SPARK_TASK_TIMEOUT_SECONDS = int(os.getenv("SPARK_TASK_TIMEOUT_SECONDS", "1200"))
     IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(15 * 1024 * 1024)))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(32 * 1024 * 1024)))
@@ -99,6 +101,8 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
+    # Desktop development can complete the official flow in the same browser.
+    SPARK_LOGIN_HEADLESS = _env_bool("SPARK_LOGIN_HEADLESS", sys.platform not in {"darwin", "win32"})
     APP_ENV = "development"
     DEBUG = True
 
