@@ -215,6 +215,23 @@ def schedule_due(now=None):
     db.session.commit()
 
 
+def queue_snapshot(now):
+    """Anonymous workload only; other members' task details stay private."""
+    from app.models import SparkLoginSession
+    from .login_session import BROWSER
+    job_counts = dict(db.session.execute(db.select(SparkJob.status, db.func.count()).where(
+        (SparkJob.status == "running") | ((SparkJob.status == "queued") &
+        (SparkJob.scheduled_at <= now) & SparkJob.cancel_requested.is_(False))
+    ).group_by(SparkJob.status)).all())
+    login_counts = dict(db.session.execute(db.select(SparkLoginSession.status, db.func.count()).where(
+        SparkLoginSession.expires_at > now,
+        SparkLoginSession.status.in_((*BROWSER, "queued")),
+        (SparkLoginSession.status != "queued") | SparkLoginSession.cancel_requested.is_(False),
+    ).group_by(SparkLoginSession.status)).all())
+    return {"mode": "serial", "busy": bool(job_counts.get("running") or any(login_counts.get(status) for status in BROWSER)),
+            "ready_count": job_counts.get("queued", 0) + login_counts.get("queued", 0)}
+
+
 def overview(account):
     now = now_utc()
     worker = db.session.get(SparkWorkerState, 1)
@@ -270,6 +287,7 @@ def overview(account):
             "selected_count": sum(c.selected for c in contacts), "creator_sent_today": creator_count,
             "ledger_stats": stats, "pending_send": pending[:maximum],
             "jobs": [j.to_dict() for j in jobs], "timezone": "Asia/Shanghai",
+            "queue": queue_snapshot(now),
             "credential_storage_ready": bool(current_app.config.get("SPARK_CREDENTIAL_KEY")),
             "worker": {"online": bool(worker and now - worker.heartbeat_at < timedelta(seconds=30)),
                        "heartbeat_at": isoformat_utc(worker.heartbeat_at) if worker else None}}

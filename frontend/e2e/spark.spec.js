@@ -19,7 +19,7 @@ test("spark integrates login, import, contacts, plan, simulation, queue and unbi
   await page.goto("/tools/spark");
   await expect(page.getByRole("heading", { name: /让火花继续/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeDisabled();
-  await page.getByText("备用方式：电脑脚本导出并上传登录态", { exact: true }).click();
+  await page.getByText("备用登录方式", { exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({ name: "state.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ cookies: [
     { name: "sessionid", value: "offline-e2e-session", domain: ".douyin.com", path: "/", expires: -1, httpOnly: true, secure: true, sameSite: "Lax" },
   ], origins: [] })) });

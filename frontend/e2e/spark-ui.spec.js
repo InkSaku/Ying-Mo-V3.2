@@ -31,7 +31,7 @@ test("spark workspace explains queued retries and keeps filtered selections", as
         config: { ...payload.data.config, messages: ["今天也要开心哦", "晚安，明天见"], schedule_time: "21:00", auto_run_enabled: true },
         next_run_at: later, step_progress: { completed: [true, true, true, true], current_step: 4 },
         pending_send: contacts.slice(0, 3).map((contact) => ({ name: contact.display_name, channel: "consumer" })),
-        worker: { online: true, heartbeat_at: now }, jobs,
+        worker: { online: true, heartbeat_at: now }, queue: { mode: "serial", busy: false, ready_count: 0 }, jobs,
         ledger_stats: { ...payload.data.ledger_stats, total: 20, selected: 3, with_short_id: 9, confidence: { high: 9, low: 11 } },
       };
     }
@@ -54,6 +54,9 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   await expect(page.getByText("纸页里的问候", { exact: true })).toBeVisible();
   await expect(page.locator("#spark-check-hint")).toContainText("补发已安排在");
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeDisabled();
+  await expect(page.locator("#spark-queue .spark-run-status")).toHaveText("定时等待");
+  await expect(page.locator("#spark-queue")).toContainText("尚未开始");
+  await expect(page.locator("#spark-queue .spark-queue-dots")).toHaveCount(0);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.screenshot({ path: testInfo.outputPath("spark-ui-desktop.png"), fullPage: true });
   const friends = await page.locator(".spark-friends").boundingBox();
@@ -72,6 +75,27 @@ test("spark workspace explains queued retries and keeps filtered selections", as
 
   await page.getByRole("button", { name: "停止补发任务", exact: true }).click();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeEnabled();
+  await expect(page.locator("#spark-queue")).toHaveCount(0);
+  await expect(page.locator(".spark-hero-companion")).toBeVisible();
+  await expect(page.locator(".spark-plan-sketch")).toBeVisible();
+  await expect(page.locator(".spark-message-sketch")).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const hero = await page.locator(".spark-hero").boundingBox();
+  const launch = await page.locator("#spark-step-4").boundingBox();
+  const workspace = await page.locator(".spark-workspace").boundingBox();
+  expect(hero.y).toBeLessThan(130);
+  expect(hero.y).toBeGreaterThanOrEqual(0);
+  expect(launch.y).toBeGreaterThanOrEqual(workspace.y + workspace.height);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-desktop.png"), fullPage: false });
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-full.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".spark-hero-companion")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-mobile.png"), fullPage: true });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "dark"; });
+  await page.screenshot({ path: testInfo.outputPath("spark-redesign-dark-mobile.png"), fullPage: true });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("group", { name: "筛选好友" }).getByRole("button", { name: "已选 3", exact: true }).click();
   await expect(page.locator(".spark-contact")).toHaveCount(3);
   await page.getByRole("group", { name: "筛选好友" }).getByRole("button", { name: "全部 20", exact: true }).click();
@@ -91,9 +115,41 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   await page.getByRole("button", { name: "检查与同步", exact: true }).click();
   await expect(page.locator(".spark-run")).toHaveCount(2);
   await expect(page.locator(".spark-run").first()).toContainText("模拟运行");
-  state.jobs.unshift({ id: "ui-running", kind: "dry_run", source: "manual", status: "running", scheduled_at: now,
-    result: { progress: { completed: 1, total: 3, current_name: "阿文" } } });
+  state.jobs.unshift({ id: "ui-running", kind: "dry_run", source: "manual", status: "queued", scheduled_at: now, created_at: now, result: {} });
+  state.queue = { mode: "serial", busy: true, ready_count: 2 };
   await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+  const queuePanel = page.locator("#spark-queue");
+  await expect(queuePanel).toContainText("前序任务正在执行");
+  await expect(queuePanel.locator(".spark-run-status")).toHaveText("排队中");
+  await expect(queuePanel.locator(".spark-queue-dots i")).toHaveCount(3);
+  await expect(queuePanel.locator(".spark-queue-item-footer")).toContainText(/已等待 \d{2}:\d{2}/);
+  await expect(queuePanel.getByRole("progressbar")).toHaveCount(0);
+  const dots = queuePanel.locator(".spark-queue-dots i").first();
+  expect(await dots.evaluate((el) => getComputedStyle(el).animationName)).toBe("spark-dot-wave");
+  await dots.evaluate((el) => { el.dataset.pollIdentity = "same-node"; });
+  await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+  await expect(dots).toHaveAttribute("data-poll-identity", "same-node");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await dots.evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  }
+  await page.screenshot({ path: testInfo.outputPath("spark-queue-desktop.png"), fullPage: true });
+  await queuePanel.screenshot({ path: testInfo.outputPath("spark-queue-panel-desktop.png") });
+  state.jobs[0] = { ...state.jobs[0], status: "running", started_at: new Date(Date.now() - 15_000).toISOString(),
+    result: { progress: { completed: 1, total: 3, current_name: "阿文" } } };
+  state.queue = { mode: "serial", busy: true, ready_count: 0 };
+  await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+  await expect(queuePanel.locator(".spark-run-status")).toHaveText("正在执行");
+  await expect(queuePanel.locator(".spark-moving-flame")).toHaveCount(1);
+  await expect(queuePanel.locator(".spark-queue-item-footer")).toContainText(/已执行 00:1\d/);
+  await expect(queuePanel.getByRole("progressbar")).toHaveAttribute("value", "1");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: testInfo.outputPath("spark-queue-mobile.png"), fullPage: true });
+  await queuePanel.screenshot({ path: testInfo.outputPath("spark-queue-panel-mobile.png") });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(page.locator("#spark-step-4")).toContainText("正在检查 阿文");
   await expect(page.getByRole("progressbar", { name: "当前模拟检查进度", exact: true })).toHaveAttribute("value", "1");
   await page.getByLabel("消息模板（每行一条）").fill("尚未保存的问候");
@@ -103,5 +159,18 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   state.worker.online = false;
   await page.getByRole("button", { name: "刷新状态", exact: true }).click();
   await expect(page.getByText("后台服务暂未连接。配置会保存，任务会等待服务恢复；不会显示为已发送。", { exact: true })).toBeVisible();
+  await expect(queuePanel.locator(".spark-run-status")).toHaveText("状态待同步");
+  await expect(queuePanel.locator(".spark-moving-flame")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "重新扫码连接", exact: true })).toBeDisabled();
+  state.login_session = { id: "ui-login", status: "interrupted", has_qr: false,
+    reason: "抖音网页登录还需要已登录设备确认，尚未生成登录态。" };
+  await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+  await expect(page.locator(".spark-login-session")).toHaveText("抖音网页登录还需要已登录设备确认，尚未生成登录态。");
+  await expect(page.locator(".spark-login-session")).not.toContainText("短信");
+  await expect(page.locator(".spark-login-session")).not.toContainText("安全验证");
+  state.jobs[0].status = "succeeded";
+  state.worker.online = true;
+  await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+  await expect(queuePanel).toHaveCount(0);
+  await expect(page.locator(".spark-run").first().locator(".spark-finished-check")).toHaveCount(1);
 });

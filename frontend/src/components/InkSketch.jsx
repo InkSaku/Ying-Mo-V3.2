@@ -24,9 +24,12 @@ import shelf from "../assets/ink/story-shelf.svg?raw";
 import bookmark from "../assets/ink/saved-bookmark.svg?raw";
 import replies from "../assets/ink/tea-replies.svg?raw";
 import detour from "../assets/ink/paper-detour.svg?raw";
+import spark from "../assets/ink/spark-companion.svg?raw";
+import sparkCalendar from "../assets/ink/spark-calendar.svg?raw";
+import sparkGreeting from "../assets/ink/spark-greeting.svg?raw";
 import "../styles/ink-sketches.css";
 
-const sketches = { reader, volumes, wanderer, letter, welcome, writer, search, archive, memory, camera, garden, steward, place, labels, thread, packed, inbox, keys, pocket, rewind, pages, pencil, shelf, bookmark, replies, detour };
+const sketches = { reader, volumes, wanderer, letter, welcome, writer, search, archive, memory, camera, garden, steward, place, labels, thread, packed, inbox, keys, pocket, rewind, pages, pencil, shelf, bookmark, replies, detour, spark, sparkCalendar, sparkGreeting };
 
 export function InkSketch({ variant = "letter", className = "" }) {
   return <span

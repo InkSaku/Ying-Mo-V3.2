@@ -4,9 +4,9 @@ import { api } from "../lib/api";
 const live = ["queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation"];
 const labels = {
   queued: "后台正在处理其他任务，连接正在等待。", preparing: "正在打开抖音登录页面…",
-  waiting_scan: "请用手机抖音扫码，并在手机上确认登录。", verifying: "正在确认登录状态…",
+  waiting_scan: "请用手机抖音扫码，并在手机上确认登录。", verifying: "正在等待抖音网页完成登录。手机确认后，登录凭证可能还需要几秒才能写入。",
   awaiting_confirmation: "登录已完成，请确认连接的账号。", succeeded: "账号已连接，联系人同步已安排。",
-  expired: "连接或二维码已经过期，请重新获取。", blocked: "抖音要求安全验证，本次连接未完成。",
+  expired: "连接或二维码已经过期，请重新获取。", blocked: "抖音官方网页仍需处理登录验证，本次连接未完成。",
   interrupted: "后台连接中断，请重新扫码。", cancelled: "本次连接已取消。",
 };
 
@@ -40,7 +40,7 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
       {!active ? <button className={`btn ${data.bound ? "btn-secondary" : "btn-primary"}`} disabled={Boolean(busy) || !data.credential_storage_ready || !data.worker.online} onClick={onStart}>{data.bound ? "重新扫码连接" : "扫码连接抖音"}</button> : null}
     </div>
     {showSession ? <div className="spark-login-session" aria-live="polite">
-      <p>{labels[session.status] || session.reason}</p>
+      <p>{session.reason || labels[session.status] || "本次连接尚未完成。"}</p>
       {waiting ? <div className="spark-qr-area">
         {image?.version === version ? <img src={image.url} alt="抖音登录二维码" width="200" height="200" /> : <p>正在读取二维码…</p>}
         {imageError ? <p className="spark-meta">{imageError}</p> : null}
@@ -53,7 +53,6 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
         {!session.identity_known ? <p className="spark-meta">尚未读取到可靠身份标识，请核对手机上实际登录的账号。好友名单将按新账号重新获取。</p> : null}
         <button className="btn btn-primary" disabled={Boolean(busy)} onClick={onConfirm}>确认连接此账号</button>
       </div> : null}
-      {session.reason && !active ? <p className="spark-meta">{session.reason}</p> : null}
       {active ? <button className="text-button danger-text" disabled={Boolean(busy)} onClick={onCancel}>取消连接</button> : null}
     </div> : null}
     {!data.worker.online ? <p className="spark-meta">后台恢复在线后即可开始扫码连接。</p> : null}

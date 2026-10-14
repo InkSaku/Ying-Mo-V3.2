@@ -3,7 +3,7 @@ import hashlib
 import base64
 import json
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from .credentials import validate_state
 
@@ -70,8 +70,57 @@ def issued_qr_bytes(data):
 
 
 def qr_requires_verification(payload):
+    """A second-step decision, not proof that an SMS prompt is displayed."""
     data = payload.get("data") if isinstance(payload, dict) else None
     return isinstance(data, dict) and type(data.get("error_code")) is int and data["error_code"] == 2046
+
+
+def verification_methods(data):
+    """Keep known platform method enums, never tickets, phone numbers or URLs."""
+    known = {"sms", "mobile_sms_verify", "mobile_sms_check_or_verify", "push_verify", "qrcode_verify",
+             "face_verify", "password_verify", "email_verify"}
+    methods = data.get("verify_ways") if isinstance(data, dict) else None
+    if not isinstance(methods, list):
+        return []
+    return sorted({value for item in methods[:20]
+                   if isinstance(value := item.get("verify_way") if isinstance(item, dict) else item, str)
+                   and value in known})
+
+
+def login_handoff_reason(signal):
+    # verify_ways lists available methods, not a chosen/displayed challenge.
+    return "抖音网页登录未完成，未取得有效登录凭证。本次连接已超时，请重新连接；若仍失败，请使用备用登录方式查看官方页面的实际提示。"
+
+
+def login_handoff_prompt(methods=None, *, browser_visible=False, visible_challenge=False):
+    # Neither SMS nor device confirmation can be inferred from offered enums.
+    if browser_visible:
+        return "请查看已打开的抖音官方浏览器窗口，按实际页面提示完成登录。完成后本页会自动更新，无需导出登录文件。"
+    if visible_challenge:
+        return "抖音官方页面显示了验证提示，当前连接尚未完成。请使用备用登录方式，在官方浏览器中本人完成后导入。"
+    return "已收到扫码登录响应，正在等待抖音网页完成登录；目前尚未取得登录凭证。"
+
+
+def login_browser_headless():
+    from flask import current_app, has_app_context
+    return current_app.config.get("SPARK_LOGIN_HEADLESS", True) if has_app_context() else True
+
+
+def browser_challenge(context):
+    """Inspect visible frames/popups as well as the original page."""
+    for page in context.pages:
+        if page.is_closed():
+            continue
+        for frame in page.frames:
+            try:
+                if frame != page.main_frame and not frame.frame_element().is_visible():
+                    continue
+                if login_challenge(frame):
+                    return True
+            except Exception:
+                # Frames may be detached while the official SDK changes steps.
+                continue
+    return False
 
 
 def clean_browser_state(captured):
@@ -80,33 +129,45 @@ def clean_browser_state(captured):
     return validate_state(json.dumps({**captured, "cookies": [c for c in captured["cookies"] if c.get("name")]}).encode())
 
 
-def observe_login(on_qr, on_status, assert_current, timeout=180):
+def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=None):
+    # Leave time to commit a specific outcome before the worker's 180s lease.
     from playwright.sync_api import sync_playwright
+    headless = login_browser_headless() if headless is None else headless
     display = {}
     scan_signal = {}
     issue_signal = {}
     issued_qr = None
-    verification_required = False
+    issued_token = None
+    handoff_observed = False
+    status = None
+    reported_prompt = None
+    signal_revision = 0
     deadline = time.monotonic() + timeout
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, chromium_sandbox=True, args=["--disable-dev-shm-usage"])
+        browser = p.chromium.launch(headless=headless, chromium_sandbox=True, args=["--disable-dev-shm-usage"])
         try:
             context = browser.new_context(viewport={"width": 1366, "height": 800}, locale="zh-CN")
             page = context.new_page()
             def observe_profile(response):
-                nonlocal issued_qr, verification_required
+                nonlocal issued_qr, issued_token, handoff_observed, signal_revision
                 url = urlsplit(response.url)
                 if url.hostname and (url.hostname == "douyin.com" or url.hostname.endswith(".douyin.com")) and "passport" in url.path and any(word in url.path for word in ("qr", "scan")):
                     try:
                         payload = response.json()
-                        if "check_qrconnect" in url.path and qr_requires_verification(payload):
-                            verification_required = True
+                        if not isinstance(payload, dict):
+                            return
                         data = payload.get("data", {})
+                        if "check_qrconnect" in url.path:
+                            request_token = parse_qs(url.query).get("token", [None])[0]
+                            if issued_token and request_token and request_token != issued_token:
+                                return  # A late poll for the previous QR must not terminate this one.
                         if "get_qrcode" in url.path and isinstance(data, dict):
                             issue_signal.update({"keys": sorted(data), "error_code": data.get("error_code") if type(data.get("error_code")) is int else None})
                             decoded = issued_qr_bytes(data)
                             if decoded:
                                 issued_qr = decoded
+                                issued_token = data.get("token") if isinstance(data.get("token"), str) else None
+                                handoff_observed = False
                                 issue_signal["has_png"] = True
                         scan_signal.clear()
                         scan_signal.update({"path": url.path, "http_status": response.status,
@@ -116,6 +177,13 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                                 value = part.get(field) if isinstance(part, dict) else None
                                 if type(value) in (int, bool) or (isinstance(value, str) and len(value) <= 24 and value.replace("_", "").isalnum()):
                                     scan_signal[f"{prefix}_{field}"] = value
+                        if "check_qrconnect" in url.path and isinstance(data, dict):
+                            scan_signal.update({"verification_methods": verification_methods(data),
+                                "has_verification_url": bool(data.get("url")),
+                                "has_captcha": bool(data.get("captcha"))})
+                            if qr_requires_verification(payload) or data.get("status") in ("confirmed", "3", 3):
+                                handoff_observed = True
+                        signal_revision += 1
                     except Exception:
                         pass
                 if url.hostname != "www.douyin.com" or "/user/profile/self/" not in url.path:
@@ -126,15 +194,22 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                         display.update({k: user[k] for k in ("nickname", "unique_id") if isinstance(user.get(k), str)})
                 except Exception:
                     pass
-            page.on("response", observe_profile)
+            context.on("response", observe_profile)
             # The chat route renders the official login modal without navigating home.
             page.goto("https://www.douyin.com/chat", wait_until="domcontentloaded", timeout=30000)
             previous = None
             sampled_at = 0
+            sampled_revision = -1
             while time.monotonic() < deadline:
                 assert_current()
+                if not context.pages:
+                    raise LoginBrowserError("cancelled", "抖音登录窗口已关闭，本次连接已结束。")
+                if page.is_closed():
+                    page = context.pages[0]
                 cookies = context.cookies()
-                if time.monotonic() - sampled_at > 4:
+                has_session = any(c["name"].startswith("sessionid") and c["value"] for c in cookies)
+                visible_challenge = browser_challenge(context)
+                if time.monotonic() - sampled_at > 4 or sampled_revision != signal_revision or has_session:
                     # Only cookie names and structural signals, never cookie values,
                     # profile text, response URLs with queries, or contact names.
                     url = urlsplit(page.url)
@@ -142,21 +217,38 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                         "page_host": url.hostname, "page_path": url.path,
                         "qr_nodes": page.locator("#animate_qrcode_container").count(),
                         "conversation_nodes": page.locator(".conversationConversationItemtitle").count(),
-                        "scan_signal": dict(scan_signal), "issue_signal": dict(issue_signal)}
+                        "scan_signal": dict(scan_signal), "issue_signal": dict(issue_signal),
+                        "visible_challenge": visible_challenge, "handoff_observed": handoff_observed,
+                        "browser_visible": not headless,
+                        "page_count": len(context.pages),
+                        "frame_hosts": sorted({urlsplit(f.url).hostname for p in context.pages for f in p.frames if urlsplit(f.url).hostname})}
                     on_status("diagnostic", diagnostics)
                     sampled_at = time.monotonic()
-                if any(c["name"].startswith("sessionid") and c["value"] for c in cookies):
+                    sampled_revision = signal_revision
+                if has_session:
                     on_status("verifying")
                     page.wait_for_timeout(1500)
                     assert_current()
                     state = clean_browser_state(context.storage_state())
                     return state, identity_profile(state, display)
-                if verification_required:
-                    raise LoginBrowserError("blocked", "扫码已确认，但抖音还要求额外身份验证。请使用备用扫码脚本，在弹出的官方浏览器中完成验证后导入登录态。")
-                if login_challenge(page):
-                    raise LoginBrowserError("blocked", "抖音要求安全验证，本次连接未完成，请在官方客户端查看后重试。")
+                if scan_signal.get("data_error_code") == 0:
+                    if scan_signal.get("data_status") in ("refused", "4", 4):
+                        raise LoginBrowserError("cancelled", "抖音扫码登录已被拒绝，本次连接已结束。")
+                    if scan_signal.get("data_status") in ("expired", "5", 5):
+                        raise LoginBrowserError("expired", "抖音登录二维码已过期，请重新连接。")
+                if visible_challenge and headless:
+                    raise LoginBrowserError("blocked", "抖音官方网页显示了安全验证，登录尚未完成。请使用备用扫码脚本，在弹出的官方浏览器中本人完成验证后导入登录态。")
+                # The official SDK handles 2046 through its verification flow.
+                # Keep that browser alive for late cookies / phone confirmation;
+                # never turn the protocol response itself into a successful login.
+                next_status = "verifying" if handoff_observed or visible_challenge else "waiting_scan"
+                prompt = {"browser_visible": not headless, "visible_challenge": visible_challenge}
+                if next_status == "verifying" and (status != next_status or prompt != reported_prompt):
+                    on_status(next_status, prompt)
+                    status = next_status
+                    reported_prompt = prompt
                 qr = qr_locator(page)
-                if qr:
+                if qr and not handoff_observed and not visible_challenge:
                     for text in ("二维码已失效", "二维码失效", "二维码已过期", "刷新二维码"):
                         message = page.get_by_text(text, exact=False)
                         if message.count() and message.first.is_visible():
@@ -169,7 +261,10 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                     if digest != previous:
                         on_qr(image)
                         previous = digest
+                        status = "waiting_scan"
                 page.wait_for_timeout(1500)
+            if handoff_observed:
+                raise LoginBrowserError("interrupted", login_handoff_reason(scan_signal))
             raise LoginBrowserError("expired", "等待扫码超时，请重新连接。")
         finally:
             browser.close()
