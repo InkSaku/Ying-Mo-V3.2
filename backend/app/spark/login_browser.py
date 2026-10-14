@@ -3,7 +3,7 @@ import hashlib
 import base64
 import json
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from .credentials import validate_state
 
@@ -70,8 +70,38 @@ def issued_qr_bytes(data):
 
 
 def qr_requires_verification(payload):
+    """A second-step decision, not proof that an SMS prompt is displayed."""
     data = payload.get("data") if isinstance(payload, dict) else None
     return isinstance(data, dict) and type(data.get("error_code")) is int and data["error_code"] == 2046
+
+
+def verification_methods(data):
+    """Keep known platform method enums, never tickets, phone numbers or URLs."""
+    known = {"sms", "mobile_sms_verify", "mobile_sms_check_or_verify", "push_verify", "qrcode_verify",
+             "face_verify", "password_verify", "email_verify"}
+    methods = data.get("verify_ways") if isinstance(data, dict) else None
+    if not isinstance(methods, list):
+        return []
+    return sorted({value for item in methods[:20]
+                   if isinstance(value := item.get("verify_way") if isinstance(item, dict) else item, str)
+                   and value in known})
+
+
+def login_handoff_reason(signal):
+    methods = signal.get("verification_methods", [])
+    if any(method in methods for method in ("sms", "mobile_sms_verify", "mobile_sms_check_or_verify")):
+        return "抖音网页登录返回了短信验证要求，手机扫码确认后尚未生成登录态。请在官方电脑网页完成提示，或使用备用扫码脚本完成登录后导入。"
+    if "push_verify" in methods:
+        return "抖音网页登录还需要已登录设备确认，尚未生成登录态。请检查抖音内的登录确认通知；也可在官方电脑网页或备用扫码脚本中完成登录。"
+    return "已收到扫码登录响应，但抖音网页没有完成登录，尚未获取有效登录态。请在官方电脑网页查看具体提示，或使用备用扫码脚本完成登录后导入。"
+
+
+def login_handoff_prompt(methods):
+    if "push_verify" in methods:
+        return "抖音正在等待已登录设备确认，请留意抖音里的登录确认通知。确认后保持此页打开，等待网页登录完成。"
+    if any(method in methods for method in ("sms", "mobile_sms_verify", "mobile_sms_check_or_verify")):
+        return "抖音网页登录返回了短信验证要求，正在等待官方页面处理。若本页不能继续，可使用备用扫码脚本，在官方浏览器中完成验证后导入。"
+    return "已收到扫码登录响应，正在等待抖音网页写入登录凭证，请保持此页打开。"
 
 
 def clean_browser_state(captured):
@@ -80,13 +110,18 @@ def clean_browser_state(captured):
     return validate_state(json.dumps({**captured, "cookies": [c for c in captured["cookies"] if c.get("name")]}).encode())
 
 
-def observe_login(on_qr, on_status, assert_current, timeout=180):
+def observe_login(on_qr, on_status, assert_current, timeout=170):
+    # Leave time to commit a specific outcome before the worker's 180s lease.
     from playwright.sync_api import sync_playwright
     display = {}
     scan_signal = {}
     issue_signal = {}
     issued_qr = None
-    verification_required = False
+    issued_token = None
+    handoff_observed = False
+    status = None
+    reported_methods = None
+    signal_revision = 0
     deadline = time.monotonic() + timeout
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, chromium_sandbox=True, args=["--disable-dev-shm-usage"])
@@ -94,19 +129,25 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
             context = browser.new_context(viewport={"width": 1366, "height": 800}, locale="zh-CN")
             page = context.new_page()
             def observe_profile(response):
-                nonlocal issued_qr, verification_required
+                nonlocal issued_qr, issued_token, handoff_observed, signal_revision
                 url = urlsplit(response.url)
                 if url.hostname and (url.hostname == "douyin.com" or url.hostname.endswith(".douyin.com")) and "passport" in url.path and any(word in url.path for word in ("qr", "scan")):
                     try:
                         payload = response.json()
-                        if "check_qrconnect" in url.path and qr_requires_verification(payload):
-                            verification_required = True
+                        if not isinstance(payload, dict):
+                            return
                         data = payload.get("data", {})
+                        if "check_qrconnect" in url.path:
+                            request_token = parse_qs(url.query).get("token", [None])[0]
+                            if issued_token and request_token and request_token != issued_token:
+                                return  # A late poll for the previous QR must not terminate this one.
                         if "get_qrcode" in url.path and isinstance(data, dict):
                             issue_signal.update({"keys": sorted(data), "error_code": data.get("error_code") if type(data.get("error_code")) is int else None})
                             decoded = issued_qr_bytes(data)
                             if decoded:
                                 issued_qr = decoded
+                                issued_token = data.get("token") if isinstance(data.get("token"), str) else None
+                                handoff_observed = False
                                 issue_signal["has_png"] = True
                         scan_signal.clear()
                         scan_signal.update({"path": url.path, "http_status": response.status,
@@ -116,6 +157,13 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                                 value = part.get(field) if isinstance(part, dict) else None
                                 if type(value) in (int, bool) or (isinstance(value, str) and len(value) <= 24 and value.replace("_", "").isalnum()):
                                     scan_signal[f"{prefix}_{field}"] = value
+                        if "check_qrconnect" in url.path and isinstance(data, dict):
+                            scan_signal.update({"verification_methods": verification_methods(data),
+                                "has_verification_url": bool(data.get("url")),
+                                "has_captcha": bool(data.get("captcha"))})
+                            if qr_requires_verification(payload) or data.get("status") in ("confirmed", "3", 3):
+                                handoff_observed = True
+                        signal_revision += 1
                     except Exception:
                         pass
                 if url.hostname != "www.douyin.com" or "/user/profile/self/" not in url.path:
@@ -131,32 +179,49 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
             page.goto("https://www.douyin.com/chat", wait_until="domcontentloaded", timeout=30000)
             previous = None
             sampled_at = 0
+            sampled_revision = -1
             while time.monotonic() < deadline:
                 assert_current()
                 cookies = context.cookies()
-                if time.monotonic() - sampled_at > 4:
+                has_session = any(c["name"].startswith("sessionid") and c["value"] for c in cookies)
+                if time.monotonic() - sampled_at > 4 or sampled_revision != signal_revision or has_session:
                     # Only cookie names and structural signals, never cookie values,
                     # profile text, response URLs with queries, or contact names.
                     url = urlsplit(page.url)
+                    visible_challenge = login_challenge(page)
                     diagnostics = {"cookie_names": sorted({c["name"] for c in cookies}),
                         "page_host": url.hostname, "page_path": url.path,
                         "qr_nodes": page.locator("#animate_qrcode_container").count(),
                         "conversation_nodes": page.locator(".conversationConversationItemtitle").count(),
-                        "scan_signal": dict(scan_signal), "issue_signal": dict(issue_signal)}
+                        "scan_signal": dict(scan_signal), "issue_signal": dict(issue_signal),
+                        "visible_challenge": visible_challenge, "handoff_observed": handoff_observed}
                     on_status("diagnostic", diagnostics)
                     sampled_at = time.monotonic()
-                if any(c["name"].startswith("sessionid") and c["value"] for c in cookies):
+                    sampled_revision = signal_revision
+                if has_session:
                     on_status("verifying")
                     page.wait_for_timeout(1500)
                     assert_current()
                     state = clean_browser_state(context.storage_state())
                     return state, identity_profile(state, display)
-                if verification_required:
-                    raise LoginBrowserError("blocked", "扫码已确认，但抖音还要求额外身份验证。请使用备用扫码脚本，在弹出的官方浏览器中完成验证后导入登录态。")
+                if scan_signal.get("data_error_code") == 0:
+                    if scan_signal.get("data_status") in ("refused", "4", 4):
+                        raise LoginBrowserError("cancelled", "抖音扫码登录已被拒绝，本次连接已结束。")
+                    if scan_signal.get("data_status") in ("expired", "5", 5):
+                        raise LoginBrowserError("expired", "抖音登录二维码已过期，请重新连接。")
                 if login_challenge(page):
-                    raise LoginBrowserError("blocked", "抖音要求安全验证，本次连接未完成，请在官方客户端查看后重试。")
+                    raise LoginBrowserError("blocked", "抖音官方网页显示了安全验证，登录尚未完成。请使用备用扫码脚本，在弹出的官方浏览器中本人完成验证后导入登录态。")
+                # The official SDK handles 2046 through its verification flow.
+                # Keep that browser alive for late cookies / phone confirmation;
+                # never turn the protocol response itself into a successful login.
+                next_status = "verifying" if handoff_observed else "waiting_scan"
+                methods = scan_signal.get("verification_methods", [])
+                if handoff_observed and (status != next_status or methods != reported_methods):
+                    on_status(next_status, {"verification_methods": methods})
+                    status = next_status
+                    reported_methods = methods
                 qr = qr_locator(page)
-                if qr:
+                if qr and not handoff_observed:
                     for text in ("二维码已失效", "二维码失效", "二维码已过期", "刷新二维码"):
                         message = page.get_by_text(text, exact=False)
                         if message.count() and message.first.is_visible():
@@ -169,7 +234,10 @@ def observe_login(on_qr, on_status, assert_current, timeout=180):
                     if digest != previous:
                         on_qr(image)
                         previous = digest
+                        status = "waiting_scan"
                 page.wait_for_timeout(1500)
+            if handoff_observed:
+                raise LoginBrowserError("interrupted", login_handoff_reason(scan_signal))
             raise LoginBrowserError("expired", "等待扫码超时，请重新连接。")
         finally:
             browser.close()

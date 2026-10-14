@@ -5,8 +5,9 @@ import { PersonalNav } from "../components/PersonalNav";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { CustomSelect } from "../components/CustomSelect";
 import { SparkBinding } from "../components/SparkBinding";
+import { SparkQueue, SparkRunBadge } from "../components/SparkQueue";
 import { ErrorState, PageLoader } from "../components/States";
-import { sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
+import { sparkJobDuration, sparkJobPhase, sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
 import "../styles/spark.css";
 
 const numericFields = [
@@ -33,6 +34,7 @@ export function SparkPage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState("");
   const [confirm, setConfirm] = useState(null);
+  const [now, setNow] = useState(Date.now);
   const initialized = useRef(false);
   const contactsDirty = useRef(false);
   const selectionSequence = useRef([]);
@@ -41,6 +43,7 @@ export function SparkPage() {
 
   const acceptData = useCallback((value, reset = false) => {
     setData(value);
+    setNow(Date.now());
     if (!initialized.current || reset) {
       setConfig(value.config);
       setMessages(value.config.messages.join("\n"));
@@ -66,12 +69,19 @@ export function SparkPage() {
     }
   }, [acceptData]);
 
+  const hasActiveWork = Boolean(data?.jobs.some((job) => ["queued", "running"].includes(job.status)));
   useEffect(() => {
     void load();
     const activeLogin = ["queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation"].includes(data?.login_session?.status);
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, activeLogin ? 1500 : 5000);
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, activeLogin ? 1500 : hasActiveWork ? 2000 : 5000);
     return () => window.clearInterval(timer);
-  }, [load, data?.login_session?.status]);
+  }, [load, data?.login_session?.status, hasActiveWork]);
+
+  useEffect(() => {
+    if (!hasActiveWork) return;
+    const timer = window.setInterval(() => { if (!document.hidden) setNow(Date.now()); }, 1000);
+    return () => window.clearInterval(timer);
+  }, [hasActiveWork]);
 
   const action = async (name, operation, message) => {
     setBusy(name);
@@ -82,7 +92,10 @@ export function SparkPage() {
       setNotice(message);
       setConfirm(null);
     } catch (actionError) {
-      setError(actionError.message);
+      if (actionError.code === "SPARK_BUSY") {
+        await load();
+        setError("你已有任务在排队或执行，下方任务队列会自动显示进度。");
+      } else setError(actionError.message);
       setConfirm(null);
     } finally {
       setBusy("");
@@ -92,7 +105,7 @@ export function SparkPage() {
   const queue = (kind) => action(kind, async () => {
     await api.post("/spark/jobs", { kind, request_id: crypto.randomUUID() });
     await load();
-  }, `${sparkKindLabels[kind]}任务已加入，执行结果会显示在下方。`);
+  }, `${sparkKindLabels[kind]}已加入队列，下方会自动显示排队与执行进度。`);
 
   const saveConfig = (event) => {
     event.preventDefault();
@@ -159,8 +172,8 @@ export function SparkPage() {
     (index === 1 ? !contactsDirty.current : index === 2 ? !planDirty : index === 3 ? !contactsDirty.current && !planDirty : true));
   const currentStep = stepComplete.findIndex((done) => !done);
   const queueHint = !data.bound ? "先连接抖音账号，再同步好友。"
-    : waitingRetry ? `补发已安排在 ${sparkTime(waitingRetry.scheduled_at)}。如需现在操作，可先停止补发任务。`
-    : activeJobs.length ? `${sparkKindLabels[activeJobs[0].kind]}${activeJobs[0].status === "running" ? "正在执行" : "正在等待后台执行"}，完成后可继续操作。` : "";
+    : waitingRetry && new Date(waitingRetry.scheduled_at).getTime() > now ? `补发已安排在 ${sparkTime(waitingRetry.scheduled_at)}。如需现在操作，可先停止补发任务。`
+    : activeJobs.length ? `${sparkKindLabels[activeJobs[0].kind]} · ${sparkJobPhase(activeJobs[0], data.worker.online, now).label}。下方任务队列会自动更新，无需重复提交。` : "";
   const checkHint = queueHint || (contactsDirty.current ? "好友选择尚未保存，请先保存左侧名单。"
     : !data.selected_count ? "先在好友名单中勾选朋友，并保存选择。"
     : planDirty || !data.step_progress.completed[2] ? "先保存每日计划，再进行模拟检查。"
@@ -294,9 +307,9 @@ export function SparkPage() {
         </section>
       <section id="spark-step-4" className="spark-section" aria-labelledby="spark-runs-heading">
         <div className="spark-section-heading"><span>04</span><div><h2 id="spark-runs-heading">检查并开启</h2><p>先模拟检查，再开启每天的问候。</p></div></div>
-        <div className={`spark-check-status${data.validation_ready && !planDirty && !contactsDirty.current ? " is-ready" : ""}`}><strong>{runningCheck ? "模拟检查正在进行" : data.validation_ready && !planDirty && !contactsDirty.current ? "✓ 模拟检查已通过" : "完成检查，就准备好了"}</strong><p id="spark-check-hint">{checkHint}</p>
-          {runningCheck?.result.progress ? <div className="spark-current-progress" aria-live="polite"><p>已检查 {runningCheck.result.progress.completed}/{runningCheck.result.progress.total} 位{runningCheck.result.progress.current_name ? ` · 正在检查 ${runningCheck.result.progress.current_name}` : " · 正在整理结果"}</p><progress className="spark-progress" value={runningCheck.result.progress.completed} max={runningCheck.result.progress.total || 1} aria-label="当前模拟检查进度" /></div> : null}
-          {activeJobs.length ? <a className="spark-history-link" href="#spark-history">查看执行详情 →</a> : null}
+        <div className={`spark-check-status${data.validation_ready && !planDirty && !contactsDirty.current ? " is-ready" : ""}`}><strong>{runningCheck ? data.worker.online ? "模拟检查正在进行" : "模拟检查状态待同步" : data.validation_ready && !planDirty && !contactsDirty.current ? "✓ 模拟检查已通过" : "完成检查，就准备好了"}</strong><p id="spark-check-hint">{checkHint}</p>
+          {runningCheck?.result.progress ? <div className="spark-current-progress" aria-live="polite"><p>已检查 {runningCheck.result.progress.completed}/{runningCheck.result.progress.total} 位{!data.worker.online ? " · 等待状态同步" : runningCheck.result.progress.current_name ? ` · 正在检查 ${runningCheck.result.progress.current_name}` : " · 正在整理结果"}</p><progress className="spark-progress" value={runningCheck.result.progress.completed} max={runningCheck.result.progress.total || 1} aria-label="当前模拟检查进度" /></div> : null}
+          {activeJobs.length ? <a className="spark-history-link" href="#spark-queue">查看排队与进度 →</a> : null}
           {waitingRetry ? <button className="text-button danger-text" disabled={Boolean(busy) || waitingRetry.cancel_requested} onClick={() => { void cancelJob(waitingRetry); }}>{waitingRetry.cancel_requested ? "正在停止" : "停止补发任务"}</button> : null}</div>
         <div className="spark-actions spark-activation-actions" aria-describedby="spark-check-hint"><button className="btn btn-secondary" disabled={!canCheck} onClick={() => { void queue("dry_run"); }}>{busy === "dry_run" ? "正在提交" : "模拟运行"}</button>
           <button className="btn btn-primary" disabled={Boolean(busy) || (!data.config.auto_run_enabled && !canActivate)} onClick={() => { void togglePlan(); }}>{data.config.auto_run_enabled ? "暂停每日计划" : data.account_profile.plan_was_enabled ? "恢复每日计划" : "开启每日自动续火花"}</button></div>
@@ -304,21 +317,26 @@ export function SparkPage() {
         <p className="spark-meta">开启后，关闭网页也会执行。修改账号、好友或模板后，需要重新检查。</p>
       </section></div></div>
 
+      <SparkQueue data={data} now={now} busy={busy} onCancel={(job) => { void cancelJob(job); }} />
       <section id="spark-history" className="spark-section spark-history" aria-labelledby="spark-history-heading">
         <div className="spark-history-heading"><div><p className="hero-kicker">问候的回音</p><h2 id="spark-history-heading">执行记录</h2><p>每次检查与问候的结果，都在这里。</p></div><button className="text-button" disabled={Boolean(busy)} onClick={() => { void load(); }}>刷新状态</button></div>
         <div className="spark-filters" role="group" aria-label="筛选执行记录">{[["all", "全部记录"], ["send", "发送记录"], ["check", "检查与同步"]].map(([value, label]) => <button key={value} aria-pressed={runFilter === value} onClick={() => setRunFilter(value)}>{label}</button>)}</div>
         {!visibleJobs.length ? <p className="spark-empty">{data.jobs.length ? "这里还没有相关记录。" : "还没有执行记录。完成好友和计划设置后，先来一次模拟检查。"}</p> : null}
-        <div className="spark-run-list">{visibleJobs.map((job) => <details className="spark-run" key={job.id} open={["queued", "running", "unknown", "failed", "partial", "expired", "blocked"].includes(job.status) ? true : undefined}>
-          <summary><span><strong>{sparkKindLabels[job.kind]}{job.source === "retry" ? <em>失败补发</em> : null}</strong><small>{sourceLabels[job.source]} · {sparkTime(job.scheduled_at)}{job.result.events?.length ? ` · ${job.result.events.length} 位好友` : ""}</small></span><span className={`spark-run-status is-${job.status}`}>{sparkStatusLabels[job.status] || job.status}</span></summary>
-          {job.status === "queued" ? <p className="spark-meta">{new Date(job.scheduled_at).getTime() > Date.now() ? `预计 ${sparkTime(job.scheduled_at)} 执行。` : "等待后台开始执行。"}{job.source === "retry" ? "仅重试未发送成功的好友，已发送或结果待确认的对象会跳过。" : ""}</p> : null}
+        <div className="spark-run-list">{visibleJobs.map((job) => {
+          const phase = sparkJobPhase(job, data.worker.online, now);
+          return <details className={`spark-run is-${phase.key}`} key={job.id} open={["queued", "running", "unknown", "failed", "partial", "expired", "blocked"].includes(job.status) ? true : undefined}>
+          <summary><span><strong>{sparkKindLabels[job.kind]}{job.source === "retry" ? <em>失败补发</em> : null}</strong><small>{sourceLabels[job.source]} · {sparkTime(job.scheduled_at)}{job.result.events?.length ? ` · ${job.result.events.length} 位好友` : ""}</small></span><SparkRunBadge phase={phase} /></summary>
+          {job.status === "queued" ? <p className="spark-meta">{phase.key === "scheduled" ? `${sparkTime(job.scheduled_at)} 到点后进入队列。` : phase.key === "stopping" ? "停止请求已提交，等待后台确认。" : !data.worker.online ? "后台暂未连接，排队状态会在恢复后同步。" : `已等待 ${sparkJobDuration(job, now)} · ${data.queue?.busy ? "前序任务正在执行，完成后继续处理队列。" : "等待后台接手。"}`}{job.source === "retry" ? "仅重试未发送成功的好友，已发送或结果待确认的对象会跳过。" : ""}</p> : null}
+          {job.status === "running" ? <p className="spark-meta spark-run-clock" aria-live="off">{data.worker.online ? `已执行 ${sparkJobDuration(job, now)} · 结果自动更新` : "后台暂未连接，当前执行状态待同步。"}</p> : null}
           {job.result.message ? <p>{job.result.message}</p> : null}
-          {job.kind === "dry_run" && job.status === "running" ? <p className="spark-meta" role="status">
+          {job.kind === "dry_run" && job.status === "running" && data.worker.online ? <p className="spark-meta" role="status">
             {job.result.progress ? `已检查 ${job.result.progress.completed}/${job.result.progress.total} 位${job.result.progress.current_name ? `，正在检查：${job.result.progress.current_name}` : "，正在整理结果"}` : "正在打开抖音并检查会话，请稍候。"}模拟检查不会发送消息。
           </p> : null}
           {job.status === "running" && job.result.progress ? <progress className="spark-progress" value={job.result.progress.completed} max={job.result.progress.total || 1} aria-label="模拟检查进度" /> : null}
           {job.result.events?.map((event, index) => <div className="spark-run-event" key={`${event.name}-${index}`}><strong>{event.name}</strong><span>{sparkStatusLabels[event.status]} · {event.reason}</span></div>)}
           {["queued", "running"].includes(job.status) ? <button className="text-button danger-text" disabled={Boolean(busy) || job.cancel_requested} onClick={() => { void cancelJob(job); }}>{job.cancel_requested ? "正在停止" : "停止任务"}</button> : null}
-        </details>)}</div>
+        </details>;
+        })}</div>
       </section>
       <ConfirmDialog open={Boolean(confirm)} title={confirm === "send" ? "现在给选中的好友续火花？" : "解绑并删除抖音登录态？"}
         description={confirm === "send" ? `将按已保存的计划向 ${data.selected_count} 位好友尝试发送消息。今天已发送或结果待确认的好友会跳过。` : "会停止当前账号的任务，删除服务器保存的登录态和好友名单。已发送的消息无法撤回。"}

@@ -502,3 +502,52 @@ def test_saved_plan_replaces_cancelled_same_day_job_instead_of_losing_new_schedu
     assert [job.status for job in jobs] == ["cancelled", "cancelled", "queued"]
     execute_job(jobs[-1].id, Driver, sleep=lambda _: None)
     assert len(Driver.calls) == 1
+
+
+def test_queue_overview_explains_shared_serial_work_without_other_member_details(client):
+    alice, a = member(client, "queuealice")
+    bob, b = member(client, "queuebob")
+    bind(client, a, state_for("alice-secret", "alice-uid"))
+    bind(client, b, state_for("bob-secret", "bob-uid"))
+    other_id = queue(client, b, "sync").get_json()["data"]["id"]
+    other = db.session.get(SparkJob, other_id)
+    other.status = "running"
+    other.result = {"message": "private-member-task", "events": [{"name": "private-contact"}]}
+    db.session.commit()
+    own_id = queue(client, a, "sync").get_json()["data"]["id"]
+    response = client.get("/api/v1/spark", headers=auth(a))
+    data = response.get_json()["data"]
+    assert data["queue"] == {"mode": "serial", "busy": True, "ready_count": 1}
+    assert [job["id"] for job in data["jobs"]] == [own_id]
+    serialized = response.get_data(as_text=True)
+    assert all(value not in serialized for value in (other_id, "private-member-task", "private-contact", "bob-secret"))
+
+
+def test_queue_snapshot_excludes_future_cancelled_and_expired_work(client):
+    from app.models import SparkLoginSession
+    from app.spark.service import queue_snapshot
+    user_id, token = member(client, "queuestates")
+    bind(client, token)
+    job_id = queue(client, token, "sync").get_json()["data"]["id"]
+    now = now_utc()
+    job = db.session.get(SparkJob, job_id)
+    job.scheduled_at = now + timedelta(minutes=45)
+    login = SparkLoginSession(id=str(uuid.uuid4()), account_id=user_id, generation=1,
+                              base_credential_revision=1, status="awaiting_confirmation",
+                              expires_at=now + timedelta(minutes=2))
+    db.session.add(login)
+    db.session.commit()
+    assert queue_snapshot(now) == {"mode": "serial", "busy": False, "ready_count": 0}
+    login.status = "waiting_scan"
+    db.session.commit()
+    assert queue_snapshot(now)["busy"] is True
+    login.status = "queued"
+    db.session.commit()
+    assert queue_snapshot(now) == {"mode": "serial", "busy": False, "ready_count": 1}
+    login.expires_at = now - timedelta(seconds=1)
+    job.scheduled_at = now - timedelta(seconds=1)
+    db.session.commit()
+    assert queue_snapshot(now)["ready_count"] == 1
+    job.cancel_requested = True
+    db.session.commit()
+    assert queue_snapshot(now)["ready_count"] == 0

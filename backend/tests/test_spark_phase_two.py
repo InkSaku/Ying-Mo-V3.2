@@ -77,6 +77,28 @@ def test_qr_confirm_is_atomic_private_idempotent_and_syncs_without_enabling(clie
     assert not config_for(account)["auto_run_enabled"]
 
 
+def test_pending_device_confirmation_is_visible_and_success_keeps_safe_diagnostics(client):
+    _, token = member(client, "handoffmember")
+    session_id = start(client, token).get_json()["data"]["id"]
+    claim_login()
+    def observer(on_qr, on_status, check):
+        check()
+        on_status("diagnostic", {"cookie_names": ["sessionid"], "scan_signal": {"data_error_code": 0}})
+        on_status("verifying", {"verification_methods": ["push_verify"]})
+        data = client.get("/api/v1/spark", headers=auth(token)).get_json()["data"]["login_session"]
+        assert data["status"] == "verifying"
+        assert "已登录设备确认" in data["reason"]
+        assert "短信" not in data["reason"]
+        assert "diagnostics" not in data["detected_account"]
+        state = state_for()
+        return state, identity_profile(state)
+    run_login(session_id, observer)
+    session = db.session.get(SparkLoginSession, session_id)
+    assert session.status == "awaiting_confirmation"
+    assert session.reason == ""
+    assert session.detected_account["diagnostics"]["cookie_names"] == ["sessionid"]
+
+
 def test_repeated_start_and_second_tab_share_same_session(client):
     _, token = member(client)
     first = start(client, token).get_json()["data"]["id"]

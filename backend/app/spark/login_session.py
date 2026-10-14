@@ -6,7 +6,7 @@ from app.extensions import db
 from app.models import SparkAccount, SparkLoginSession, User
 from app.models.spark import now_utc
 from .credentials import CredentialError, credential_cipher, decrypt_state, encrypt_state
-from .login_browser import identity_profile, LoginBrowserError, observe_login
+from .login_browser import identity_profile, LoginBrowserError, observe_login, login_handoff_prompt
 from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, reset_schedule
 
 LIVE = ("queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation")
@@ -125,6 +125,7 @@ def run_login(session_id, observer=observe_login):
                 session.detected_account = {**(session.detected_account or {}), "diagnostics": diagnostics}
             else:
                 session.status = value
+                session.reason = login_handoff_prompt(diagnostics.get("verification_methods", [])) if value == "verifying" and diagnostics else ""
             if value == "verifying":
                 session.qr_ciphertext = None
             db.session.commit()
@@ -134,6 +135,7 @@ def run_login(session_id, observer=observe_login):
             _, session = assert_login_active(session_id)
             session.qr_ciphertext = credential_cipher().encrypt(image).decode()
             session.qr_updated_at, session.status = now_utc(), "waiting_scan"
+            session.reason = ""
             db.session.commit()
         state, profile = observer(qr, status, check)
         account, session = assert_login_active(session_id)
@@ -145,7 +147,9 @@ def run_login(session_id, observer=observe_login):
             except ValueError:
                 pass
         profile["same_account"] = bool(old and profile.get("identity_hash") and old.get("identity_hash") == profile["identity_hash"])
-        session.detected_account = profile
+        # Preserve structural success diagnostics for comparison with failures.
+        session.detected_account = {**profile, "diagnostics": (session.detected_account or {}).get("diagnostics")}
+        session.reason = ""
         session.qr_ciphertext = None
         session.status, session.expires_at = "awaiting_confirmation", now_utc() + timedelta(minutes=5)
         db.session.commit()

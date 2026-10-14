@@ -220,21 +220,20 @@ def test_confirmed_qr_requiring_identity_verification_is_not_success_or_waiting(
         assert not qr_requires_verification(payload)
 
 
-def test_real_browser_stops_on_qr_verification_response_before_timeout(chat_page, monkeypatch):
+def mock_login_browser(chat_page, monkeypatch, html, responses):
     import json
     from types import SimpleNamespace
     import playwright.sync_api
-    from app.spark.login_browser import observe_login, LoginBrowserError
     context = chat_page.context.browser.new_context()
     closed = []
     def route(request):
-        if "check_qrconnect" in request.request.url:
-            request.fulfill(content_type="application/json", body=json.dumps({
-                "data": {"error_code": 2046, "verify_ways": ["sms"]}, "message": "error"}))
+        from urllib.parse import urlsplit
+        url = urlsplit(request.request.url)
+        key = url.path + ("?" + url.query if url.query else "")
+        if key in responses:
+            request.fulfill(content_type="application/json", body=json.dumps(responses[key]))
         else:
-            request.fulfill(content_type="text/html", body='''<script>
-                fetch('/passport/web/check_qrconnect/');
-                </script><p>身份验证</p>''')
+            request.fulfill(content_type="text/html; charset=utf-8", body=html)
     context.route("https://www.douyin.com/**", route)
     def close():
         closed.append(True)
@@ -246,9 +245,82 @@ def test_real_browser_stops_on_qr_verification_response_before_timeout(chat_page
         def __exit__(self, *args):
             pass
     monkeypatch.setattr(playwright.sync_api, "sync_playwright", Runtime)
+    return closed
+
+
+def test_real_browser_stops_on_visible_official_challenge(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login, LoginBrowserError
+    closed = mock_login_browser(chat_page, monkeypatch, '''<script>
+        fetch('/passport/web/check_qrconnect/');
+        </script><p>请进行安全验证</p>''', {
+        '/passport/web/check_qrconnect/': {"data": {"error_code": 2046, "verify_ways": ["sms"]}}})
     with pytest.raises(LoginBrowserError) as error:
         observe_login(lambda image: pytest.fail("verification must not publish a new QR"),
                       lambda *args: None, lambda: None, timeout=10)
     assert error.value.status == "blocked"
-    assert "额外身份验证" in error.value.reason
+    assert "官方网页显示了安全验证" in error.value.reason
     assert closed == [True]
+
+
+def test_second_step_response_waits_for_delayed_login_cookie(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login
+    closed = mock_login_browser(chat_page, monkeypatch, '''<script>
+        fetch('/passport/web/check_qrconnect/').then(() => {
+            setTimeout(() => { document.cookie = 'sessionid=fixture;path=/;secure'; }, 500);
+        });</script>''', {'/passport/web/check_qrconnect/': {
+            'data': {'error_code': 2046, 'verify_ways': [{'verify_way': 'push_verify'}], 'url': 'private-ticket-url'}}})
+    statuses = []
+    state, _ = observe_login(lambda _: pytest.fail('must not invent a new QR'),
+                             lambda value, diagnostics=None: statuses.append((value, diagnostics)), lambda: None, timeout=6)
+    assert any(cookie['name'] == 'sessionid' for cookie in state['cookies'])
+    assert any(value == 'verifying' for value, _ in statuses)
+    signals = [diagnostics['scan_signal'] for value, diagnostics in statuses if value == 'diagnostic']
+    assert any(signal.get('verification_methods') == ['push_verify'] for signal in signals)
+    assert 'private-ticket-url' not in str(statuses)
+    assert closed == [True]
+
+
+def test_second_step_without_cookie_is_unfinished_login_not_assumed_sms(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login, LoginBrowserError
+    mock_login_browser(chat_page, monkeypatch, "<script>fetch('/passport/web/check_qrconnect/');</script>",
+                       {'/passport/web/check_qrconnect/': {'data': {'error_code': 2046}}})
+    with pytest.raises(LoginBrowserError) as error:
+        observe_login(lambda _: None, lambda *args: None, lambda: None, timeout=2)
+    assert error.value.status == 'interrupted'
+    assert '尚未获取有效登录态' in error.value.reason
+    assert '短信' not in error.value.reason
+
+
+def test_verification_method_diagnostics_keep_only_known_enums():
+    from app.spark.login_browser import verification_methods, login_handoff_reason
+    assert verification_methods({'verify_ways': [
+        {'verify_way': 'push_verify', 'mobile': 'private-phone', 'verify_ticket': 'private-ticket'},
+        {'verify_way': 'mobile_sms_verify'}, 'sms', 'private-phone', {'verify_way': 2046}, None,
+    ]}) == ['mobile_sms_verify', 'push_verify', 'sms']
+    assert '已登录设备确认' in login_handoff_reason({'verification_methods': ['push_verify']})
+    assert '短信验证要求' in login_handoff_reason({'verification_methods': ['mobile_sms_verify']})
+
+
+def test_late_old_qr_decision_does_not_block_current_qr(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login
+    import base64
+    from io import BytesIO
+    from PIL import Image
+    buffer = BytesIO()
+    Image.new('RGB', (32, 32), 'white').save(buffer, format='PNG')
+    png = base64.b64encode(buffer.getvalue()).decode()
+    mock_login_browser(chat_page, monkeypatch, '''<script>(async () => {
+        await fetch('/passport/web/get_qrcode/?generation=old');
+        await fetch('/passport/web/get_qrcode/?generation=current');
+        await fetch('/passport/web/check_qrconnect/?token=old');
+        setTimeout(() => { document.cookie = 'sessionid=fixture;path=/;secure'; }, 500);
+        })();</script>''', {
+        '/passport/web/get_qrcode/?generation=old': {'data': {'error_code': 0, 'token': 'old', 'qrcode': png}},
+        '/passport/web/get_qrcode/?generation=current': {'data': {'error_code': 0, 'token': 'current', 'qrcode': png}},
+        '/passport/web/check_qrconnect/?token=old': {'data': {'error_code': 2046}},
+    })
+    signals = []
+    state, _ = observe_login(lambda _: None, lambda status, diagnostics=None: signals.append(diagnostics) if diagnostics else None,
+                             lambda: None, timeout=6)
+    assert any(cookie['name'] == 'sessionid' for cookie in state['cookies'])
+    assert not any(signal['scan_signal'].get('data_error_code') == 2046 for signal in signals)
