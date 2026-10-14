@@ -22,7 +22,7 @@ def encode_image_derivatives(image):
     display = image.copy()
     display.thumbnail(DISPLAY_MAX_SIZE)
     if display.mode not in ("RGB", "RGBA"):
-        display = display.convert("RGB")
+        display = display.convert("RGBA" if "transparency" in display.info or "A" in display.getbands() else "RGB")
     display_buffer = BytesIO()
     display.save(display_buffer, "WEBP", quality=90, method=6)
 

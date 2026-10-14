@@ -1384,14 +1384,20 @@ login_only + archived                → 200，保留稳定地址
 
 ## 11.2 上传规则
 
-第一阶段支持：
+图片上传支持：
 
 - JPG / JPEG；
 - PNG；
 - WebP；
+- HEIC / HEIF；
+- GIF；
+- BMP；
+- TIFF / TIF；
+- AVIF；
 - 现有 Live Photo 所需媒体类型。
 
 单文件默认上限 15 MB，后端必须校验实际内容而不是只相信扩展名和 MIME 声明。
+GIF 等多帧图片和多页 TIFF 的站内展示图与缩略图使用第一帧／第一页，保留上传原文件供作者下载；GIF 和 TIFF 不在前端转码。JPEG 的 `.jpe`、`.jfif` 扩展名与常见 MIME 别名也可选择上传。
 
 必须验证：
 

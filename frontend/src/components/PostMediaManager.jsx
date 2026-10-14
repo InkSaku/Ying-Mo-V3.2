@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import { manageableMediaRows } from "../lib/postMedia";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MediaPresentationEditor } from "./MediaPresentationEditor";
@@ -50,7 +50,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
     setError("");
     setMessage("");
     if (!isAcceptedImageFile(file)) {
-      setError("请选择 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
+      setError(`请选择 ${IMAGE_FORMAT_LABEL} 图片。`);
       return null;
     }
 
@@ -121,7 +121,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       return;
     }
     if (!isAcceptedImageFile(imageFile)) {
-      setError("Live Photo 图片必须是 JPEG、PNG、WebP、HEIC 或 HEIF。");
+      setError(`Live Photo 静态图片支持 ${IMAGE_FORMAT_LABEL}。`);
       return;
     }
     if (busyRef.current) return;
@@ -343,7 +343,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
           <div className="live-photo-file-field">
             <div className="live-photo-file-copy">
               <span>静态图片</span>
-              <small title={liveImage?.name}>{liveImage?.name || "JPEG、PNG、WebP、HEIC 或 HEIF"}</small>
+              <small title={liveImage?.name}>{liveImage?.name || IMAGE_FORMAT_LABEL}</small>
             </div>
             <label
               className={`btn btn-secondary live-photo-file-picker ${busy ? "is-disabled" : ""}`}

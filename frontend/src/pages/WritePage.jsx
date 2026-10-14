@@ -18,7 +18,7 @@ import { ArticleArchiveCat } from "../components/ArticleSketches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile } from "../lib/imageUpload";
 import {
   AUTOSAVE_DELAY,
   autosaveStatusLabel,
@@ -806,7 +806,7 @@ export function WritePage() {
   const uploadInlineImages = async (files, { selectionPrepared = false } = {}) => {
     const images = files.filter(isAcceptedImageFile);
     if (!images.length) {
-      setEditorError("只支持 JPEG、PNG、WebP、HEIC 或 HEIF 图片；Live Photo 请使用页面下方的配对上传。");
+      setEditorError(`支持 ${IMAGE_FORMAT_LABEL} 图片；Live Photo 请使用页面下方的配对上传。`);
       return;
     }
     const controller = new AbortController();

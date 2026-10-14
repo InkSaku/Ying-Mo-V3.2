@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ProtectedImage } from "./ProtectedImage";
 import { UploadProgress } from "./UploadProgress";
@@ -43,7 +43,7 @@ export function AvatarManager({ profile, onChange }) {
       return;
     }
     if (!isAcceptedImageFile(selected)) {
-      setError("请选择 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
+      setError(`请选择 ${IMAGE_FORMAT_LABEL} 图片。`);
       clearSelection();
       return;
     }
@@ -174,7 +174,7 @@ export function AvatarManager({ profile, onChange }) {
           </label>
         ) : (
           <>
-            <button className="btn btn-primary" type="button" disabled={busy} onClick={save}>
+            <button className="btn btn-primary" type="button" disabled={busy} onClick={() => { void save(); }}>
               {busy ? "正在上传" : profile.avatar_media_id ? "确认替换头像" : "确认设置头像"}
             </button>
             <button className="btn btn-secondary" type="button" disabled={busy} onClick={() => {

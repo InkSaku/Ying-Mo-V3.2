@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import {
   localDateTimeValue, memoryContributionPayload, memoryDraftKey,
   readMemoryDraft, removeMemoryDraft, writeMemoryDraft,
@@ -169,7 +169,7 @@ export function MemoryContributionComposer({ rootPost, collection, defaults, onP
   const uploadFiles = async (files) => {
     if (!files.length) return;
     if (files.some((file) => !isAcceptedImageFile(file))) {
-      setError("只支持 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
+      setError(`支持 ${IMAGE_FORMAT_LABEL} 图片。`);
       return;
     }
     setBusy("uploading");

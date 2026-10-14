@@ -33,6 +33,10 @@ ALLOWED_FORMATS={
     "PNG":("image/png",".png"),
     "WEBP":("image/webp",".webp"),
     "HEIF":("image/heic",".heic"),
+    "GIF":("image/gif",".gif"),
+    "BMP":("image/bmp",".bmp"),
+    "TIFF":("image/tiff",".tiff"),
+    "AVIF":("image/avif",".avif"),
 }
 
 
@@ -57,6 +61,7 @@ def _read_image(file):
         if fmt not in ALLOWED_FORMATS:
             raise ValueError("unsupported")
         image=Image.open(BytesIO(raw)); image.load()
+        # Display the first frame/page while retaining the untouched original.
         image=ImageOps.exif_transpose(image)
     except (UnidentifiedImageError,OSError):
         raise ValueError("invalid")
@@ -127,6 +132,8 @@ def upload_image():
     except ValueError as error:
         if str(error)=="too_large":
             return error_response("PAYLOAD_TOO_LARGE","图片不得超过 15 MB。",413)
+        if str(error)=="unsupported":
+            return error_response("VALIDATION_ERROR","图片格式暂不支持，请选择 JPEG/JPG、PNG、WebP、HEIC/HEIF、GIF、BMP、TIFF 或 AVIF 图片。",422)
         return error_response("VALIDATION_ERROR","文件不是有效图片。",422)
     public_id=str(uuid.uuid4())
     mime,original,display,thumb=_write_image_files(raw,image,fmt,public_id)

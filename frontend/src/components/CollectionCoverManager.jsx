@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ProtectedImage } from "./ProtectedImage";
 import { UploadProgress } from "./UploadProgress";
@@ -19,7 +19,7 @@ export function CollectionCoverManager({ collection, onChange }) {
     setError("");
     setMessage("");
     if (!isAcceptedImageFile(file)) {
-      setError("请选择 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
+      setError(`请选择 ${IMAGE_FORMAT_LABEL} 图片。`);
       return;
     }
     const controller = new AbortController();

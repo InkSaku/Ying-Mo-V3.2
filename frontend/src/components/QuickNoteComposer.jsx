@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
 import {
   formWithQuickNoteAudience,
   initialQuickNoteForm,
@@ -192,7 +192,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     if (!files.length) return;
     const invalid = files.find((file) => !isAcceptedImageFile(file));
     if (invalid) {
-      setError("快速随记只支持 JPEG、PNG、WebP、HEIC 或 HEIF 图片。");
+      setError(`快速随记支持 ${IMAGE_FORMAT_LABEL} 图片。`);
       return;
     }
     if (!online) {

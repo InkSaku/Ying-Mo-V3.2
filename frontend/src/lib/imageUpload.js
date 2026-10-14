@@ -1,21 +1,36 @@
-export const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
+export const IMAGE_FORMAT_LABEL = "JPEG/JPG、PNG、WebP、HEIC/HEIF、GIF、BMP、TIFF、AVIF";
 
 const acceptedMimeTypes = new Set([
   "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
   "image/png",
   "image/webp",
   "image/heic",
   "image/heif",
+  "image/gif",
+  "image/bmp",
+  "image/x-bmp",
+  "image/x-ms-bmp",
+  "image/tiff",
+  "image/x-tiff",
+  "image/avif",
 ]);
-const acceptedExtensions = /\.(?:jpe?g|png|webp|heic|heif)$/i;
+const imageExtensions = [".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".webp", ".heic", ".heif", ".gif", ".bmp", ".tif", ".tiff", ".avif"];
+export const IMAGE_ACCEPT = [...acceptedMimeTypes, ...imageExtensions].join(",");
+const acceptedExtensions = /\.(?:jpe?g|jpe|jfif|png|webp|heic|heif|gif|bmp|tiff?|avif)$/i;
 const heicExtensions = /\.(?:heic|heif)$/i;
 
+function imageMimeType(file) {
+  return String(file?.type || "").split(";")[0].trim().toLowerCase();
+}
+
 export function isAcceptedImageFile(file) {
-  return Boolean(file) && (acceptedMimeTypes.has(file.type) || acceptedExtensions.test(file.name || ""));
+  return Boolean(file) && (acceptedMimeTypes.has(imageMimeType(file)) || acceptedExtensions.test(file.name || ""));
 }
 
 export function isHeicImage(file) {
-  return Boolean(file) && (["image/heic", "image/heif"].includes(file.type) || heicExtensions.test(file.name || ""));
+  return Boolean(file) && (["image/heic", "image/heif"].includes(imageMimeType(file)) || heicExtensions.test(file.name || ""));
 }
 
 export function shouldOptimizeImage({ byteSize, width, height }, {
@@ -50,8 +65,11 @@ export async function prepareImageForUpload(file, {
   maxDimension = 4096,
   quality = 0.88,
 } = {}) {
-  if (!isAcceptedImageFile(file)) throw new TypeError("unsupported_image");
-  if (isHeicImage(file) || typeof createImageBitmap !== "function") {
+  if (!isAcceptedImageFile(file)) throw new TypeError(`图片格式暂不支持，请选择 ${IMAGE_FORMAT_LABEL} 图片。`);
+  // Keep animated GIFs and multi-page TIFF originals intact for server decoding.
+  const preserveOriginal = ["image/gif", "image/tiff", "image/x-tiff"].includes(imageMimeType(file))
+    || /\.(?:gif|tiff?)$/i.test(file.name || "");
+  if (isHeicImage(file) || preserveOriginal || typeof createImageBitmap !== "function") {
     return { file, optimized: false, originalBytes: file.size, uploadBytes: file.size };
   }
 

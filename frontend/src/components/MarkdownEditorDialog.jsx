@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import { UploadProgress } from "./UploadProgress";
 import { VisualMarkdownEditor } from "./VisualMarkdownEditor";
-import { IMAGE_ACCEPT } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL } from "../lib/imageUpload";
 
 const focusableSelector = [
   "button:not([disabled])",
@@ -305,7 +305,7 @@ export function MarkdownEditorDialog({
         </div>
 
         <footer className="markdown-editor-dialog-footer">
-          <p>支持拖拽或粘贴 JPEG、PNG、WebP、HEIC、HEIF；大图会先在本机优化，取消编辑不会删除已经上传的媒体。</p>
+          <p>支持拖拽或粘贴 {IMAGE_FORMAT_LABEL}；大图会先在本机优化，取消编辑不会删除已经上传的媒体。</p>
           <div>
             <button className="btn btn-secondary" type="button" disabled={busy} onClick={onRequestClose}>取消</button>
             <button className="btn btn-secondary" type="button" disabled={busy} onClick={onSave} title="⌘/Ctrl + S">保存</button>
