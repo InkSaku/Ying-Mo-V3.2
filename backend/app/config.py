@@ -68,6 +68,9 @@ class BaseConfig:
     S3_REGION = os.getenv("S3_REGION", "").strip()
     S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "").strip()
     S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "").strip()
+    SPARK_CREDENTIAL_KEY = os.getenv("SPARK_CREDENTIAL_KEY", "").strip()
+    SPARK_WORKER_LOCK = os.getenv("SPARK_WORKER_LOCK", str(BASE_DIR / "instance/spark-worker.lock"))
+    SPARK_TASK_TIMEOUT_SECONDS = int(os.getenv("SPARK_TASK_TIMEOUT_SECONDS", "1200"))
     IMAGE_MAX_BYTES = int(os.getenv("IMAGE_MAX_BYTES", str(15 * 1024 * 1024)))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", str(32 * 1024 * 1024)))
     SITE_URL = os.getenv("SITE_URL", "http://localhost:5173").rstrip("/")
@@ -115,6 +118,7 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     APP_ENV = "production"
+    SPARK_WORKER_LOCK = os.getenv("SPARK_WORKER_LOCK", "/var/lib/yingmo-spark/worker.lock")
     JWT_COOKIE_SECURE = True
     SECRET_KEY = os.getenv("SECRET_KEY")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")

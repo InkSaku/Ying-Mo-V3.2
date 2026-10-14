@@ -1,0 +1,32 @@
+[Unit]
+Description=Ying-Mo spark scheduler and serial browser worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/yingmo/backend
+EnvironmentFile=/var/www/yingmo/backend/.env
+Environment=APP_ENV=production
+Environment=PLAYWRIGHT_BROWSERS_PATH=/var/lib/yingmo-spark/browsers
+Environment=SPARK_WORKER_LOCK=/var/lib/yingmo-spark/worker.lock
+Environment=PYTHONUNBUFFERED=1
+StateDirectory=yingmo-spark
+StateDirectoryMode=0700
+ExecStart=/var/www/yingmo/backend/.venv/bin/python -m app.spark.worker
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+TimeoutStopSec=15
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+MemoryMax=1800M
+TasksMax=256
+
+[Install]
+WantedBy=multi-user.target

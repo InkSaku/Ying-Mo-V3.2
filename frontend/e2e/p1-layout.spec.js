@@ -120,7 +120,8 @@ test("P1 personal archive is one coherent desktop directory", async ({ page }, t
 
   await page.goto("/me");
   await expect(page.locator(".personal-nav")).toBeVisible();
-  await expect(page.locator(".personal-nav section")).toHaveCount(3);
+  await expect(page.locator(".personal-nav section")).toHaveCount(4);
+  await expect(page.locator('.personal-nav a[href="/tools/spark"]')).toBeVisible();
   await expect(page.locator(".personal-nav-mobile")).toBeHidden();
   const navigationBox = await page.locator(".personal-navigation").boundingBox();
   const heroBox = await page.locator(".me-hero").boundingBox();
@@ -182,8 +183,9 @@ test("P1 pages stay operable on a narrow phone", async ({ page }, testInfo) => {
   const mobileDirectory = page.locator(".personal-nav-mobile");
   await expect(mobileDirectory).toBeVisible();
   await mobileDirectory.locator(":scope > summary").click();
-  await expect(mobileDirectory.locator("nav section")).toHaveCount(3);
-  await expect(mobileDirectory.locator("nav a")).toHaveCount(12);
+  await expect(mobileDirectory.locator("nav section")).toHaveCount(4);
+  await expect(mobileDirectory.locator("nav a")).toHaveCount(13);
+  await expect(mobileDirectory.locator('a[href="/tools/spark"]')).toBeVisible();
   await mobileDirectory.locator(":scope > summary").click();
   await noOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("personal-overview-mobile.png"), fullPage: true });

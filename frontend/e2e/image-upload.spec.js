@@ -34,7 +34,7 @@ test("avatar confirmation uploads the selected JPEG and persists after reload", 
   await avatar.locator("input[type=file]").setInputFiles(jpegPath);
   await expect(avatar.getByAltText("待确认的新头像预览")).toBeVisible();
   await avatar.getByRole("button", { name: "确认设置头像", exact: true }).click();
-  await expect(avatar.getByRole("status")).toHaveText("头像已设置。");
+  await expect(avatar.locator(".inline-success[role=status]")).toHaveText("头像已设置。");
   await expect(avatar.locator(".inline-error")).toHaveCount(0);
   await expect(avatar.getByAltText("当前头像")).toBeVisible();
   await page.reload();
@@ -49,7 +49,7 @@ test("collection cover accepts GIF and persists after reload", async ({ page }) 
     name: "cover.gif", mimeType: "image/gif",
     buffer: Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"),
   });
-  await expect(cover.getByRole("status")).toHaveText("Collection 封面已更新。");
+  await expect(cover.locator(".inline-success[role=status]")).toHaveText("Collection 封面已更新。");
   await expect(cover.locator(".inline-error")).toHaveCount(0);
   await expect(cover.getByAltText("当前 Collection 封面")).toBeVisible();
   await page.reload();

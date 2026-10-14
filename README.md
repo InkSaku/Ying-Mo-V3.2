@@ -447,6 +447,18 @@ python run.py
 http://127.0.0.1:8000
 ```
 
+本地测试续火花时，还需要在另一个终端运行独立后台：
+
+```bash
+cd backend
+.venv/bin/python -m playwright install chromium
+.venv/bin/python scripts/run_local_spark.py
+```
+
+该脚本仅允许开发环境和本机数据库。首次启动会生成固定的凭证加密密钥并保存到本地 `.env`（权限 `600`），以后重复启动沿用该密钥；不会输出密钥。若网站后端已在运行，首次生成后重启 `python run.py` 一次。脚本检查数据库和真实 Chromium 后启动 worker，保持这个终端运行即可。可加 `--check` 只完成配置和检查。前端、网站后端、续火花后台是三个独立进程。
+
+打开 `/tools/spark` 应看到“后台服务在线”，点击“扫码连接抖音”，用手机抖音扫描网页二维码并确认，再在网页确认连接的账号。系统自动安排联系人同步；保存好友与问候计划、完成模拟检查后，显式开启每日计划。备用脚本导入收纳在折叠入口中。无需先部署服务器即可测试这一流程。
+
 ---
 
 ### 3. 启动前端
@@ -620,6 +632,59 @@ Bundle verification
 ---
 
 ## Production Build
+
+### 续火花助手（第二阶段：网页扫码与首次设置）
+
+入口为 `/tools/spark`，个人空间与侧栏提供链接。复用映墨成员登录，每位有效成员管理一个抖音账号；登录态、好友、配置、执行记录均独立。主入口使用抖音官方网页生成的二维码，用户在手机上扫码确认、在映墨核对账号后完成绑定；本地脚本导入作为备用方式保留。
+
+第二阶段需要数据库迁移 `20261014_0015`，新增临时登录会话表及账号引导状态字段。更新前停止 worker、备份数据库和密钥，再执行 `flask --app run.py db upgrade`，重启网站后端与 worker。已有第一阶段账号的已启用计划保留；首次绑定、更换账号或重连均暂停每日发送，同号重连保留好友和模板，完成核对与模拟检查后再显式恢复。改变好友选择或消息/通道设置后，需要重新检查。仅保存默认值不算已经完成设置。
+
+扫码请求与普通任务共用一个串行后台：到期自动发送优先，扫码之后为其他就绪任务安排一次执行机会；手动发送不会持续压住扫码请求。排队期限 30 分钟，实际扫码窗口最长 180 秒，候选登录态等待账号确认最长 5 分钟。进入账号确认后浏览器即关闭。取消、过期和重启会清理临时二维码/候选凭证；停止后台期间，超时会话在接口读取或后台恢复时清理，过期会话始终不能确认。
+
+二维码与候选登录态加密保存，仅本人通过带 JWT 请求头的接口读取。前端使用鉴权 Blob 请求展示二维码，不把 token 放进图片地址。稳定身份使用带来源的内部摘要比对，昵称和抖音号仅用于展示；无法确认同号时按新账号处理。登录页的普通“验证码登录”选项不会被当作安全挑战，实际验证提示会停止此次连接。
+
+续火花包含联系人同步、好友选择与排序、消息模板、每日计划、模拟运行、立即执行、失败补发、consumer / creator 双通道、抖音号采集和每周采集。自动任务在独立进程中运行，不依赖打开网页。站内运行记录区分排队、执行、成功、部分成功、失效、平台验证、待确认与停止。
+
+安装后端依赖并升级迁移后，配置独立的 `SPARK_CREDENTIAL_KEY`。在服务器终端执行下面的命令生成密钥，再将输出写入权限为 `600` 的 `backend/.env`；不要提交密钥，也不要在每次部署时重新生成：
+
+```bash
+cd /var/www/yingmo/backend
+.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+登录态使用 Fernet 加密存入数据库，执行时只在内存解密。数据库备份包含加密登录态，密钥应另行安全备份；丢失或更换密钥后需重新导入登录态。更新同一账号的凭证会保留已确认身份的好友选择；不能确认相同账号时会清空好友名单，避免把旧名单用于新账号。
+
+4 核 4 GB、最多十位成员采用一个后台进程、一个 Chromium、一个任务子进程，依次执行所有账号任务。不要把调度器放进 Gunicorn，不要在多台机器上启动此后台。准备浏览器与 systemd 服务（示例使用 `www-data`；部署路径或运行用户不同时调整服务文件）：
+
+```bash
+sudo install -d -m 700 -o www-data -g www-data /var/lib/yingmo-spark
+sudo /var/www/yingmo/backend/.venv/bin/python -m playwright install-deps chromium
+sudo -u www-data env PLAYWRIGHT_BROWSERS_PATH=/var/lib/yingmo-spark/browsers \
+  /var/www/yingmo/backend/.venv/bin/python -m playwright install chromium
+sudo install -m 644 /var/www/yingmo/deploy/yingmo-spark.service /etc/systemd/system/yingmo-spark.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now yingmo-spark
+sudo systemctl status yingmo-spark
+```
+
+运行用户需要读取代码和 `.env`，但不要开放给无关用户。浏览器运行于非 root 用户并启用 Chromium sandbox；保留系统的用户命名空间支持。服务默认使用 `MemoryMax=1800M`、每个任务最长 1200 秒，全部子进程随服务停止，单实例文件锁也会由执行子进程持有。
+
+本地启动与检查（脚本准备固定本地密钥；检查只启动空白 Chromium，不访问抖音）：
+
+```bash
+cd backend
+.venv/bin/python -m playwright install chromium
+.venv/bin/python scripts/run_local_spark.py --check
+.venv/bin/python scripts/run_local_spark.py
+```
+
+部署后端更新前停止 `yingmo-spark`，执行数据库迁移后重启。原有 `deploy/deploy.sh` 会对已安装的该服务进行这两步；首次安装仍按上面的命令执行。保存计划会撤销旧配置的自动任务并重新安排；关闭每日发送后，不启动新的每日发送与补发，手动任务和单独配置的每周采集仍可运行。关闭每周采集请将采集日期设为关闭；解绑会取消该账号全部任务并删除登录态与好友。服务重启时不自动重放中断的发送。跨日过期的发送任务取消，不集中补发过去几天的消息。
+
+每位好友每日的真实发送有独立记录，Enter 前写入执行意图。已成功或结果不明的发送不会再发；只有确认在发送之前失败的好友才安排 45 分钟后的补发，每个账号每日至多一次补发批次。遇到平台验证或登录失效时暂停对应账号的计划。消息已进入发送阶段时，取消或解绑无法撤回它；界面保留待确认结果。
+
+上游核心固定为 `douyin-keeper` 的 `07d9c52e373f5e2c39da91415d7a53e9e1d7294c`，出处、改造说明与 MIT 版权见 `backend/app/spark/vendor/NOTICE.md` 和 `LICENSE`。验收范围及实账号验证边界见 [第一阶段记录](docs/backend/SPARK_ACCEPTANCE.md)、[第二阶段记录](docs/backend/SPARK_PHASE_TWO_ACCEPTANCE.md)。
+
+独立扫码探测可运行 `.venv/bin/python scripts/verify_spark_qr_spike.py`，需要先停止当前 worker，以共享文件锁保证只开一个浏览器。它只把临时二维码写入本机私有 `instance`，登录态留在内存，随后用新浏览器只读验证联系人，不绑定网站账号、不发送消息。`--probe` 仅检测二维码渲染，退出后该二维码不能登录。普通用户直接用网站入口，不需要运行探测脚本。
 
 前端：
 

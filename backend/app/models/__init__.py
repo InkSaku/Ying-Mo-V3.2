@@ -32,4 +32,7 @@ __all__ = [
     "Notification", "RefreshSession",
     "AdminLog", "FeaturedContent", "SiteSetting",
     "AccountToken", "AccountTokenPurpose", "PostMemoryLink",
+    "SparkAccount", "SparkContact", "SparkJob", "SparkDelivery", "SparkWorkerState", "SparkLoginSession",
 ]
+
+from .spark import SparkAccount, SparkContact, SparkJob, SparkDelivery, SparkWorkerState, SparkLoginSession

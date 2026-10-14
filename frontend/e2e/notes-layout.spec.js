@@ -32,7 +32,8 @@ test("Notes preserves readable dates, photos and filters across viewport sizes",
   await page.getByLabel("密码").fill(account.password);
   await page.getByRole("button", { name: /登录，继续书写/ }).click();
   await expect(page).toHaveURL(/\/home/);
-  await page.goto("/notes");
+  // The shared test server contains other specs' login_only posts as well.
+  await page.goto(`/notes?author=${account.username}`);
   await expect(page.locator(".post-card-journal")).toHaveCount(4);
   await expect(page.locator(".note-journal-period")).toHaveCount(2);
   await expect(page.locator(".post-filters-controls")).toBeHidden();

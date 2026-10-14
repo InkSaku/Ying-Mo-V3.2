@@ -43,6 +43,7 @@ export function MePage() {
           <div className="profile-actions">
             <Link className="btn btn-secondary" to="/me/settings">编辑资料</Link>
             <Link className="btn btn-secondary" to="/me/sessions">登录会话</Link>
+            <Link className="btn btn-secondary" to="/tools/spark">续火花助手</Link>
             <Link className="btn btn-primary" to="/write">新建记录</Link>
           </div>
         </div>
