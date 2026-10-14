@@ -2,6 +2,7 @@
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import hashlib
+import json
 import random
 import re
 import uuid
@@ -19,7 +20,7 @@ TZ = ZoneInfo("Asia/Shanghai")
 DEFAULT_CONFIG = {
     "schedule_time": "21:00", "jitter_minutes": 30, "send_gap_min": 6, "send_gap_max": 12,
     "max_friends_per_run": 20, "messages": ["🔥 续火花", "晚安，明天见", "今天也要开心哦"],
-    "auto_run_enabled": True, "allow_first_message": False, "first_message_daily_limit": 1,
+    "auto_run_enabled": False, "allow_first_message": False, "first_message_daily_limit": 1,
     "creator_user_detail_path": "aweme/v1/creator/im/user_detail/", "creator_max_scrolls": 80,
     "schedule_harvest_day": "mon",
 }
@@ -137,6 +138,26 @@ def selected_contacts(account):
     return [c for c in contacts_for(account) if c.selected]
 
 
+def validation_fingerprint(account):
+    cfg = config_for(account)
+    targets = [{"id": c.id, "name": c.display_name, "order": c.selected_order,
+                "profile": {k: c.profile.get(k) for k in ("has_conversation", "ambiguous", "missing_in_sync", "short_id", "user_id")}}
+               for c in selected_contacts(account)]
+    return hashlib.sha256(json.dumps({"credential": account.credential_revision, "targets": targets,
+        "allow_first_message": cfg["allow_first_message"], "messages": cfg["messages"]},
+        sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def validation_ready(account):
+    return bool(account.validated_at and account.validation_fingerprint == validation_fingerprint(account)
+                and selected_contacts(account) and account.session_status == "ready")
+
+
+def require_plan_validation(account):
+    if account.onboarding_required and (not account.config_saved_at or not validation_ready(account)):
+        raise SparkError("请先保存问候计划，并对当前账号和好友完成模拟检查。", 409, "SPARK_CHECK_REQUIRED")
+
+
 def enqueue(account, kind, source, request_key, *, scheduled_at=None, only_names=None, local_day=None):
     if not account.credential_ciphertext:
         raise SparkError("请先导入抖音登录态。", 409, "SPARK_NOT_BOUND")
@@ -173,6 +194,11 @@ def schedule_due(now=None):
         .with_for_update()).all()
     for account in accounts:
         cfg = config_for(account)
+        if account.onboarding_required and cfg["auto_run_enabled"] and not validation_ready(account):
+            account.config = {**cfg, "auto_run_enabled": False}
+            cancel_jobs(account, automatic_only=True)
+            reset_schedule(account, now)
+            cfg = config_for(account)
         if account.session_status in ("expired", "blocked", "error"):
             continue
         if cfg["auto_run_enabled"] and account.next_run_at and account.next_run_at <= now:
@@ -203,9 +229,19 @@ def overview(account):
         SparkDelivery.account_id == account.user_id, SparkDelivery.local_day == today,
         SparkDelivery.status.in_(("checking", "sending", "succeeded", "unknown")))))
     cfg = config_for(account)
+    from .login_session import latest_session
+    login = latest_session(account)
+    if login and login.status in ("queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation") and login.expires_at <= now:
+        from .login_session import finish
+        finish(login, "expired", "连接已过期，请重新扫码。")
+        db.session.commit()
+    steps = [bool(account.credential_ciphertext and account.session_status == "ready"),
+             bool(selected_contacts(account)), bool(account.config_saved_at),
+             bool(cfg["auto_run_enabled"] and validation_ready(account))]
+    profile = account.account_profile or {}
     pending, creator_pending = [], 0
     for contact in contacts:
-        if not contact.selected or contact.display_name in sent_names or contact.profile.get("ambiguous"):
+        if not contact.selected or contact.display_name in sent_names or contact.profile.get("ambiguous") or contact.profile.get("missing_in_sync"):
             continue
         if contact.profile.get("has_conversation"):
             pending.append({"name": contact.display_name, "channel": "consumer"})
@@ -222,6 +258,12 @@ def overview(account):
              "top_streak": [{"name": c.display_name, "days": c.profile.get("streak_days", 0)} for c in sorted(contacts, key=lambda c: -c.profile.get("streak_days", 0))[:10]]}
     stats["confidence"]["low"] = len(contacts) - stats["confidence"]["high"]
     return {"bound": bool(account.credential_ciphertext), "session_status": account.session_status,
+            "account_profile": {k: profile.get(k) for k in ("nickname", "short_id", "bound_via", "plan_was_enabled")},
+            "login_session": login.to_dict() if login else None,
+            "step_progress": {"completed": steps, "current_step": next((i + 1 for i, done in enumerate(steps) if not done), 4)},
+            "validation_ready": validation_ready(account),
+            "reconnection_diff": {"missing_selected": [c.display_name for c in contacts if c.selected and c.profile.get("missing_in_sync")],
+                                  "ambiguous_selected": [c.display_name for c in contacts if c.selected and c.profile.get("ambiguous")]},
             "credential_updated_at": isoformat_utc(account.credential_updated_at), "config": config_for(account),
             "next_run_at": isoformat_utc(account.next_run_at), "next_harvest_at": isoformat_utc(account.next_harvest_at),
             "contacts_updated_at": isoformat_utc(account.contacts_updated_at), "contacts": [c.to_dict() for c in contacts],

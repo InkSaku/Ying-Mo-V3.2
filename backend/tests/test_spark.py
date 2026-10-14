@@ -13,7 +13,7 @@ from app.models.spark import now_utc
 from app.spark.context import execution_state
 from app.spark.credentials import decrypt_state
 from app.spark.executor import execute_job, merge_consumer
-from app.spark.service import config_for, get_account, local_now, next_daily, next_weekly, schedule_due
+from app.spark.service import config_for, get_account, local_now, next_daily, next_weekly, schedule_due, reset_schedule
 from app.spark.worker import recover_interrupted, worker_lock
 from .conftest import auth, register, token_from
 
@@ -35,8 +35,18 @@ def state_for(value="private-session", uid="member-1"):
 
 
 def bind(client, token, state=None):
-    return client.post("/api/v1/spark/credentials", headers=auth(token),
-                       data={"file": (BytesIO(json.dumps(state or state_for()).encode()), "state.json")})
+    response = client.post("/api/v1/spark/credentials", headers=auth(token),
+                           data={"file": (BytesIO(json.dumps(state or state_for()).encode()), "state.json")})
+    # Phase-one executor regressions model existing, migration-grandfathered plans.
+    # New-member onboarding and activation gates are tested in test_spark_phase_two.
+    if response.status_code == 200:
+        from flask_jwt_extended import decode_token
+        account = get_account(int(decode_token(token)["sub"]))
+        account.onboarding_required = False
+        account.config = {**config_for(account), "auto_run_enabled": True}
+        reset_schedule(account)
+        db.session.commit()
+    return response
 
 
 def add_friend(user_id, name="好友", selected=True, creator=False):
@@ -96,6 +106,29 @@ def run(response):
     job_id = response.get_json()["data"]["id"]
     execute_job(job_id, Driver, sleep=lambda _: None)
     return db.session.get(SparkJob, job_id)
+
+
+def test_dry_run_publishes_current_recipient_before_browser_check(client):
+    user_id, token = member(client, "sparkprogress")
+    bind(client, token)
+    add_friend(user_id, "好友甲")
+    add_friend(user_id, "好友乙")
+    response = queue(client, token, "dry_run")
+    job_id = response.get_json()["data"]["id"]
+    progress = []
+    def observe_progress():
+        job = db.session.get(SparkJob, job_id)
+        progress.append(deepcopy(job.result))
+    Driver.during_send = observe_progress
+    job = run(response)
+    assert [result["progress"] for result in progress] == [
+        {"total": 2, "completed": 0, "current_name": "好友甲"},
+        {"total": 2, "completed": 1, "current_name": "好友乙"},
+    ]
+    assert progress[0]["events"] == []
+    assert progress[1]["events"][0]["name"] == "好友甲"
+    assert job.status == "succeeded"
+    assert db.session.scalar(db.select(db.func.count()).select_from(SparkDelivery)) == 0
 
 
 def test_two_members_complete_independent_chains_and_credentials_never_leave_backend(client):
@@ -257,6 +290,29 @@ def test_restart_journal_marks_enter_unknown_without_replay(client):
     assert not Driver.calls
 
 
+def test_parent_stale_job_snapshot_cannot_overwrite_child_completion(client):
+    from sqlalchemy.orm import Session
+    from app.spark.executor import interrupted
+    user, token = member(client, "completedchild")
+    bind(client, token)
+    job_id = queue(client, token, "sync").get_json()["data"]["id"]
+    job = db.session.get(SparkJob, job_id)
+    job.status = "running"
+    db.session.commit()
+    assert job.status == "running"
+    with Session(db.engine) as child:
+        completed = child.get(SparkJob, job_id)
+        completed.status = "succeeded"
+        completed.result = {"message": "同步完成", "count": 31}
+        completed.finished_at = now_utc()
+        child.commit()
+    assert job.status == "running"  # Parent cached state predates child commit.
+    interrupted(job_id, "执行进程中断，请检查结果后重试")
+    db.session.expire_all()
+    assert db.session.get(SparkJob, job_id).status == "succeeded"
+    assert db.session.get(SparkJob, job_id).result == {"message": "同步完成", "count": 31}
+
+
 def test_daily_schedule_is_persistent_deduplicated_and_pause_cancels_automatic_jobs(client):
     user, token = member(client, "schedulespark")
     bind(client, token)
@@ -298,7 +354,9 @@ def test_creator_channel_daily_and_per_run_limits_survive_new_jobs(client):
     bind(client, token)
     add_friend(user, "新朋友一", creator=True)
     add_friend(user, "新朋友二", creator=True)
-    client.put("/api/v1/spark/config", headers=auth(token), json={"allow_first_message": True})
+    client.put("/api/v1/spark/config", headers=auth(token), json={"allow_first_message": True, "auto_run_enabled": False})
+    run(queue(client, token, "dry_run"))
+    Driver.calls = []
     first = run(queue(client, token))
     assert [e["status"] for e in first.result["events"]] == ["succeeded", "skipped"]
     second = run(queue(client, token))
@@ -368,6 +426,9 @@ def test_contact_selection_order_is_preserved(client):
     response = client.put("/api/v1/spark/contacts", headers=auth(token), json={
         "entries": [{"id": two.id, "selected": True}, {"id": one.id, "selected": True}]})
     assert [c["display_name"] for c in response.get_json()["data"]["contacts"]] == ["第二位", "第一位"]
+    client.put("/api/v1/spark/config", headers=auth(token), json={"schedule_time": "22:00"})
+    run(queue(client, token, "dry_run"))
+    Driver.calls = []
     run(queue(client, token))
     assert [c[0] for c in Driver.calls] == ["第二位", "第一位"]
 
@@ -406,8 +467,11 @@ def test_file_database_survives_app_restart_with_schedule_and_job(tmp_path):
         account.credential_ciphertext = encrypt_state(state_for())
         account.credential_revision = 1
         account.session_status = "ready"
+        account.onboarding_required = False
+        account.config = {**config_for(account), "auto_run_enabled": True}
         reset_schedule(account)
         planned = account.next_run_at
+        assert planned is not None
         job_id = enqueue(account, "sync", "manual", str(uuid.uuid4())).id
         db.session.commit()
         db.session.remove()
@@ -426,8 +490,11 @@ def test_saved_plan_replaces_cancelled_same_day_job_instead_of_losing_new_schedu
     add_friend(user)
     account = db.session.get(SparkAccount, user)
     for messages in (["初次计划"], ["修改计划"], ["初次计划"]):
-        response = client.put("/api/v1/spark/config", headers=auth(token), json={"messages": messages, "jitter_minutes": 0})
+        response = client.put("/api/v1/spark/config", headers=auth(token), json={"messages": messages, "jitter_minutes": 0, "auto_run_enabled": False})
         assert response.status_code == 200
+        run(queue(client, token, "dry_run"))
+        Driver.calls = []
+        assert client.put("/api/v1/spark/config", headers=auth(token), json={"auto_run_enabled": True}).status_code == 200
         account.next_run_at = now_utc() - timedelta(seconds=1)
         db.session.commit()
         schedule_due()

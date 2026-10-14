@@ -10,7 +10,7 @@ from app.models import SparkAccount, SparkContact, SparkDelivery, SparkJob, User
 from app.models.spark import now_utc
 from .context import _execution
 from .credentials import CredentialError, decrypt_state
-from .service import config_for, enqueue, local_now, reset_schedule, selected_contacts
+from .service import config_for, enqueue, local_now, reset_schedule, selected_contacts, validation_fingerprint, validation_ready
 
 
 class Cancelled(Exception):
@@ -37,13 +37,18 @@ def assert_active(job_id):
     if (job.status != "running" or job.cancel_requested or not user or user.status != "active"
         or not account or not account.credential_ciphertext or account.credential_revision != job.credential_revision
         or (job.source in ("daily", "retry") and not config_for(account)["auto_run_enabled"])
-        or (job.kind == "send" and account.session_status in ("expired", "blocked", "error"))):
+        or (job.kind == "send" and account.session_status in ("expired", "blocked", "error"))
+        or (job.kind == "send" and account.onboarding_required and not validation_ready(account))):
         raise Cancelled()
     return job, account
 
 
 def merge_consumer(account, items):
     contacts = {c.display_name: c for c in db.session.scalars(db.select(SparkContact).where(SparkContact.account_id == account.user_id))}
+    found = {str(item.get("name", "")).strip()[:191] for item in items[:500]}
+    for name, contact in contacts.items():
+        if contact.profile.get("has_conversation"):
+            contact.profile = {**contact.profile, "missing_in_sync": name not in found}
     for item in items[:500]:
         name = str(item.get("name", "")).strip()[:191]
         if not name:
@@ -55,7 +60,7 @@ def merge_consumer(account, items):
             contacts[name] = contact
         import re
         streak = re.search(r"\d+", str(item.get("streak", "")))
-        profile = {**(contact.profile or {}), "has_conversation": True, "channel": "consumer",
+        profile = {**(contact.profile or {}), "has_conversation": True, "channel": "consumer", "missing_in_sync": False,
                    "streak_days": int(streak.group()) if streak else 0}
         if profile.get("nickname") == name:
             profile["join_confidence"] = "high"
@@ -110,8 +115,14 @@ def mark_intent(job_id, delivery_id, limit):
 
 
 def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认"):
-    job = db.session.get(SparkJob, job_id)
+    # The parent may still hold a running-job snapshot after the child committed
+    # success. Discard that transaction and lock the current row before deciding
+    # to interrupt; committed send intents remain the source of truth.
+    db.session.rollback()
+    job = db.session.scalar(db.select(SparkJob).where(SparkJob.id == job_id).with_for_update()
+                            .execution_options(populate_existing=True))
     if not job or job.status != "running":
+        db.session.rollback()
         return
     unknown = False
     for delivery in db.session.scalars(db.select(SparkDelivery).where(SparkDelivery.job_id == job_id)):
@@ -141,6 +152,9 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         job, account = assert_active(job_id)
         cfg = config_for(account)
         state = decrypt_state(account.credential_ciphertext)
+        if job.kind == "dry_run":
+            account.validation_fingerprint = account.validated_at = None
+            db.session.commit()
     except Cancelled:
         job.status, job.finished_at = "cancelled", now_utc()
         db.session.commit()
@@ -178,11 +192,12 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                 job.result = {"message": "同步完成" if status == "succeeded" else "同步未完成，请检查登录态后重试。", "count": len(data)}
             else:
                 targets = selected_contacts(account)
+                checked_fingerprint = validation_fingerprint(account)
                 only_names = (job.payload or {}).get("only_names")
                 if only_names is not None:
                     targets = [c for c in targets if c.display_name in only_names]
                 maximum = cfg["max_friends_per_run"]
-                targets = targets[:maximum] if maximum else targets[:500]
+                targets = targets[:500] if job.kind == "dry_run" else targets[:maximum] if maximum else targets[:500]
                 creator_attempts = 0
                 for index, contact in enumerate(targets):
                     job, account = assert_active(job_id)
@@ -191,10 +206,17 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                     if not contact.selected:
                         continue
                     dry = job.kind == "dry_run"
+                    if dry:
+                        job.result = {"events": list(events), "progress": {
+                            "total": len(targets), "completed": len(events), "current_name": contact.display_name,
+                        }}
+                        db.session.commit()
                     channel = "consumer" if contact.profile.get("has_conversation") else "creator"
                     event = {"name": contact.display_name, "channel": channel}
                     if contact.profile.get("ambiguous"):
                         event.update(status="skipped", reason="同名好友身份尚未确认")
+                    elif contact.profile.get("missing_in_sync"):
+                        event.update(status="skipped", reason="本次同步未找到该好友，请重新核对")
                     elif channel == "creator" and (not cfg["allow_first_message"] or creator_attempts >= 1):
                         event.update(status="skipped", reason="未启用首条消息或本轮已使用首条消息通道")
                     elif channel == "creator" and not dry and creator_daily_count(job) >= cfg["first_message_daily_limit"]:
@@ -229,7 +251,9 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                                     retry_names.append(contact.display_name)
                             event.update(status=status, reason=reason)
                     events.append(event)
-                    job.result = {"events": list(events)}
+                    job.result = {"events": list(events), **({"progress": {
+                        "total": len(targets), "completed": len(events), "current_name": None,
+                    }} if dry else {})}
                     db.session.commit()
                     if event["status"] in ("expired", "blocked"):
                         account.session_status = event["status"]
@@ -243,6 +267,8 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                     job.status = "partial"
                 if job.status not in ("expired", "blocked") and "succeeded" in statuses:
                     account.session_status = "ready"
+                if job.kind == "dry_run" and events and len(events) == len(selected_contacts(account)) and all(e["status"] == "succeeded" for e in events) and checked_fingerprint == validation_fingerprint(account):
+                    account.validation_fingerprint, account.validated_at = checked_fingerprint, now_utc()
                 if job.kind == "send" and retry_names and job.source != "retry" and job.status not in ("expired", "blocked"):
                     enqueue(account, "send", "retry", f"{job.local_day}:retry", scheduled_at=now_utc() + timedelta(minutes=45),
                             only_names=retry_names, local_day=job.local_day)

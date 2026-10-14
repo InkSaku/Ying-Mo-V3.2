@@ -65,27 +65,30 @@ def check_login(page) -> tuple[bool, str]:
 
 def _find_contact(page, name: str):
     """优先按全文精确匹配联系人标题，避免误点其他会话里的消息预览。"""
-    exact = page.get_by_text(name, exact=True)
-    if exact.count():
-        return exact.first
-    return exact.first
+    return page.locator(".conversationConversationItemtitle").filter(
+        has_text=re.compile("^" + re.escape(name) + "$")
+    ).first
 
 
 def _verify_in_conversation(page, name: str) -> bool:
-    """右侧会话顶部标题区域（x>300 且 y<100）出现目标昵称才算切换成功。"""
-    for exact in (True,):
-        try:
-            loc = page.get_by_text(name, exact=exact)
-            for i in range(loc.count()):
-                try:
-                    box = loc.nth(i).bounding_box()
-                except Exception:
-                    continue
-                if box and box.get("x", 0) > 300 and box.get("y", 0) < 100:
-                    return True
-        except Exception:
-            continue
-    return False
+    """校验会话标题；群人数后缀只在目标列表项已选中时接受。"""
+    try:
+        titles = page.locator(".RightPanelHeadertitle:visible")
+        if titles.count() != 1:
+            return False
+        title = titles.first.inner_text().strip()
+        if title == name:
+            return True
+        # Douyin appends a member count to group headers, e.g. 群名(3).
+        # A similarly named, stale group must not validate a different recipient.
+        if not re.fullmatch(re.escape(name) + r"\s*[（(]\d+[)）]", title):
+            return False
+        selected = page.locator(
+            ".conversationConversationItemcurConversation .conversationConversationItemtitle:visible"
+        )
+        return selected.count() == 1 and selected.first.inner_text().strip() == name
+    except Exception:
+        return False
 
 
 def _search_and_open(page, name: str) -> bool:
@@ -149,13 +152,28 @@ def _locate_contact(page, name: str) -> bool:
 # ── 消息输入与发送 ────────────────────────────────────────────────────────
 
 
+def _editor_text(input_box) -> str:
+    """Read message text without Douyin's empty end-of-line caret nodes."""
+    return input_box.evaluate(r"""element => {
+        const lines = element.querySelectorAll('.ace-line');
+        if (!lines.length) return element.innerText || '';
+        return Array.from(lines, line => {
+            const copy = line.cloneNode(true);
+            copy.querySelectorAll('[data-enter="true"][data-leaf="true"]').forEach(node => {
+                if (/^[\u200b\ufeff]*$/.test(node.textContent || '')) node.remove();
+            });
+            return copy.textContent || '';
+        }).join('\n');
+    }""")
+
+
 def _type_and_send(page, input_box, msg_text: str, before_send) -> bool:
     """Record intent immediately before Enter; never retry an uncertain Enter."""
     input_box.click()
-    page.keyboard.press("Control+A")
+    page.keyboard.press("ControlOrMeta+A")
     page.keyboard.press("Delete")
     page.keyboard.type(msg_text, delay=100)
-    if msg_text not in (input_box.inner_text() or ""):
+    if _editor_text(input_box).strip() != msg_text.strip():
         return False
     before_send()
     page.keyboard.press("Enter")
@@ -168,7 +186,7 @@ def _wait_input_cleared(input_box, msg_text: str, wait: float = 8) -> bool:
     while time.time() < deadline:
         time.sleep(1)
         try:
-            cur = input_box.inner_text() or ""
+            cur = _editor_text(input_box)
             if msg_text not in cur:
                 return True
         except Exception:

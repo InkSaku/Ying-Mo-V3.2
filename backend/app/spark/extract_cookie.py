@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import os
+import json
 import sys
 import time
 from pathlib import Path
@@ -30,19 +31,26 @@ def main() -> None:
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(viewport={"width": 1280, "height": 800})
         page = context.new_page()
-        page.goto("https://www.douyin.com/", wait_until="domcontentloaded", timeout=60000)
+        page.goto("https://www.douyin.com/chat", wait_until="domcontentloaded", timeout=60000)
+        print("如扫码后出现额外身份验证，请本人在这个官方浏览器窗口完成；完成前不会保存登录态。")
 
-        deadline = time.time() + 300
-        while time.time() < deadline:
+        deadline = time.monotonic() + 300
+        while time.monotonic() < deadline:
+            if page.is_closed():
+                print("\n浏览器已关闭，登录已取消。")
+                browser.close()
+                sys.exit(1)
             cookies = context.cookies()
-            if any(c["name"].startswith("sessionid") for c in cookies):
-                time.sleep(2)
-                context.storage_state(path=str(OUT_PATH))
+            if any(c["name"].startswith("sessionid") and c["value"] for c in cookies):
+                page.wait_for_timeout(2000)
+                state = context.storage_state()
+                state["cookies"] = [cookie for cookie in state["cookies"] if cookie.get("name")]
+                OUT_PATH.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
                 os.chmod(OUT_PATH, 0o600)
                 print(f"\n登录态已保存到: {OUT_PATH}")
                 browser.close()
                 return
-            time.sleep(2)
+            page.wait_for_timeout(2000)
 
         print("\n超时：5 分钟内未完成扫码登录，请重新运行。")
         browser.close()

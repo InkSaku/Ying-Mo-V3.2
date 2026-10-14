@@ -138,15 +138,9 @@ def _do_send(page, context, nickname: str, msg_text: str, dry_run: bool, max_scr
         return False, "未能确认当前会话属于该好友"
     if dry_run:
         return True, "dry-run（通道 B 定位成功）"
-    input_box.click()
-    page.keyboard.press("Control+A")
-    page.keyboard.press("Delete")
-    page.keyboard.type(msg_text, delay=100)
-    if msg_text not in (input_box.inner_text() or ""):
+    from .automation import _type_and_send, _wait_input_cleared
+    if not _type_and_send(page, input_box, msg_text, before_send):
         return False, "文字未进入输入框，未发送消息"
-    before_send()
-    page.keyboard.press("Enter")
-    from .automation import _wait_input_cleared
     if _wait_input_cleared(input_box, msg_text):
         if detect_rate_limit(page):
             return False, "发送后平台要求验证，结果需要确认"

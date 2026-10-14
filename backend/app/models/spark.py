@@ -16,6 +16,12 @@ class SparkAccount(db.Model):
     credential_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
     credential_revision = db.Column(db.Integer, nullable=False, default=0)
     plan_revision = db.Column(db.Integer, nullable=False, default=0)
+    login_generation = db.Column(db.Integer, nullable=False, default=0)
+    account_profile = db.Column(db.JSON, nullable=True, default=dict)
+    onboarding_required = db.Column(db.Boolean, nullable=False, default=True)
+    config_saved_at = db.Column(db.DateTime, nullable=True)
+    validation_fingerprint = db.Column(db.String(64), nullable=True)
+    validated_at = db.Column(db.DateTime, nullable=True)
     config = db.Column(db.JSON, nullable=False, default=dict)
     session_status = db.Column(db.String(24), nullable=False, default="unbound")
     credential_updated_at = db.Column(db.DateTime, nullable=True)
@@ -88,3 +94,31 @@ class SparkWorkerState(db.Model):
     __tablename__ = "spark_worker_state"
     id = db.Column(db.Integer, primary_key=True)
     heartbeat_at = db.Column(db.DateTime, nullable=False, default=now_utc)
+
+
+class SparkLoginSession(db.Model):
+    __tablename__ = "spark_login_sessions"
+    id = db.Column(db.String(36), primary_key=True)
+    account_id = db.Column(db.Integer, db.ForeignKey("spark_accounts.user_id", ondelete="CASCADE"), nullable=False, index=True)
+    generation = db.Column(db.Integer, nullable=False)
+    base_credential_revision = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(24), nullable=False, default="queued", index=True)
+    qr_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
+    qr_updated_at = db.Column(db.DateTime, nullable=True)
+    candidate_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
+    detected_account = db.Column(db.JSON, nullable=False, default=dict)
+    reason = db.Column(db.String(255), nullable=False, default="")
+    cancel_requested = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=now_utc)
+    started_at = db.Column(db.DateTime, nullable=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    finished_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        profile = self.detected_account or {}
+        return {"id": self.id, "status": self.status, "reason": self.reason,
+                "detected_account": {k: profile.get(k) for k in ("nickname", "short_id", "same_account")},
+                "identity_known": bool(profile.get("identity_hash")),
+                "has_qr": bool(self.qr_ciphertext),
+                **{key: isoformat_utc(getattr(self, key)) for key in
+                   ("created_at", "started_at", "expires_at", "qr_updated_at", "finished_at")}}
