@@ -133,7 +133,7 @@ success "Environment check passed"
 info "Updating source code from GitHub..."
 
 
-GIT_TERMINAL_PROMPT=0 git fetch origin
+timeout 90s env GIT_TERMINAL_PROMPT=0 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch origin
 
 
 LOCAL=$(git rev-parse HEAD)
