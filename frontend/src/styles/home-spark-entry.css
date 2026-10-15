@@ -1,0 +1,72 @@
+/* One illustrated entrance moves from the center of the first post-login view
+   to a persistent corner shortcut. It remains a normal keyboard-accessible link. */
+.home-spark-entry {
+  position: fixed;
+  z-index: 30;
+  left: calc(100vw - 224px);
+  top: calc(var(--home-header-height, 68px) + 16px);
+  width: 200px;
+  min-height: 76px;
+  padding: 9px 12px 9px 6px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--surface, var(--page));
+  border: 1px solid var(--border);
+  border-radius: 18px 3px 18px 3px;
+  box-shadow: 0 8px 30px rgb(25 29 36 / 9%);
+  text-decoration: none;
+  transition: left 1.2s cubic-bezier(.28,.78,.19,1), top 1.2s cubic-bezier(.28,.78,.19,1),
+    width 1.2s cubic-bezier(.28,.78,.19,1), min-height 1.2s cubic-bezier(.28,.78,.19,1),
+    padding 1.2s cubic-bezier(.28,.78,.19,1), box-shadow .25s ease;
+}
+.home-spark-entry:hover { text-decoration: none; box-shadow: 0 12px 34px rgb(25 29 36 / 15%); }
+.home-spark-entry:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+.home-spark-entry-art { display: block; flex: none; width: 58px; color: var(--text); transition: width 1.2s cubic-bezier(.28,.78,.19,1); }
+.home-spark-entry-art svg { display: block; width: 100%; height: auto; overflow: visible; }
+.home-spark-entry-copy { min-width: 0; display: grid; gap: 2px; }
+.home-spark-entry-kicker { color: var(--brand-link); font-family: var(--mono); font-size: 8px; letter-spacing: .06em; white-space: nowrap; }
+.home-spark-entry-copy strong { color: var(--text); font-size: 15px; font-weight: 500; white-space: nowrap; transition: font-size 1.2s cubic-bezier(.28,.78,.19,1); }
+.home-spark-entry-hint { display: none; color: var(--text-3); font-size: 11px; white-space: nowrap; }
+.home-spark-entry.is-center {
+  left: calc(50vw - 130px);
+  top: calc(50svh - 145px);
+  width: 260px;
+  min-height: 290px;
+  padding: 24px 14px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  border-radius: 46% 48% 42% 6%;
+  box-shadow: 0 24px 75px rgb(25 29 36 / 16%);
+}
+.home-spark-entry.is-center .home-spark-entry-art { width: 148px; }
+.home-spark-entry.is-center .home-spark-entry-copy { gap: 7px; justify-items: center; }
+.home-spark-entry.is-center .home-spark-entry-kicker { font-size: 10px; }
+.home-spark-entry.is-center .home-spark-entry-copy strong { font-size: 23px; }
+.home-spark-entry.is-center .home-spark-entry-hint { display: block; }
+.home-spark-entry.is-traveling { flex-direction: column; justify-content: center; gap: 0; text-align: center; }
+.home-spark-entry.is-traveling .home-spark-entry-copy { justify-items: center; }
+.home-spark-entry.is-traveling .home-spark-entry-art { animation: home-spark-run 260ms ease-in-out 5; }
+.home-spark-runner-flame { transform-origin: 120px 57px; animation: home-spark-glow 2.5s ease-in-out infinite; }
+.home-spark-runner-star { opacity: .8; animation: home-spark-twinkle 2.4s ease-in-out infinite; }
+@keyframes home-spark-run { 50% { transform: translateY(-5px) rotate(-5deg); } }
+@keyframes home-spark-glow { 50% { transform: rotate(6deg) scale(1.04); } }
+@keyframes home-spark-twinkle { 50% { opacity: .25; } }
+@media (max-width: 767px) {
+  .home-editorial .home-edition-copy { padding-top: 68px; }
+  .home-spark-entry { left: calc(100vw - 182px); top: calc(var(--home-header-height, 68px) + 12px); width: 166px; min-height: 66px; padding: 6px 8px 6px 3px; gap: 2px; }
+  .home-spark-entry-art { width: 50px; }
+  .home-spark-entry-kicker { font-size: 7px; }
+  .home-spark-entry-copy strong { font-size: 13px; }
+  .home-spark-entry.is-center { left: calc(50vw - 116px); top: calc(50svh - 132px); width: 232px; min-height: 264px; padding: 20px 12px; gap: 3px; }
+  .home-spark-entry.is-center .home-spark-entry-art { width: 136px; }
+  .home-spark-entry.is-center .home-spark-entry-copy strong { font-size: 21px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-spark-entry, .home-spark-entry-art, .home-spark-runner-flame, .home-spark-runner-star { transition: none !important; animation: none !important; }
+}
+@media print { .home-spark-entry { display: none; } }

@@ -64,6 +64,39 @@ test.beforeAll(async ({ request }) => {
   }
 });
 
+test("the spark companion starts in the welcome area and becomes a persistent shortcut", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page);
+  const entry = page.getByRole("link", { name: "进入续火花助手" });
+  await expect(entry).toHaveClass(/is-center/);
+  await expect(entry).toContainText("续火花，来这里");
+  const center = await entry.boundingBox();
+  expect(Math.abs(center.x + center.width / 2 - 720)).toBeLessThan(30);
+  expect(Math.abs(center.y + center.height / 2 - 450)).toBeLessThan(30);
+  await page.screenshot({ path: testInfo.outputPath("spark-welcome-center.png") });
+  await expect(entry).toHaveClass(/is-traveling/);
+  await page.screenshot({ path: testInfo.outputPath("spark-welcome-moving.png") });
+  await expect(entry).toHaveClass(/is-docked/);
+  const dock = await entry.boundingBox();
+  expect(dock.x).toBeGreaterThan(1200);
+  expect(dock.y).toBeLessThan(160);
+  await page.screenshot({ path: testInfo.outputPath("spark-welcome-corner.png") });
+  await entry.click();
+  await expect(page).toHaveURL(/\/tools\/spark/);
+  await page.goto("/home");
+  await expect(page.getByRole("link", { name: "进入续火花助手" })).toHaveClass(/is-docked/);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow(page);
+  await expect(page.getByRole("link", { name: "进入续火花助手" })).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("spark-welcome-mobile.png") });
+  await page.locator(".mobile-menu > summary").click();
+  await page.getByRole("button", { name: "退出登录" }).click();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await login(page);
+  await expect(page.getByRole("link", { name: "进入续火花助手" })).toHaveClass(/is-docked/);
+});
+
 test("home keeps chronological order, cursor paging and the reading position", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const response = page.waitForResponse((res) => res.url().includes("/home/feed?") && res.ok());

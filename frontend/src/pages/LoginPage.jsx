@@ -5,6 +5,7 @@ import { InkSketch } from "../components/InkSketch";
 import "../styles/login.css";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { HOME_SPARK_WELCOME_KEY } from "../lib/homeSparkWelcome";
 
 export function LoginPage() {
   usePageMeta("登录");
@@ -20,10 +21,14 @@ export function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      await login(form);
       const next = params.get("next");
-      navigate(next && next.startsWith("/") ? next : "/home", { replace: true });
+      const destination = next && next.startsWith("/") ? next : "/home";
+      if (destination === "/home") window.sessionStorage.setItem(HOME_SPARK_WELCOME_KEY, "1");
+      await login(form);
+      if (destination !== "/home") window.sessionStorage.removeItem(HOME_SPARK_WELCOME_KEY);
+      navigate(destination, { replace: true });
     } catch (err) {
+      window.sessionStorage.removeItem(HOME_SPARK_WELCOME_KEY);
       setError(err.message);
     } finally {
       setBusy(false);

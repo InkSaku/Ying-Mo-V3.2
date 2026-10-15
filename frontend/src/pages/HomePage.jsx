@@ -5,12 +5,14 @@ import { HomeFeed } from "../components/HomeFeed";
 import { QuickNoteComposer } from "../components/QuickNoteComposer";
 import { HomeClosing } from "../components/HomeClosing";
 import { HomeOpeningFeature } from "../components/HomeOpeningFeature";
+import { HomeSparkEntry } from "../components/HomeSparkEntry";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { homeFeaturePost } from "../lib/homeComposition";
 import { HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
 import "../styles/home.css";
 import "../styles/home-editorial.css";
+import "../styles/home-spark-entry.css";
 
 const feedFilters = [["all", "全部"], ["note", "随记"], ["article", "文章"]];
 
@@ -58,6 +60,7 @@ export function HomePage() {
 
   return (
     <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
+      <HomeSparkEntry key={user.id} />
       <section className="home-edition-heading" aria-label="映墨日常来信">
         <div className="home-edition-copy">
           <p className="home-edition-eyebrow">映墨 / {editionDate} · 今日来信</p>
