@@ -1,5 +1,6 @@
 """Owned, versioned and expiring QR sessions sharing the serial browser worker."""
 from datetime import timedelta
+import json
 import uuid
 
 from app.extensions import db
@@ -16,6 +17,12 @@ BROWSER = ("preparing", "waiting_scan", "verifying")
 def finish(session, status, reason=""):
     session.status, session.reason, session.finished_at = status, reason, now_utc()
     session.qr_ciphertext = session.candidate_ciphertext = None
+    clear_verification(session)
+
+
+def clear_verification(session):
+    session.verification_ciphertext = session.verification_revision = None
+    session.verification_updated_at = session.interaction_ciphertext = None
 
 
 def invalidate_sessions(account, reason="账号连接已更新，请重新扫码。"):
@@ -96,7 +103,7 @@ def claim_login(now=None):
         db.session.rollback()
         return None
     session.status, session.started_at = "preparing", now
-    session.expires_at = now + timedelta(seconds=180)
+    session.expires_at = now + timedelta(seconds=310)
     db.session.commit()
     return session
 
@@ -117,17 +124,31 @@ def assert_login_active(session_id):
 def run_login(session_id, observer=observe_login):
     try:
         def check():
-            assert_login_active(session_id)
+            _, session = assert_login_active(session_id)
+            interaction = None
+            if session.interaction_ciphertext:
+                interaction = json.loads(credential_cipher().decrypt(session.interaction_ciphertext.encode()))
+                session.interaction_ciphertext = None
             db.session.commit()  # Never hold row locks while waiting for the phone.
+            return interaction
         def status(value, diagnostics=None):
             _, session = assert_login_active(session_id)
-            if value == "diagnostic":
+            if value == "verification_preview":
+                image = diagnostics["image"]
+                if len(image) > 3 * 1024 * 1024 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
+                    raise LoginBrowserError("interrupted", "官方登录页面暂时无法显示，请重新连接。")
+                session.verification_ciphertext = credential_cipher().encrypt(image).decode()
+                session.verification_revision = diagnostics["revision"]
+                session.verification_updated_at = now_utc()
+            elif value == "diagnostic":
                 session.detected_account = {**(session.detected_account or {}), "diagnostics": diagnostics}
             else:
                 session.status = value
                 session.reason = login_handoff_prompt(browser_visible=diagnostics.get("browser_visible", False), visible_challenge=diagnostics.get("visible_challenge", False)) if value == "verifying" and diagnostics else ""
             if value == "verifying":
                 session.qr_ciphertext = None
+                if diagnostics is None:
+                    clear_verification(session)
             db.session.commit()
         def qr(image):
             if len(image) > 512 * 1024:
@@ -135,6 +156,7 @@ def run_login(session_id, observer=observe_login):
             _, session = assert_login_active(session_id)
             session.qr_ciphertext = credential_cipher().encrypt(image).decode()
             session.qr_updated_at, session.status = now_utc(), "waiting_scan"
+            clear_verification(session)
             session.reason = "" if login_browser_headless() else "请用手机扫描本页或已打开的抖音官方窗口中的二维码，并确认登录。请保持官方窗口打开，完成后本页会自动更新。"
             db.session.commit()
         state, profile = observer(qr, status, check)
@@ -151,6 +173,7 @@ def run_login(session_id, observer=observe_login):
         session.detected_account = {**profile, "diagnostics": (session.detected_account or {}).get("diagnostics")}
         session.reason = ""
         session.qr_ciphertext = None
+        clear_verification(session)
         session.status, session.expires_at = "awaiting_confirmation", now_utc() + timedelta(minutes=5)
         db.session.commit()
     except LoginBrowserError as error:

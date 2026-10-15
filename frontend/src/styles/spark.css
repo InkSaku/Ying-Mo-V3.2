@@ -389,3 +389,28 @@
   .spark-connection.is-bound:has(.spark-help[open]) > .spark-connection-tools { grid-column: 1; border-top: 1px solid var(--border); padding-top: 4px; }
 }
 .spark-page .spark-plan textarea { min-height: 88px; height: 88px; }
+
+
+/* Official login remains in its server context while the member operates it. */
+.spark-verification { margin-block: 20px; max-width: 1080px; }
+.spark-verification-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.spark-verification-heading span { color: var(--text-3); font-size: .85rem; }
+.spark-verification-screen { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; cursor: pointer; }
+.spark-verification-screen img { width: 100%; height: auto; display: block; user-select: none; }
+.spark-verification-screen > p { padding: 36px 20px; }
+.spark-verification-controls { margin-top: 14px; }
+.spark-verification-controls form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.spark-verification-controls label { display: grid; gap: 8px; font-size: .88rem; }
+.spark-verification-controls input { width: min(300px, 100%); min-width: 0; }
+.spark-verification-keys { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; }
+@media (max-width: 640px) {
+  .spark-verification-heading { align-items: start; flex-direction: column; gap: 4px; }
+  .spark-verification-controls form { align-items: stretch; flex-direction: column; }
+  .spark-verification-controls input { width: 100%; }
+}
+
+.spark-login-session:has(.spark-verification) { max-width: 1120px; }
+
+.spark-verification-screen img { touch-action: none; }
+.spark-verification-screen.is-enlarged { overflow: auto; max-height: 600px; }
+.spark-verification-screen.is-enlarged img { width: 1366px; max-width: none; }

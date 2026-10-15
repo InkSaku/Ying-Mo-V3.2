@@ -53,3 +53,19 @@ def test_second_phase_mysql_ddl_has_private_large_ciphertext_and_indexes():
     assert sql.count("MEDIUMTEXT") == 2
     assert "DROP" not in sql and "spark_login_sessions" in sql
     assert "ix_spark_login_sessions_expires_at" in sql
+
+
+
+def test_remote_login_mysql_ddl_retains_existing_sessions_and_uses_large_encrypted_preview():
+    path = Path(__file__).resolve().parents[1] / "migrations/versions/20261014_0016_spark_login_interaction.py"
+    spec = importlib.util.spec_from_file_location("spark_login_interaction_migration", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    output = StringIO()
+    context = MigrationContext.configure(dialect_name="mysql", opts={"as_sql": True, "output_buffer": output})
+    with Operations.context(context):
+        module.upgrade()
+    sql = output.getvalue()
+    assert 'MEDIUMTEXT' in sql and 'verification_ciphertext' in sql
+    assert 'interaction_sequence' in sql and 'DEFAULT' in sql
+    assert 'DROP' not in sql and 'DELETE' not in sql

@@ -79,7 +79,7 @@ def next_work(now=None):
 def run_subprocess(app, job_id, lock_fd, *, login=False):
     process = subprocess.Popen([sys.executable, "-m", "app.spark.worker", "--login-session" if login else "--execute", job_id, "--lock-fd", str(lock_fd)],
         start_new_session=True, pass_fds=(lock_fd,), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    deadline = time.monotonic() + (190 if login else app.config["SPARK_TASK_TIMEOUT_SECONDS"])
+    deadline = time.monotonic() + (320 if login else app.config["SPARK_TASK_TIMEOUT_SECONDS"])
     reason = None
     try:
         while process.poll() is None:

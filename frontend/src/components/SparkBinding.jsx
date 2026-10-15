@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SparkVerification } from "./SparkVerification";
 import { api } from "../lib/api";
 
 const live = ["queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation"];
@@ -46,6 +47,7 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
         {imageError ? <p className="spark-meta">{imageError}</p> : null}
         <p className="spark-meta">二维码会随平台更新；失效时请重新获取。手机上打开本页时，可用另一块屏幕展示二维码。</p>
       </div> : null}
+      {session.status === "verifying" && session.has_verification_preview ? <SparkVerification key={session.id} sessionId={session.id} /> : null}
       {session.status === "awaiting_confirmation" ? <div className="spark-account-confirm">
         <strong>{detected.nickname || "已登录的抖音账号"}</strong>
         {detected.short_id ? <p>抖音号：{detected.short_id}</p> : null}

@@ -248,17 +248,19 @@ def mock_login_browser(chat_page, monkeypatch, html, responses):
     return closed
 
 
-def test_real_browser_stops_on_visible_official_challenge(chat_page, monkeypatch):
+def test_real_browser_publishes_visible_official_challenge_for_member(chat_page, monkeypatch):
     from app.spark.login_browser import observe_login, LoginBrowserError
     closed = mock_login_browser(chat_page, monkeypatch, '''<script>
         fetch('/passport/web/check_qrconnect/');
         </script><p>请进行安全验证</p>''', {
         '/passport/web/check_qrconnect/': {"data": {"error_code": 2046, "verify_ways": ["sms"]}}})
+    previews = []
     with pytest.raises(LoginBrowserError) as error:
         observe_login(lambda image: pytest.fail("verification must not publish a new QR"),
-                      lambda *args: None, lambda: None, timeout=10)
-    assert error.value.status == "blocked"
-    assert "官方网页显示了安全验证" in error.value.reason
+                      lambda status, details=None: previews.append(details) if status == "verification_preview" else None,
+                      lambda: None, timeout=2)
+    assert error.value.status == "interrupted"
+    assert previews and previews[0]["image"].startswith(b"\x89PNG")
     assert closed == [True]
 
 
@@ -364,3 +366,35 @@ def test_login_browser_visibility_is_explicit_and_headless_outside_app():
         assert login_browser_headless() is False
         app.config['SPARK_LOGIN_HEADLESS'] = True
         assert login_browser_headless() is True
+
+
+
+def test_headless_member_operates_official_screen_and_login_is_returned(chat_page, monkeypatch):
+    from app.spark.login_browser import observe_login
+    mock_login_browser(chat_page, monkeypatch, """<script>fetch('/passport/web/check_qrconnect/');</script>
+        <button style="position:absolute;left:20px;top:20px;width:180px;height:40px"
+          onclick="document.cookie='sessionid=fixture;path=/;secure'">继续验证</button>""",
+        {'/passport/web/check_qrconnect/': {'data': {'error_code': 2046, 'verify_ways': ['face_verify', 'mobile_sms_verify']}}})
+    pending = []
+    previews = []
+    def status(value, details=None):
+        if value == 'verification_preview':
+            previews.append(details)
+            pending.append({'revision': details['revision'], 'action': {'type': 'click', 'x': 60, 'y': 35}})
+    state, _ = observe_login(lambda _: None, status, lambda: pending.pop(0) if pending else None, timeout=8)
+    assert any(cookie['name'] == 'sessionid' for cookie in state['cookies'])
+    assert len(previews) == 1  # no authenticated screenshot follows the click
+
+
+def test_numeric_input_is_relayed_to_official_form_but_not_chat_editor(chat_page):
+    from app.spark.login_browser import apply_login_interaction
+    page = chat_page
+    page.route('https://www.douyin.com/**', lambda route: route.fulfill(body='<input id="otp"><div id="chat" contenteditable="true"></div><iframe srcdoc="<input id=otp>"></iframe>', content_type='text/html'))
+    page.goto('https://www.douyin.com/chat')
+    page.locator('#otp').click()
+    apply_login_interaction(page, {'type': 'text', 'text': '123456'})
+    assert page.locator('#otp').input_value() == '123456'
+    page.frame_locator('iframe').locator('#otp').click()
+    page.locator('#chat').click()
+    apply_login_interaction(page, {'type': 'text', 'text': '987654'})
+    assert page.locator('#chat').inner_text() == ''

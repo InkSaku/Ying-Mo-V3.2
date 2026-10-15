@@ -3,6 +3,7 @@ import hashlib
 import base64
 import json
 import time
+import uuid
 from urllib.parse import parse_qs, urlsplit
 
 from .credentials import validate_state
@@ -96,9 +97,7 @@ def login_handoff_prompt(methods=None, *, browser_visible=False, visible_challen
     # Neither SMS nor device confirmation can be inferred from offered enums.
     if browser_visible:
         return "请查看已打开的抖音官方浏览器窗口，按实际页面提示完成登录。完成后本页会自动更新，无需导出登录文件。"
-    if visible_challenge:
-        return "抖音官方页面显示了验证提示，当前连接尚未完成。请使用备用登录方式，在官方浏览器中本人完成后导入。"
-    return "已收到扫码登录响应，正在等待抖音网页完成登录；目前尚未取得登录凭证。"
+    return "扫码后的登录尚未完成，请在下方的抖音官方页面按实际提示继续操作。完成后会自动更新连接结果。"
 
 
 def login_browser_headless():
@@ -123,14 +122,52 @@ def browser_challenge(context):
     return False
 
 
+def official_login_page(page):
+    url = urlsplit(page.url)
+    return url.scheme == "https" and (url.hostname == "douyin.com" or (url.hostname or "").endswith(".douyin.com"))
+
+
+def apply_login_interaction(page, action):
+    """Relay only a member's bounded login input, never navigate or run scripts."""
+    if not official_login_page(page):
+        return
+    kind = action["type"]
+    if kind == "click":
+        page.mouse.click(action["x"], action["y"])
+    elif kind == "drag":
+        page.mouse.move(action["x"], action["y"])
+        page.mouse.down()
+        try:
+            page.mouse.move(action["end_x"], action["end_y"], steps=16)
+        finally:
+            page.mouse.up()
+    elif kind == "scroll":
+        page.mouse.move(683, 400)
+        page.mouse.wheel(0, action["delta"])
+    elif kind == "key" and action["key"] in ("Tab", "Escape"):
+        page.keyboard.press(action["key"])
+    elif kind in ("text", "key"):
+        # Only official form inputs may receive text/keys, never chat editors.
+        frames = [page.main_frame, *[f for f in page.frames if f != page.main_frame]]
+        focused = next((frame for frame in frames if frame.evaluate("""() => {
+            const e = document.activeElement;
+            return document.hasFocus() && e?.tagName === 'INPUT' && !['password','file','hidden','submit','button'].includes(e.type);
+        }""")), None)
+        if focused:
+            if kind == "text":
+                page.keyboard.insert_text(action["text"])
+            else:
+                page.keyboard.press(action["key"])
+
+
 def clean_browser_state(captured):
     # The official page can set a nameless visitor cookie, which has no
     # authentication purpose. Keep file-upload validation strict.
     return validate_state(json.dumps({**captured, "cookies": [c for c in captured["cookies"] if c.get("name")]}).encode())
 
 
-def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=None):
-    # Leave time to commit a specific outcome before the worker's 180s lease.
+def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=None):
+    # Leave time to commit a specific outcome before the worker's 310s lease.
     from playwright.sync_api import sync_playwright
     headless = login_browser_headless() if headless is None else headless
     display = {}
@@ -200,8 +237,12 @@ def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=Non
             previous = None
             sampled_at = 0
             sampled_revision = -1
+            verification_revision = None
+            verification_page = None
+            verification_url = None
+            preview_at = 0
             while time.monotonic() < deadline:
-                assert_current()
+                interaction = assert_current()
                 if not context.pages:
                     raise LoginBrowserError("cancelled", "抖音登录窗口已关闭，本次连接已结束。")
                 if page.is_closed():
@@ -236,8 +277,6 @@ def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=Non
                         raise LoginBrowserError("cancelled", "抖音扫码登录已被拒绝，本次连接已结束。")
                     if scan_signal.get("data_status") in ("expired", "5", 5):
                         raise LoginBrowserError("expired", "抖音登录二维码已过期，请重新连接。")
-                if visible_challenge and headless:
-                    raise LoginBrowserError("blocked", "抖音官方网页显示了安全验证，登录尚未完成。请使用备用扫码脚本，在弹出的官方浏览器中本人完成验证后导入登录态。")
                 # The official SDK handles 2046 through its verification flow.
                 # Keep that browser alive for late cookies / phone confirmation;
                 # never turn the protocol response itself into a successful login.
@@ -247,6 +286,33 @@ def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=Non
                     on_status(next_status, prompt)
                     status = next_status
                     reported_prompt = prompt
+                if headless and next_status == "verifying":
+                    active_page = context.pages[-1]
+                    if not official_login_page(active_page):
+                        raise LoginBrowserError("blocked", "登录页面跳转到了不支持的地址，本次连接已停止。请使用备用登录方式。")
+                    if active_page != verification_page:
+                        active_page.set_viewport_size({"width": 1366, "height": 800})
+                    if active_page != verification_page or active_page.url != verification_url:
+                        verification_revision = str(uuid.uuid4())
+                        verification_page, verification_url = active_page, active_page.url
+                    if interaction and interaction.get("revision") == verification_revision:
+                        if any(c["name"].startswith("sessionid") and c["value"] for c in context.cookies()):
+                            continue
+                        apply_login_interaction(active_page, interaction["action"])
+                        if not official_login_page(active_page):
+                            raise LoginBrowserError("blocked", "登录页面跳转到了不支持的地址，本次连接已停止。请使用备用登录方式。")
+                        if active_page.url != verification_url:
+                            verification_revision = str(uuid.uuid4())
+                            verification_url = active_page.url
+                    # Recheck before publishing any image after user interaction:
+                    # authenticated chat content must never enter the preview.
+                    if any(c["name"].startswith("sessionid") and c["value"] for c in context.cookies()):
+                        continue
+                    if time.monotonic() - preview_at >= 1:
+                        image = active_page.screenshot(type="png", timeout=5000)
+                        if not any(c["name"].startswith("sessionid") and c["value"] for c in context.cookies()):
+                            on_status("verification_preview", {"image": image, "revision": verification_revision})
+                        preview_at = time.monotonic()
                 qr = qr_locator(page)
                 if qr and not handoff_observed and not visible_challenge:
                     for text in ("二维码已失效", "二维码失效", "二维码已过期", "刷新二维码"):
@@ -258,7 +324,7 @@ def observe_login(on_qr, on_status, assert_current, timeout=170, *, headless=Non
                         continue
                     image = issued_qr
                     digest = hashlib.sha256(image).digest()
-                    if digest != previous:
+                    if digest != previous or status != "waiting_scan":
                         on_qr(image)
                         previous = digest
                         status = "waiting_scan"

@@ -102,3 +102,70 @@ test("spark QR connects through authenticated image, confirmation and four-step 
   await page.getByRole("button", { name: "暂停每日计划" }).click();
   await expect(page.getByRole("button", { name: "开启每日自动续火花" })).toBeVisible();
 });
+
+test("server login verification screen relays input and disappears after authentication", async ({ page, request }, testInfo) => {
+  const username = `spark_remote_${Date.now().toString(36)}`;
+  const account = { username, nickname: "远程登录验收", email: `${username}@example.com`, password: "password123", invite_code: "e2e-invite" };
+  const registered = await request.post("/api/v1/auth/register", { data: account });
+  expect(registered.status()).toBe(201);
+  await login(page, account);
+  let state;
+  let sequence = 0;
+  let complete = false;
+  const actions = [];
+  const official = await page.context().newPage();
+  await official.setViewportSize({ width: 1366, height: 800 });
+  await official.setContent(`<main style="font:20px sans-serif;padding:80px;background:#fff;height:700px">
+    <h1>官方登录流程模拟（离线测试）</h1><p>扫码已确认，请继续完成登录</p>
+    <button style="position:absolute;left:100px;top:250px;height:50px">选择验证方式</button>
+    <input style="position:absolute;left:100px;top:350px;width:250px;height:40px" placeholder="验证码" />
+    <button style="position:absolute;left:100px;top:430px;height:50px">完成登录</button></main>`);
+  const png = await official.screenshot();
+  await official.close();
+  await page.route("**/api/v1/spark", async (route) => {
+    if (!state) state = (await (await route.fetch()).json()).data;
+    const session = complete ? { id: "remote-test", status: "awaiting_confirmation", has_qr: false, has_verification_preview: false,
+      detected_account: { nickname: "远程登录验收（模拟）" }, identity_known: true } : {
+      id: "remote-test", status: "verifying", reason: "请在下方官方页面继续完成登录。", has_qr: false,
+      has_verification_preview: true, verification_revision: "test-revision", detected_account: {}, interaction_sequence: sequence,
+    };
+    await route.fulfill({ json: { ok: true, data: { ...state, login_session: session } } });
+  });
+  await page.route("**/login-sessions/remote-test/verification", (route) => route.fulfill({ contentType: "image/png", body: png,
+    headers: { "X-Spark-Revision": "test-revision", "X-Spark-Input-Sequence": String(sequence), "X-Spark-Input-Pending": "0" } }));
+  await page.route("**/login-sessions/remote-test/interaction", async (route) => {
+    const data = route.request().postDataJSON();
+    expect(data.revision).toBe("test-revision");
+    expect(data.sequence).toBe(sequence);
+    actions.push(data.action);
+    sequence += 1;
+    if (data.action.type === "key" && data.action.key === "Enter") complete = true;
+    await route.fulfill({ status: 202, json: { ok: true, data: { sequence } } });
+  });
+  await page.goto("/tools/spark");
+  const screen = page.getByRole("img", { name: "抖音官方登录页面实时画面" });
+  await expect(screen).toBeVisible();
+  const box = await screen.boundingBox();
+  await screen.click({ position: { x: box.width * 150 / 1366, y: box.height * 375 / 800 } });
+  await expect.poll(() => actions.length).toBe(1);
+  expect(actions[0].type).toBe("click");
+  expect(Math.abs(actions[0].x - 150)).toBeLessThanOrEqual(1);
+  expect(Math.abs(actions[0].y - 375)).toBeLessThanOrEqual(1);
+  const digits = page.getByLabel("验证码或手机号", { exact: true });
+  await digits.fill("123456");
+  const fill = page.getByRole("button", { name: "填入已选输入框", exact: true });
+  await expect(fill).toBeEnabled();
+  await fill.click();
+  await expect.poll(() => actions.length).toBe(2);
+  expect(actions[1]).toEqual({ type: "text", text: "123456" });
+  await expect(digits).toHaveValue("");
+  await page.locator(".spark-verification").screenshot({ path: testInfo.outputPath("spark-server-verification.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: testInfo.outputPath("spark-server-verification-mobile.png"), fullPage: true });
+  const enter = page.getByRole("button", { name: "确认输入", exact: true });
+  await expect(enter).toBeEnabled();
+  await enter.click();
+  await expect(page.getByRole("button", { name: "确认连接此账号", exact: true })).toBeVisible();
+  await expect(screen).toHaveCount(0);
+});

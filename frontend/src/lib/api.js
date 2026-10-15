@@ -134,6 +134,7 @@ async function execute(path, options = {}, retry = true, responseType = "json") 
   if (responseType === "blob" && response.ok) {
     return {
       data: await response.blob(),
+      headers: response.headers,
       meta: null,
       requestId: response.headers.get("X-Request-ID"),
     };

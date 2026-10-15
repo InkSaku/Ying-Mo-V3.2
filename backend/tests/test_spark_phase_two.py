@@ -260,4 +260,83 @@ def test_queue_timeout_is_separate_from_scan_timeout(client):
     session = db.session.get(SparkLoginSession, session_id)
     assert session.expires_at > now_utc() + timedelta(minutes=29)
     claim_login()
-    assert session.expires_at < now_utc() + timedelta(minutes=4)
+    assert session.expires_at < now_utc() + timedelta(minutes=6)
+
+
+
+def preview_session(client, token):
+    session_id = start(client, token).get_json()['data']['id']
+    session = claim_login()
+    session.status = 'verifying'
+    session.verification_ciphertext = credential_cipher().encrypt(b'private-preview-png').decode()
+    session.verification_revision = str(uuid.uuid4())
+    session.verification_updated_at = now_utc()
+    db.session.commit()
+    return session_id, session
+
+
+def test_remote_login_preview_and_inputs_are_private_encrypted_and_cleared(client):
+    _, token = member(client)
+    _, other = member(client, 'otherpreviewmember')
+    session_id, session = preview_session(client, token)
+    url = f'/api/v1/spark/login-sessions/{session_id}'
+    assert client.get(url + '/verification').status_code == 401
+    assert client.get(url + '/verification', headers=auth(other)).status_code == 404
+    image = client.get(url + '/verification', headers=auth(token))
+    assert image.data == b'private-preview-png' and 'no-store' in image.headers['Cache-Control']
+    assert image.headers['X-Spark-Revision'] == session.verification_revision
+    assert 'X-Spark-Input-Sequence' in image.headers['Access-Control-Expose-Headers']
+    data = {'revision': session.verification_revision, 'sequence': 0, 'action': {'type': 'text', 'text': '765432'}}
+    assert client.post(url + '/interaction', headers=auth(other), json=data).status_code == 404
+    assert client.post(url + '/interaction', headers=auth(token), json=data).status_code == 202
+    assert session.interaction_sequence == 1 and '765432' not in session.interaction_ciphertext
+    assert client.post(url + '/interaction', headers=auth(token), json=data).status_code == 409
+    public = client.get('/api/v1/spark', headers=auth(token)).get_json()['data']['login_session']
+    assert public['has_verification_preview'] and public['interaction_pending']
+    assert '765432' not in json.dumps(public) and 'private-preview' not in json.dumps(public)
+    assert 'ciphertext' not in json.dumps(public)
+    client.post(url + '/cancel', headers=auth(token))
+    assert session.interaction_ciphertext is None and session.verification_ciphertext is None
+    assert client.get(url + '/verification', headers=auth(token)).status_code == 409
+
+
+@pytest.mark.parametrize('action', [
+    {'type': 'click', 'x': -1, 'y': 0}, {'type': 'click', 'x': True, 'y': 1},
+    {'type': 'click', 'x': 1366, 'y': 0}, {'type': 'key', 'key': 'Control+L'},
+    {'type': 'text', 'text': 'https://example.com'}, {'type': 'text', 'text': '１２３'},
+    {'type': []}, {'type': 'evaluate', 'script': 'alert(1)'}, {'type': 'text', 'text': '1', 'url': 'https://example.com'},
+])
+def test_remote_login_rejects_unbounded_input(client, action):
+    _, token = member(client)
+    session_id, session = preview_session(client, token)
+    response = client.post(f'/api/v1/spark/login-sessions/{session_id}/interaction', headers=auth(token),
+                           json={'revision': session.verification_revision, 'sequence': 0, 'action': action})
+    assert response.status_code == 422
+    assert session.interaction_ciphertext is None
+
+
+def test_remote_preview_expires_and_old_page_revision_cannot_receive_input(client):
+    _, token = member(client)
+    session_id, session = preview_session(client, token)
+    data = {'revision': 'old-page', 'sequence': 0, 'action': {'type': 'click', 'x': 10, 'y': 10}}
+    assert client.post(f'/api/v1/spark/login-sessions/{session_id}/interaction', headers=auth(token), json=data).status_code == 409
+    session.verification_updated_at = now_utc() - timedelta(seconds=20)
+    db.session.commit()
+    assert client.get(f'/api/v1/spark/login-sessions/{session_id}/verification', headers=auth(token)).status_code == 409
+
+
+def test_worker_consumes_member_input_once_and_success_removes_preview(client):
+    _, token = member(client)
+    session_id, session = preview_session(client, token)
+    def observer(on_qr, on_status, check):
+        response = client.post(f'/api/v1/spark/login-sessions/{session_id}/interaction', headers=auth(token),
+            json={'revision': session.verification_revision, 'sequence': 0, 'action': {'type': 'click', 'x': 10, 'y': 20}})
+        assert response.status_code == 202
+        assert check()['action'] == {'type': 'click', 'x': 10, 'y': 20}
+        assert check() is None
+        state = state_for()
+        return state, identity_profile(state)
+    run_login(session_id, observer)
+    assert session.status == 'awaiting_confirmation'
+    assert session.verification_ciphertext is None and session.interaction_ciphertext is None
+    assert not session.to_dict()['has_verification_preview']

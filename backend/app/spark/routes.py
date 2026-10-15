@@ -10,6 +10,7 @@ from app.common.responses import error_response, success_response
 from app.extensions import db, limiter
 from app.models import SparkContact, SparkJob
 from app.models.spark import now_utc
+from .login_interaction import require_preview, queue_interaction
 from .credentials import CredentialError, credential_cipher, validate_state
 from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, overview, reset_schedule, validate_config, require_plan_validation, validation_fingerprint
 from .login_session import bind_state, invalidate_sessions, start_session, owned_session, valid_session, confirm_session, finish
@@ -197,6 +198,34 @@ def login_qr(actor, session_id):
     response = Response(image, mimetype="image/png")
     response.headers.update({"Cache-Control": "no-store, private, max-age=0", "Pragma": "no-cache", "X-Content-Type-Options": "nosniff"})
     return response
+
+
+@bp.get("/login-sessions/<session_id>/verification")
+@member_endpoint
+def login_verification(actor, session_id):
+    account = get_account(actor.id, lock=True)
+    session = owned_session(account, session_id)
+    require_preview(account, session)
+    image = credential_cipher().decrypt(session.verification_ciphertext.encode())
+    response = Response(image, mimetype="image/png")
+    response.headers.update({"Cache-Control": "no-store, private, max-age=0", "Pragma": "no-cache",
+        "X-Content-Type-Options": "nosniff", "X-Spark-Revision": session.verification_revision,
+        "X-Spark-Input-Sequence": str(session.interaction_sequence),
+        "X-Spark-Input-Pending": "1" if session.interaction_ciphertext else "0",
+        "Access-Control-Expose-Headers": "X-Spark-Revision, X-Spark-Input-Sequence, X-Spark-Input-Pending"})
+    db.session.commit()
+    return response
+
+
+@bp.post("/login-sessions/<session_id>/interaction")
+@member_endpoint
+@limiter.limit("90 per minute", key_func=lambda: f"spark-login-input:{get_jwt_identity()}")
+def login_interaction(actor, session_id):
+    account = get_account(actor.id, lock=True)
+    session = owned_session(account, session_id)
+    queue_interaction(account, session, request.get_json(silent=True))
+    db.session.commit()
+    return success_response({"sequence": session.interaction_sequence}, 202)
 
 
 @bp.post("/login-sessions/<session_id>/confirm")

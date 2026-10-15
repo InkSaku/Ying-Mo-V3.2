@@ -105,6 +105,11 @@ class SparkLoginSession(db.Model):
     status = db.Column(db.String(24), nullable=False, default="queued", index=True)
     qr_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
     qr_updated_at = db.Column(db.DateTime, nullable=True)
+    verification_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
+    verification_revision = db.Column(db.String(36), nullable=True)
+    verification_updated_at = db.Column(db.DateTime, nullable=True)
+    interaction_ciphertext = db.Column(db.Text, nullable=True)
+    interaction_sequence = db.Column(db.Integer, nullable=False, default=0)
     candidate_ciphertext = db.Column(db.Text().with_variant(MEDIUMTEXT(), "mysql"), nullable=True)
     detected_account = db.Column(db.JSON, nullable=False, default=dict)
     reason = db.Column(db.String(255), nullable=False, default="")
@@ -120,5 +125,9 @@ class SparkLoginSession(db.Model):
                 "detected_account": {k: profile.get(k) for k in ("nickname", "short_id", "same_account")},
                 "identity_known": bool(profile.get("identity_hash")),
                 "has_qr": bool(self.qr_ciphertext),
+                "has_verification_preview": self.status == "verifying" and bool(self.verification_ciphertext),
+                "verification_revision": self.verification_revision,
+                "interaction_sequence": self.interaction_sequence,
+                "interaction_pending": bool(self.interaction_ciphertext),
                 **{key: isoformat_utc(getattr(self, key)) for key in
-                   ("created_at", "started_at", "expires_at", "qr_updated_at", "finished_at")}}
+                   ("created_at", "started_at", "expires_at", "qr_updated_at", "verification_updated_at", "finished_at")}}
