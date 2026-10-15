@@ -75,11 +75,42 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
   await page.setViewportSize({ width: 1440, height: 1000 });
 
+  // The editorial layout must remain usable with long identities and larger type.
+  await page.locator(".spark-account-identity strong").evaluate((el) => {
+    el.dataset.originalText = el.textContent;
+    el.textContent = "一个很长很长的抖音昵称与LongAccountNameWithoutSpaces";
+  });
+  for (const theme of ["light", "dark"]) {
+    await page.evaluate((value) => { document.documentElement.dataset.theme = value; }, theme);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    }
+  }
+  await page.locator(".spark-account-identity strong").evaluate((el) => { el.textContent = el.dataset.originalText; });
+  await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator(".spark-page").evaluate((root) => {
+    const elements = [...root.querySelectorAll("*")];
+    const sizes = elements.map((el) => parseFloat(getComputedStyle(el).fontSize));
+    elements.forEach((el, i) => { el.dataset.originalStyle = el.getAttribute("style") || ""; el.style.fontSize = `${sizes[i] * 2}px`; });
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await page.locator(".spark-page [data-original-style]").evaluateAll((elements) => {
+    elements.forEach((el) => { el.setAttribute("style", el.dataset.originalStyle); delete el.dataset.originalStyle; });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const firstStep = page.getByRole("navigation", { name: "续火花设置步骤" }).getByRole("link").first();
+  await firstStep.focus();
+  await expect(firstStep).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("navigation", { name: "续火花设置步骤" }).getByRole("link").nth(1)).toBeFocused();
+
   await page.getByRole("button", { name: "停止补发任务", exact: true }).click();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeEnabled();
   await expect(page.locator("#spark-queue")).toHaveCount(0);
   await expect(page.locator(".spark-hero-companion")).toBeVisible();
-  await expect(page.locator(".spark-plan-sketch")).toBeVisible();
+  await expect(page.locator(".spark-plan-sketch")).toHaveCount(0);
   await expect(page.locator(".spark-message-sketch")).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   const hero = await page.locator(".spark-hero").boundingBox();

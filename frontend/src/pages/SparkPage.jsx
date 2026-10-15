@@ -213,8 +213,8 @@ function SparkWorkspace() {
           <p className="hero-kicker">映墨工具箱 / 续火花助手</p>
           <h1>留一点问候，让火花继续。</h1>
           <p>选朋友、定时间，剩下的每日问候交给助手。</p>
-          <div className="spark-status-line"><span className={`spark-status-dot is-${data.session_status}`} />{sparkStatusLabels[data.session_status]}
-            <span>·</span><span>{data.worker.online ? "后台服务在线" : "后台服务暂未连接"}</span></div>
+          <div className="spark-status-line"><span className="spark-status-item"><span className={`spark-status-dot is-${data.session_status}`} />{sparkStatusLabels[data.session_status]}</span>
+            <span className="spark-status-item"><span className={`spark-status-dot${data.worker.online ? " is-ready" : ""}`} />{data.worker.online ? "后台服务在线" : "后台服务暂未连接"}</span></div>
         </div>
         <div className="spark-hero-scene">
           <InkSketch variant="spark" className="spark-hero-companion" />
@@ -294,7 +294,7 @@ function SparkWorkspace() {
         </section>
 
         <div className="spark-plan-column"><section id="spark-step-3" className="spark-section spark-plan" aria-labelledby="spark-plan-heading">
-          <div className="spark-section-heading"><span>03</span><div><h2 id="spark-plan-heading">安排每天的问候</h2><p>定一个时间，留一句问候。</p></div><InkSketch variant="sparkCalendar" className="spark-plan-sketch" /></div>
+          <div className="spark-section-heading"><span>03</span><div><h2 id="spark-plan-heading">安排每天的问候</h2><p>定一个时间，留一句问候。</p></div></div>
           <form className="spark-plan-form" onSubmit={saveConfig}>
             {planDirty ? <p className="spark-meta">问候设置尚未保存。请先保存，再检查和开启。</p> : null}
             <label>每天发送时间<span className="spark-time-field"><input type="time" required value={config.schedule_time} onChange={(event) => changeConfig("schedule_time", event.target.value)} /><small>北京时间</small></span></label>
