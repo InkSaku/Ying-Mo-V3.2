@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { SparkRiskNotice } from "../components/SparkRiskNotice";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { PersonalNav } from "../components/PersonalNav";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -22,6 +24,11 @@ const numericFields = [
 const sourceLabels = { manual: "手动", daily: "每日计划", retry: "失败补发", weekly: "每周采集", auto_bind: "连接后同步" };
 
 export function SparkPage() {
+  const { user } = useAuth();
+  return <><SparkRiskNotice key={user.id} userId={user.id} /><SparkWorkspace /></>;
+}
+
+function SparkWorkspace() {
   usePageMeta("续火花助手");
   const [data, setData] = useState(null);
   const [config, setConfig] = useState(null);

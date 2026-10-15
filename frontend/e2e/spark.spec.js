@@ -17,6 +17,8 @@ test("spark integrates login, import, contacts, plan, simulation, queue and unbi
   expect(registered.status()).toBe(201);
   await login(page, account);
   await page.goto("/tools/spark");
+  await page.getByRole("checkbox", { name: "不再提示", exact: true }).check();
+  await page.getByRole("button", { name: "我已知悉", exact: true }).click();
   await expect(page.getByRole("heading", { name: /让火花继续/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeDisabled();
   await page.getByText("备用登录方式", { exact: true }).click();
@@ -69,6 +71,8 @@ test("spark QR connects through authenticated image, confirmation and four-step 
   expect(response.status()).toBe(201);
   await login(page, account);
   await page.goto("/tools/spark");
+  await page.getByRole("checkbox", { name: "不再提示", exact: true }).check();
+  await page.getByRole("button", { name: "我已知悉", exact: true }).click();
   await expect(page.getByRole("button", { name: "开启每日自动续火花" })).toBeDisabled();
   await page.getByRole("button", { name: "扫码连接抖音", exact: true }).click();
   const qr = page.getByRole("img", { name: "抖音登录二维码" });
@@ -143,6 +147,8 @@ test("server login verification screen relays input and disappears after authent
     await route.fulfill({ status: 202, json: { ok: true, data: { sequence } } });
   });
   await page.goto("/tools/spark");
+  await page.getByRole("checkbox", { name: "不再提示", exact: true }).check();
+  await page.getByRole("button", { name: "我已知悉", exact: true }).click();
   const screen = page.getByRole("img", { name: "抖音官方登录页面实时画面" });
   await expect(screen).toBeVisible();
   const box = await screen.boundingBox();

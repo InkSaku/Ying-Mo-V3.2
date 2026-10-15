@@ -51,6 +51,8 @@ test("spark workspace explains queued retries and keeps filtered selections", as
     await route.fulfill({ json: { ok: true, data: state } });
   });
   await page.goto("/tools/spark");
+  await page.getByRole("checkbox", { name: "不再提示", exact: true }).check();
+  await page.getByRole("button", { name: "我已知悉", exact: true }).click();
   await expect(page.getByText("纸页里的问候", { exact: true })).toBeVisible();
   await expect(page.locator("#spark-check-hint")).toContainText("补发已安排在");
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeDisabled();
