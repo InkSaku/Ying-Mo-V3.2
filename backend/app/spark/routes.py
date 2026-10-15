@@ -11,6 +11,7 @@ from app.extensions import db, limiter
 from app.models import SparkContact, SparkJob
 from app.models.spark import now_utc
 from .login_interaction import require_preview, queue_interaction
+from .notifications import notify_send_result
 from .credentials import CredentialError, credential_cipher, validate_state
 from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, overview, reset_schedule, validate_config, require_plan_validation, validation_fingerprint
 from .login_session import bind_state, invalidate_sessions, start_session, owned_session, valid_session, confirm_session, finish
@@ -165,6 +166,7 @@ def cancel_job(actor, job_id):
     job.cancel_requested = True
     if job.status == "queued":
         job.status, job.finished_at = "cancelled", now_utc()
+        notify_send_result(job)
     db.session.commit()
     return success_response(job.to_dict())
 

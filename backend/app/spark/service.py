@@ -15,6 +15,7 @@ from app.extensions import db
 from app.models import SparkAccount, SparkContact, SparkJob, SparkDelivery, SparkWorkerState, User
 from app.models.spark import now_utc
 from app.common.time import isoformat_utc
+from .notifications import notify_send_result
 
 TZ = ZoneInfo("Asia/Shanghai")
 DEFAULT_CONFIG = {
@@ -127,6 +128,7 @@ def cancel_jobs(account, *, automatic_only=False):
         job.cancel_requested = True
         if job.status == "queued":
             job.status, job.finished_at = "cancelled", now_utc()
+            notify_send_result(job)
 
 
 def contacts_for(account):

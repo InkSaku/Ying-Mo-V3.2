@@ -12,3 +12,6 @@ instance/
 /uploads/
 /backend/uploads/
 .DS_Store
+
+# macOS archive metadata
+._*

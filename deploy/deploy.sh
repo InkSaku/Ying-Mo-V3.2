@@ -119,12 +119,7 @@ fi
 
 success "Environment check passed"
 
-# The spark worker must not execute old code against a new schema.
-SPARK_SERVICE_INSTALLED=false
-if systemctl cat yingmo-spark.service >/dev/null 2>&1; then
-    SPARK_SERVICE_INSTALLED=true
-    sudo systemctl stop yingmo-spark
-fi
+
 
 
 
@@ -138,7 +133,7 @@ fi
 info "Updating source code from GitHub..."
 
 
-git fetch origin
+GIT_TERMINAL_PROMPT=0 git fetch origin
 
 
 LOCAL=$(git rev-parse HEAD)
@@ -153,7 +148,7 @@ if [ "$LOCAL" = "$REMOTE" ]; then
 
 else
 
-    git pull origin "$BRANCH"
+    git merge --ff-only "origin/$BRANCH"
 
 fi
 
@@ -163,6 +158,13 @@ COMMIT=$(git rev-parse --short HEAD)
 
 
 success "Current commit: $COMMIT"
+
+# The spark worker must not execute old code against a new schema.
+SPARK_SERVICE_INSTALLED=false
+if systemctl cat yingmo-spark.service >/dev/null 2>&1; then
+    SPARK_SERVICE_INSTALLED=true
+    sudo systemctl stop yingmo-spark
+fi
 
 
 

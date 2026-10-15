@@ -8,6 +8,7 @@ import time
 from app.extensions import db
 from app.models import SparkAccount, SparkContact, SparkDelivery, SparkJob, User
 from app.models.spark import now_utc
+from .notifications import notify_send_result
 from .context import _execution
 from .credentials import CredentialError, decrypt_state
 from .service import config_for, enqueue, local_now, reset_schedule, selected_contacts, validation_fingerprint, validation_ready
@@ -114,7 +115,7 @@ def mark_intent(job_id, delivery_id, limit):
     db.session.commit()
 
 
-def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认"):
+def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认", *, cancelled=False):
     # The parent may still hold a running-job snapshot after the child committed
     # success. Discard that transaction and lock the current row before deciding
     # to interrupt; committed send intents remain the source of truth.
@@ -131,9 +132,10 @@ def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认
             unknown = True
         elif delivery.status == "checking":
             delivery.status, delivery.reason = "failed", "发送前任务已中断，未发送"
-    job.status = "unknown" if unknown else "cancelled" if job.cancel_requested else "failed"
+    job.status = "unknown" if unknown else "cancelled" if job.cancel_requested or cancelled else "failed"
     job.result = {**(job.result or {}), "message": reason}
     job.finished_at = now_utc()
+    notify_send_result(job)
     db.session.commit()
 
 
@@ -157,6 +159,7 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
             db.session.commit()
     except Cancelled:
         job.status, job.finished_at = "cancelled", now_utc()
+        notify_send_result(job)
         db.session.commit()
         return
     except CredentialError:
@@ -164,11 +167,13 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         job.result = {"message": "登录态无法解密，请联系管理员检查加密密钥或重新导入。"}
         account.session_status = "error"
         reset_schedule(account)
+        notify_send_result(job)
         db.session.commit()
         return
     if job.kind == "send" and job.local_day != local_now().date().isoformat():
         job.status, job.finished_at = "cancelled", now_utc()
         job.result = {"message": "任务已跨日，取消过期发送。"}
+        notify_send_result(job)
         db.session.commit()
         return
     token = _execution.set({"config": cfg, "state": state})
@@ -263,6 +268,8 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                         sleep(random.uniform(cfg["send_gap_min"], cfg["send_gap_max"]))
                 statuses = {e["status"] for e in events}
                 job.status = next((s for s in ("expired", "blocked", "unknown", "failed") if s in statuses), "succeeded")
+                if job.kind == "send" and statuses == {"skipped"}:
+                    job.status = "skipped"
                 if "succeeded" in statuses and job.status == "failed":
                     job.status = "partial"
                 if job.status not in ("expired", "blocked") and "succeeded" in statuses:
@@ -278,13 +285,10 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                     if account.next_run_at is None:
                         reset_schedule(account)
         job.finished_at = now_utc()
+        notify_send_result(job)
         db.session.commit()
     except Cancelled:
-        interrupted(job_id, "任务已停止；已尝试发送的结果需要到抖音确认")
-        job = db.session.get(SparkJob, job_id)
-        if job.status == "failed":
-            job.status = "cancelled"
-            db.session.commit()
+        interrupted(job_id, "任务已停止；已尝试发送的结果需要到抖音确认", cancelled=True)
     except Exception:
         db.session.rollback()
         interrupted(job_id, "后台执行失败，请检查服务运行状态后重试")

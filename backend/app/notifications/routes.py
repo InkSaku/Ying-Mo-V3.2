@@ -31,6 +31,9 @@ def _safe_notification(item,actor,posts,collections,comments=None):
     data=item.to_dict()
     data["target_url"]=None
     data["summary"]=None
+    if item.kind == "spark_send_result":
+        data["target_url"] = "/tools/spark"
+        return data
     if item.kind == "memory_contribution_added":
         link = db.session.scalar(db.select(PostMemoryLink).where(
             PostMemoryLink.contribution_post_id == item.post_id,

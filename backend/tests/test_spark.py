@@ -360,7 +360,7 @@ def test_creator_channel_daily_and_per_run_limits_survive_new_jobs(client):
     first = run(queue(client, token))
     assert [e["status"] for e in first.result["events"]] == ["succeeded", "skipped"]
     second = run(queue(client, token))
-    assert second.status == "succeeded"
+    assert second.status == "skipped"
     assert all(e["status"] == "skipped" for e in second.result["events"])
     assert any("上限" in e["reason"] for e in second.result["events"])
     assert len([c for c in Driver.calls if c[0] == "新朋友一"]) == 1
@@ -551,3 +551,61 @@ def test_queue_snapshot_excludes_future_cancelled_and_expired_work(client):
     job.cancel_requested = True
     db.session.commit()
     assert queue_snapshot(now)["ready_count"] == 0
+
+
+def test_scheduled_send_after_manual_send_notifies_skip_without_resending(client):
+    from app.models import Notification
+    from app.spark.notifications import notify_send_result
+    user, token = member(client, "receiptmember")
+    bind(client, token)
+    add_friend(user)
+    run(queue(client, token))
+    account = get_account(user)
+    account.next_run_at = now_utc() - timedelta(seconds=1)
+    account.config = {**config_for(account), "jitter_minutes": 0}
+    db.session.commit()
+    schedule_due()
+    job = db.session.scalar(db.select(SparkJob).where(SparkJob.source == "daily"))
+    execute_job(job.id, Driver, sleep=lambda _: None)
+    assert job.status == "skipped"
+    assert len(Driver.calls) == 1
+    notify_send_result(job)
+    db.session.commit()
+    notes = db.session.scalars(db.select(Notification).where(Notification.user_id == user)).all()
+    assert len(notes) == 2
+    assert "立即发送：成功" in notes[0].message
+    assert "定时发送：已跳过，本次未发送" in notes[1].message
+    assert "今天已发送" in notes[1].message
+    data = client.get("/api/v1/notifications", headers=auth(token)).get_json()["data"]
+    assert data[0]["target_url"] == "/tools/spark"
+    assert client.get("/api/v1/notifications/unread-count", headers=auth(token)).get_json()["data"]["unread_count"] == 2
+    _, other = member(client, "otherreceipt")
+    assert client.get("/api/v1/notifications", headers=auth(other)).get_json()["data"] == []
+
+
+@pytest.mark.parametrize("outcome,word", [("failed", "失败"), ("unknown", "待确认"), ("expired", "登录态已失效"), ("blocked", "需要平台验证")])
+def test_send_failure_receipts(client, outcome, word):
+    from app.models import Notification
+    user, token = member(client, "failreceipt")
+    bind(client, token)
+    add_friend(user)
+    Driver.outcomes = {"好友": outcome}
+    run(queue(client, token))
+    note = db.session.scalar(db.select(Notification).where(Notification.user_id == user))
+    assert word in note.message
+
+
+def test_interrupted_send_receipt_created_once(client):
+    from app.models import Notification
+    from app.spark.executor import interrupted
+    user, token = member(client, "interruptedreceipt")
+    bind(client, token)
+    add_friend(user)
+    job_id = queue(client, token).get_json()["data"]["id"]
+    job = db.session.get(SparkJob, job_id)
+    job.status = "running"
+    db.session.commit()
+    interrupted(job_id, "执行超时")
+    interrupted(job_id, "执行超时")
+    notes = db.session.scalars(db.select(Notification).where(Notification.user_id == user)).all()
+    assert len(notes) == 1 and "执行超时" in notes[0].message
