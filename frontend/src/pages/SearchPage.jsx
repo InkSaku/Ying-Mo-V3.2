@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "../components/DefaultAvatar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -210,7 +211,7 @@ export function SearchPage() {
               media={user.avatar_media}
               alt=""
               className="search-member-avatar"
-              fallback={<span className="search-member-avatar search-member-avatar-fallback" aria-hidden="true">{label.slice(0, 1)}</span>}
+              fallback={<DefaultAvatar className="search-member-avatar" />}
             />
             <span><strong>{label}</strong><small>@{user.username}</small></span>
             <i aria-hidden="true">↗</i>

@@ -41,7 +41,8 @@ test("member profile reads as a portrait, personal catalogue and shared shelf", 
 
   await page.goto(`/users/${account.username}`);
   await expect(page.getByRole("heading", { level: 1, name: "林间" })).toBeVisible();
-  await expect(page.locator(".profile-monogram")).toContainText("林");
+  await expect(page.getByAltText("映墨默认头像")).toBeVisible();
+  expect(await page.getByAltText("映墨默认头像").evaluate((element) => getComputedStyle(element).objectFit)).toBe("contain");
   await expect(page.getByRole("link", { name: "编辑资料" })).toBeVisible();
   await expect(page.locator(".profile-post-catalogue .post-card-profile")).toHaveCount(2);
   await expect(page.locator(".profile-collection-shelf .collection-card-shelf")).toHaveCount(2);

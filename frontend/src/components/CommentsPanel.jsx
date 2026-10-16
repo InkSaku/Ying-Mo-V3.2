@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "./DefaultAvatar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -64,13 +65,12 @@ function CommentBody({ comment }) {
 }
 
 function CommentAvatar({ member, current = false }) {
-  const initial = (member?.nickname || member?.username || "?").slice(0, 1);
   const image = (
     <ProtectedImage
       media={member?.avatar_media}
       alt=""
       className="comment-avatar-image"
-      fallback={<span className="comment-avatar-fallback" aria-hidden="true">{initial}</span>}
+      fallback={<DefaultAvatar className="comment-avatar-image" />}
     />
   );
 

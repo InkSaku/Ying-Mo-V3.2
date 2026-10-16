@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "./DefaultAvatar";
 import { Link } from "react-router-dom";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 import { logicalMediaFromPostDisplay } from "../lib/mediaGallery";
@@ -15,7 +16,6 @@ export function FeedPostMedia({ post, media, label }) {
 
 export function FeedPostFrame({ post, actionLabel = "查看与回应", children }) {
   const href = postHref(post);
-  const initial = (post.author?.nickname || post.author?.username || "?").slice(0, 1);
   const semanticTime = post.semantic_time || post.published_at;
   const context = post.collection
     ? <Link to={`/collections/${post.collection.slug}`}>合集 · {post.collection.name}</Link>
@@ -25,7 +25,7 @@ export function FeedPostFrame({ post, actionLabel = "查看与回应", children 
     <article className={`home-feed-post is-${post.post_type} ${post._feedFresh ? "is-fresh" : ""}`} data-post-type={post.post_type}>
       <header className="home-feed-post-header">
         <Link className="home-feed-avatar-link" to={`/users/${post.author?.username}`} aria-label={`查看${post.author?.nickname || "作者"}的主页`}>
-          <ProtectedImage media={post.author?.avatar_media} alt="" className="home-feed-avatar" fallback={<span className="home-feed-avatar-fallback" aria-hidden="true">{initial}</span>} />
+          <ProtectedImage media={post.author?.avatar_media} alt="" className="home-feed-avatar" fallback={<DefaultAvatar className="home-feed-avatar" />} />
         </Link>
         <div>
           <Link className="home-feed-author" to={`/users/${post.author?.username}`}>{post.author?.nickname || post.author?.username}</Link>

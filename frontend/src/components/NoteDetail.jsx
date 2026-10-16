@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "./DefaultAvatar";
 import { Link } from "react-router-dom";
 import { formatDate } from "../lib/format";
 import { InteractionBar } from "./InteractionBar";
@@ -18,7 +19,6 @@ function noteDateParts(value) {
 }
 
 export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
-  const initial = (post.author?.nickname || post.author?.username || "?").slice(0, 1);
   const date = noteDateParts(post.semantic_time);
   const renderedBody = post.rendered_html ? (
     <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} />
@@ -41,7 +41,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
           <div className="note-detail-intro">
             <div className="note-detail-byline">
               <Link className="note-detail-avatar-link" to={`/users/${post.author?.username}`} aria-label={`查看${post.author?.nickname || "作者"}的主页`}>
-                <ProtectedImage media={post.author?.avatar_media} alt="" className="note-detail-avatar" fallback={<span className="note-detail-avatar-fallback" aria-hidden="true">{initial}</span>} />
+                <ProtectedImage media={post.author?.avatar_media} alt="" className="note-detail-avatar" fallback={<DefaultAvatar className="note-detail-avatar" />} />
               </Link>
               <div>
                 {post.author ? <Link className="note-detail-author" to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}

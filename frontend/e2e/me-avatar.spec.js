@@ -48,11 +48,14 @@ test("personal avatar stays square through loading, image and fallback states", 
 
   avatarPath = "/api/v1/uploads/avatar-unavailable/thumbnail";
   await page.reload();
-  await expect(frame.locator(".profile-monogram")).toBeVisible();
+  await expect(frame.getByAltText("映墨默认头像")).toBeVisible();
   await checkSizes();
   avatarPath = null;
   await page.reload();
-  await expect(frame.locator(".profile-monogram")).toBeVisible();
+  const defaultAvatar = frame.getByAltText("映墨默认头像");
+  await expect(defaultAvatar).toBeVisible();
+  await expect(defaultAvatar).toHaveAttribute("src", "/ink-app-512.png");
+  await expect.poll(() => defaultAvatar.evaluate((element) => element.naturalWidth)).toBe(512);
   await checkSizes();
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: testInfo.outputPath("me-avatar-desktop.png"), fullPage: true });

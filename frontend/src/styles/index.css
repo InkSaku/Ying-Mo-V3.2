@@ -14366,3 +14366,6 @@ input[aria-invalid="true"] {
   .search-collection-grid { grid-template-columns: 1fr; }
   .search-filtered-members .search-member-list { grid-template-columns: 1fr; }
 }
+
+/* Keep the shared ink mascot uncropped at every avatar size. */
+.app-frame img.default-avatar { object-fit: contain; background: #f8f7f3; }

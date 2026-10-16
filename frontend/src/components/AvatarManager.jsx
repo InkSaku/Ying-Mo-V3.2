@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "./DefaultAvatar";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
@@ -114,7 +115,7 @@ export function AvatarManager({ profile, onChange }) {
       await onChange(updated.data);
       clearSelection();
       setConfirmRemove(false);
-      setMessage("头像已移除，成员页面将显示昵称首字占位。");
+      setMessage("头像已移除，将显示映墨默认头像。");
     } catch (removeError) {
       setError(removeError.message);
     } finally {
@@ -122,7 +123,6 @@ export function AvatarManager({ profile, onChange }) {
     }
   };
 
-  const fallbackText = (profile.nickname || profile.username || "?").slice(0, 1);
 
   return (
     <section className="avatar-manager" aria-labelledby="avatar-manager-heading">
@@ -137,9 +137,9 @@ export function AvatarManager({ profile, onChange }) {
         <div className="avatar-preview-item">
           <span>当前头像</span>
           {profile.avatar_media ? (
-            <ProtectedImage media={profile.avatar_media} alt="当前头像" className="avatar-settings-preview" />
+            <ProtectedImage media={profile.avatar_media} alt="当前头像" className="avatar-settings-preview" fallback={<DefaultAvatar className="avatar-settings-preview" />} />
           ) : (
-            <div className="avatar-settings-placeholder" aria-label="尚未设置头像">{fallbackText}</div>
+            <DefaultAvatar className="avatar-settings-preview" />
           )}
         </div>
         {previewUrl ? (
@@ -195,7 +195,7 @@ export function AvatarManager({ profile, onChange }) {
       <ConfirmDialog
         open={confirmRemove}
         title="移除当前头像？"
-        description="移除后，个人中心和成员主页将显示昵称首字。"
+        description="移除后将显示映墨默认头像。"
         confirmLabel="确认移除"
         danger
         busy={busy}

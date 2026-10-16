@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "../components/DefaultAvatar";
 import { InkSketch } from "../components/InkSketch";
 import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
@@ -90,7 +91,7 @@ export function UserProfilePage() {
             media={data.user.avatar_media}
             alt={`${data.user.nickname}的头像`}
             className="profile-avatar"
-            fallback={<div className="profile-monogram" aria-hidden="true">{(data.user.nickname || data.user.username).slice(0, 1)}</div>}
+            fallback={<DefaultAvatar className="profile-avatar" />}
           />
           <figcaption aria-hidden="true">PORTRAIT / {data.user.username}</figcaption>
         </figure>

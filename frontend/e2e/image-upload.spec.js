@@ -39,6 +39,12 @@ test("avatar confirmation uploads the selected JPEG and persists after reload", 
   await expect(avatar.getByAltText("当前头像")).toBeVisible();
   await page.reload();
   await expect(avatar.getByAltText("当前头像")).toBeVisible();
+  await avatar.getByRole("button", { name: "移除头像", exact: true }).click();
+  await page.getByRole("button", { name: "确认移除", exact: true }).click();
+  await expect(avatar.getByAltText("映墨默认头像")).toBeVisible();
+  await expect(avatar.getByAltText("当前头像", { exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(avatar.getByAltText("映墨默认头像")).toBeVisible();
 });
 
 test("collection cover accepts GIF and persists after reload", async ({ page }) => {
@@ -49,9 +55,9 @@ test("collection cover accepts GIF and persists after reload", async ({ page }) 
     name: "cover.gif", mimeType: "image/gif",
     buffer: Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64"),
   });
-  await expect(cover.locator(".inline-success[role=status]")).toHaveText("Collection 封面已更新。");
+  await expect(cover.locator(".inline-success[role=status]")).toHaveText("合集封面已更新。");
   await expect(cover.locator(".inline-error")).toHaveCount(0);
-  await expect(cover.getByAltText("当前 Collection 封面")).toBeVisible();
+  await expect(cover.getByAltText("当前合集封面")).toBeVisible();
   await page.reload();
-  await expect(cover.getByAltText("当前 Collection 封面")).toBeVisible();
+  await expect(cover.getByAltText("当前合集封面")).toBeVisible();
 });

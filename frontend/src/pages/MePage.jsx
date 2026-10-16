@@ -1,3 +1,4 @@
+import { DefaultAvatar } from "../components/DefaultAvatar";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -32,7 +33,7 @@ export function MePage() {
             media={user.avatar_media}
             alt={`${user.nickname}的头像`}
             className="profile-avatar"
-            fallback={<div className="profile-monogram" aria-hidden="true">{(user.nickname || user.username).slice(0, 1)}</div>}
+            fallback={<DefaultAvatar className="profile-avatar" />}
           />
         </div>
         <div>

@@ -1,15 +1,15 @@
+import { DefaultAvatar } from "./DefaultAvatar";
 import { Link } from "react-router-dom";
 import { ProtectedImage } from "./ProtectedImage";
 
 export function MemberCard({ member }) {
-  const initial = (member.nickname || member.username || "?").slice(0, 1);
   return (
     <article className="explore-member-card">
       <ProtectedImage
         media={member.avatar_media}
         alt={`${member.nickname}的头像`}
         className="explore-member-avatar"
-        fallback={<div className="explore-member-initial" aria-hidden="true">{initial}</div>}
+        fallback={<DefaultAvatar className="explore-member-avatar" />}
       />
       <div>
         <h3><Link to={`/users/${member.username}`}>{member.nickname}</Link></h3>
