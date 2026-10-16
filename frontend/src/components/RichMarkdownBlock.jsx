@@ -1,13 +1,29 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { CustomSelect } from "./CustomSelect";
-import { useEditor, EditorContent } from "@tiptap/react";
-import { richMarkdownExtensions, markdownPosition, editorPosition, mapTextOffset, preserveMarkdownBoundary } from "../lib/richMarkdown";
+import { useEditor, EditorContent, ReactNodeViewRenderer } from "@tiptap/react";
+import { closeHistory } from "@tiptap/pm/history";
+import { richMarkdownExtensions, markdownPosition, editorPosition, mapTextOffset } from "../lib/richMarkdown";
+import { InternalMedia } from "../lib/internalMediaNode";
+import { EditorMediaNode } from "./EditorMediaNode";
+import { EditorMediaContext } from "../lib/editorMediaContext";
 
-export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelection, onFocus, onKeyDown, onPaste, placeholder, ariaLabel, ariaDescribedBy, spellCheck }, ref) {
+const mediaExtension = InternalMedia.extend({
+  addNodeView: () => ReactNodeViewRenderer(EditorMediaNode, { trackNodeViewPosition: true }),
+});
+
+function restoreEditorSelection(editor, source, start, end) {
+  const normalized = editor.getMarkdown();
+  const from = editorPosition(editor, mapTextOffset(source, normalized, start));
+  const to = editorPosition(editor, mapTextOffset(source, normalized, end));
+  editor.chain().focus().setTextSelection({ from, to: Math.max(from, to) }).run();
+}
+
+export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelection, onFocus, onKeyDown, onPaste, placeholder, ariaLabel, ariaDescribedBy, spellCheck, mediaContext }, ref) {
   const propsRef = useRef({ value, onChange, onSelection, onFocus, onKeyDown, onPaste });
   propsRef.current = { value, onChange, onSelection, onFocus, onKeyDown, onPaste };
   const emittedRef = useRef(value);
   const editorRef = useRef(null);
+  const pendingSelectionRef = useRef(null);
   const [, refresh] = useState(0);
   const [linkDraft, setLinkDraft] = useState(null);
   const linkSelection = useRef(null);
@@ -16,16 +32,17 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
     return [editor.state.selection.from, editor.state.selection.to].map((position) => mapTextOffset(markdown, propsRef.current.value, markdownPosition(editor, position, markdown)));
   };
   const editor = useEditor({
-    extensions: richMarkdownExtensions(),
+    extensions: richMarkdownExtensions(mediaExtension),
     content: value, contentType: "markdown", immediatelyRender: false,
     editorProps: {
       attributes: { role: "textbox", "aria-multiline": "true", "aria-label": ariaLabel, "aria-describedby": ariaDescribedBy || "", spellcheck: String(spellCheck), tabindex: "0", class: "rich-markdown-content" },
       handleKeyDown: (_view, event) => { propsRef.current.onKeyDown?.(event); return event.defaultPrevented; },
+      clipboardTextSerializer: (slice) => editorRef.current.markdown.serialize({ type: "doc", content: slice.content.toJSON() }),
       handlePaste: (_view, event) => {
         propsRef.current.onPaste?.(event);
         if (event.defaultPrevented) return true;
         const text = event.clipboardData?.getData("text/plain") || "";
-        if (!event.clipboardData?.getData("text/html") && /(^|\n)(?:#{1,6} |[-*] |\d+\. |> |```)|\*\*|\$\$/.test(text)) {
+        if (!event.clipboardData?.getData("text/html") && /(^|\n)(?:#{1,6} |[-*] |\d+\. |> |```)|\*\*|\$\$|\[\[ym-media:\d+\]\]/.test(text)) {
           event.preventDefault();
           editorRef.current.commands.insertContent(text, { contentType: "markdown" });
           return true;
@@ -34,8 +51,9 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
       },
     },
     onFocus: ({ editor }) => { propsRef.current.onFocus?.(); propsRef.current.onSelection?.(...selection(editor)); },
+    onSelectionUpdate: ({ editor }) => propsRef.current.onSelection?.(...selection(editor)),
     onUpdate: ({ editor }) => {
-      const markdown = preserveMarkdownBoundary(propsRef.current.value, editor.getMarkdown());
+      const markdown = editor.getMarkdown();
       emittedRef.current = markdown;
       propsRef.current.onChange(markdown);
     },
@@ -44,8 +62,22 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
 
   useEffect(() => {
     if (!editor || emittedRef.current === value) return;
-    editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
-    emittedRef.current = value;
+    let cancelled = false;
+    // React node views flush their portals synchronously. Apply external source
+    // changes after this lifecycle, preserving uploads as separate undo steps.
+    queueMicrotask(() => {
+      if (cancelled || editor.isDestroyed) return;
+      editor.view.dispatch(closeHistory(editor.state.tr));
+      editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
+      editor.view.dispatch(closeHistory(editor.state.tr));
+      emittedRef.current = value;
+      if (pendingSelectionRef.current) {
+        const [start, end] = pendingSelectionRef.current;
+        pendingSelectionRef.current = null;
+        restoreEditorSelection(editor, value, start, end);
+      }
+    });
+    return () => { cancelled = true; };
   }, [editor, value]);
   useEffect(() => {
     if (!editor) return undefined;
@@ -72,15 +104,15 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
     return true;
   };
   useImperativeHandle(ref, () => ({
-    focus: () => editor?.commands.focus(),
+    focus: () => queueMicrotask(() => { if (!editor?.isDestroyed) editor?.commands.focus(); }),
     get selectionStart() { return editor ? selection(editor)[0] : value.length; },
     get selectionEnd() { return editor ? selection(editor)[1] : value.length; },
     setSelectionRange(start, end = start) {
-      if (!editor) return;
-      const normalized = editor.getMarkdown();
-      const from = editorPosition(editor, mapTextOffset(value, normalized, start));
-      const to = editorPosition(editor, mapTextOffset(value, normalized, end));
-      editor.chain().focus().setTextSelection({ from, to: Math.max(from, to) }).run();
+      queueMicrotask(() => {
+        if (!editor || editor.isDestroyed) return;
+        if (emittedRef.current !== propsRef.current.value) pendingSelectionRef.current = [start, end];
+        else restoreEditorSelection(editor, propsRef.current.value, start, end);
+      });
     },
     applyFormat,
   }));
@@ -102,6 +134,8 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
       <span>输入 # 加空格可写标题</span>
     </div>
     {linkDraft !== null ? <div className="rich-link-edit"><label>链接地址<input autoFocus aria-label="链接地址" value={linkDraft} onChange={(event) => setLinkDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveLink(); } }} /></label><button type="button" onClick={saveLink}>应用链接</button><button type="button" onClick={() => setLinkDraft(null)}>取消</button></div> : null}
-    <div className={editor.isEmpty ? "rich-is-empty" : ""} data-placeholder={placeholder}><EditorContent editor={editor} /></div>
+    <EditorMediaContext.Provider value={mediaContext || { mediaMap: new Map() }}>
+      <div className={editor.isEmpty ? "rich-is-empty" : ""} data-placeholder={placeholder}><EditorContent editor={editor} /></div>
+    </EditorMediaContext.Provider>
   </div>;
 });

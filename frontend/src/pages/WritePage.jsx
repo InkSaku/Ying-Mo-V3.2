@@ -1080,7 +1080,7 @@ export function WritePage() {
                 ariaDescribedBy="editor-body-help"
               />
               <div className="editor-inline-drop-hint" aria-hidden={!inlineDraggingImage}>松开即可上传并插入到当前位置</div>
-              <small id="editor-body-help" className="editor-body-help">可以直接粘贴或拖入图片；选中文字后使用上方工具排版。</small>
+              <small id="editor-body-help" className="editor-body-help">可以粘贴或拖入图片；点选图片后可删除、剪切或复制，按 Enter 在下方继续写。</small>
             </section>
 
             <div className="editor-cat-perch"><ArticleArchiveCat /></div>

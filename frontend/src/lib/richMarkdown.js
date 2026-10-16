@@ -6,6 +6,7 @@ import { TableKit } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import diff from "fast-diff";
+import { InternalMedia } from "./internalMediaNode.js";
 
 const RawBlock = Node.create({
   name: "rawMarkdownBlock", group: "block", atom: true, priority: 50,
@@ -62,11 +63,11 @@ const SafeCodeBlock = CodeBlock.extend({
   },
 });
 
-export function richMarkdownExtensions() {
+export function richMarkdownExtensions(mediaExtension = InternalMedia) {
   return [
     StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, link: { openOnClick: false, autolink: false }, underline: false, codeBlock: false }), SafeCodeBlock,
     TableKit.configure({ table: { resizable: false, renderWrapper: true } }), TaskList, TaskItem.configure({ nested: true }),
-    RawBlock, RawInline, ExternalImage, Markdown,
+    RawBlock, RawInline, ExternalImage, mediaExtension, Markdown,
   ];
 }
 
@@ -88,7 +89,10 @@ export function markdownPosition(editor, position, markdown = editor.getMarkdown
   try {
     let marker = cursorMarker;
     while (markdown.includes(marker)) marker += "Q";
-    const doc = editor.state.tr.insertText(marker, position).doc;
+    const transaction = editor.state.tr;
+    if (editor.state.doc.resolve(position).parent.inlineContent) transaction.insertText(marker, position);
+    else transaction.insert(position, editor.schema.nodes.paragraph.create(null, editor.schema.text(marker)));
+    const doc = transaction.doc;
     const serialized = editor.markdown.serialize(doc.toJSON());
     const offset = serialized.indexOf(marker);
     return Math.max(0, offset);

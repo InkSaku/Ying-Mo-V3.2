@@ -79,7 +79,7 @@
 .editor-page .editor-body-visual .visual-media-block { padding: 0; border: 0; background: transparent; box-shadow: none; }
 .editor-page .editor-body-visual .visual-media-block:hover,
 .editor-page .editor-body-visual .visual-media-block:focus-within { box-shadow: none; }
-.editor-page .editor-body-visual .visual-media-block-toolbar { border: 0; margin-bottom: 12px; }
+.editor-page .editor-body-visual .visual-media-block-toolbar { border: 0; margin: 0; }
 .editor-page .editor-body-visual .visual-media-block-toolbar button { border: 0; background: transparent; }
 .editor-page .editor-body-help { display: block; margin-top: 12px; padding: 0; border: 0; color: var(--text-3); font-size: 10px; line-height: 1.9; }
 .editor-page .editor-cat-perch { width: 132px; margin: 36px 0 0 auto; }

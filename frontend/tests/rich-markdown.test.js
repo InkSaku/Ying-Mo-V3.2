@@ -45,3 +45,23 @@ test("code samples containing backtick fences remain one intact code block", () 
   assert.equal(second.content[0].type, "codeBlock");
   assert.deepEqual(second.content[0].content, first.content[0].content);
 });
+
+test("media and text share one document without spacer paragraphs", () => {
+  const engine = manager();
+  const source = "开头\n\n[[ym-media:7]]\n\n[[ym-media:8]]\n\n结尾";
+  const doc = engine.parse(source);
+  assert.deepEqual(doc.content.map((node) => node.type), ["paragraph", "internalMedia", "internalMedia", "paragraph"]);
+  assert.equal(engine.serialize(doc), source);
+  // Older documents can have media tokens without paragraph separators.
+  assert.deepEqual(engine.parse("甲[[ym-media:7]]乙").content.map((node) => node.type), ["paragraph", "internalMedia", "paragraph"]);
+  getSchema(richMarkdownExtensions()).nodeFromJSON(doc).check();
+});
+
+test("real media nodes leave code examples and advanced Markdown intact", () => {
+  const engine = manager();
+  const source = "`text [[ym-media:1]]`\n\n````md\n```\n[[ym-media:2]]\n```\n````\n\n[[ym-media:3]]\n\n正文 $x^2$。";
+  const doc = engine.parse(source);
+  assert.deepEqual(doc.content.filter((node) => node.type === "internalMedia").map((node) => node.attrs.mediaId), [3]);
+  assert.equal(engine.serialize(doc), source);
+  getSchema(richMarkdownExtensions()).nodeFromJSON(doc).check();
+});

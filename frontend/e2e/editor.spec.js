@@ -50,6 +50,7 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   await expect(page.locator(".editor-body-visual img.visual-media-block-image")).toHaveCount(1);
 
   const firstBlock = page.locator(".editor-body-visual .visual-media-block").first();
+  await firstBlock.hover();
   await firstBlock.getByRole("button", { name: "图片设置" }).click();
   await firstBlock.getByPlaceholder("描述图片内容，供读屏软件使用").fill("绿色像素示例");
   await firstBlock.getByPlaceholder("显示在图片下方，可留空").fill("插入位置与图注验收");
@@ -68,8 +69,10 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   const before = await source.inputValue();
   const beforeIds = [...before.matchAll(/\[\[ym-media:(\d+)\]\]/g)].map((match) => match[1]);
   expect(beforeIds).toHaveLength(2);
+  expect(before.indexOf("第二段")).toBeGreaterThan(before.indexOf(`[[ym-media:${beforeIds[0]}]]`));
 
   await page.locator(".editor-body-visual").getByRole("button", { name: "可视编辑" }).click();
+  await page.locator(".editor-body-visual .visual-media-block").last().hover();
   await page.locator(".editor-body-visual .visual-media-block").last().getByRole("button", { name: "上移" }).click();
   await sourceButton.click();
   const after = await source.inputValue();
