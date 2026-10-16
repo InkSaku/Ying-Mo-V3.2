@@ -50,7 +50,7 @@ export function AdminSettingsPage() {
   };
 
   return (
-    <AdminPageFrame title="站点设置" description="调整站点名称、介绍、页脚与注册提示，让每一处文字都延续映墨的气质。" busy={state.loading || busy} actions={state.data?.updated_at ? <span className="personal-page-total">最近更新 {formatDate(state.data.updated_at, true)}</span> : null}>
+    <AdminPageFrame title="站点设置" description="设置站点名称、介绍、页脚和注册提示。" busy={state.loading || busy} actions={state.data?.updated_at ? <span className="personal-page-total">最近更新 {formatDate(state.data.updated_at, true)}</span> : null}>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取站点设置</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
@@ -63,7 +63,7 @@ export function AdminSettingsPage() {
         </label>)}
         <div className="admin-settings-actions"><button className="btn btn-secondary" type="button" disabled={busy || state.loading} onClick={() => { setForm(siteSettingsForm(state.data)); setError(""); setMessage(""); }}>恢复已保存值</button><button className="btn btn-primary" type="submit" disabled={busy || state.loading}>保存设置</button></div>
       </form> : null}
-      <AdminActionDialog open={confirmOpen} title="保存站点设置" description="本次修改会覆盖当前站点配置，并记录修改前后值、操作者、请求 ID 和原因。" confirmLabel="确认保存" reason={reason} busy={busy} error={confirmOpen ? error : ""} onReasonChange={setReason} onConfirm={() => { void save(); }} onClose={() => { if (!busy) { setConfirmOpen(false); setError(""); } }} />
+      <AdminActionDialog open={confirmOpen} title="保存站点设置" description="保存后将覆盖当前配置，并记入操作日志。" confirmLabel="确认保存" reason={reason} busy={busy} error={confirmOpen ? error : ""} onReasonChange={setReason} onConfirm={() => { void save(); }} onClose={() => { if (!busy) { setConfirmOpen(false); setError(""); } }} />
     </AdminPageFrame>
   );
 }

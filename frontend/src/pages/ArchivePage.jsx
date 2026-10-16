@@ -65,7 +65,7 @@ export function ArchivePage() {
   };
   const changeFilter = (key, value) => setParams(archiveSearchParams({ ...selection, [key]: value, page: 1 }));
 
-  if (state.loading && !state.data) return <PageLoader label="正在整理归档" />;
+  if (state.loading && !state.data) return <PageLoader label="正在加载归档…" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   const activeYearGroup = groups.find((group) => String(group.year) === year);
@@ -75,9 +75,9 @@ export function ArchivePage() {
     <main className="page-shell archive-publication-page" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <header className="archive-publication-hero">
         <div className="archive-publication-copy">
-          <p className="archive-kicker">ARCHIVE / 时间目录</p>
-          <h1>归档，<br />重逢旧时光。</h1>
-          <p>沿着年份与月份，翻回曾经写下的一页。文章与随记，都在时间里留下了位置。</p>
+          <p className="archive-kicker"></p>
+          <h1>归档<br /></h1>
+          <p>按年月查看文章与随记。</p>
         </div>
         <ArchiveSketch />
         <dl className="archive-publication-facts">
@@ -88,13 +88,13 @@ export function ArchivePage() {
       </header>
 
       <details className="archive-filter-shelf">
-        <summary><span>REFINE / 筛选</span><strong>查找归档</strong><small>{activeFilterCount ? `${activeFilterCount} 项条件已启用` : "作者、分类、标签与合集"}</small><i aria-hidden="true" /></summary>
+        <summary><span></span><strong>筛选</strong><small>{activeFilterCount ? `${activeFilterCount} 项条件已启用` : "作者、分类、标签与合集"}</small><i aria-hidden="true" /></summary>
         <PostFilters filters={{ ...selection, sort: "newest" }} options={optionState.data || {}} loading={optionState.loading} showSort={false} onChange={changeFilter} onClear={() => setParams(archiveSearchParams({ year, month, page: 1 }))} />
       </details>
 
       <div className="archive-layout">
         <aside className="archive-facets" aria-label="归档年份与月份">
-          <header><h2>按时间翻阅</h2><p>选择年份后，可以继续定位到月份。</p></header>
+          <header><h2>年份与月份</h2><p>选择年份和月份。</p></header>
           <div className="archive-year-list">
             <button
               className={!year ? "active" : ""}

@@ -18,7 +18,7 @@ test("personal avatar stays square through loading, image and fallback states", 
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.goto("/me");
 

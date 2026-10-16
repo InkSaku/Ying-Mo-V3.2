@@ -4,7 +4,7 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写", exact: true }).click();
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
 
   let state;

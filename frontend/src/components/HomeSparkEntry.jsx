@@ -37,9 +37,9 @@ export function HomeSparkEntry() {
   return <Link className={`home-spark-entry is-${phase}`} to="/tools/spark" aria-label="进入续火花助手">
     <span className="home-spark-entry-art"><InkSparkRunner /></span>
     <span className="home-spark-entry-copy">
-      <span className="home-spark-entry-kicker">映墨小助手 · SPARK</span>
-      <strong>续火花，来这里</strong>
-      <span className="home-spark-entry-hint">把问候留给重要的人 <span aria-hidden="true">↗</span></span>
+      <span className="home-spark-entry-kicker">映墨工具</span>
+      <strong>续火花助手</strong>
+      <span className="home-spark-entry-hint">设置抖音每日问候 <span aria-hidden="true">↗</span></span>
     </span>
   </Link>;
 }

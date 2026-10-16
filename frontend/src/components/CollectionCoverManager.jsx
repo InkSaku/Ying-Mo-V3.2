@@ -50,7 +50,7 @@ export function CollectionCoverManager({ collection, onChange }) {
       }
       await onChange(updated.data);
       setUploadState(null);
-      setMessage(cleanupFailed ? "封面已替换，但旧媒体解绑失败，请刷新后重试。" : "Collection 封面已更新。");
+      setMessage(cleanupFailed ? "封面已替换，但旧媒体解绑失败，请刷新后重试。" : "合集封面已更新。");
     } catch (uploadError) {
       const cancelled = uploadError.code === "REQUEST_ABORTED" || uploadError.name === "AbortError";
       setError(cancelled ? "封面上传已取消。" : uploadError.message);
@@ -77,7 +77,7 @@ export function CollectionCoverManager({ collection, onChange }) {
       await api.delete(`/uploads/${collection.cover_media_id}/bind`);
       await onChange({ ...collection, cover_media_id: null, cover_media: null });
       setConfirmRemove(false);
-      setMessage("Collection 封面已移除。");
+      setMessage("合集封面已移除。");
     } catch (removeError) {
       setError(removeError.message);
     } finally {
@@ -89,10 +89,10 @@ export function CollectionCoverManager({ collection, onChange }) {
     <section className="collection-cover-manager" aria-labelledby="collection-cover-heading">
       <div>
         <h2 id="collection-cover-heading">封面</h2>
-        <p>封面只对当前 Collection 成员可读。</p>
+        <p>封面只对当前合集成员可读。</p>
       </div>
       {collection.cover_media ? (
-        <ProtectedImage media={collection.cover_media} alt="当前 Collection 封面" className="collection-cover-preview" />
+        <ProtectedImage media={collection.cover_media} alt="当前合集封面" className="collection-cover-preview" />
       ) : <div className="collection-cover-empty">尚未设置封面</div>}
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {message ? <div className="inline-success" role="status">{message}</div> : null}
@@ -106,8 +106,8 @@ export function CollectionCoverManager({ collection, onChange }) {
       </div>
       <ConfirmDialog
         open={confirmRemove}
-        title="移除 Collection 封面？"
-        description="封面媒体会与 Collection 解除绑定，其他内容和成员关系不受影响。"
+        title="移除合集封面？"
+        description="移除合集封面，内容和成员关系不受影响。"
         confirmLabel="确认移除"
         danger
         busy={busy}

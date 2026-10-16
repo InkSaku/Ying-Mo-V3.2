@@ -4,7 +4,7 @@ async function login(page, account) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "登录，继续书写", exact: true }).click();
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -19,7 +19,7 @@ test("spark integrates login, import, contacts, plan, simulation, queue and unbi
   await page.goto("/tools/spark");
   await page.getByRole("checkbox", { name: "不再提示", exact: true }).check();
   await page.getByRole("button", { name: "我已知悉", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /让火花继续/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /续火花助手/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "立即续火花", exact: true })).toBeDisabled();
   await page.getByText("备用登录方式", { exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({ name: "state.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ cookies: [

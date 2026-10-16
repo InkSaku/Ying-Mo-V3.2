@@ -75,7 +75,7 @@ export function NotificationsPage() {
       <PersonalNav />
       <header className="page-heading">
         {state.data?.length ? <InkPageSketch /> : null}
-        <div><p className="section-kicker">INBOX</p><h1>通知</h1><p>朋友的回应、共同记录的新页，都在这里。</p></div>
+        <div><p className="section-kicker"></p><h1>通知</h1><p></p></div>
         {state.data?.some((item) => !item.is_read) ? (
           <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("all"); }}>
             {busy === "all" ? "处理中" : "全部已读"}
@@ -86,8 +86,8 @@ export function NotificationsPage() {
       {message ? <div className="inline-success notification-feedback" role="status">{message}</div> : null}
       {state.loading ? <div className="profile-refresh" role="status">正在更新通知…</div> : null}
       {state.data?.length && !pageNeedsClamp ? <div className="ink-inbox-summary">
-        <p><span className="tabular">{pagination.total ?? state.data.length}</span> 封消息<span className="ink-inbox-unread">本页 {state.data.filter((item) => !item.is_read).length} 封未读</span></p>
-        <span>一封一封，慢慢读。</span>
+        <p><span className="tabular">{pagination.total ?? state.data.length}</span> 条通知<span className="ink-inbox-unread">本页 {state.data.filter((item) => !item.is_read).length} 条未读</span></p>
+        <span></span>
       </div> : null}
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
         <div className="notification-list">
@@ -120,7 +120,7 @@ export function NotificationsPage() {
             </article>
           ))}
         </div>
-      ) : <EmptyState sketch="inbox" title="还没有通知" description="信箱先歇一会儿。朋友的回应到了，会放在这里。" />}
+      ) : <EmptyState sketch="inbox" title="还没有通知" description="" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}

@@ -26,7 +26,7 @@ function MemoryFilters({ data, memory, onChange, media = false }) {
   const activeCount = [memory.year, memory.author, memory.type, media ? memory.mediaKind : ""].filter(Boolean).length;
   return (
     <details className={`collection-memory-filter-drawer ${media ? "is-media" : ""}`}>
-      <summary><span>REFINE / 筛选</span><strong>缩小阅读范围</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "年份、作者与内容类型"}</small><i aria-hidden="true" /></summary>
+      <summary><span></span><strong>筛选</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "年份、作者与内容类型"}</small><i aria-hidden="true" /></summary>
     <div className={`collection-memory-filters ${media ? "is-media" : ""}`} aria-label="共同回忆筛选">
       <label><span>年份</span><CustomSelect value={memory.year} onChange={(event) => patch({ year: event.target.value })}>
         <option value="">全部年份</option>
@@ -54,7 +54,7 @@ function TimelineView({ slug, memory, onChange }) {
   const groups = groupTimelineItems(state.data?.items || []);
   const pagination = state.meta?.pagination || {};
   return <section className="collection-memory-view" aria-labelledby="collection-timeline-heading">
-    <div className="collection-memory-heading"><div><h2 id="collection-timeline-heading">共同时间轴</h2><p>按记录真正发生的时间，重新阅读一起走过的日子。</p></div>
+    <div className="collection-memory-heading"><div><h2 id="collection-timeline-heading">共同时间轴</h2><p>文章按发布时间，随记按发生时间排列。</p></div>
       {state.data?.year_facets?.length ? <div className="collection-year-jumps" aria-label="年份快速定位">{state.data.year_facets.slice(0, 8).map((facet) => <button key={facet.year} type="button" className={memory.year === String(facet.year) ? "active" : ""} onClick={() => onChange({ ...memory, year: String(facet.year), page: 1 })}>{facet.year}<span>{facet.count}</span></button>)}</div> : null}
     </div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} />
@@ -91,7 +91,7 @@ function MediaWallView({ slug, memory, onChange }) {
   if (state.loading) return <PageLoader label="正在整理共同影像" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
   return <section className="collection-memory-view" aria-labelledby="collection-media-heading">
-    <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p>图片与 Live Photo 始终留在原记录里，这里只是另一种回看方式。</p></div></div>
+    <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p></p></div></div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} media />
     {state.data?.items?.length ? <div className="collection-media-wall">{state.data.items.map((item) => <article key={item.id} className="collection-media-memory"><MediaOpenButton item={item} items={state.data.items} context="collection" pagination={{ page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || state.data.items.length, totalPages: pagination.total_pages || 1, loadPage }}><ProtectedImage media={item.image} alt={`来自${item.author?.nickname || "成员"}的共同影像`} /></MediaOpenButton><Link to={postHref(item.post)} className="collection-media-caption"><strong>{item.post.title || (item.post.post_type === "note" ? "一则随记" : "一篇文章")}</strong><small><span>{item.author?.nickname || "成员"}</span><time dateTime={item.occurred_at || undefined}>{formatDate(item.occurred_at)}</time></small><span className="collection-media-kind">{item.kind === "live_photo" ? "Live Photo" : "图片"} / {postTypeLabel(item.post.post_type)}</span></Link></article>)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
     <Pagination page={pagination.page || 1} totalPages={pagination.total_pages || 0} onChange={(page) => onChange({ ...memory, page })} />
@@ -126,7 +126,7 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
 
       <aside className="collection-overview-index" aria-label="合集卷内索引">
         <section className="collection-index-section" aria-labelledby="collection-members-title">
-          <header><h2 id="collection-members-title">共同署名</h2><p>{members.length} 位成员一起完成这册合集。</p></header>
+          <header><h2 id="collection-members-title">合集成员</h2><p>{members.length} 位合集成员。</p></header>
           <div className="collection-member-index">
             {members.map((member, index) => (
               <Link key={`${member.id}-${index}`} to={`/users/${member.username}`}>
@@ -138,8 +138,8 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
         </section>
 
         <section className="collection-index-section collection-notification-preference" aria-labelledby="collection-notification-title">
-          <div><h2 id="collection-notification-title">合集通知</h2><p>加入、移除和创建者转让等与你直接相关的通知始终保留。</p></div>
-          <CustomSelect aria-label="合集通知偏好" disabled={notificationPreference.loading || notificationPreference.saving} value={notificationPreference.level} onChange={(event) => { void onSaveNotificationPreference(event.target.value); }}><option value="all">全部通知</option><option value="important">仅重要变更</option><option value="muted">静音共同投稿</option></CustomSelect>
+          <div><h2 id="collection-notification-title">合集通知</h2><p>互动与管理通知包括评论、回复、提及和回忆补充。静音后仍接收成员变更、合集转让和你的内容被移出等管理通知。</p></div>
+          <CustomSelect aria-label="合集通知偏好" disabled={notificationPreference.loading || notificationPreference.saving} value={notificationPreference.level} onChange={(event) => { void onSaveNotificationPreference(event.target.value); }}><option value="all">全部通知</option><option value="important">互动与管理通知</option><option value="muted">静音</option></CustomSelect>
           {notificationPreference.error ? <small className="field-error">{notificationPreference.error}</small> : null}
           {notificationPreference.message ? <small>{notificationPreference.message}</small> : null}
         </section>
@@ -184,21 +184,21 @@ export function CollectionDetailPage() {
   const collection = state.data;
   return <main className="page-shell collection-memory-page">
     <header className="collection-hero collection-volume-hero">
-      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span>YING MO / COLLECTION</span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
+      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span></span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
       <div className="collection-volume-copy">
         <Link className="collection-volume-back" to="/collections">返回合集目录</Link>
-        <span className="collection-volume-kicker">COLLECTION / SHARED VOLUME</span>
+        <span className="collection-volume-kicker"></span>
         <h1>{collection.name}</h1>
-        {collection.description ? <p>{collection.description}</p> : <p>这一册还没有写下卷首说明。</p>}
+        {collection.description ? <p>{collection.description}</p> : <p></p>}
         <dl className="collection-volume-facts">
           <div><dt>创建者</dt><dd><Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname}</Link></dd></div>
-          <div><dt>共同署名</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
-          <div><dt>最近整理</dt><dd>{formatDate(collection.updated_at)}</dd></div>
+          <div><dt>合集成员</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
+          <div><dt>更新于</dt><dd>{formatDate(collection.updated_at)}</dd></div>
         </dl>
-        <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理这册合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>写入新的记录</Link></div>
+        <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>添加记录</Link></div>
       </div>
     </header>
-    <nav className="collection-memory-nav collection-volume-nav" aria-label="Collection 阅读视图">
+    <nav className="collection-memory-nav collection-volume-nav" aria-label="合集阅读视图">
       <button type="button" aria-pressed={memory.view === "timeline"} className={memory.view === "timeline" ? "active" : ""} onClick={() => changeView("timeline")}><strong>共同时间轴</strong></button>
       <button type="button" aria-pressed={memory.view === "overview"} className={memory.view === "overview" ? "active" : ""} onClick={() => changeView("overview")}><strong>合集内容</strong></button>
       <button type="button" aria-pressed={memory.view === "media"} className={memory.view === "media" ? "active" : ""} onClick={() => changeView("media")}><strong>共同影像</strong></button>

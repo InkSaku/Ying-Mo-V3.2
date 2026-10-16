@@ -374,7 +374,7 @@ export function CommentsPanel({ postId }) {
       <div className="comments-heading">
         <div>
           <h2 id="comments-title">评论</h2>
-          <p>围绕这篇内容，留下你的想法与回应。</p>
+          <p></p>
         </div>
         {pagination.total !== undefined ? <span className="tabular">{pagination.total} 条一级评论</span> : null}
       </div>
@@ -389,7 +389,7 @@ export function CommentsPanel({ postId }) {
           <CommentAvatar member={user} current />
           <div>
             <strong>{user?.nickname || user?.username || "成员"}</strong>
-            <span>{replyTo ? `回复 ${replyTo.author?.nickname || "成员"}` : "参与这段共同阅读"}</span>
+            <span>{replyTo ? `回复 ${replyTo.author?.nickname || "成员"}` : ""}</span>
           </div>
         </div>
         <label className="sr-only" htmlFor={`comment-body-${postId}`}>{replyTo ? "写下回复" : "写下回应"}</label>
@@ -420,7 +420,7 @@ export function CommentsPanel({ postId }) {
           ) : null}
         </div>
         <div className="comment-compose-footer">
-          <span className="meta-text">输入 @ 选择当前可访问成员</span>
+          <span className="meta-text">输入 @ 提及成员</span>
           <div>
             <span className="meta-text tabular" id={`comment-count-${postId}`}>{characterCount} / 500</span>
             <button className="btn btn-primary" type="submit" disabled={submitting || deleting || state.loading || !body.trim()}>
@@ -436,7 +436,7 @@ export function CommentsPanel({ postId }) {
       {state.loading && items.length ? <div className="comment-loading comment-loading-inline" role="status">正在更新评论…</div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={() => load(page)} /> : null}
       {!state.loading && !state.error && items.length === 0 ? (
-        <EmptyState title="还没有评论" description="你可以成为第一个留下回应的人。" />
+        <EmptyState title="还没有评论" description="" />
       ) : null}
       {!state.error ? <div className="comment-list">{items.map((item) => commentNode(item))}</div> : null}
       <Pagination page={pagination.page || page} totalPages={pagination.total_pages || 0} onChange={changePage} />
@@ -445,8 +445,8 @@ export function CommentsPanel({ postId }) {
         open={Boolean(deleteTarget)}
         title="删除这条评论？"
         description={deleteTarget?.replies?.length
-          ? "这条评论已有回复。删除后会保留节点并显示“[该评论已删除]”，回复不会被删除。"
-          : "评论将从当前内容中删除，这项操作不能在前端撤销。"}
+          ? "删除后将显示“[该评论已删除]”，已有回复保留。"
+          : "评论将被删除，无法在本页恢复。"}
         confirmLabel="确认删除"
         danger
         busy={deleting}

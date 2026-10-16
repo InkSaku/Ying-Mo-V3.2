@@ -190,9 +190,9 @@ export function SearchPage() {
             fallback={<span className="search-collection-cover search-collection-cover-fallback" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>}
           />
           <span>
-            <small>COLLECTION / {String(index + 1).padStart(2, "0")}</small>
+            <small>合集 {String(index + 1).padStart(2, "0")}</small>
             <strong>{item.name}</strong>
-            <em>{item.description || "这一册还没有卷首说明。"}</em>
+            <em>{item.description || ""}</em>
           </span>
           <i aria-hidden="true">↗</i>
         </Link>
@@ -224,7 +224,7 @@ export function SearchPage() {
     data.category_facets?.length || data.tag_facets?.length ? (
       <section className="search-facet-panel" aria-labelledby="search-facets-heading">
         <div className="search-rail-heading">
-          <span>RELATED INDEX</span>
+          <span></span>
           <h2 id="search-facets-heading">相关索引</h2>
         </div>
         {data.category_facets?.length ? (
@@ -251,9 +251,9 @@ export function SearchPage() {
     <main className="page-shell search-page" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <header className="search-hero">
         <div className="search-hero-copy">
-          <span className="search-eyebrow">SEARCH / DISCOVERY</span>
-          <h1>{q ? "继续寻找。" : "在共同记忆里，\n找到那一页。"}</h1>
-          <p>从文章、随记、合集与成员中检索。结果始终遵循你当前拥有的访问权限。</p>
+          <span className="search-eyebrow"></span>
+          <h1>{q ? "搜索" : "搜索"}</h1>
+          <p></p>
         </div>
 
         <SearchSketch />
@@ -284,7 +284,7 @@ export function SearchPage() {
               type="search"
               value={inputValue}
               maxLength={100}
-              placeholder="输入标题、正文、合集或成员…"
+              placeholder="搜索文章、随记、合集或成员"
               autoComplete="off"
               role="combobox"
               aria-autocomplete="list"
@@ -305,7 +305,7 @@ export function SearchPage() {
             {showSuggestionPanel ? (
               <div id="search-suggestions" className="search-suggestions">
                 {suggestionState.loading ? (
-                  <p className="search-suggestion-state" role="status">正在寻找建议…</p>
+                  <p className="search-suggestion-state" role="status">正在加载搜索建议…</p>
                 ) : null}
                 {suggestionState.error ? (
                   <div className="search-suggestion-state" role="alert">
@@ -316,7 +316,7 @@ export function SearchPage() {
                   </div>
                 ) : null}
                 {!suggestionState.loading && !suggestionState.error && suggestionState.data && !suggestions.length ? (
-                  <p className="search-suggestion-state">没有匹配的标题或 Collection。</p>
+                  <p className="search-suggestion-state">没有匹配的标题或合集。</p>
                 ) : null}
                 {!suggestionState.loading && !suggestionState.error && suggestions.length ? (
                   <ul className="search-suggestion-list" role="listbox" aria-label="搜索建议">
@@ -349,24 +349,24 @@ export function SearchPage() {
               </div>
             ) : null}
           </div>
-          <button className="btn btn-primary search-submit" type="submit">开始搜索 <span aria-hidden="true">→</span></button>
+          <button className="btn btn-primary search-submit" type="submit">搜索 <span aria-hidden="true">→</span></button>
         </div>
-        <p className="search-form-hint"><span>⌘ K</span> 支持标题与正文关键词，也可以直接搜索一个人的名字。</p>
+        <p className="search-form-hint"><span>⌘ K</span> 可按标题、正文、合集名称、昵称或用户名搜索。</p>
         </form>
       </header>
 
       {!q ? (
         <section className="search-start" aria-labelledby="search-start-heading">
           <div className="search-start-heading">
-            <span>HOW TO SEARCH</span>
-            <h2 id="search-start-heading">你可以从这些线索开始</h2>
+            <span></span>
+            <h2 id="search-start-heading">搜索范围</h2>
           </div>
           <div className="search-start-grid">
-            <article><span>01</span><h3>一句话</h3><p>搜索标题、摘要和正文，找回只记得片段的那篇内容。</p></article>
-            <article><span>02</span><h3>一本合集</h3><p>输入合集名称，回到一组共同维护、持续生长的记录。</p></article>
-            <article><span>03</span><h3>一个人</h3><p>通过昵称或用户名，找到共同书写这段记忆的成员。</p></article>
+            <article><span></span><h3>内容</h3><p>标题、摘要或正文中的关键词</p></article>
+            <article><span></span><h3>合集</h3><p>合集名称</p></article>
+            <article><span></span><h3>成员</h3><p>昵称或用户名</p></article>
           </div>
-          <p className="search-privacy-note"><span aria-hidden="true">◉</span> 私密内容不会因为搜索而越过原有的访问边界。</p>
+          <p className="search-privacy-note"><span aria-hidden="true">◉</span> </p>
         </section>
       ) : null}
       {q && state.loading ? <div className="search-loading" role="status">正在搜索“{q}”…</div> : null}
@@ -384,10 +384,10 @@ export function SearchPage() {
         <>
           <section className="search-result-overview" aria-labelledby="search-results-heading">
             <div>
-              <span className="search-eyebrow">SEARCH RESULTS</span>
+              <span className="search-eyebrow"></span>
               <h2 id="search-results-heading">关于“{q}”</h2>
             </div>
-            <p><strong>{totalResultCount}</strong><span>项可访问结果</span></p>
+            <p><strong>{totalResultCount}</strong><span>项结果</span></p>
           </section>
 
           <nav className="search-result-tabs" aria-label="搜索结果类型">
@@ -407,8 +407,8 @@ export function SearchPage() {
               {data?.posts?.length ? (
                 <section className="search-primary-results" aria-labelledby="search-posts-heading">
                   <div className="search-section-heading">
-                    <div><span>WRITING / {String(resultCounts.posts).padStart(2, "0")}</span><h2 id="search-posts-heading">文章与随记</h2></div>
-                    <p>按最近相关内容排序</p>
+                    <div><span>{String(resultCounts.posts).padStart(2, "0")} 项</span><h2 id="search-posts-heading">文章与随记</h2></div>
+                    <p></p>
                   </div>
                   <div className="note-stream search-post-stream">{data.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="search" index={index} />)}</div>
                   <Pagination page={pagination.page || page} totalPages={totalPages} disabled={pageNeedsClamp} onChange={(nextPage) => {
@@ -426,13 +426,13 @@ export function SearchPage() {
                 <aside className="search-discovery-rail" aria-label="关联搜索结果">
                   {data?.collections?.length ? (
                     <section aria-labelledby="search-collections-heading">
-                      <div className="search-rail-heading"><span>COLLECTIONS / {String(resultCounts.collections).padStart(2, "0")}</span><h2 id="search-collections-heading">相关合集</h2></div>
+                      <div className="search-rail-heading"><span>{String(resultCounts.collections).padStart(2, "0")} 项</span><h2 id="search-collections-heading">相关合集</h2></div>
                       {renderCollections(true)}
                     </section>
                   ) : null}
                   {data?.users?.length ? (
                     <section aria-labelledby="search-users-heading">
-                      <div className="search-rail-heading"><span>PEOPLE / {String(resultCounts.users).padStart(2, "0")}</span><h2 id="search-users-heading">相关成员</h2></div>
+                      <div className="search-rail-heading"><span>{String(resultCounts.users).padStart(2, "0")} 位</span><h2 id="search-users-heading">相关成员</h2></div>
                       {renderUsers()}
                     </section>
                   ) : null}
@@ -444,14 +444,14 @@ export function SearchPage() {
 
           {hasVisibleResults && resultView === "collections" ? (
             <section className="search-filtered-section" aria-labelledby="search-collections-heading">
-              <div className="search-section-heading"><div><span>COLLECTIONS / {String(resultCounts.collections).padStart(2, "0")}</span><h2 id="search-collections-heading">相关合集</h2></div><p>仅显示你可以进入的合集</p></div>
+              <div className="search-section-heading"><div><span>{String(resultCounts.collections).padStart(2, "0")} 项</span><h2 id="search-collections-heading">相关合集</h2></div><p></p></div>
               {renderCollections(false)}
             </section>
           ) : null}
 
           {hasVisibleResults && resultView === "users" ? (
             <section className="search-filtered-section search-filtered-members" aria-labelledby="search-users-heading">
-              <div className="search-section-heading"><div><span>PEOPLE / {String(resultCounts.users).padStart(2, "0")}</span><h2 id="search-users-heading">相关成员</h2></div><p>按昵称与用户名匹配</p></div>
+              <div className="search-section-heading"><div><span>{String(resultCounts.users).padStart(2, "0")} 位</span><h2 id="search-users-heading">相关成员</h2></div><p></p></div>
               {renderUsers()}
             </section>
           ) : null}

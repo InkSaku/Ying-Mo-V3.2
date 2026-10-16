@@ -61,7 +61,7 @@ export function ResetPasswordPage() {
       setToken("");
       setMessage(accountActionMessage(
         result.data,
-        "密码已更新，当前设备中的登录状态已清除。请使用新密码重新登录。",
+        "密码已更新，请使用新密码重新登录。",
       ));
     } catch (confirmError) {
       const fields = fieldErrorsFrom(confirmError);
@@ -78,8 +78,8 @@ export function ResetPasswordPage() {
   return (
     <AccountSecurityLayout
       eyebrow="账户安全"
-      title="设置新的登录密码"
-      description="新密码保存成功后，当前页面会清除本地登录状态。其他已签发会话的撤销以后端结果为准。"
+      title="设置新密码"
+      description="重置后需要重新登录。"
       aside={<p>请不要复用其他网站的密码，也不要把邮件中的重置链接转发给任何人。</p>}
     >
       <header className="auth-card-intro">
@@ -105,7 +105,7 @@ export function ResetPasswordPage() {
               aria-describedby={fieldErrors.password ? "new-password-error" : "new-password-help"}
               onChange={set("password")}
             />
-            <small id="new-password-help">使用 8-128 个字符。</small>
+            <small id="new-password-help">8–128 个字符。</small>
             {fieldErrors.password ? <small className="field-error" id="new-password-error">{fieldErrors.password}</small> : null}
           </label>
           <label className="auth-field">
@@ -127,7 +127,7 @@ export function ResetPasswordPage() {
           <button className="btn btn-primary btn-wide" type="submit" disabled={busy || !token}>
             {busy ? "正在更新密码" : "保存新密码"}
           </button>
-          {!token ? <div className="inline-error" role="alert">重置链接缺少安全令牌，请重新申请。</div> : null}
+          {!token ? <div className="inline-error" role="alert">重置链接无效，请重新申请。</div> : null}
         </form>
       ) : (
         <Link className="btn btn-primary btn-wide" to="/login">使用新密码登录</Link>

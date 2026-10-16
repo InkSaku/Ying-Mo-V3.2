@@ -37,7 +37,7 @@ export function CollectionManagePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(null);
-  usePageMeta(collection ? `管理 ${collection.name}` : "管理 Collection");
+  usePageMeta(collection ? `管理 ${collection.name}` : "管理合集");
 
   useEffect(() => {
     let active = true;
@@ -112,7 +112,7 @@ export function CollectionManagePage() {
         ...(collection.first_shared_at ? {} : { slug: form.slug }),
       });
       setCollection((current) => ({ ...current, ...result.data, posts: current.posts }));
-      setMessage("Collection 资料已保存。");
+      setMessage("合集资料已保存。");
       if (result.data.slug !== slug) navigate(`/collections/${result.data.slug}/manage`, { replace: true });
     } catch (saveError) {
       setError(saveError.message);
@@ -174,7 +174,7 @@ export function CollectionManagePage() {
     try {
       await api.post(`/collections/${collection.id}/reorder`, { post_ids: orderedPosts.map((post) => post.id) });
       setCollection((current) => ({ ...current, posts: orderedPosts }));
-      setMessage("Collection 内容顺序已保存。");
+      setMessage("合集内容顺序已保存。");
     } catch (orderError) {
       setError(orderError.message);
     } finally {
@@ -213,7 +213,7 @@ export function CollectionManagePage() {
       const result = await api.put(`/collections/${collection.id}/highlights`, { post_ids: highlightIds });
       setHighlightIds(result.data.post_ids || []);
       setCollection((current) => ({ ...current, highlights: result.data.highlights || [] }));
-      setMessage("关键记录已保存。它们只影响 Collection 回忆入口，不改变正文与作者归属。");
+      setMessage("关键记录已保存，正文和作者归属不变。");
     } catch (highlightError) {
       setError(highlightError.message);
     } finally {
@@ -233,7 +233,7 @@ export function CollectionManagePage() {
       setHighlightIds((current) => current.filter((id) => id !== post.id));
       setCollection((current) => ({ ...current, posts: current.posts.filter((item) => item.id !== post.id) }));
       setConfirm(null);
-      setMessage("Post 已移出 Collection，并恢复为作者私有内容。");
+      setMessage("内容已移出合集，仅作者可见。");
     } catch (removeError) {
       setError(removeError.message);
     } finally {
@@ -276,7 +276,7 @@ export function CollectionManagePage() {
     setCollection((current) => ({ ...current, ...nextCollection, posts: current.posts }));
   };
 
-  if (loading) return <PageLoader label="正在读取 Collection 管理数据" />;
+  if (loading) return <PageLoader label="正在读取合集管理数据" />;
   if (loadError) return <main className="page-shell narrow-page"><ErrorState error={loadError} onRetry={() => setReloadKey((value) => value + 1)} /></main>;
   if (collection.creator.id !== user.id) return <Navigate to={`/collections/${collection.slug}`} replace />;
 
@@ -285,11 +285,11 @@ export function CollectionManagePage() {
       <header className="page-heading">
         <InkPageSketch />
         <div>
-          <p className="hero-kicker">Collection 管理</p>
+          <p className="hero-kicker">合集管理</p>
           <h1>{collection.name}</h1>
-          <p>创建者可以管理资料、成员与内容顺序，但不能编辑或删除其他作者的 Post。</p>
+          <p>管理资料、成员和内容顺序。</p>
         </div>
-        <Link className="btn btn-secondary" to={`/collections/${collection.slug}`}>返回 Collection</Link>
+        <Link className="btn btn-secondary" to={`/collections/${collection.slug}`}>返回合集</Link>
       </header>
 
       <nav className="collection-manage-index" aria-label="管理区段">
@@ -310,9 +310,9 @@ export function CollectionManagePage() {
             <form className="editor-form" onSubmit={saveDetails}>
               <label><span>名称</span><input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
               <label>
-                <span>Slug</span>
+                <span>网址标识</span>
                 <input required disabled={Boolean(collection.first_shared_at)} value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase() })} />
-                <small>{collection.first_shared_at ? `已于 ${formatDate(collection.first_shared_at, true)} 首次共享，Slug 已锁定。` : "首次发布 Collection 内容前可以修改。"}</small>
+                <small>{collection.first_shared_at ? `已于 ${formatDate(collection.first_shared_at, true)} 首次发布合集内容，网址标识已锁定。` : "首次发布合集内容前可以修改。"}</small>
               </label>
               <label><span>说明</span><textarea maxLength={5000} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
               <button className="btn btn-primary" type="submit" disabled={Boolean(busy)}>{busy === "details" ? "正在保存" : "保存资料"}</button>
@@ -371,7 +371,7 @@ export function CollectionManagePage() {
 
           <section className="collection-manage-section" id="collection-order">
             <div className="section-header">
-              <div><h2>内容顺序</h2><p>上下移动后保存，排序请求会完整覆盖当前可展示 Post。</p></div>
+              <div><h2>内容顺序</h2><p>调整后点击“保存顺序”。</p></div>
               {orderedPosts.length ? <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveOrder}>{busy === "order" ? "正在保存" : "保存顺序"}</button> : null}
             </div>
             {orderedPosts.length ? (
@@ -399,8 +399,8 @@ export function CollectionManagePage() {
         <aside className="collection-manage-aside" id="collection-side-settings">
           <CollectionCoverManager collection={collection} onChange={handleCoverChange} />
           <section className="collection-transfer-zone">
-            <h2>转让创建者</h2>
-            <p>转让后，对方将管理此 Collection；你会保留普通成员的阅读和投稿权。</p>
+            <h2>转让合集</h2>
+            <p>转让后，对方将管理此合集；你会保留普通成员的阅读和投稿权。</p>
             <label>
               <span>新创建者</span>
               <CustomSelect aria-label="新创建者" value={transferTargetId} disabled={Boolean(busy) || !transferCandidates.length} onChange={(event) => setTransferTargetId(event.target.value)}>
@@ -408,27 +408,27 @@ export function CollectionManagePage() {
                 {transferCandidates.map((member) => <option key={member.id} value={member.id}>{member.nickname} · @{member.username}</option>)}
               </CustomSelect>
             </label>
-            {!transferCandidates.length ? <p className="collection-transfer-empty">当前没有可接收 Collection 的有效成员。</p> : null}
-            <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || !transferTarget} onClick={() => setConfirm({ type: "transfer", member: transferTarget })}>转让 Collection</button>
+            {!transferCandidates.length ? <p className="collection-transfer-empty">当前没有可接收合集的有效成员。</p> : null}
+            <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || !transferTarget} onClick={() => setConfirm({ type: "transfer", member: transferTarget })}>转让合集</button>
           </section>
           <section className="collection-danger-zone">
-            <h2>删除 Collection</h2>
-            <p>所有 Post 会安全脱离并恢复为作者私有内容，不会转移作者身份。</p>
-            <button className="btn btn-danger" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ type: "delete" })}>删除 Collection</button>
+            <h2>删除合集</h2>
+            <p>删除合集不会删除内容；所有记录将移出合集，仅各自作者可见。</p>
+            <button className="btn btn-danger" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ type: "delete" })}>删除合集</button>
           </section>
         </aside>
       </div>
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.type === "members" ? "移除选中的共同成员？" : confirm?.type === "post" ? "将这篇 Post 移出 Collection？" : confirm?.type === "transfer" ? `将 Collection 转让给 ${confirm.member.nickname}？` : "删除这个 Collection？"}
+        title={confirm?.type === "members" ? "移除选中的共同成员？" : confirm?.type === "post" ? "将这篇内容移出合集？" : confirm?.type === "transfer" ? `将合集转让给 ${confirm.member.nickname}？` : "删除这个合集？"}
         description={confirm?.type === "members"
-          ? `将移除 ${confirm.removed.map((member) => member.nickname).join("、")}。他们会立即失去普通阅读和投稿权限，但仍可通过作者入口管理自己的历史 Post。`
+          ? `将移除 ${confirm.removed.map((member) => member.nickname).join("、")}。他们会立即失去普通阅读和投稿权限，但仍可通过作者入口管理自己的历史内容。`
           : confirm?.type === "post"
-            ? "Post 会脱离 Collection 并恢复为作者私有内容；创建者不会获得该 Post 的编辑或删除权限。"
+            ? "移出后仅作者可见，内容不会被删除；合集创建者不能编辑或删除这篇内容。"
             : confirm?.type === "transfer"
-              ? `${confirm.member.nickname} 将立即获得资料、成员、排序、关键记录和删除权限。你将变为普通成员，仍可阅读、投稿和管理自己的 Post，但不能再管理此 Collection。`
-            : "Collection 将被删除，所有 Post 会脱离并恢复为各自作者的私有内容。此操作无法在前端撤销。"}
+              ? `${confirm.member.nickname} 将立即获得资料、成员、排序、关键记录和删除权限。你将变为普通成员，仍可阅读、投稿和管理自己的内容，但不能再管理此合集。`
+            : "合集将被删除，所有内容会脱离并恢复为各自作者的私有内容。此操作无法在本页撤销。"}
         confirmLabel={confirm?.type === "members" ? "确认更新成员" : confirm?.type === "post" ? "确认移出" : confirm?.type === "transfer" ? "确认转让" : "确认删除"}
         danger
         busy={Boolean(busy)}

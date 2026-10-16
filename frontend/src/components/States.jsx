@@ -1,6 +1,6 @@
 import { InkSketch } from "./InkSketch";
 
-export function PageLoader({ label = "正在读取内容" }) {
+export function PageLoader({ label = "正在加载内容…" }) {
   return (
     <main className="page-shell" aria-busy="true" aria-live="polite">
       <div className="skeleton-stack" role="status">
@@ -32,7 +32,7 @@ export function ErrorState({ error, onRetry }) {
   return (
     <div className="error-state" role="alert">
       <InkSketch variant="wanderer" />
-      <h3>没有成功读取内容</h3>
+      <h3>内容加载失败</h3>
       <p>{message}</p>
       {diagnostic ? <p className="meta-text">{diagnostic}</p> : null}
       {error?.requestId ? <p className="meta-text">Request ID: {error.requestId}</p> : null}

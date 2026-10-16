@@ -45,11 +45,11 @@ export function AdminLogsPage() {
   return (
     <AdminPageFrame title="操作日志" description="按操作者、动作与对象回看管理记录，核对修改前后的内容。" busy={state.loading || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <form className="admin-log-filters" role="search" onSubmit={(event) => { event.preventDefault(); apply({ ...draft, page: 1 }); }}>
-        <label className="admin-filter-search"><span>全文筛选</span><input maxLength={100} value={draft.q} onChange={(event) => setDraft({ ...draft, q: event.target.value })} placeholder="动作、对象 ID、Request ID 或原因" /></label>
+        <label className="admin-filter-search"><span>全文筛选</span><input maxLength={100} value={draft.q} onChange={(event) => setDraft({ ...draft, q: event.target.value })} placeholder="动作、对象 ID、请求 ID 或原因" /></label>
         <label><span>动作</span><input maxLength={80} value={draft.action} onChange={(event) => setDraft({ ...draft, action: event.target.value })} placeholder="例如 settings.update" /></label>
         <label><span>对象类型</span><input maxLength={40} value={draft.target_type} onChange={(event) => setDraft({ ...draft, target_type: event.target.value })} placeholder="例如 featured" /></label>
         <label><span>操作者 ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={draft.operator_id} onChange={(event) => setDraft({ ...draft, operator_id: event.target.value.replace(/\D/g, "") })} /></label>
-        <details className="admin-advanced-filters"><summary>精确对象与请求筛选</summary><div><label><span>对象 ID</span><input maxLength={100} value={draft.target_id} onChange={(event) => setDraft({ ...draft, target_id: event.target.value })} /></label><label><span>Request ID</span><input maxLength={64} value={draft.request_id} onChange={(event) => setDraft({ ...draft, request_id: event.target.value })} /></label></div></details>
+        <details className="admin-advanced-filters"><summary>精确对象与请求筛选</summary><div><label><span>对象 ID</span><input maxLength={100} value={draft.target_id} onChange={(event) => setDraft({ ...draft, target_id: event.target.value })} /></label><label><span>请求 ID</span><input maxLength={64} value={draft.request_id} onChange={(event) => setDraft({ ...draft, request_id: event.target.value })} /></label></div></details>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>筛选</button>
         <button className="text-button" type="button" disabled={state.loading} onClick={() => { setDraft(emptyDraft); setParams({}); }}>清除</button>
       </form>
@@ -59,7 +59,7 @@ export function AdminLogsPage() {
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : null}
       {state.data && !pageNeedsClamp ? state.data.length ? <div className="admin-log-list">{state.data.map((item) => <article key={item.id} className="admin-log-row">
         <header><div><p className="hero-kicker">{item.target_type} · {item.target_id}</p><h2>{item.action}</h2></div><time dateTime={item.created_at}>{formatDate(item.created_at, true)}</time></header>
-        <dl><div><dt>操作者</dt><dd>@{item.operator?.username || "未知"} · 用户 #{item.operator?.id || "?"}</dd></div><div><dt>Request ID</dt><dd className="admin-log-code">{item.request_id}</dd></div><div><dt>原因</dt><dd>{item.reason || "未记录"}</dd></div>{item.idempotency_key ? <div><dt>幂等键</dt><dd className="admin-log-code">{item.idempotency_key}</dd></div> : null}</dl>
+        <dl><div><dt>操作者</dt><dd>@{item.operator?.username || "未知"} · 用户 #{item.operator?.id || "?"}</dd></div><div><dt>请求 ID</dt><dd className="admin-log-code">{item.request_id}</dd></div><div><dt>原因</dt><dd>{item.reason || "未记录"}</dd></div>{item.idempotency_key ? <div><dt>幂等键</dt><dd className="admin-log-code">{item.idempotency_key}</dd></div> : null}</dl>
         <div className="admin-log-payload"><JsonDisclosure label="修改前" value={item.before} /><JsonDisclosure label="修改后" value={item.after} /></div>
       </article>)}</div> : <EmptyState title="没有匹配的操作日志" description="调整动作、对象、操作者或请求条件后重试。" /> : null}
       <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || pageNeedsClamp} onChange={(page) => apply({ page })} />

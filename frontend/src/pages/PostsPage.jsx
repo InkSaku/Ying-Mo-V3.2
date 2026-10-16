@@ -60,13 +60,13 @@ function groupArticlesByYear(posts) {
 
 function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
   if (isArticle) {
-    const openingCopy = sort === "oldest" ? "从最早保存的一篇开始" : sort === "updated" ? "从最近整理的一篇开始" : "从最近写下的一篇开始";
+    const openingCopy = sort === "oldest" ? "最早发布" : sort === "updated" ? "最近更新" : "最新文章";
     return (
       <header className="browse-hero browse-hero-article">
         <div className="browse-hero-copy">
-          <p className="hero-kicker">ARTICLES / READING ARCHIVE</p>
-          <h1>文章，<br />展开阅读。</h1>
-          <p>把观察写成文字，把日常留给时间。<br />从这里，慢慢读到彼此。</p>
+          <p className="hero-kicker"></p>
+          <h1>文章<br /></h1>
+          <p><br /></p>
         </div>
         <div className="articles-drawn-opening"><CollectionSketch /><p aria-hidden="true">Between the lines.<br /><span>A little life.</span></p></div>
         <aside className="articles-hero-note" aria-label="文章目录概览">
@@ -82,16 +82,16 @@ function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
   return (
     <header className="browse-hero browse-hero-note">
       <div className="browse-hero-copy">
-        <p className="hero-kicker">FIELD NOTES / 日常片段</p>
-        <h1>随记，<br />留住当下。</h1>
-        <p>一阵风、一段路、一个忽然想记住的瞬间。留几句话，让平凡的日子有迹可循。</p>
+        <p className="hero-kicker"></p>
+        <h1>随记<br /></h1>
+        <p></p>
       </div>
       <NoteSketch />
       <aside className="browse-hero-index" aria-label="内容目录概览">
         <span className="tabular">{total || 0}</span>
-        <div><strong>则可阅读随记</strong><p>把日常片段，慢慢收进这一册。</p></div>
+        <div><strong>则可阅读随记</strong><p></p></div>
         <nav aria-label="内容类型切换"><Link to="/articles">文章</Link><Link className="active" to="/notes">随记</Link></nav>
-        <a className="browse-hero-jump" href="#browse-content"><span>START READING</span>从本页首篇开始 <i aria-hidden="true">↓</i></a>
+        <a className="browse-hero-jump" href="#browse-content"><span></span>查看随记 <i aria-hidden="true">↓</i></a>
       </aside>
     </header>
   );
@@ -102,10 +102,10 @@ function ArticleMagazine({ posts, page, total, sort, onOpen, fromArticleList, se
   const secondary = posts.slice(1, 3);
   const indexPosts = posts.slice(3);
   const archiveGroups = groupArticlesByYear(indexPosts);
-  const openingLabel = sort === "newest" ? "LATEST STORY" : sort === "oldest" ? "FROM THE ARCHIVE" : "RECENTLY UPDATED";
+  const openingLabel = sort === "newest" ? "最新文章" : sort === "oldest" ? "最早发布" : "最近更新";
   return (
     <section className="browse-editorial-section" id="browse-content" aria-labelledby="article-magazine-heading">
-      <header className="browse-section-heading"><div><p>READING SELECTION / PAGE {String(page).padStart(2, "0")}</p><h2 id="article-magazine-heading">从这里开始</h2></div><span>{total} 篇文章 · 先读一篇，再慢慢走进目录</span></header>
+      <header className="browse-section-heading"><div><p>第 {String(page).padStart(2, "0")} 页</p><h2 id="article-magazine-heading">本页首篇</h2></div><span>{total} 篇文章</span></header>
       <div className="article-magazine-grid">
         <div className="article-magazine-opening">
           <div className="article-magazine-opening-main">
@@ -113,16 +113,16 @@ function ArticleMagazine({ posts, page, total, sort, onOpen, fromArticleList, se
             <ArticleLeadStory post={lead} index={(page - 1) * PAGE_SIZE} onOpen={onOpen} fromArticleList={fromArticleList} selected={lead.id === selectedId} />
           </div>
           {secondary.length ? <aside className="article-magazine-rail" aria-label="延伸阅读篇目">
-            <header><span>READ NEXT</span><strong>接着阅读</strong><small>{secondary.length} 篇延伸阅读</small></header>
+            <header><span></span><strong>接着阅读</strong><small>{secondary.length} 篇延伸阅读</small></header>
             {secondary.map((post, index) => <ArticleMarginStory key={post.id} post={post} index={(page - 1) * PAGE_SIZE + index + 1} onOpen={onOpen} fromArticleList={fromArticleList} selected={post.id === selectedId} />)}
           </aside> : null}
         </div>
         {archiveGroups.length ? <section className="article-magazine-index-section" aria-label="文章年份目录">
           <ArticleArchiveCat />
-          <header><span>ARCHIVE</span><strong>文章档案</strong><small>依照发布时间继续浏览</small></header>
+          <header><span></span><strong>文章档案</strong><small>依照发布时间继续浏览</small></header>
           <div className="article-year-groups">
             {archiveGroups.map((group) => <section className="article-year-group" key={group.year} aria-labelledby={`article-year-${group.year}`}>
-              <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong><span>{group.items.length} STORIES</span></header>
+              <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong><span>{group.items.length} 篇文章</span></header>
               <ol className="article-magazine-index-list">
                 {group.items.map((post) => <ArticleIndexRow key={post.id} post={post} onOpen={onOpen} fromArticleList={fromArticleList} selected={post.id === selectedId} />)}
               </ol>
@@ -137,11 +137,11 @@ function ArticleMagazine({ posts, page, total, sort, onOpen, fromArticleList, se
 function NoteJournal({ posts, page, total }) {
   return (
     <section className="browse-editorial-section" id="browse-content" aria-labelledby="note-journal-heading">
-      <header className="browse-section-heading"><div><p>JOURNAL / {String(page).padStart(2, "0")}</p><h2 id="note-journal-heading">日子里的小事</h2></div><span>{total} 则随记 · 按当前条件编排</span></header>
+      <header className="browse-section-heading"><div><p>第 {String(page).padStart(2, "0")} 页</p><h2 id="note-journal-heading">随记目录</h2></div><span>{total} 则随记</span></header>
       <div className="note-journal">
         {groupNotesByYear(posts).map((group) => (
           <section className="note-journal-period" key={group.key}>
-            <header><p>THE YEAR</p><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
+            <header><p></p><strong className="tabular">{group.year}</strong><span>{group.month}</span><small>{group.items.length} 则片段</small></header>
             <div className="note-journal-entries">
               {group.items.map(({ post, index }) => <PostCard key={post.id} post={post} compact index={(page - 1) * PAGE_SIZE + index} variant="journal" />)}
             </div>
@@ -220,7 +220,7 @@ export function PostsPage({ type }) {
       {pageNeedsClamp ? (
         <div className="profile-refresh" role="status">正在返回有效页码…</div>
       ) : !displayData?.length ? (
-        <EmptyState illustrated title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : "这里只会出现你有权读取的已发布或归档内容。"} />
+        <EmptyState illustrated title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : ""} />
       ) : (
         isArticle
           ? <ArticleMagazine posts={displayData} page={pagination.page || page} total={pagination.total || displayData.length} sort={filters.sort} onOpen={onOpenArticle} fromArticleList={fromArticleList} selectedId={snapshot?.postId} />

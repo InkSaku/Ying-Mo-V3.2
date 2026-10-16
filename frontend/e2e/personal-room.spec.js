@@ -12,7 +12,7 @@ test("six illustrated entries show account counts and navigate at every size", a
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.goto("/me");
 
@@ -21,7 +21,7 @@ test("six illustrated entries show account counts and navigate at every size", a
   const destinations = [
     ["内容，12 则", "/me/posts"], ["草稿，3 份", "/me/posts?status=draft"],
     ["合集，4 册", "/me/collections"], ["收藏，8 则", "/me/favorites"],
-    ["评论，16 条", "/me/comments"], ["未读通知，2 封", "/me/notifications"],
+    ["评论，16 条", "/me/comments"], ["未读通知，2 条", "/me/notifications"],
   ];
   for (const [label, href] of destinations) await expect(entries.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
 
@@ -66,6 +66,6 @@ test("six illustrated entries show account counts and navigate at every size", a
   counts.unread_notifications = 0;
   await page.goto("/me");
   await expect(entries.getByRole("link", { name: "内容，123456789 则", exact: true })).toBeVisible();
-  await expect(entries.getByRole("link", { name: "未读通知，0 封", exact: true })).toContainText("信箱先歇一会儿");
+  await expect(entries.getByRole("link", { name: "未读通知，0 条", exact: true })).toContainText("未读通知");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });

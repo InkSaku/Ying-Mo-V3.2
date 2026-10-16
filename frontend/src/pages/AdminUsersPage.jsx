@@ -47,14 +47,14 @@ export function AdminUsersPage() {
   return (
     <AdminPageFrame
       title="用户"
-      description="查看成员基础资料和内容数量。V3.2 不提供发布资格、评论资格或日常账号停用开关。"
+      description="查看成员资料和内容数量。"
       busy={state.loading || pageNeedsClamp}
       actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 人</span>}
     >
       <form className="admin-user-filters" role="search" onSubmit={submitSearch}>
         <label>
           <span>搜索用户</span>
-          <input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="username 或 nickname" />
+          <input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="用户名或昵称" />
         </label>
         <label>
           <span>角色</span>
@@ -102,8 +102,8 @@ export function AdminUsersPage() {
                   {user.region ? <small>{user.region}</small> : null}
                 </div>
                 <dl className="admin-user-counts">
-                  <div><dt>Post</dt><dd className="tabular">{user.post_count}</dd></div>
-                  <div><dt>创建的 Collection</dt><dd className="tabular">{user.collection_count}</dd></div>
+                  <div><dt>内容</dt><dd className="tabular">{user.post_count}</dd></div>
+                  <div><dt>创建的合集</dt><dd className="tabular">{user.collection_count}</dd></div>
                 </dl>
                 <dl className="admin-user-times">
                   <div><dt>注册</dt><dd><time dateTime={user.created_at}>{formatDate(user.created_at, true)}</time></dd></div>

@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 const live = ["queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation"];
 const labels = {
   queued: "后台正在处理其他任务，连接正在等待。", preparing: "正在打开抖音登录页面…",
-  waiting_scan: "请用手机抖音扫码，并在手机上确认登录。", verifying: "正在等待抖音网页完成登录。手机确认后，登录凭证可能还需要几秒才能写入。",
+  waiting_scan: "请用手机抖音扫码，并在手机上确认登录。", verifying: "正在等待抖音网页完成登录。手机确认后，登录状态可能需要几秒才能同步。",
   awaiting_confirmation: "登录已完成，请确认连接的账号。", succeeded: "账号已连接，联系人同步已安排。",
   expired: "连接或二维码已经过期，请重新获取。", blocked: "抖音官方网页仍需处理登录验证，本次连接未完成。",
   interrupted: "后台连接中断，请重新扫码。", cancelled: "本次连接已取消。",
@@ -37,7 +37,7 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
   return <div className="spark-binding">
     <div className={`spark-account-card${data.bound ? " is-bound" : ""}`}>
       <span className="spark-account-avatar" aria-hidden="true">{data.bound ? Array.from(data.account_profile.nickname || "抖音")[0] : "↗"}</span>
-      <div className="spark-account-identity"><small>{data.bound ? "已连接的抖音账号" : "从连接账号开始"}</small><strong>{data.bound ? data.account_profile.nickname || "抖音账号" : "把问候交给你自己的账号"}</strong><span>{data.bound ? data.account_profile.short_id ? `抖音号 ${data.account_profile.short_id}` : data.contacts_updated_at ? `已同步 ${data.contacts.length} 位联系人` : "账号已连接，等待同步好友" : "手机扫码 · 核对账号 · 同步好友"}</span></div>
+      <div className="spark-account-identity"><small>{data.bound ? "已连接的抖音账号" : "连接抖音账号"}</small><strong>{data.bound ? data.account_profile.nickname || "抖音账号" : "使用你的抖音账号发送问候"}</strong><span>{data.bound ? data.account_profile.short_id ? `抖音号 ${data.account_profile.short_id}` : data.contacts_updated_at ? `已同步 ${data.contacts.length} 位联系人` : "账号已连接，等待同步好友" : "手机扫码 · 核对账号 · 同步好友"}</span></div>
       {!active ? <button className={`btn ${data.bound ? "btn-secondary" : "btn-primary"}`} disabled={Boolean(busy) || !data.credential_storage_ready || !data.worker.online} onClick={onStart}>{data.bound ? "重新扫码连接" : "扫码连接抖音"}</button> : null}
     </div>
     {showSession ? <div className="spark-login-session" aria-live="polite">

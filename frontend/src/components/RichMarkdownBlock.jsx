@@ -84,7 +84,7 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
     },
     applyFormat,
   }));
-  if (!editor) return <div className="rich-markdown-loading" role="status">正在展开可视编辑…</div>;
+  if (!editor) return <div className="rich-markdown-loading" role="status">正在加载编辑器…</div>;
   const heading = [1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level })) || 0;
   const saveLink = () => {
     const href = linkDraft.trim();

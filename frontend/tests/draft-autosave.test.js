@@ -74,7 +74,7 @@ test("writing desk keeps creation, publication and media concerns visibly separa
   assert.match(page, /editor-sidebar-heading/);
   assert.match(page, /editor-media-drawer/);
   assert.match(page, /进入沉浸写作/);
-  assert.match(page, /PUBLICATION/);
+  assert.match(page, /文稿信息/);
   assert.match(page, /ArticleArchiveCat/);
   assert.match(page, /WritingCoverSketch/);
   assert.match(sketches, /InkSketch/);

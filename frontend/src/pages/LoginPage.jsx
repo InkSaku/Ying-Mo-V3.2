@@ -47,29 +47,29 @@ export function LoginPage() {
           <div className="login-story-copy">
             <p className="login-ink" aria-hidden="true">墨</p>
             <p className="login-manifesto">记录生活，<br />也保留此刻的自己。</p>
-            <p className="login-english">A QUIETER<br />PLACE TO WRITE.</p>
+            <p className="login-english"><br /></p>
           </div>
           <figure className="login-landscape">
             <div className="login-landscape-art">
               <InkSketch variant="reader" className="ink-entry-art" />
             </div>
-            <figcaption>日子缓缓，文字长留。</figcaption>
+            <figcaption></figcaption>
           </figure>
-          <p className="login-handwritten" aria-hidden="true">Write a softer<br /><span>tomorrow.</span></p>
+          <p className="login-handwritten" aria-hidden="true"><br /><span></span></p>
         </section>
 
         <section className="login-entry" aria-labelledby="login-title">
           <form className="login-form" onSubmit={submit}>
             <header className="login-intro">
-              <p className="login-overline">拾起上次的那一页</p>
+              <p className="login-overline"></p>
               <h1 id="login-title">好久不见。</h1>
-              <p>从这里，继续你的记录。</p>
+              <p></p>
             </header>
             {error ? <div className="login-error" role="alert">{error}</div> : null}
             <label className="login-field" htmlFor="login-identifier">
               <span>用户名或邮箱</span>
               <input id="login-identifier" required autoComplete="username"
-                placeholder="你的名字，或邮箱地址" value={form.identifier}
+                placeholder="输入用户名或邮箱" value={form.identifier}
                 onChange={(event) => setForm({ ...form, identifier: event.target.value })} />
             </label>
             <div className="login-field">
@@ -82,14 +82,14 @@ export function LoginPage() {
                 onChange={(event) => { setForm({ ...form, password: event.target.value }); setError(""); }} />
             </div>
             <button className="login-submit" type="submit" disabled={busy}>
-              <span>{busy ? "正在翻开…" : "登录，继续书写"}</span><span aria-hidden="true">⟶</span>
+              <span>{busy ? "正在登录…" : "登录"}</span><span aria-hidden="true">⟶</span>
             </button>
-            <p className="login-join">第一次来？ <Link to="/register">使用邀请码加入</Link></p>
+            <p className="login-join">第一次来？ <Link to="/register">使用邀请码注册</Link></p>
           </form>
-          <p className="login-postscript">不必写下所有，<br />留住你想记得的就好。</p>
+          <p className="login-postscript"><br /></p>
         </section>
       </div>
-      <footer className="login-colophon"><span>映墨 · 留给生活的一页</span><span>A LITTLE LIFE, IN WORDS.</span></footer>
+      <footer className="login-colophon"><span>映墨 · 留给生活的一页</span><span></span></footer>
     </main>
   );
 }

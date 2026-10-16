@@ -14,7 +14,7 @@ test("Articles uses a dedicated editorial composition without restyling Notes", 
 
   assert.match(page, /styles\/articles\.css/);
   assert.match(page, /article-magazine-opening-main/);
-  assert.match(page, /LATEST STORY/);
+  assert.match(page, /最新文章/);
   assert.match(page, /article-year-groups/);
   assert.match(page, /groupArticlesByYear/);
   assert.match(styles, /\.browse-page-article/);

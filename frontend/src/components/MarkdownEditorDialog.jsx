@@ -159,7 +159,7 @@ export function MarkdownEditorDialog({
           <div>
             <p className="hero-kicker">沉浸式编辑</p>
             <h2 id={titleId}>Markdown 正文</h2>
-            <p id={descriptionId}>左侧编写，右侧呈现与发布页面一致的安全预览。</p>
+            <p id={descriptionId}>左侧编写，右侧呈现与发布页面一致的预览。</p>
           </div>
           <div className="markdown-editor-header-actions">
             <span className={`markdown-editor-dirty-state ${dirty ? "is-dirty" : ""}`} role="status">
@@ -298,7 +298,7 @@ export function MarkdownEditorDialog({
               />
             ) : null}
             {!preview.error && !preview.html ? (
-              <p className="markdown-editor-preview-state">{preview.loading ? "正在生成安全预览…" : "正文为空，暂无可预览内容。"}</p>
+              <p className="markdown-editor-preview-state">{preview.loading ? "正在生成预览…" : "正文为空，暂无可预览内容。"}</p>
             ) : null}
             {preview.loading && preview.html ? <span className="markdown-editor-preview-updating">正在更新预览…</span> : null}
           </section>

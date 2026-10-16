@@ -5,10 +5,10 @@ test("quiet canvas keeps settings, advanced formatting and draft text accessible
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.goto("/write?type=article");
-  await page.getByPlaceholder("写下值得被慢慢读完的事").fill("给日常留一点空白");
+  await page.getByPlaceholder("文章标题（必填）").fill("给日常留一点空白");
   const body = page.locator(".editor-body-visual .rich-markdown-content").first();
   await body.fill("窗外的雨刚停，书桌上还放着一杯没喝完的茶。");
   await body.press("Enter");

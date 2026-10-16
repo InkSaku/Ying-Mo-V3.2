@@ -6,19 +6,19 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 const editor = (page) => page.locator(".editor-body-visual .rich-markdown-content").first();
 const mode = (page, name) => page.locator(".editor-body-visual").getByRole("button", { name, exact: true });
 async function startArticle(page, title) {
   await page.goto("/write?type=article");
-  await page.getByPlaceholder("写下值得被慢慢读完的事").fill(title);
+  await page.getByPlaceholder("文章标题（必填）").fill(title);
   await expect(editor(page)).toBeVisible();
 }
 async function openPublish(page) {
   await page.getByRole("button", { name: "发布", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "把这一页，轻轻放好。", exact: true });
+  const dialog = page.getByRole("dialog", { name: "确认发布", exact: true });
   await expect(dialog).toBeVisible();
   return dialog;
 }
@@ -121,7 +121,7 @@ test("publish confirms collection and tags, reuses names, retains choices and re
   expect(post.visibility).toBe("private");
   expect(post.tags.map((tag) => tag.name).sort()).toEqual(["Python", "冷门主题", "海风来信", "城市，路线"].sort());
   await page.goto("/tags");
-  await expect(page.getByRole("heading", { level: 1, name: "主题索引" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "标签" })).toBeVisible();
   await page.getByRole("textbox", { name: "搜索主题" }).fill("海风来信");
   await expect(page.locator(".taxonomy-tag-entry")).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("tag-index-desktop.png"), fullPage: true });

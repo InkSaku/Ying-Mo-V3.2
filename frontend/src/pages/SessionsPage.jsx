@@ -36,7 +36,7 @@ function deviceLabel(userAgent) {
 }
 
 export function SessionsPage() {
-  usePageMeta("登录会话");
+  usePageMeta("登录设备");
   const navigate = useNavigate();
   const { logoutAll, endLocalSession } = useAuth();
   const state = useAsyncData(() => api.get("/auth/sessions"), []);
@@ -94,18 +94,18 @@ export function SessionsPage() {
         {sessions.length ? <InkPageSketch /> : null}
         <div>
           <p className="hero-kicker">账户安全</p>
-          <h1>登录会话</h1>
-          <p>查看仍然有效的登录设备，结束不再使用或不认识的会话。</p>
+          <h1>登录设备</h1>
+          <p>查看并退出不再使用或不认识的登录设备。</p>
         </div>
         {sessions.length ? <button className="btn btn-danger" type="button" onClick={() => setShowLogoutAll(true)}>退出所有设备</button> : null}
       </header>
 
       {actionError ? <div className="inline-error" role="alert">{actionError}</div> : null}
 
-      {sessions.length ? <div className="ink-session-summary"><p><span className="tabular">{sessions.length}</span> 个有效登录会话</p><span>当前设备排在最前。</span></div> : null}
+      {sessions.length ? <div className="ink-session-summary"><p><span className="tabular">{sessions.length}</span> 个有效登录记录</p><span></span></div> : null}
 
       {sessions.length ? (
-        <section className="session-list" aria-label="有效登录会话">
+        <section className="session-list" aria-label="有效登录设备">
           {sessions.map((session) => (
             <article className={`session-card${session.current ? " session-card-current" : ""}`} key={session.id}>
               <div className="session-device">
@@ -121,20 +121,20 @@ export function SessionsPage() {
                 <div><dt>到期时间</dt><dd>{formatDate(session.expires_at, true)}</dd></div>
               </dl>
               <button className="btn btn-secondary" type="button" onClick={() => setTarget(session)}>
-                {session.current ? "退出当前设备" : "结束会话"}
+                {session.current ? "退出当前设备" : "退出登录"}
               </button>
             </article>
           ))}
         </section>
-      ) : <EmptyState sketch="keys" title="没有有效的登录会话" description="下次登录后，会话会显示在这里。" />}
+      ) : <EmptyState sketch="keys" title="没有有效的登录设备" description="下次登录后，登录记录会显示在这里。" />}
 
       <ConfirmDialog
         open={Boolean(target)}
-        title={target?.current ? "退出当前设备？" : "结束这个登录会话？"}
+        title={target?.current ? "退出当前设备？" : "退出这个登录设备？"}
         description={target?.current
           ? "当前页面会立即退出，未保存的编辑内容可能丢失。"
           : `将结束 ${deviceLabel(target?.user_agent)} 的登录状态。`}
-        confirmLabel={target?.current ? "确认退出" : "结束会话"}
+        confirmLabel={target?.current ? "确认退出" : "退出登录"}
         danger
         busy={busy}
         onConfirm={revoke}

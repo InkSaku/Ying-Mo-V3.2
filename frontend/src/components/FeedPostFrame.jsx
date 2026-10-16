@@ -18,7 +18,7 @@ export function FeedPostFrame({ post, actionLabel = "查看与回应", children 
   const initial = (post.author?.nickname || post.author?.username || "?").slice(0, 1);
   const semanticTime = post.semantic_time || post.published_at;
   const context = post.collection
-    ? <Link to={`/collections/${post.collection.slug}`}>Collection · {post.collection.name}</Link>
+    ? <Link to={`/collections/${post.collection.slug}`}>合集 · {post.collection.name}</Link>
     : post.location ? <span>{post.location}</span> : null;
 
   return (

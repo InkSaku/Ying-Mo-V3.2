@@ -88,7 +88,7 @@ export function AppShell() {
             <details className={`header-menu discover-menu${discoveryActive ? " active" : ""}`} data-header-menu>
               <summary>查找 <span aria-hidden="true">⌄</span></summary>
               <div className="header-menu-panel discover-menu-panel">
-                <p className="header-menu-eyebrow">FIND &amp; READ</p>
+                <p className="header-menu-eyebrow"></p>
                 <nav aria-label="查找内容">
                   {discoveryNavItems.map(({ to, label, description }) => (
                     <NavLink key={to} to={to} onClick={closeOwningMenu} className={({ isActive }) => isActive ? "active" : ""}>
@@ -138,7 +138,7 @@ export function AppShell() {
                 <span aria-hidden="true">•••</span>
               </summary>
               <div className="mobile-menu-panel">
-                <p className="header-menu-eyebrow">BROWSE</p>
+                <p className="header-menu-eyebrow"></p>
                 <nav aria-label="更多导航">
                   {[...discoveryNavItems.slice(0, 2), { to: "/collections", label: "合集" }, ...discoveryNavItems.slice(2)].map(({ to, label }) => (
                     <NavLink key={to} to={to} onClick={closeOwningMenu} className={({ isActive }) => isActive ? "active" : ""}>{label}</NavLink>

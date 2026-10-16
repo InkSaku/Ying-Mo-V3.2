@@ -73,12 +73,12 @@ export function SparkRiskNotice({ userId }) {
       </button>
       <div className="spark-risk-heading">
         <p className="spark-risk-kicker">映墨工具箱 / 使用前须知</p>
-        <span className="spark-risk-number" aria-hidden="true">一则小提醒</span>
+        <span className="spark-risk-number" aria-hidden="true"></span>
       </div>
       <div className="spark-risk-art"><SparkRiskSketch /></div>
       <div className="spark-risk-copy">
-        <p className="spark-risk-caption">火花虽小，也请留意。</p>
-        <h2 id={titleId}>续火花之前，<br />先读这一页。</h2>
+        <p className="spark-risk-caption"></p>
+        <h2 id={titleId}>使用须知<br /></h2>
         <p id={descriptionId} className="spark-risk-description">本功能纯属作者自娱自乐，违反抖音社区公约，<strong>有封号风险</strong>，望知悉。</p>
       </div>
       <div className="spark-risk-footer">

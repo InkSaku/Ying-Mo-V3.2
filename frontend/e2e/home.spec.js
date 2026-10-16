@@ -9,7 +9,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -69,7 +69,7 @@ test("the spark companion starts in the welcome area and becomes a persistent sh
   await login(page);
   const entry = page.getByRole("link", { name: "进入续火花助手" });
   await expect(entry).toHaveClass(/is-center/);
-  await expect(entry).toContainText("续火花，来这里");
+  await expect(entry).toContainText("续火花助手");
   const center = await entry.boundingBox();
   expect(Math.abs(center.x + center.width / 2 - 720)).toBeLessThan(30);
   expect(Math.abs(center.y + center.height / 2 - 450)).toBeLessThan(30);
@@ -128,7 +128,7 @@ test("home keeps chronological order, cursor paging and the reading position", a
   const before = await target.boundingBox();
   await target.locator(".home-feed-post-footer > a").click();
   await expect(page).toHaveURL(/\/(articles|notes)\//);
-  await page.getByRole("button", { name: "返回首页时间流" }).click();
+  await page.getByRole("button", { name: "返回首页" }).click();
   await expect(page).toHaveURL(/\/home/);
   await expect.poll(async () => Math.abs((await target.boundingBox()).y - before.y)).toBeLessThan(6);
 
@@ -211,7 +211,7 @@ test("home keeps empty and failed feeds usable", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText("暂时无法读取记录");
   fail = false;
   await page.getByRole("button", { name: "重新读取" }).click();
-  await expect(page.getByRole("heading", { name: "时间流还是空的" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "暂无记录" })).toBeVisible();
   await page.locator(".home-prompt-activate").click();
   await expect(page.getByRole("textbox", { name: "快速随记正文" })).toBeVisible();
   await noOverflow(page);

@@ -35,14 +35,14 @@ function ExploreOpening({ article, note }) {
           <div className="explore-opening-caption">
             <span>本次开篇 · {article.author?.nickname || "朋友"} · {formatDate(article.published_at)}</span>
             <h2><Link to={postHref(article)}>{article.title || "未命名文章"}</Link></h2>
-            <p>{excerpt(article) || "翻开这篇文章，作为这次漫游的第一站。"}</p>
-            <Link className="explore-read-link" to={postHref(article)}>翻开这一页 <span aria-hidden="true">→</span></Link>
+            <p>{excerpt(article) || ""}</p>
+            <Link className="explore-read-link" to={postHref(article)}>阅读全文 <span aria-hidden="true">→</span></Link>
           </div>
         </article>
       ) : null}
       {note ? (
         <aside className="explore-opening-note">
-          <span>途中拾到的一页</span>
+          <span>随记</span>
           <p><Link to={postHref(note)}>{excerpt(note) || "一则影像随记"}</Link></p>
           <small>{note.author?.nickname || "朋友"} · {formatDate(note.semantic_time)}</small>
         </aside>
@@ -54,7 +54,7 @@ function ExploreOpening({ article, note }) {
 function ExploreLoader() {
   return (
     <main className="page-shell explore-page explore-page-loading" aria-busy="true" aria-live="polite">
-      <span className="sr-only">正在寻找可以偶遇的内容</span>
+      <span className="sr-only">正在加载漫游内容…</span>
       <div className="explore-loader-frontispiece">
         <div className="explore-loader-copy"><div className="skeleton-line skeleton-line-short" /><div className="skeleton-line skeleton-line-title" /><div className="skeleton-line" /></div>
         <div className="skeleton-block" />
@@ -89,14 +89,14 @@ export function ExplorePage() {
       <header className="explore-frontispiece">
         <div className="explore-frontispiece-copy">
           <div className="explore-intro">
-            <p className="explore-kicker">EXPLORE</p>
+            <p className="explore-kicker"></p>
             <h1>漫游</h1>
-            <p className="explore-manifesto">换一条路，遇见彼此。</p>
-            <p className="explore-introduction">从朋友留下的记录里，随意翻开几页。</p>
+            <p className="explore-manifesto"></p>
+            <p className="explore-introduction">随机看看朋友的记录。</p>
           </div>
           <div className="explore-walk-margin"><ExploreSketch /></div>
           <button className="explore-shuffle" type="button" disabled={state.loading} onClick={shuffle}>
-            <span>{state.loading ? "正在换一条路" : "换一批内容"}</span><span aria-hidden="true">↻</span>
+            <span>{state.loading ? "正在加载…" : "换一批内容"}</span><span aria-hidden="true">↻</span>
           </button>
         </div>
         {openingArticle || openingNote ? <ExploreOpening article={openingArticle} note={openingNote} /> : null}
@@ -104,40 +104,40 @@ export function ExplorePage() {
 
       {!hasExploreContent ? (
         <section className="explore-all-empty" aria-labelledby="explore-empty-title">
-          <h2 id="explore-empty-title">还没有可以偶遇的内容</h2>
-          <p>等朋友们留下一些记录，再回来换一条路看看。</p>
+          <h2 id="explore-empty-title">暂时没有可浏览的内容</h2>
+          <p>可以返回首页，或写下自己的记录。</p>
           <nav aria-label="空漫游页可用入口"><Link to="/home">返回首页</Link><Link to="/write">先写一篇</Link></nav>
         </section>
       ) : (
         <>
           {articleTrail.length ? <section className="explore-section explore-article-section">
-            <ExploreSectionHeading title="继续翻一翻" description="再随意翻开几篇朋友的文章。" href="/articles" linkLabel="全部文章" />
+            <ExploreSectionHeading title="更多文章" description="" href="/articles" linkLabel="全部文章" />
             <div className="explore-article-ledger">{articleTrail.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
           </section> : null}
 
           {noteTrail.length ? <section className="explore-section explore-note-section">
-            <ExploreSectionHeading title="生活片段" description="照片、心情和路上拾到的小事。" href="/notes" linkLabel="全部随记" />
+            <ExploreSectionHeading title="随记" description="" href="/notes" linkLabel="全部随记" />
             <div className="explore-note-rail">{noteTrail.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
           </section> : null}
 
           {tags.length || collections.length ? <div className={`explore-section explore-index-layout${tags.length && collections.length ? "" : " is-single"}`}>
             {tags.length ? <section className="explore-index-section" aria-labelledby="explore-tags-title">
-              <header className="explore-section-heading"><div><h2 id="explore-tags-title">沿着标签走</h2><p>从一个词，走向更多记录。</p></div><Link to="/tags">全部标签 <span aria-hidden="true">→</span></Link></header>
+              <header className="explore-section-heading"><div><h2 id="explore-tags-title">标签</h2><p></p></div><Link to="/tags">全部标签 <span aria-hidden="true">→</span></Link></header>
               <nav className="explore-tag-index" aria-label="漫游标签">{tags.map((tag) => <Link key={tag.id} to={`/tags/${tag.slug}`}><strong>#{tag.name}</strong><span>{tag.visible_post_count} 篇</span></Link>)}</nav>
             </section> : null}
             {collections.length ? <section className="explore-index-section" aria-labelledby="explore-collections-title">
-              <header className="explore-section-heading"><div><h2 id="explore-collections-title">进入一册合集</h2><p>接着读共同留下的故事。</p></div><Link to="/collections">全部合集 <span aria-hidden="true">→</span></Link></header>
+              <header className="explore-section-heading"><div><h2 id="explore-collections-title">合集</h2><p></p></div><Link to="/collections">全部合集 <span aria-hidden="true">→</span></Link></header>
               <div className="explore-collection-grid">{collections.map((collection) => <CollectionCard key={collection.id} collection={collection} />)}</div>
             </section> : null}
           </div> : null}
 
           {memories.length ? <section className="explore-section explore-memory-section">
-            <header className="explore-section-heading"><div><p className="explore-memory-date">{memoryDayLabel(data.on_this_day)}</p><h2>往年今日</h2><p>重新遇见旧日片段。</p></div><Link to="/on-this-day">查看全部 <span aria-hidden="true">→</span></Link></header>
+            <header className="explore-section-heading"><div><p className="explore-memory-date">{memoryDayLabel(data.on_this_day)}</p><h2>往年今日</h2><p></p></div><Link to="/on-this-day">查看全部 <span aria-hidden="true">→</span></Link></header>
             <div className="explore-memory-grid">{memories.map((post) => <MemoryCard key={post.id} post={post} />)}</div>
           </section> : null}
 
           {members.length ? <section className="explore-section explore-member-section">
-            <ExploreSectionHeading title="新朋友" description="认识最近开始记录生活的朋友。" />
+            <ExploreSectionHeading title="新朋友" description="最近加入映墨的成员。" />
             <div className="explore-member-grid">{members.map((member) => <MemberCard key={member.id} member={member} />)}</div>
           </section> : null}
         </>

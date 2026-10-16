@@ -36,9 +36,9 @@ export function NoteExperience({ experience }) {
             );
           })}
         </div>
-      ) : <p className="note-experience-empty">这附近暂时没有其他记录，可以从 Collection 继续查看。</p>}
+      ) : <p className="note-experience-empty">暂时没有时间相近的记录。</p>}
 
-      <p className="note-experience-collection-link"><Link to={`/collections/${collection.slug}`}>查看完整 Collection</Link></p>
+      <p className="note-experience-collection-link"><Link to={`/collections/${collection.slug}`}>查看合集</Link></p>
     </section>
   );
 }

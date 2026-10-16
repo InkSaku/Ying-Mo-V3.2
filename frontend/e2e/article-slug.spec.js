@@ -4,11 +4,11 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
-const titleInput = (page) => page.getByPlaceholder("写下值得被慢慢读完的事");
+const titleInput = (page) => page.getByPlaceholder("文章标题（必填）");
 const slugInput = (page) => page.getByRole("textbox", { name: "文章网址", exact: true, includeHidden: true });
 async function waitForSaved(page) {
   await expect(page.getByText(/已自动保存/).first()).toBeVisible({ timeout: 12_000 });

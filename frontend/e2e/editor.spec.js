@@ -7,7 +7,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码").fill("password123");
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -29,7 +29,7 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   });
   await page.goto("/write?type=article");
 
-  await page.getByPlaceholder("写下值得被慢慢读完的事").fill("编辑器端到端验收");
+  await page.getByPlaceholder("文章标题（必填）").fill("编辑器端到端验收");
   const body = page.locator(".editor-body-visual .rich-markdown-content").first();
   await body.fill("第一段\n\n第二段");
   await expect(page.getByText(/已自动保存/).first()).toBeVisible({ timeout: 12_000 });
@@ -103,7 +103,7 @@ test("visual editor autosaves, inserts and arranges real image blocks", async ({
   await expect(page.locator(".editor-preview-prose")).toContainText("第一段");
   await page.getByRole("tab", { name: "写作", exact: true }).click();
   await page.locator(".editor-summary-drawer summary").click();
-  await page.getByPlaceholder("用一两句话，为阅读留下入口。").fill("写作布局与预览验收");
+  await page.getByPlaceholder("简要介绍文章内容（选填）。").fill("写作布局与预览验收");
   await expect(page.locator(".editor-summary-drawer summary")).toContainText("已填写");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "文稿信息", exact: true }).click();

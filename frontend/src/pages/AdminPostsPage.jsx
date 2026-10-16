@@ -13,24 +13,24 @@ import { clampPageToTotal } from "../lib/pagination";
 
 const PAGE_SIZE = 20;
 const actionCopy = {
-  hide: ["隐藏 Post", "隐藏后普通成员将无法访问该内容。", "确认隐藏"],
-  restore: ["恢复 Post", "恢复后仍会继续遵守发布状态、可见性和成员权限。", "确认恢复"],
-  delete: ["删除 Post", "该操作会软删除 Post，之后不能从管理页恢复。", "确认删除"],
+  hide: ["隐藏内容", "隐藏后普通成员将无法访问该内容。", "确认隐藏"],
+  restore: ["恢复内容", "恢复后仍会继续遵守发布状态、阅读范围和成员权限。", "确认恢复"],
+  delete: ["删除内容", "删除后无法在管理页恢复。", "确认删除"],
 };
 
 function PostFilters({ filters, searchValue, loading, onSearchValue, onChange, onSubmit }) {
   return (
     <form className="admin-content-filters" role="search" onSubmit={onSubmit}>
       <label className="admin-filter-search"><span>搜索内容</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => onSearchValue(event.target.value)} placeholder="标题、摘要或正文" /></label>
-      <label><span>类型</span><CustomSelect value={filters.post_type} onChange={(event) => onChange({ post_type: event.target.value })}><option value="">全部类型</option><option value="article">Article</option><option value="note">Note</option></CustomSelect></label>
+      <label><span>类型</span><CustomSelect value={filters.post_type} onChange={(event) => onChange({ post_type: event.target.value })}><option value="">全部类型</option><option value="article">文章</option><option value="note">随记</option></CustomSelect></label>
       <label><span>发布状态</span><CustomSelect value={filters.status} onChange={(event) => onChange({ status: event.target.value })}><option value="">全部状态</option><option value="draft">草稿</option><option value="published">已发布</option><option value="archived">已归档</option></CustomSelect></label>
-      <label><span>可见性</span><CustomSelect value={filters.visibility} onChange={(event) => onChange({ visibility: event.target.value })}><option value="">全部可见性</option><option value="login_only">成员可见</option><option value="private">仅作者</option></CustomSelect></label>
-      <label><span>治理状态</span><CustomSelect value={filters.moderation_status} onChange={(event) => onChange({ moderation_status: event.target.value })}><option value="">全部治理状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
+      <label><span>阅读范围</span><CustomSelect value={filters.visibility} onChange={(event) => onChange({ visibility: event.target.value })}><option value="">全部阅读范围</option><option value="login_only">成员可见</option><option value="private">仅作者</option></CustomSelect></label>
+      <label><span>管理状态</span><CustomSelect value={filters.moderation_status} onChange={(event) => onChange({ moderation_status: event.target.value })}><option value="">全部管理状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
       <button className="btn btn-secondary" type="submit" disabled={loading}>搜索</button>
       <details className="admin-advanced-filters">
         <summary>按关联 ID 筛选</summary>
         <div>
-          {[["author_id", "作者 ID"], ["category_id", "分类 ID"], ["tag_id", "标签 ID"], ["collection_id", "Collection ID"]].map(([key, label]) => (
+          {[["author_id", "作者 ID"], ["category_id", "分类 ID"], ["tag_id", "标签 ID"], ["collection_id", "合集 ID"]].map(([key, label]) => (
             <label key={key}><span>{label}</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={filters[key]} onChange={(event) => onChange({ [key]: event.target.value.replace(/\D/g, "") })} /></label>
           ))}
         </div>
@@ -40,7 +40,7 @@ function PostFilters({ filters, searchValue, loading, onSearchValue, onChange, o
 }
 
 export function AdminPostsPage() {
-  usePageMeta("Post 管理");
+  usePageMeta("内容管理");
   const [params, setParams] = useSearchParams();
   const filters = readAdminPostFilters(params);
   const [searchValue, setSearchValue] = useState(filters.q);
@@ -86,7 +86,7 @@ export function AdminPostsPage() {
       if (action.type === "delete") await api.delete(path, { body: { reason: reason.trim() } });
       else await api.post(path, { reason: reason.trim() });
       const verb = action.type === "hide" ? "隐藏" : action.type === "restore" ? "恢复" : "删除";
-      setMessage(`已${verb}「${action.item.title || `Note #${action.item.id}`}」。`);
+      setMessage(`已${verb}「${action.item.title || `内容 #${action.item.id}`}」。`);
       setAction(null); setPreview({ id: null, data: null, loading: false, error: null });
       await state.reload();
     } catch (error) { setActionError(error); }
@@ -97,19 +97,19 @@ export function AdminPostsPage() {
     <AdminPageFrame title="内容" description="查找文章与随记，查看发布状态和访问范围；预览与管理操作会留下记录。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <PostFilters filters={filters} searchValue={searchValue} loading={state.loading} onSearchValue={setSearchValue} onChange={(updates) => updateFilters({ ...updates, page: 1 })} onSubmit={submitSearch} />
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
-      {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取 Post 列表</span><div className="skeleton-block" /></div> : null}
+      {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取内容列表</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
-      {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新 Post 列表…</div> : null}
+      {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新内容列表…</div> : null}
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : null}
       {state.data && !pageNeedsClamp ? state.data.length ? (
         <div className="admin-content-list">
           {state.data.map((post) => (
             <article className="admin-content-row" key={post.id}>
               <div className="admin-content-main">
-                <div className="admin-content-title"><h2>{post.title || `Note #${post.id}`}</h2><span className="tabular">#{post.id}</span></div>
+                <div className="admin-content-title"><h2>{post.title || `内容 #${post.id}`}</h2><span className="tabular">#{post.id}</span></div>
                 <div className="admin-user-badges"><AdminStatus value={post.post_type} /><AdminStatus value={post.status} /><AdminStatus value={post.visibility} /><AdminStatus value={post.deleted_at ? "deleted" : post.moderation_status} /></div>
                 <p>{post.summary || "无摘要"}</p>
-                <small>作者 @{post.author?.username || "未知"}{post.collection_id ? ` · Collection #${post.collection_id}` : ""}</small>
+                <small>作者 @{post.author?.username || "未知"}{post.collection_id ? ` · 合集 #${post.collection_id}` : ""}</small>
                 <small>{post.category ? `分类：${post.category.name}` : "未分类"}{post.tags?.length ? ` · 标签：${post.tags.map((tag) => tag.name).join("、")}` : ""}</small>
               </div>
               <dl className="admin-content-meta"><div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div><div><dt>发布时间</dt><dd>{post.published_at ? <time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time> : "尚未发布"}</dd></div></dl>
@@ -125,7 +125,7 @@ export function AdminPostsPage() {
             </article>
           ))}
         </div>
-      ) : <EmptyState title="没有匹配的 Post" description="调整搜索词或筛选条件后重试。" /> : null}
+      ) : <EmptyState title="没有匹配的内容" description="调整搜索词或筛选条件后重试。" /> : null}
       <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || actionBusy || pageNeedsClamp} onChange={(page) => updateFilters({ page })} />
       <AdminActionDialog open={Boolean(action)} title={action ? actionCopy[action.type][0] : ""} description={action ? actionCopy[action.type][1] : ""} confirmLabel={action ? actionCopy[action.type][2] : "确认"} reason={reason} busy={actionBusy} error={actionError?.message} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction} />
     </AdminPageFrame>

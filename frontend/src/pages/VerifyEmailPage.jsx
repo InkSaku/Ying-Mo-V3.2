@@ -86,19 +86,19 @@ export function VerifyEmailPage() {
   return (
     <AccountSecurityLayout
       eyebrow="账户安全"
-      title={confirmationMode ? "确认你的邮箱" : "邮箱验证状态"}
+      title={confirmationMode ? "验证邮箱" : "邮箱验证状态"}
       description={confirmationMode
-        ? "确认后，这个邮箱会成为当前账号的已验证联系方式。"
-        : "验证邮箱可用于安全找回密码，并帮助你确认账户联系方式。"}
-      aside={<p>验证链接包含一次性令牌。不要把完整链接发送给其他人。</p>}
+        ? "确认后可用这个邮箱找回密码。"
+        : "验证邮箱后可用它找回密码。"}
+      aside={<p>请勿转发验证链接。</p>}
     >
       <header className="auth-card-intro">
-        <h2>{verified ? "邮箱已验证" : confirmationMode ? "完成邮箱确认" : registered ? "账号已创建" : "检查验证状态"}</h2>
+        <h2>{verified ? "邮箱已验证" : confirmationMode ? "确认邮箱" : registered ? "账号已创建" : "检查验证状态"}</h2>
         <p>
           {verified
             ? "当前邮箱已经完成验证。"
             : confirmationMode
-              ? "点击下方按钮完成确认。"
+              ? "请确认这是你的邮箱。"
               : registered
                 ? "请验证注册邮箱。没有收到邮件时可以在这里重发。"
                 : "登录后可以查看状态或重新发送验证邮件。"}

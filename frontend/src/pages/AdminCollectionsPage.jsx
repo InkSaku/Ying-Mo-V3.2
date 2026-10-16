@@ -13,13 +13,13 @@ import { clampPageToTotal } from "../lib/pagination";
 
 const PAGE_SIZE = 20;
 const actionCopy = {
-  hide: ["隐藏 Collection", "隐藏后 Collection 及其中内容会按后端 ACL 对普通成员收口。", "确认隐藏"],
-  restore: ["恢复 Collection", "恢复后其中内容仍分别遵守自身发布状态、可见性和治理状态。", "确认恢复"],
-  delete: ["删除 Collection", "Collection 将被删除，其中的 Post 会解除归属并转为仅作者可见。", "确认删除"],
+  hide: ["隐藏合集", "隐藏后，普通成员将无法阅读此合集及其中内容。", "确认隐藏"],
+  restore: ["恢复合集", "恢复后，内容仍按发布状态、阅读权限和隐藏状态展示。", "确认恢复"],
+  delete: ["删除合集", "合集将被删除，其中的内容会解除归属并转为仅作者可见。", "确认删除"],
 };
 
 export function AdminCollectionsPage() {
-  usePageMeta("Collection 管理");
+  usePageMeta("合集管理");
   const [params, setParams] = useSearchParams();
   const filters = readAdminCollectionFilters(params);
   const [searchValue, setSearchValue] = useState(filters.q);
@@ -63,16 +63,16 @@ export function AdminCollectionsPage() {
   };
 
   return (
-    <AdminPageFrame title="合集" description="查看共同书册的创建者、成员和内容，管理书册的开放与保留状态。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 个</span>}>
+    <AdminPageFrame title="合集" description="查看并管理合集、成员和内容状态。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 个</span>}>
       <form className="admin-content-filters admin-collection-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ q: searchValue.trim(), page: 1 }); }}>
-        <label className="admin-filter-search"><span>搜索 Collection</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称或 slug" /></label>
+        <label className="admin-filter-search"><span>搜索合集</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称或网址标识" /></label>
         <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>搜索</button>
       </form>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
-      {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取 Collection 列表</span><div className="skeleton-block" /></div> : null}
+      {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取合集列表</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
-      {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新 Collection 列表…</div> : null}
+      {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新合集列表…</div> : null}
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : null}
       {state.data && !pageNeedsClamp ? state.data.length ? <div className="admin-content-list">
         {state.data.map((collection) => (
@@ -84,14 +84,14 @@ export function AdminCollectionsPage() {
               <small>创建者 @{collection.creator?.username || "未知"} · /collections/{collection.slug}</small>
               <small>成员：{collection.members?.length ? collection.members.map((member) => `@${member.username}`).join("、") : "无"}</small>
             </div>
-            <dl className="admin-content-meta"><div><dt>Post</dt><dd className="admin-content-count tabular">{collection.post_count || 0}</dd></div><div><dt>成员</dt><dd className="tabular">{collection.members?.length || 0}</dd></div><div><dt>更新</dt><dd><time dateTime={collection.updated_at}>{formatDate(collection.updated_at, true)}</time></dd></div></dl>
+            <dl className="admin-content-meta"><div><dt>内容</dt><dd className="admin-content-count tabular">{collection.post_count || 0}</dd></div><div><dt>成员</dt><dd className="tabular">{collection.members?.length || 0}</dd></div><div><dt>更新</dt><dd><time dateTime={collection.updated_at}>{formatDate(collection.updated_at, true)}</time></dd></div></dl>
             <div className="admin-content-actions">
               {!collection.deleted_at ? <button className="btn btn-secondary btn-small" type="button" disabled={actionBusy} onClick={() => openAction(collection.status === "hidden" ? "restore" : "hide", collection)}>{collection.status === "hidden" ? "恢复" : "隐藏"}</button> : null}
               {!collection.deleted_at ? <button className="btn btn-danger btn-small" type="button" disabled={actionBusy} onClick={() => openAction("delete", collection)}>删除</button> : null}
             </div>
           </article>
         ))}
-      </div> : <EmptyState title="没有匹配的 Collection" description="调整名称或状态筛选后重试。" /> : null}
+      </div> : <EmptyState title="没有匹配的合集" description="调整名称或状态筛选后重试。" /> : null}
       <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || actionBusy || pageNeedsClamp} onChange={(page) => updateFilters({ page })} />
       <AdminActionDialog open={Boolean(action)} title={action ? actionCopy[action.type][0] : ""} description={action ? actionCopy[action.type][1] : ""} confirmLabel={action ? actionCopy[action.type][2] : "确认"} reason={reason} busy={actionBusy} error={actionError?.message} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction} />
     </AdminPageFrame>

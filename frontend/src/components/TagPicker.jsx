@@ -63,7 +63,7 @@ export function TagPicker({ value, onChange, disabled = false, initialTags = [] 
       <input aria-label="搜索或新建标签" aria-describedby={helpId} value={query} maxLength={80} disabled={disabled} placeholder="搜索或输入新标签名称" onChange={(event) => setQuery(event.target.value)} />
     </label>
     <div className="tag-picker-hint" id={helpId} aria-live="polite">
-      <span>{loading ? "正在寻找这个词…" : result.error ? "标签暂时无法读取" : exact?.is_active === false ? "这个标签已停用，请选择其他主题。" : exact ? `已有标签 · ${exact.visible_post_count} 篇引用` : normalized ? `找到 ${items.length} 个相关标签` : "常用主题 · 引用最多的前 10 个"}</span>
+      <span>{loading ? "正在加载标签…" : result.error ? "标签暂时无法读取" : exact?.is_active === false ? "这个标签已停用，请选择其他标签。" : exact ? `已有标签 · ${exact.visible_post_count} 篇引用` : normalized ? `找到 ${items.length} 个相关标签` : "常用标签 · 引用最多的前 10 个"}</span>
       {result.error ? <button type="button" disabled={disabled} onClick={() => setRetry((value) => value + 1)}>重试</button> : normalized && !loading ? <button type="button" disabled={disabled || names.length >= 20 || exact?.is_active === false || (exact && selected(exact.name))} onClick={() => add(exact?.name || normalized)}>{exact ? selected(exact.name) ? "已选中 ✓" : "选择已有标签" : `＋ 创建「${normalized}」`}</button> : null}
     </div>
     <div className="tag-picker-options" aria-label="可用标签">
@@ -72,7 +72,7 @@ export function TagPicker({ value, onChange, disabled = false, initialTags = [] 
         {tag.visible_post_count > 0 && tag.is_active !== false ? <Link to={`/tags/${tag.slug}`} target="_blank" rel="noopener noreferrer" aria-label={`查看${tag.name}标签分区`}>↗</Link> : <span className="tag-picker-no-partition" title={tag.is_active === false ? "这个标签已停用" : "发布后可查看标签分区"}>↗</span>}
       </div>)}
     </div>
-    {!loading && !result.error && !items.length && !normalized ? <p className="tag-picker-empty">还没有可用主题，写下第一个词吧。</p> : null}
+    {!loading && !result.error && !items.length && !normalized ? <p className="tag-picker-empty">还没有标签，可以输入名称创建。</p> : null}
     <div className="tag-picker-chosen"><span>已选 {names.length} / 20 个标签</span><div>
       {names.map((name) => {
         const tag = known[tagKey(name)];

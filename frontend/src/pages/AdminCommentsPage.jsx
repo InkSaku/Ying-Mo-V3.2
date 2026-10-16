@@ -53,7 +53,7 @@ export function AdminCommentsPage() {
   return (
     <AdminPageFrame title="评论" description="按状态或所属记录查看评论。可以隐藏与恢复评论；成员自行删除的评论无法恢复。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
       <form className="admin-content-filters admin-comment-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ post_id: postValue.replace(/\D/g, ""), page: 1 }); }}>
-        <label className="admin-filter-search"><span>目标 Post ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={postValue} onChange={(event) => setPostValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
+        <label className="admin-filter-search"><span>内容 ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={postValue} onChange={(event) => setPostValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
         <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option><option value="deleted">成员已删除</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>筛选</button>
       </form>
@@ -69,7 +69,7 @@ export function AdminCommentsPage() {
               <div className="admin-content-title"><h2>评论 #{comment.id}</h2><AdminStatus value={comment.status} /></div>
               <blockquote>{comment.body || "（内容已清除）"}</blockquote>
               <small>作者 @{comment.author?.username || "未知"} · 用户 #{comment.author_id}</small>
-              <small>目标：{comment.post ? `${comment.post.title || `${comment.post.post_type} #${comment.post.id}`} · ${comment.post.status}${comment.post.moderation_status === "hidden" ? " · 已隐藏" : ""}${comment.post.deleted_at ? " · 已删除" : ""}` : `Post #${comment.post_id}（已不存在）`}</small>
+              <small>目标：{comment.post ? `${comment.post.title || `${comment.post.post_type} #${comment.post.id}`} · ${comment.post.status}${comment.post.moderation_status === "hidden" ? " · 已隐藏" : ""}${comment.post.deleted_at ? " · 已删除" : ""}` : `内容 #${comment.post_id}（已不存在）`}</small>
             </div>
             <dl className="admin-content-meta"><div><dt>创建</dt><dd><time dateTime={comment.created_at}>{formatDate(comment.created_at, true)}</time></dd></div><div><dt>更新</dt><dd><time dateTime={comment.updated_at}>{formatDate(comment.updated_at, true)}</time></dd></div></dl>
             <div className="admin-content-actions">
@@ -77,9 +77,9 @@ export function AdminCommentsPage() {
             </div>
           </article>
         ))}
-      </div> : <EmptyState title="没有匹配的评论" description="调整状态或目标 Post ID 后重试。" /> : null}
+      </div> : <EmptyState title="没有匹配的评论" description="调整状态或内容 ID 后重试。" /> : null}
       <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || actionBusy || pageNeedsClamp} onChange={(page) => updateFilters({ page })} />
-      <AdminActionDialog open={Boolean(action)} title={action?.type === "hide" ? "隐藏评论" : "恢复评论"} description={action?.type === "hide" ? "隐藏后评论不会出现在普通成员的评论区。" : "恢复后评论会重新遵守目标 Post 的访问权限。"} confirmLabel={action?.type === "hide" ? "确认隐藏" : "确认恢复"} reason={reason} busy={actionBusy} error={actionError?.message} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction} />
+      <AdminActionDialog open={Boolean(action)} title={action?.type === "hide" ? "隐藏评论" : "恢复评论"} description={action?.type === "hide" ? "隐藏后评论不会出现在普通成员的评论区。" : "恢复后，有权阅读原内容的成员可再次看到这条评论。"} confirmLabel={action?.type === "hide" ? "确认隐藏" : "确认恢复"} reason={reason} busy={actionBusy} error={actionError?.message} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction} />
     </AdminPageFrame>
   );
 }

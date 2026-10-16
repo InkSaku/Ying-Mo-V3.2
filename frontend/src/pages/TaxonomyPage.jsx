@@ -25,7 +25,7 @@ export function TaxonomyPage({ kind }) {
   const page = cleanPage(params.get("page"));
   const postType = ["article", "note"].includes(params.get("type")) ? params.get("type") : "";
   const isCategory = kind === "category";
-  const label = isCategory ? "栏目" : "主题";
+  const label = isCategory ? "分类" : "标签";
   const basePath = isCategory ? "/categories" : "/tags";
   const state = useAsyncData(
     () => api.get(`${basePath}/${encodeURIComponent(slug)}?page=${page}&page_size=${PAGE_SIZE}${!isCategory && postType ? `&post_type=${postType}` : ""}`),
@@ -64,7 +64,7 @@ export function TaxonomyPage({ kind }) {
     <main className={`page-shell taxonomy-page taxonomy-publication-page taxonomy-detail-${kind}`} aria-busy={pageNeedsClamp || undefined}>
       <TaxonomyNav />
       <header className="taxonomy-detail-hero">
-        <p className="taxonomy-back"><Link to={basePath}>返回{isCategory ? "栏目目录" : "主题索引"}</Link></p>
+        <p className="taxonomy-back"><Link to={basePath}>返回{isCategory ? "分类" : "标签"}</Link></p>
         <div className="taxonomy-detail-hero-layout">
           <div className="taxonomy-detail-copy">
             <span className="taxonomy-detail-kind">{label}</span>
@@ -72,7 +72,7 @@ export function TaxonomyPage({ kind }) {
           {isCategory && taxonomy?.description ? (
             <p>{taxonomy.description}</p>
           ) : (
-              <p>{isCategory ? "这个栏目暂未填写说明。" : "从同一个关键词出发，重读彼此关联的文章与随记。"}</p>
+              <p>{isCategory ? "" : ""}</p>
           )}
           </div>
           <TaxonomySketch kind={kind} />
@@ -84,12 +84,12 @@ export function TaxonomyPage({ kind }) {
         </div>
       </header>
 
-      {!isCategory ? <nav className="taxonomy-topic-tabs" aria-label="主题记录类型">{[["", "全部记录"], ["article", "文章"], ["note", "随记"]].map(([type, title]) => <button key={type} type="button" aria-pressed={postType === type} onClick={() => setParams(type ? { type } : {})}>{title}</button>)}</nav> : null}
+      {!isCategory ? <nav className="taxonomy-topic-tabs" aria-label="标签记录类型">{[["", "全部记录"], ["article", "文章"], ["note", "随记"]].map(([type, title]) => <button key={type} type="button" aria-pressed={postType === type} onClick={() => setParams(type ? { type } : {})}>{title}</button>)}</nav> : null}
 
       <section className="taxonomy-reading-section" aria-labelledby="taxonomy-reading-title">
         <header className="taxonomy-reading-heading">
-          <h2 id="taxonomy-reading-title">{isCategory ? "栏目文章" : "主题阅读"}</h2>
-          <p>{isCategory ? "沿着发布时间依次阅读这个栏目。" : "文章与随记按时间交错排列，保留主题形成的自然路径。"}</p>
+          <h2 id="taxonomy-reading-title">{isCategory ? "文章" : "相关记录"}</h2>
+          <p>{isCategory ? "按发布时间排列。" : "文章与随记按时间排列。"}</p>
         </header>
         <div className="taxonomy-reading-body">
           <aside className="taxonomy-reading-summary" aria-label="当前阅读范围">
@@ -111,8 +111,8 @@ export function TaxonomyPage({ kind }) {
               </div>
             ) : (
               <EmptyState
-                title={`这个${label}下还没有可见内容`}
-                description="内容可能尚未发布，或不在你当前有权进入的合集里。"
+                title={`这个${label}下暂无可读内容`}
+                description=""
               />
             )}
           </div>

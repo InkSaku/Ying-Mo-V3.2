@@ -34,7 +34,7 @@ export function OnThisDayPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, pagination.page_size, pagination.total, state.error, state.loading, state.meta]);
 
-  if (state.loading && !state.data) return <PageLoader label="正在翻阅旧日记录" />;
+  if (state.loading && !state.data) return <PageLoader label="正在加载往年今日…" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   const groups = groupMemories(state.data?.items);
@@ -44,7 +44,7 @@ export function OnThisDayPage() {
       <header className="memory-hero">
         <InkSketch variant="memory" className="ink-page-sketch" />
         <div>
-          <p className="hero-kicker">On this day</p>
+          <p className="hero-kicker"></p>
           <h1>往年今日</h1>
           <p>{memoryDayLabel(state.data)}，看看朋友们曾在今天留下什么。</p>
         </div>
@@ -75,9 +75,9 @@ export function OnThisDayPage() {
         </section>
       )) : (
         <EmptyState
-          title="今天还没有旧日记录"
-          description="只有往年同月同日、且你当前有权阅读的 Article 和 Note 会出现在这里。"
-          action={<Link className="btn btn-secondary" to="/archive">去时间归档看看</Link>}
+          title="暂无可查看的往年今日记录"
+          description="可以到归档看看其他日期。"
+          action={<Link className="btn btn-secondary" to="/archive">查看归档</Link>}
         />
       )}
 

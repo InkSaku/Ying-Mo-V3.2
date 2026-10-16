@@ -129,7 +129,7 @@ export function AvatarManager({ profile, onChange }) {
       <div className="avatar-manager-heading">
         <div>
           <h2 id="avatar-manager-heading">头像</h2>
-          <p>头像只通过鉴权媒体接口读取。选择图片后需要再次确认才会保存。</p>
+          <p>选择图片后，确认保存即可更新头像。</p>
         </div>
       </div>
 
@@ -195,7 +195,7 @@ export function AvatarManager({ profile, onChange }) {
       <ConfirmDialog
         open={confirmRemove}
         title="移除当前头像？"
-        description="头像媒体会与你的账户解除绑定；个人中心和用户主页将改为昵称首字占位。"
+        description="移除后，个人中心和成员主页将显示昵称首字。"
         confirmLabel="确认移除"
         danger
         busy={busy}

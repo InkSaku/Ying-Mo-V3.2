@@ -18,7 +18,7 @@ test("member profile reads as a portrait, personal catalogue and shared shelf", 
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码").fill(account.password);
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 
   const author = { username: account.username, nickname: "林间", avatar_media: null, bio: "写下散步、阅读，以及朋友们一起经过的普通日子。", region: "杭州" };
@@ -42,7 +42,7 @@ test("member profile reads as a portrait, personal catalogue and shared shelf", 
   await page.goto(`/users/${account.username}`);
   await expect(page.getByRole("heading", { level: 1, name: "林间" })).toBeVisible();
   await expect(page.locator(".profile-monogram")).toContainText("林");
-  await expect(page.getByRole("link", { name: "编辑公开资料" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "编辑资料" })).toBeVisible();
   await expect(page.locator(".profile-post-catalogue .post-card-profile")).toHaveCount(2);
   await expect(page.locator(".profile-collection-shelf .collection-card-shelf")).toHaveCount(2);
 

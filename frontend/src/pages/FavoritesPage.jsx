@@ -75,7 +75,7 @@ export function FavoritesPage() {
       <PersonalNav />
       <header className="page-heading">
         <InkPageSketch />
-        <div><p className="section-kicker">SAVED READING</p><h1>收藏</h1><p>只保留你当前仍有权访问的收藏内容。</p></div>
+        <div><p className="section-kicker"></p><h1>收藏</h1><p></p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 篇</span>
       </header>
       {actionError ? <div className="inline-error favorite-feedback" role="alert">{actionError}</div> : null}
@@ -103,7 +103,7 @@ export function FavoritesPage() {
             ))}
           </div>
         )
-        : <EmptyState sketch="reader" title="还没有可见收藏" description="收藏内容失去访问权限后，不会在这里泄漏正文或 Collection 信息。" />}
+        : <EmptyState sketch="reader" title="暂无可查看的收藏" description="部分收藏可能已无法访问。" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}

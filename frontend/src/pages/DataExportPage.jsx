@@ -27,20 +27,20 @@ export function DataExportPage() {
   return <main className="page-shell personal-page-shell settings-page data-export-page">
     <PersonalNav />
     <header className="page-heading">
-      <div><p className="section-kicker">PORTABLE ARCHIVE</p><h1>数据导出</h1><p>把自己的长期记录带走，不依赖某一个运行中的站点。</p></div>
+      <div><p className="section-kicker"></p><h1>数据导出</h1><p>下载自己的资料、内容和媒体原件。</p></div>
     </header>
     <section className="ink-export-sheet" aria-labelledby="export-title" aria-busy={state.busy || undefined}>
       <figure className="ink-export-art">
         <InkSketch variant="packed" />
-        <figcaption>把记录装进行李。<br />书签也要一起带走。</figcaption>
+        <figcaption><br /></figcaption>
       </figure>
       <div className="ink-export-copy">
-        <header><p className="section-kicker">一份可以带走的记录</p><h2 id="export-title">导出我的数据</h2><p>整理成一个 ZIP，把写过的、收好的，放在一起。</p></header>
+        <header><p className="section-kicker">导出内容</p><h2 id="export-title">导出我的数据</h2><p>文件格式为 ZIP。</p></header>
         <dl className="ink-export-manifest">
-          <div><dt><span aria-hidden="true">01</span>写过的文字</dt><dd>文章和随记的 Markdown 原文</dd></div>
-          <div><dt><span aria-hidden="true">02</span>一起收好的记忆</dt><dd>个人资料、合集关系与共同记录关联</dd></div>
-          <div><dt><span aria-hidden="true">03</span>来往与留痕</dt><dd>评论、收藏、互动和通知清单</dd></div>
-          <div><dt><span aria-hidden="true">04</span>影像与附件</dt><dd>你拥有的媒体清单与可读取的原件</dd></div>
+          <div><dt><span aria-hidden="true"></span>文章与随记</dt><dd>文章和随记的 Markdown 原文</dd></div>
+          <div><dt><span aria-hidden="true"></span>资料与合集关联</dt><dd>个人资料、合集关系与共同记录关联</dd></div>
+          <div><dt><span aria-hidden="true"></span>评论、收藏与通知</dt><dd>评论、收藏、互动和通知清单</dd></div>
+          <div><dt><span aria-hidden="true"></span>媒体原件</dt><dd>你拥有的媒体清单与可读取的原件</dd></div>
         </dl>
         <p className="ink-export-note">导出中包含你的私密记录，请妥善保管。其他成员的正文不会被打包。</p>
         {state.error ? <div className="inline-error" role="alert">{state.error}</div> : null}

@@ -254,13 +254,13 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
 
       {!feed.items.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
 
-      {!loading && !feed.items.length && !error ? <div className="home-feed-empty"><h3>时间流还是空的</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
+      {!loading && !feed.items.length && !error ? <div className="home-feed-empty"><h3>暂无记录</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
       {error ? <div className="home-feed-error" role="alert"><p>{error}</p><button className="btn btn-secondary" type="button" onClick={() => void load({ cursor: feed.items.length ? feed.nextCursor : "", append: Boolean(feed.items.length) })}>重新读取</button></div> : null}
 
       <div ref={sentinelRef} className="home-feed-sentinel" aria-hidden="true" />
-      {loadingMore ? <p className="home-feed-more" role="status">正在接上更早的记录...</p> : null}
+      {loadingMore ? <p className="home-feed-more" role="status">正在加载更早的记录…...</p> : null}
       {!loading && !loadingMore && feed.hasMore && typeof IntersectionObserver === "undefined" ? <button className="btn btn-secondary home-feed-more-button" type="button" onClick={() => void load({ cursor: feed.nextCursor, append: true })}>继续阅读</button> : null}
-      {!loading && !loadingMore && !feed.hasMore && feed.items.length ? <p className="home-feed-end">已经读到这段时间的尽头。</p> : null}
+      {!loading && !loadingMore && !feed.hasMore && feed.items.length ? <p className="home-feed-end">已显示全部记录。</p> : null}
     </section>
   );
 }

@@ -24,7 +24,7 @@ export function AdminPage() {
   return (
     <AdminPageFrame
       title="系统管理"
-      description="整理成员、内容与共同记录，照料这间书房的日常。"
+      description="管理成员、内容和站点设置。"
       busy={state.loading}
     >
       {state.loading && !state.data ? <DashboardLoader /> : null}
@@ -44,7 +44,7 @@ export function AdminPage() {
           <div className="admin-dashboard-grid">
             <section className="admin-section" aria-labelledby="recent-posts-heading">
               <div className="admin-section-heading">
-                <div><p className="hero-kicker">Content</p><h2 id="recent-posts-heading">最近内容</h2></div>
+                <div><p className="hero-kicker"></p><h2 id="recent-posts-heading">最近内容</h2></div>
                 <span>最近 {data.recent_posts?.length || 0} 条</span>
               </div>
               {data.recent_posts?.length ? (
@@ -66,7 +66,7 @@ export function AdminPage() {
 
             <section className="admin-section" aria-labelledby="recent-comments-heading">
               <div className="admin-section-heading">
-                <div><p className="hero-kicker">Interaction</p><h2 id="recent-comments-heading">最近评论</h2></div>
+                <div><p className="hero-kicker"></p><h2 id="recent-comments-heading">最近评论</h2></div>
                 <span>最近 {data.recent_comments?.length || 0} 条</span>
               </div>
               {data.recent_comments?.length ? (
@@ -74,7 +74,7 @@ export function AdminPage() {
                   {data.recent_comments.map((comment) => (
                     <article key={comment.id}>
                       <div className="admin-feed-meta">
-                        <span>Post #{comment.post_id}</span>
+                        <span>内容 #{comment.post_id}</span>
                         <AdminStatus value={comment.status} />
                       </div>
                       <h3>{comment.post?.title || (comment.post?.post_type === "note" ? "未命名随记" : "评论目标")}</h3>
@@ -90,7 +90,7 @@ export function AdminPage() {
 
           <section className="admin-section admin-system-section" aria-labelledby="system-status-heading">
             <div className="admin-section-heading">
-              <div><p className="hero-kicker">Runtime</p><h2 id="system-status-heading">系统状态</h2></div>
+              <div><p className="hero-kicker"></p><h2 id="system-status-heading">系统状态</h2></div>
               <AdminStatus value={data.system?.status || "unknown"} />
             </div>
             <dl className="admin-system-grid">

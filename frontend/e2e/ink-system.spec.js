@@ -8,7 +8,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill("editor_e2e");
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -43,7 +43,7 @@ test("public ink scenes preserve form access and adapt to light and dark paper",
       }
       if (path === "/login") {
         await expect(page.getByLabel("用户名或邮箱")).toBeVisible();
-        await expect(page.getByRole("button", { name: "登录，继续书写" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "登录" })).toBeVisible();
         await page.screenshot({ path: testInfo.outputPath(`login-${theme}-mobile.png`), fullPage: true });
       }
     }
@@ -56,7 +56,7 @@ test("personal and writing pages keep scene, heading and actions usable at every
   for (const path of paths) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(path);
-    if (path === "/write") await expect(page.getByPlaceholder("写下值得被慢慢读完的事")).toBeVisible();
+    if (path === "/write") await expect(page.getByPlaceholder("文章标题（必填）")).toBeVisible();
     else await expect(page.locator("main .ink-sketch:visible").first()).toBeVisible();
     await expect(page.locator(".app-header .ink-brand-mark")).toBeVisible();
     await headingHasRoom(page);

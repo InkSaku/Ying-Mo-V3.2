@@ -58,7 +58,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
       </header>
 
       <div className="note-detail-content">
-        <header className="note-detail-body-label" aria-hidden="true"><span>随记正文</span><span>A MOMENT KEPT</span></header>
+        <header className="note-detail-body-label" aria-hidden="true"><span></span><span></span></header>
         {renderedBody}
 
         {post.cover_media ? <MediaOpenButton item={coverGalleryItem} items={galleryItems} context="post" label="在灯箱中查看随记影像"><ProtectedImage

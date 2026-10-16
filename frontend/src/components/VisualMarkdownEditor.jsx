@@ -191,7 +191,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
             if (block.type === "text") {
               const onlyText = blocks.length === 1;
               return (
-                <Suspense key={block.key} fallback={<div className="rich-markdown-loading" role="status">正在展开可视编辑…</div>}>
+                <Suspense key={block.key} fallback={<div className="rich-markdown-loading" role="status">正在加载编辑器…</div>}>
                   <RichMarkdownBlock
                     ref={(element) => {
                       if (element) textareasRef.current.set(block.key, element);

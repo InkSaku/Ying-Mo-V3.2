@@ -38,7 +38,7 @@ export function AdminPageFrame({ title, description, actions, busy = false, chil
       <header className="page-heading admin-heading">
         <InkPageSketch />
         <div>
-          <p className="hero-kicker">System administration</p>
+          <p className="hero-kicker"></p>
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>
@@ -96,7 +96,7 @@ export function AdminActionDialog({
           onChange={(event) => onReasonChange(event.target.value)}
           aria-describedby={reasonHelpId}
         />
-        <small id={reasonHelpId}>必填，最多 500 字；后端会将原因写入操作日志。</small>
+        <small id={reasonHelpId}>必填，最多 500 字，记入操作日志。</small>
       </label>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
     </ConfirmDialog>

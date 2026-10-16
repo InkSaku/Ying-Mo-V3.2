@@ -40,7 +40,7 @@ export function MediaPresentationEditor({ media, busy = false, onSave, onCancel,
   return (
     <div className={`media-presentation-editor ${compact ? "is-compact" : ""}`}>
       <label>
-        <span>图片说明（ALT）</span>
+        <span>图片描述（供读屏使用）</span>
         <input
           maxLength={300}
           value={draft.alt_text}
@@ -49,7 +49,7 @@ export function MediaPresentationEditor({ media, busy = false, onSave, onCancel,
         />
       </label>
       <label>
-        <span>可见图注</span>
+        <span>图注（显示在图片下方）</span>
         <textarea
           maxLength={500}
           value={draft.caption}

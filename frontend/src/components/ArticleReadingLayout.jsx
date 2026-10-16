@@ -194,7 +194,7 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
             <span aria-hidden="true">↑</span> 回到篇首
           </button>
           <div className="article-reading-companion" aria-hidden="true">
-            <p><span>READING COMPANION</span><span>{progress >= 100 ? "读完啦" : "慢慢读"}</span></p>
+            <p><span></span><span>{progress >= 100 ? "已读完" : "阅读中"}</span></p>
             <div className="article-reading-cat-track">
               <div
                 className="article-archive-cat-runner article-reading-cat-runner"

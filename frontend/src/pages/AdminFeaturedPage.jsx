@@ -12,10 +12,10 @@ import { formatDate } from "../lib/format";
 const CANDIDATE_PAGE_SIZE = 8;
 
 function targetLabel(item) {
-  if (!item.target) return `${item.content_type === "article" ? "Article" : "Collection"} 目标不存在`;
+  if (!item.target) return `${item.content_type === "article" ? "文章" : "合集"} 目标不存在`;
   return item.content_type === "article"
-    ? item.target.title || `Article #${item.post_id}`
-    : item.target.name || `Collection #${item.collection_id}`;
+    ? item.target.title || `文章 #${item.post_id}`
+    : item.target.name || `合集 #${item.collection_id}`;
 }
 
 function suggestedSortOrder(items, contentType) {
@@ -84,7 +84,7 @@ export function AdminFeaturedPage() {
           sort_order: sortOrder,
           reason: reason.trim(),
         });
-        setMessage("精选项已添加；首页仍会按当前成员 ACL 决定是否展示。");
+        setMessage("精选项已添加，每位成员只会看到自己可阅读的内容。");
       } else if (action.type === "order") {
         await api.patch(`/admin/featured/${action.item.id}`, { sort_order: sortOrder, reason: reason.trim() });
         setMessage(`精选项 #${action.item.id} 的排序已保存。`);
@@ -109,9 +109,9 @@ export function AdminFeaturedPage() {
   };
   const descriptions = {
     create: "搜索并星标内容即可，不需要查找数据库 ID。这里只会列出当前可加入精选的内容。",
-    order: "数值越小越靠前；Article 与 Collection 分别在各自首页区块中排序。",
-    toggle: action?.item?.is_active ? "停用后立即退出首页精选结果，但保留配置记录。" : "重新启用前，后端会再次校验目标是否仍可用。",
-    delete: "删除只移除精选配置，不会删除 Article 或 Collection。",
+    order: "数值越小越靠前；文章与合集分别在各自首页区块中排序。",
+    toggle: action?.item?.is_active ? "停用后立即退出首页精选结果，但保留配置记录。" : "重新启用前会检查内容是否仍可用。",
+    delete: "删除只移除精选配置，不会删除文章或合集。",
   };
   const candidatePagination = candidateState.meta?.pagination || {};
   const candidates = (candidateState.data || []).filter((item) => item.content_type === draft.content_type);
@@ -126,7 +126,7 @@ export function AdminFeaturedPage() {
   };
 
   return (
-    <AdminPageFrame title="首页精选" description="为首页挑选文章与共同书册，调整展示顺序。每位成员只会看到向自己开放的内容。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
+    <AdminPageFrame title="首页精选" description="为首页挑选文章与合集，调整展示顺序。每位成员只会看到自己可阅读的内容。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取首页精选</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
@@ -136,7 +136,7 @@ export function AdminFeaturedPage() {
           <article className="admin-content-row admin-featured-row" key={item.id}>
             <div className="admin-content-main">
               <div className="admin-content-title"><h2>{targetLabel(item)}</h2><span className={`admin-status admin-status-${item.is_active ? "active" : "inactive"}`}>{item.is_active ? "已启用" : "已停用"}</span>{!item.eligible ? <span className="admin-status admin-status-hidden">目标不可用</span> : null}</div>
-              <small>{item.content_type === "article" ? `Article #${item.post_id}` : `Collection #${item.collection_id}`}</small>
+              <small>{item.content_type === "article" ? `文章 #${item.post_id}` : `合集 #${item.collection_id}`}</small>
               {item.content_type === "article" ? <small>作者 @{item.target?.author?.username || "未知"} · {item.target?.status || "不存在"} · {item.target?.moderation_status || "未知治理状态"} · {item.target?.visibility === "private" ? "仅作者" : "成员可见"}</small> : <small>创建者 @{item.target?.creator?.username || "未知"} · {item.target?.status || "不存在"}</small>}
               <small>配置人 @{item.created_by?.username || "未知"}</small>
             </div>
@@ -148,13 +148,13 @@ export function AdminFeaturedPage() {
             </div>
           </article>
         ))}
-      </div> : <EmptyState title="还没有首页精选" description="添加 Article 或 Collection 后，符合当前成员 ACL 的目标会出现在首页。" /> : null}
+      </div> : <EmptyState title="还没有首页精选" description="添加文章或合集后，每位成员只会看到自己可阅读的内容。" /> : null}
 
       <AdminActionDialog open={Boolean(action)} title={titles[action?.type]} description={descriptions[action?.type]} confirmLabel={action?.type === "delete" ? "确认删除" : action?.type === "toggle" ? (action.item.is_active ? "确认停用" : "确认启用") : action?.type === "create" ? "添加到精选" : "保存排序"} reason={reason} busy={busy} error={actionError?.message} danger={action?.type === "delete"} wide={action?.type === "create"} confirmDisabled={draftInvalid} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction}>
         {action?.type === "create" ? <div className="admin-featured-picker">
-          <label className="admin-featured-type"><span>内容类型</span><CustomSelect value={draft.content_type} disabled={busy} onChange={(event) => changeContentType(event.target.value)}><option value="article">Article</option><option value="collection">Collection</option></CustomSelect></label>
+          <label className="admin-featured-type"><span>内容类型</span><CustomSelect value={draft.content_type} disabled={busy} onChange={(event) => changeContentType(event.target.value)}><option value="article">文章</option><option value="collection">合集</option></CustomSelect></label>
           <form className="admin-featured-search" role="search" onSubmit={(event) => { event.preventDefault(); setCandidateQuery(candidateSearch.trim()); setCandidatePage(1); }}>
-            <label><span>搜索{draft.content_type === "article" ? "文章" : "合集"}</span><input data-autofocus type="search" maxLength={100} value={candidateSearch} disabled={busy} placeholder={draft.content_type === "article" ? "输入标题、摘要或作者" : "输入名称、slug 或创建者"} onChange={(event) => setCandidateSearch(event.target.value)} /></label>
+            <label><span>搜索{draft.content_type === "article" ? "文章" : "合集"}</span><input data-autofocus type="search" maxLength={100} value={candidateSearch} disabled={busy} placeholder={draft.content_type === "article" ? "输入标题、摘要或作者" : "输入名称、网址标识或创建者"} onChange={(event) => setCandidateSearch(event.target.value)} /></label>
             <button className="btn btn-secondary" type="submit" disabled={busy || candidateState.loading}>搜索</button>
           </form>
 

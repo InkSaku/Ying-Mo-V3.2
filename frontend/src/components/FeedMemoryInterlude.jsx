@@ -16,7 +16,7 @@ export function FeedMemoryInterlude({ memory }) {
       <header className="home-feed-memory-header">
         <div>
           <p>{memory.month} 月 {memory.day} 日 · 往年今日</p>
-          <h3 id="home-feed-memory-title">时间在这里折回来</h3>
+          <h3 id="home-feed-memory-title">往年今日</h3>
         </div>
         <Link to="/on-this-day">查看全部{memory.total > memory.items.length ? ` ${memory.total}` : ""}</Link>
       </header>

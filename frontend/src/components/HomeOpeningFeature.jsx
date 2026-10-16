@@ -23,16 +23,16 @@ export function HomeOpeningFeature({ post, loading = false }) {
       </Link> : <HomeInkLandscape />}
     </div>
     {post ? <>
-      <div className="home-opening-feature-meta"><span>01 / 从这一页读起</span><span>{author} · {postTypeLabel(post.post_type)}</span></div>
+      <div className="home-opening-feature-meta"><span>最近记录</span><span>{author} · {postTypeLabel(post.post_type)}</span></div>
       <h2><Link to={href} state={{ fromHomeFeed: true }} onClick={rememberDeparture}>{title}</Link></h2>
       <div className="home-opening-feature-footer">
         <span>{summary || formatDate(post.semantic_time || post.published_at)}</span>
-        <Link to={href} state={{ fromHomeFeed: true }} onClick={rememberDeparture}>走进这则记录 ↗</Link>
+        <Link to={href} state={{ fromHomeFeed: true }} onClick={rememberDeparture}>查看记录 ↗</Link>
       </div>
     </> : <>
-      <div className="home-opening-feature-meta"><span>01 / 从这一页读起</span><span>映墨 · 日常来信</span></div>
-      <h2>{loading ? "正在接上朋友们的近况" : "下一则值得读的故事，从这里开始。"}</h2>
-      <div className="home-opening-feature-footer"><span>{loading ? "请稍等片刻。" : "现在写下的，也会成为未来的一页。"}</span></div>
+      <div className="home-opening-feature-meta"><span>最近记录</span><span></span></div>
+      <h2>{loading ? "正在加载最近记录…" : "暂无可读记录"}</h2>
+      <div className="home-opening-feature-footer"><span>{loading ? "" : ""}</span></div>
     </>}
   </article>;
 }

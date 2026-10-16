@@ -63,7 +63,7 @@ export function SettingsPage() {
       });
       setProfile(updated.data);
       await refreshMe();
-      setAction({ busy: false, message: "公开资料已保存。", error: "" });
+      setAction({ busy: false, message: "资料已保存。", error: "" });
     } catch (error) {
       setAction({ busy: false, message: "", error: error.message });
     }
@@ -93,7 +93,7 @@ export function SettingsPage() {
       <PersonalNav />
       <header className="page-heading">
         <InkPageSketch />
-        <div><h1>个人资料</h1><p>这里编辑其他成员能看到的资料；用户名、角色与账户状态不能在此修改。</p></div>
+        <div><h1>个人资料</h1><p>编辑其他成员看到的昵称、简介和地区。用户名不能修改。</p></div>
       </header>
       <AvatarManager profile={profile} onChange={async (updated) => {
         setProfile(updated);

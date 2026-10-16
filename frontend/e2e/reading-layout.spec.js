@@ -11,7 +11,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码").fill(account.password);
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -132,7 +132,7 @@ test("reading page forms a complete editorial opening and a focused reading colu
   expect(geometry.body.right).toBeLessThan(geometry.rail.left);
   await expect(page.locator(".article-reading-rail")).toContainText("已读");
   await expect(page.locator(".article-toc-list a[aria-current='location']")).toContainText("从一条熟悉的路开始");
-  await expect(page.locator(".article-reading-companion")).toContainText("慢慢读");
+  await expect(page.locator(".article-reading-companion")).toContainText("阅读中");
   await expect(page.locator(".article-reading-cat-runner")).toHaveAttribute("data-direction", "right");
   await expectNoOverflow(page);
   await page.screenshot({ path: testInfo.outputPath("reading-desktop.png"), fullPage: true });

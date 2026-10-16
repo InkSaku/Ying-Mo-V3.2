@@ -4,11 +4,11 @@ async function login(page, username = "editor_e2e") {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(username);
   await page.getByLabel("密码", { exact: true }).fill("password123");
-  await page.getByRole("button", { name: "登录，继续书写", exact: true }).click();
+  await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
-const notice = (page) => page.getByRole("dialog", { name: /续火花之前，\s*先读这一页。/ });
+const notice = (page) => page.getByRole("dialog", { name: /使用须知/ });
 
 test("risk notice keeps the warning readable across themes and sizes and repeats without opt-out", async ({ page }, testInfo) => {
   await login(page);
@@ -70,12 +70,12 @@ test("remembered acknowledgement survives reloads and navigation but belongs to 
   await notice(page).getByRole("checkbox", { name: "不再提示", exact: true }).check();
   await notice(page).getByRole("button", { name: "我已知悉", exact: true }).click();
   await page.reload();
-  await expect(page.getByRole("heading", { name: /让火花继续/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /续火花助手/ })).toBeVisible();
   await expect(notice(page)).toHaveCount(0);
   await page.goto("/home");
   await expect(page.getByRole("link", { name: "进入续火花助手" })).toBeVisible();
   await page.goto("/tools/spark");
-  await expect(page.getByRole("heading", { name: /让火花继续/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /续火花助手/ })).toBeVisible();
   await expect(notice(page)).toHaveCount(0);
   const username = `risk_${Date.now().toString(36)}`;
   const registered = await request.post("/api/v1/auth/register", { data: {

@@ -12,7 +12,7 @@ test("labels revision reasons and changed snapshot fields", () => {
   assert.equal(revisionReasonLabel("restore"), "恢复历史版本前保存");
   assert.deepEqual(
     revisionChangedLabels(["title", "body", "collection_id", "unknown"]),
-    ["标题", "正文", "Collection", "unknown"]
+    ["标题", "正文", "合集", "unknown"]
   );
 });
 

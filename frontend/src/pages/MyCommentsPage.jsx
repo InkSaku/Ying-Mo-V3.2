@@ -37,7 +37,7 @@ export function MyCommentsPage() {
       <PersonalNav />
       <header className="page-heading">
         <InkPageSketch />
-        <div><p className="section-kicker">CONVERSATIONS</p><h1>我的评论</h1><p>仅展示你当前仍能读取其所属 Post 的评论记录。</p></div>
+        <div><p className="section-kicker"></p><h1>我的评论</h1><p>查看你发表的评论。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>
       </header>
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
@@ -57,7 +57,7 @@ export function MyCommentsPage() {
             </article>
           ))}
         </div>
-      ) : <EmptyState title="还没有可见评论" description="你在无权内容下的历史评论不会出现在这里。" />}
+      ) : <EmptyState title="暂无可查看的评论" description="" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}

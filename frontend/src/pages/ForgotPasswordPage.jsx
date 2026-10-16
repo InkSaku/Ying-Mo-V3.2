@@ -5,7 +5,7 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { api, fieldErrorsFrom } from "../lib/api";
 import { passwordResetRequestPayload } from "../lib/accountSecurity";
 
-const SAFE_SUCCESS_MESSAGE = "若账号可用且邮箱已验证，重置邮件会很快送达。请同时检查垃圾邮件。";
+const SAFE_SUCCESS_MESSAGE = "如果该邮箱对应可找回的账号，你会收到重置邮件。请检查收件箱和垃圾邮件。";
 
 export function ForgotPasswordPage() {
   usePageMeta("找回密码");
@@ -39,9 +39,9 @@ export function ForgotPasswordPage() {
   return (
     <AccountSecurityLayout
       eyebrow="账户安全"
-      title="找回你的登录密码"
-      description="填写注册邮箱。为了保护成员隐私，无论邮箱是否存在，页面都会使用相同的提交反馈。"
-      aside={<p>重置链接应当只使用一次，并在邮件标注的有效期内完成。</p>}
+      title="找回密码"
+      description="输入注册邮箱，获取密码重置链接。"
+      aside={<p>请在邮件标注的有效期内使用重置链接，链接只能使用一次。</p>}
     >
       <header className="auth-card-intro">
         <h2>发送重置邮件</h2>

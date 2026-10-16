@@ -59,9 +59,9 @@ export function CreateCollectionPage() {
       <header className="page-heading">
         <InkPageSketch />
         <div>
-          <p className="hero-kicker">New shared book</p>
-          <h1>创建共同书册</h1>
-          <p>成员名单同时决定阅读权和投稿权。一键全选只保存当前时刻的成员快照。</p>
+          <p className="hero-kicker"></p>
+          <h1>创建合集</h1>
+          <p>所选成员可阅读和添加记录。全选只包含当前成员。</p>
         </div>
       </header>
 
@@ -69,17 +69,17 @@ export function CreateCollectionPage() {
         {status.error ? <div className="inline-error" role="alert">{status.error}</div> : null}
         <section className="collection-create-details" aria-labelledby="collection-details-title">
           <div>
-            <p className="section-kicker">01 / DETAILS</p>
-            <h2 id="collection-details-title">书册资料</h2>
+            <p className="section-kicker"></p>
+            <h2 id="collection-details-title">合集资料</h2>
           </div>
           <label>
             <span>名称</span>
             <input required maxLength={120} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           </label>
           <label>
-            <span>Slug</span>
+            <span>网址标识</span>
             <input required placeholder="trip-2026" value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value.toLowerCase() })} aria-invalid={Boolean(form.slug) && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)} />
-            <small>首次共享后后端会锁定 Slug。</small>
+            <small>首次发布合集内容后，网址标识不能修改。</small>
           </label>
           <label>
             <span>说明</span>
@@ -88,7 +88,7 @@ export function CreateCollectionPage() {
         </section>
 
         <fieldset className="member-fieldset">
-          <legend><span className="section-kicker">02 / MEMBERS</span>共同成员</legend>
+          <legend><span className="section-kicker"></span>共同成员</legend>
           {memberState.error ? (
             <div className="inline-error" role="alert">
               <p>{memberState.error}</p>
@@ -104,7 +104,7 @@ export function CreateCollectionPage() {
           </label>
           <label className="check-row">
             <input type="checkbox" checked={autoAddFutureMembers} onChange={(event) => setAutoAddFutureMembers(event.target.checked)} />
-            <span>自动邀请未来加入映墨的成员 <small>新注册成员将可阅读并向此 Collection 投稿</small></span>
+            <span>自动邀请未来加入映墨的成员 <small>新注册成员将可阅读此合集并添加记录</small></span>
           </label>
           {!selectAll ? (
             <div className="member-options">
@@ -117,11 +117,11 @@ export function CreateCollectionPage() {
             </div>
           ) : null}
           {memberState.loading ? <p className="meta-text" role="status">正在读取可选成员。</p> : null}
-          {!memberState.loading && !memberState.error && !members.length ? <p className="meta-text">当前没有其他有效成员，仍可创建个人 Collection。</p> : null}
+          {!memberState.loading && !memberState.error && !members.length ? <p className="meta-text">暂无其他成员，你也可以先创建自己的合集。</p> : null}
         </fieldset>
 
         <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={status.busy}>{status.busy ? "创建中" : "创建共同书册"}</button>
+          <button className="btn btn-primary" type="submit" disabled={status.busy}>{status.busy ? "创建中" : "创建合集"}</button>
         </div>
       </form>
     </main>

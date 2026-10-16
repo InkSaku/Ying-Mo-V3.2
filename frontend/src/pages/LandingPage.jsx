@@ -6,9 +6,9 @@ import "../styles/login.css";
 import "../styles/landing.css";
 
 const promises = [
-  { number: "01", title: "随手写下", copy: "长文、短句、照片，都有一处安静的位置。", icon: "pen" },
-  { number: "02", title: "自在分享", copy: "只给自己，或与熟悉的人一起珍藏。", icon: "people" },
-  { number: "03", title: "与往日重逢", copy: "在某年今日，再读一次当时的生活。", icon: "sun" },
+  { number: "01", title: "写文章与随记", copy: "保存文字、照片和 Live Photo。", icon: "pen" },
+  { number: "02", title: "与朋友共享合集", copy: "选择合集成员，一起阅读和添加记录。", icon: "people" },
+  { number: "03", title: "查看往年今日", copy: "回看往年同一天的记录。", icon: "sun" },
 ];
 
 function PromiseIcon({ name }) {
@@ -35,29 +35,29 @@ export function LandingPage() {
 
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-copy">
-          <p className="landing-eyebrow"><span aria-hidden="true">✦</span> 一处安静的私人记录地</p>
+          <p className="landing-eyebrow"><span aria-hidden="true">✦</span> 朋友间的邀请制记录空间</p>
           <h1 id="landing-title">把今天，<br /><em>轻轻</em>放进时间里。</h1>
-          <p className="landing-lead">写随笔，存照片，把共同经历编成册。<br className="landing-desktop-break" />没有喧闹的广场，只有你愿意留下的人与事。</p>
+          <p className="landing-lead">写文章、记日常、存照片，<br className="landing-desktop-break" />也和朋友一起整理合集。</p>
           <div className="landing-actions" aria-label="进入映墨">
-            <Link className="landing-primary" to="/register"><span><small>第一次来</small>开始记录</span><span className="landing-action-arrow" aria-hidden="true">⟶</span></Link>
-            <Link className="landing-secondary" to="/login"><span><small>已经是成员</small>回到我的一页</span><span aria-hidden="true">↗</span></Link>
+            <Link className="landing-primary" to="/register"><span><small>第一次来</small>使用邀请码注册</span><span className="landing-action-arrow" aria-hidden="true">⟶</span></Link>
+            <Link className="landing-secondary" to="/login"><span><small>已经是成员</small>登录</span><span aria-hidden="true">↗</span></Link>
           </div>
-          <p className="landing-trust"><span>凭邀请相聚</span><span>由你决定谁能看见</span></p>
+          <p className="landing-trust"><span>需要邀请码注册</span><span>登录后阅读</span></p>
         </div>
 
         <div className="landing-illustration" aria-label="墨团推开书房的门">
           <p className="landing-page-number" aria-hidden="true">第 〇 页&nbsp; / &nbsp;从这里开始</p>
           <div className="landing-ink-wash" aria-hidden="true" />
           <InkSketch variant="welcome" className="ink-entry-art" />
-          <p className="landing-handwritten" aria-hidden="true">Come in,<br /><span>stay awhile.</span></p>
-          <blockquote>“日子不是为了被展示，<br />是为了被记得。”</blockquote>
+          <p className="landing-handwritten" aria-hidden="true"><br /><span></span></p>
+          <blockquote><br /></blockquote>
           <span className="landing-seal" aria-hidden="true">映</span>
           <svg className="landing-flight" viewBox="0 0 160 80" aria-hidden="true"><path d="M4 65c34 9 43-30 78-22 19 5 19-24 43-19" /><path d="m119 19 12 4-8 9M139 9c5 1 8 4 10 8M142 24c5 0 9 2 13 5" /></svg>
         </div>
       </section>
 
       <section className="landing-promises" aria-label="映墨可以做什么">
-        <header className="landing-promises-intro"><p>在这里</p><h2>让生活留下自己的笔迹。</h2></header>
+        <header className="landing-promises-intro"><p>在这里</p><h2>在映墨可以做什么</h2></header>
         <div className="landing-promise-list">
           {promises.map((item) => (
             <article className="landing-promise" key={item.number}>
@@ -70,12 +70,12 @@ export function LandingPage() {
       </section>
 
       <section className="landing-closing" aria-label="开始使用映墨">
-        <p aria-hidden="true">YOUR DAYS, IN YOUR OWN HAND.</p>
-        <h2>不必等特别的一天。<br />今天，就值得写下。</h2>
-        <Link to="/register">拿着邀请码，推门进来 <span aria-hidden="true">⟶</span></Link>
+        <p aria-hidden="true"></p>
+        <h2>准备好邀请码，<br />就可以加入。</h2>
+        <Link to="/register">使用邀请码注册 <span aria-hidden="true">⟶</span></Link>
       </section>
 
-      <footer className="login-colophon landing-colophon"><span>映墨 · 留给生活的一页</span><span>A LITTLE LIFE, IN WORDS.</span></footer>
+      <footer className="login-colophon landing-colophon"><span>映墨 · 留给生活的一页</span><span></span></footer>
     </main>
   );
 }

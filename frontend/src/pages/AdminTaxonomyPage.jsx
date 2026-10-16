@@ -14,7 +14,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const CONFIG = {
   category: {
     title: "分类",
-    description: "维护稳定的主分类、排序与可用状态；首次被已发布内容使用后 Slug 永久锁定。",
+    description: "管理分类、排序和可用状态。首次被已发布内容使用后，网址标识不能修改。",
     listPath: "/admin/categories",
     writePath: "/categories",
   },
@@ -41,9 +41,9 @@ function TaxonomyFields({ kind, form, locked, disabled, onChange }) {
     <>
       <label><span>名称</span><input required maxLength={kind === "category" ? 100 : 80} value={form.name} disabled={disabled} onChange={(event) => onChange("name", event.target.value)} /></label>
       <label>
-        <span>Slug</span>
+        <span>网址标识</span>
         <input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={kind === "category" ? 120 : 100} value={form.slug} disabled={disabled || locked} onChange={(event) => onChange("slug", event.target.value.toLowerCase())} />
-        {locked ? <small>已被发布内容使用，Slug 已锁定以保持历史 URL 稳定。</small> : null}
+        {locked ? <small>已被发布内容使用，网址标识不能修改。</small> : null}
       </label>
       {kind === "category" ? <>
         <label className="admin-taxonomy-description"><span>说明</span><textarea rows={3} maxLength={500} value={form.description} disabled={disabled} onChange={(event) => onChange("description", event.target.value)} /></label>
@@ -88,7 +88,7 @@ export function AdminTaxonomyPage({ kind }) {
   const setEditField = (key, value) => { setEditError(""); setEditing((current) => ({ ...current, form: { ...current.form, [key]: value } })); };
   const validateForm = (form, locked = false) => {
     if (!form.name.trim()) return "名称不能为空。";
-    if (!locked && !SLUG_PATTERN.test(form.slug.trim())) return "Slug 只能使用小写字母、数字和连字符。";
+    if (!locked && !SLUG_PATTERN.test(form.slug.trim())) return "网址标识只能使用小写字母、数字和连字符。";
     if (kind === "category" && !/^-?\d+$/.test(form.sort_order)) return "排序值必须是整数。";
     return "";
   };
@@ -106,7 +106,7 @@ export function AdminTaxonomyPage({ kind }) {
         reason: createForm.reason.trim() || undefined,
       });
       setCreateForm({ name: "", slug: "", description: "", sort_order: "0", reason: "" });
-      setMessage("Category 已创建。");
+      setMessage("分类已创建。");
       await state.reload();
     } catch (error) { setCreateError(error.message); }
     finally { setCreateBusy(false); }
@@ -147,7 +147,7 @@ export function AdminTaxonomyPage({ kind }) {
       if (action.type === "merge") {
         const target = (state.data || []).find((item) => String(item.id) === mergeTarget);
         await api.post(`${config.writePath}/${action.item.id}/merge`, { target_id: Number(mergeTarget), reason: reason.trim() });
-        setMessage(`已将「${action.item.name}」合并到「${target?.name || `Tag #${mergeTarget}`}」。`);
+        setMessage(`已将「${action.item.name}」合并到「${target?.name || `标签 #${mergeTarget}`}」。`);
       } else {
         const nextActive = !action.item.is_active;
         await api.patch(`${config.writePath}/${action.item.id}`, { is_active: nextActive, reason: reason.trim() });
@@ -168,17 +168,17 @@ export function AdminTaxonomyPage({ kind }) {
   return (
     <AdminPageFrame title={config.title} description={config.description} busy={state.loading || createBusy || editBusy || actionBusy} actions={<span className="personal-page-total tabular">共 {(state.data || []).length} 个</span>}>
       {kind === "category" ? <section className="admin-taxonomy-create" aria-labelledby="create-category-title">
-        <div><p className="hero-kicker">Create</p><h2 id="create-category-title">新建 Category</h2><p>Category 数量应保持克制；Slug 在首次发布使用后不可修改。</p></div>
+        <div><p className="hero-kicker"></p><h2 id="create-category-title">新建分类</h2><p>首次被已发布内容使用后，网址标识不能修改。</p></div>
         <form onSubmit={(event) => { event.preventDefault(); void createCategory(); }}>
           <TaxonomyFields kind={kind} form={createForm} disabled={createBusy} onChange={setCreateField} />
           <label className="admin-taxonomy-reason"><span>审计说明（可选）</span><input maxLength={500} value={createForm.reason} disabled={createBusy} onChange={(event) => setCreateField("reason", event.target.value)} /></label>
           {createError ? <div className="inline-error" role="alert">{createError}</div> : null}
-          <button className="btn btn-primary" type="submit" disabled={createBusy}>{createBusy ? "正在创建…" : "创建 Category"}</button>
+          <button className="btn btn-primary" type="submit" disabled={createBusy}>{createBusy ? "正在创建…" : "创建分类"}</button>
         </form>
       </section> : null}
 
       <form className="admin-content-filters admin-taxonomy-filters" role="search" onSubmit={(event) => { event.preventDefault(); updateFilters({ q: searchValue.trim() }); }}>
-        <label className="admin-filter-search"><span>搜索 {config.title}</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称、Slug 或说明" /></label>
+        <label className="admin-filter-search"><span>搜索 {config.title}</span><input type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="名称、网址标识或说明" /></label>
         <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value })}><option value="">全部状态</option><option value="active">正常</option><option value="inactive">已停用</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading}>搜索</button>
       </form>
@@ -191,11 +191,11 @@ export function AdminTaxonomyPage({ kind }) {
           <article className="admin-content-row admin-taxonomy-row" key={item.id}>
             <div className="admin-content-main">
               <div className="admin-content-title"><h2>{kind === "tag" ? "#" : ""}{item.name}</h2><span className="tabular">#{item.id}</span></div>
-              <div className="admin-user-badges"><AdminStatus value={item.is_active ? "active" : "inactive"} />{item.first_used_at ? <span className="admin-status">Slug 已锁定</span> : <span className="admin-status">Slug 可修改</span>}</div>
+              <div className="admin-user-badges"><AdminStatus value={item.is_active ? "active" : "inactive"} />{item.first_used_at ? <span className="admin-status">网址标识已锁定</span> : <span className="admin-status">网址标识可修改</span>}</div>
               {kind === "category" ? <p>{item.description || "无说明"}</p> : null}
               <small>/{kind === "category" ? "categories" : "tags"}/{item.slug}</small>
             </div>
-            <dl className="admin-content-meta"><div><dt>关联 Post</dt><dd className="admin-content-count tabular">{item.post_count || 0}</dd></div>{kind === "category" ? <div><dt>排序</dt><dd className="tabular">{item.sort_order}</dd></div> : null}<div><dt>首次发布使用</dt><dd>{item.first_used_at ? <time dateTime={item.first_used_at}>{formatDate(item.first_used_at, true)}</time> : "尚未使用"}</dd></div><div><dt>更新</dt><dd><time dateTime={item.updated_at}>{formatDate(item.updated_at, true)}</time></dd></div></dl>
+            <dl className="admin-content-meta"><div><dt>关联内容</dt><dd className="admin-content-count tabular">{item.post_count || 0}</dd></div>{kind === "category" ? <div><dt>排序</dt><dd className="tabular">{item.sort_order}</dd></div> : null}<div><dt>首次发布使用</dt><dd>{item.first_used_at ? <time dateTime={item.first_used_at}>{formatDate(item.first_used_at, true)}</time> : "尚未使用"}</dd></div><div><dt>更新</dt><dd><time dateTime={item.updated_at}>{formatDate(item.updated_at, true)}</time></dd></div></dl>
             <div className="admin-content-actions">
               <button className="btn btn-secondary btn-small" type="button" disabled={editBusy || actionBusy} aria-expanded={editing?.item.id === item.id} onClick={() => { setEditError(""); setEditing(editing?.item.id === item.id ? null : { item, form: editFormFrom(item, kind) }); }}>编辑</button>
               <button className={`btn ${item.is_active ? "btn-danger" : "btn-secondary"} btn-small`} type="button" disabled={editBusy || actionBusy} onClick={() => openAction("toggle", item)}>{item.is_active ? "停用" : "恢复"}</button>
@@ -213,8 +213,8 @@ export function AdminTaxonomyPage({ kind }) {
 
       <AdminActionDialog
         open={Boolean(action)}
-        title={actionIsMerge ? "合并 Tag" : `${nextActive ? "恢复" : "停用"} ${config.title}`}
-        description={actionIsMerge ? "源 Tag 会停用，全部 Post 关系迁移到目标 Tag；源 Slug 会保留但不再出现在成员入口。" : nextActive ? `恢复后成员可以再次选择并浏览这个 ${config.title}。` : `停用不会删除历史 Post，但成员不能再选择或从聚合入口浏览这个 ${config.title}。`}
+        title={actionIsMerge ? "合并标签" : `${nextActive ? "恢复" : "停用"} ${config.title}`}
+        description={actionIsMerge ? "原标签将停用，关联内容改用目标标签；原网址标识保留。" : nextActive ? `恢复后成员可以再次选择并浏览这个 ${config.title}。` : `停用不会删除历史内容，但成员不能再选择或从聚合入口浏览这个 ${config.title}。`}
         confirmLabel={actionIsMerge ? "确认合并" : nextActive ? "确认恢复" : "确认停用"}
         reason={reason}
         busy={actionBusy}
@@ -224,7 +224,7 @@ export function AdminTaxonomyPage({ kind }) {
         onConfirm={() => { void confirmAction(); }}
         onClose={closeAction}
       >
-        {actionIsMerge ? <label><span>目标 Tag</span><CustomSelect data-autofocus value={mergeTarget} disabled={actionBusy} onChange={(event) => setMergeTarget(event.target.value)}><option value="">选择目标 Tag</option>{mergeTargets.map((item) => <option key={item.id} value={item.id}>{item.name} · /tags/{item.slug}</option>)}</CustomSelect><small>只能合并到仍为正常状态的另一个 Tag。</small></label> : null}
+        {actionIsMerge ? <label><span>目标标签</span><CustomSelect data-autofocus value={mergeTarget} disabled={actionBusy} onChange={(event) => setMergeTarget(event.target.value)}><option value="">选择目标标签</option>{mergeTargets.map((item) => <option key={item.id} value={item.id}>{item.name} · /tags/{item.slug}</option>)}</CustomSelect><small>只能合并到仍为正常状态的另一个标签。</small></label> : null}
       </AdminActionDialog>
     </AdminPageFrame>
   );

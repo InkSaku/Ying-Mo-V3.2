@@ -294,13 +294,13 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         window.requestAnimationFrame(() => bodyInputRef.current?.focus());
       }}>
         <span className="home-prompt-symbol" aria-hidden="true">✳</span>
-        <span className="home-prompt-label"><strong id="quick-note-title">此刻，留下一笔</strong><small>像给朋友写一句近况</small></span>
+        <span className="home-prompt-label"><strong id="quick-note-title">写随记</strong><small></small></span>
         <span className="home-prompt-placeholder">{hasDraft ? "草稿已暂存，接着写……" : "今天想记住什么？"}</span>
         <span className="home-prompt-action">{hasDraft ? "继续写" : "开始写"} ↗</span>
       </button>
       {message ? <p className="home-prompt-status" role="status">{message}</p> : null}
       {!online ? <p className="home-prompt-status">离线中：文字仍会保存在这台设备。</p> : null}
-      {optionsError ? <p className="home-prompt-status" role="alert">Collection 读取失败：{optionsError}</p> : null}
+      {optionsError ? <p className="home-prompt-status" role="alert">合集读取失败：{optionsError}</p> : null}
     </section>;
   }
 
@@ -308,12 +308,12 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     <section className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" || appearance === "homePrompt" ? "is-paper" : ""} ${appearance === "homePrompt" ? "is-home-prompt is-prompt-open" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
       <div className="quick-note-heading">
         <div>
-          <p className="hero-kicker">Quick Note</p>
-          <h2 id="quick-note-title">{appearance === "paper" || appearance === "homePrompt" ? "此刻，留下一笔" : "现在，记点什么？"}</h2>
+          <p className="hero-kicker"></p>
+          <h2 id="quick-note-title">{appearance === "paper" || appearance === "homePrompt" ? "写随记" : ""}</h2>
         </div>
         <div className="quick-note-heading-actions">
           <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setExpanded((current) => !current)}>
-            {expanded ? "收起补充项" : "补充时间与状态"}
+            {expanded ? "收起补充项" : "时间、地点与心情"}
           </button>
           {appearance === "homePrompt" ? <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setPromptOpen(false)}>收起</button> : null}
         </div>
@@ -384,9 +384,9 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
               }}
             >
               <option value="private">仅自己</option>
-              <option value="login_only">所有成员</option>
-              {selectedCollectionUnavailable ? <option value={`collection:${form.collection_id}`}>原 Collection（当前不可访问）</option> : null}
-              {collections.map((collection) => <option key={collection.id} value={`collection:${collection.id}`}>Collection · {collection.name}</option>)}
+              <option value="login_only">所有映墨成员</option>
+              {selectedCollectionUnavailable ? <option value={`collection:${form.collection_id}`}>原合集（当前不可访问）</option> : null}
+              {collections.map((collection) => <option key={collection.id} value={`collection:${collection.id}`}>合集 · {collection.name}</option>)}
             </CustomSelect>
           </div>
         </div>
@@ -403,12 +403,12 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
       <div className="quick-note-status" aria-live="polite">
         <UploadProgress state={uploadState} onCancel={() => uploadAbortRef.current?.abort()} onRetry={retryFiles ? () => { void runUploadImages(retryFiles); } : null} compact />
         {!online ? <p className="quick-note-offline">离线中：文字会保存在这台设备，图片与发布暂不可用。</p> : null}
-        {optionsError ? <p className="field-error">Collection 读取失败：{optionsError}</p> : null}
-        {selectedCollectionUnavailable ? <p className="field-error">你已无法访问原 Collection，请重新选择发布范围。</p> : null}
+        {optionsError ? <p className="field-error">合集读取失败：{optionsError}</p> : null}
+        {selectedCollectionUnavailable ? <p className="field-error">你已无法访问原合集，请重新选择发布范围。</p> : null}
         {error ? <div className="inline-error" role="alert">{error}</div> : null}
         {message ? <div className="inline-success" role="status">{message}</div> : null}
       </div>
-      <p className="quick-note-hint">⌘/Ctrl + Enter 发布。标题、Tags、Live Photo 与外部视频可在完整编辑器中补充。</p>
+      <p className="quick-note-hint">⌘/Ctrl + Enter 发布。标题、标签、Live Photo 与外部视频可在完整编辑器中补充。</p>
     </section>
   );
 }

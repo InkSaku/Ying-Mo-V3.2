@@ -4,14 +4,14 @@ test("collection library wraps its volumes and keeps creation accessible", async
   await page.goto('/login');
   await page.getByLabel('用户名或邮箱').fill('editor_e2e');
   await page.getByLabel('密码').fill('password123');
-  await page.getByRole('button', { name: /登录，继续书写/ }).click();
+  await page.getByRole('button', { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.route('**/api/v1/collections?*', route => route.fulfill({ json: {
     data: ['城市漫步', '一起走过的四季', '厨房里的小事', '写给未来的我们'].map((name, index) => ({ id: index + 1, name, slug: `book-${index}`, description: '把平常的日子，留在这一册。', member_count: 3, creator: { username: 'editor_e2e', nickname: '林间' }, updated_at: '2026-09-09T08:00:00Z' })),
     meta: { pagination: { page: 1, total: 4, total_pages: 1, page_size: 20 } }
   } }));
   await page.goto('/collections');
-  await expect(page.getByRole('link', { name: '创建新册' })).toHaveAttribute('href', '/collections/new');
+  await expect(page.getByRole('link', { name: '创建合集' })).toHaveAttribute('href', '/collections/new');
   await expect(page.locator('.collection-card-shelf')).toHaveCount(4);
   for (const width of [1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
@@ -41,7 +41,7 @@ test("collection detail behaves as a shared volume across all reading views", as
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码").fill(account.password);
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.route("**/api/v1/collections/coast-book", route => route.fulfill({ json: { data: collection } }));
   await page.route("**/api/v1/collections/coast-book/timeline?*", route => route.fulfill({ json: {
@@ -64,7 +64,7 @@ test("collection detail behaves as a shared volume across all reading views", as
   await page.getByRole("button", { name: "合集内容" }).click();
   await expect(page).toHaveURL(/view=overview/);
   await expect(page.locator(".collection-post-catalogue .post-card")).toHaveCount(2);
-  await expect(page.getByRole("link", { name: "管理这册合集" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "管理合集" })).toBeVisible();
   await page.getByRole("button", { name: "共同影像" }).click();
   await expect(page).toHaveURL(/view=media/);
   await expect(page.getByText("这里还没有可展示的共同影像")).toBeVisible();

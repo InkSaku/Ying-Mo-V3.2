@@ -40,7 +40,7 @@ export function SharedMemorySection({ post, onPostChanged }) {
   return (
     <section ref={sectionRef} id="shared-memory" className="shared-memory" aria-labelledby="shared-memory-title">
       <header className="shared-memory-heading">
-        <div><p className="section-kicker">Shared memory</p><h2 id="shared-memory-title">共同回忆</h2><p>{participants} 人留下了 {count + 1} 条记录。</p></div>
+        <div><p className="section-kicker"></p><h2 id="shared-memory-title">共同回忆</h2><p>{participants} 人留下了 {count + 1} 条记录。</p></div>
         {data.can_contribute ? <button className="btn btn-primary" type="button" onClick={() => setOpen((value) => !value)}>{open ? "收起补充" : "补充我的视角"}</button> : null}
       </header>
       {open && thread ? <MemoryContributionComposer
@@ -65,7 +65,7 @@ export function SharedMemorySection({ post, onPostChanged }) {
           </div>
           {item.display_media ? <Link to={postHref(item)} className="shared-memory-thumb"><ProtectedImage media={item.display_media} alt="" /></Link> : null}
         </article>
-      ))}</div> : (!loading && thread ? <p className="shared-memory-empty">你也记得这一刻吗？成为第一个补充视角的人。</p> : null)}
+      ))}</div> : (!loading && thread ? <p className="shared-memory-empty">还没有补充记录。</p> : null)}
       {pagination && pagination.page < pagination.total_pages ? <button className="text-button shared-memory-more" type="button" disabled={loading} onClick={() => void load(pagination.page + 1, true)}>{loading ? "正在读取" : "继续查看补充"}</button> : null}
     </section>
   );

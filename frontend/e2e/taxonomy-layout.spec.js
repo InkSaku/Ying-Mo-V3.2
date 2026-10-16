@@ -21,7 +21,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码").fill(account.password);
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -41,7 +41,7 @@ test("Category and tag pages form a readable responsive index", async ({ page },
   } }));
 
   await page.goto("/categories");
-  await expect(page.getByRole("heading", { name: "栏目目录" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "分类", exact: true })).toBeVisible();
   await expect(page.locator(".taxonomy-category-register li")).toHaveCount(3);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--page").trim())).toBe("#f8f7f3");
   for (const width of [1440, 390]) {

@@ -123,7 +123,7 @@ export function PostDetailPage({ type }) {
         <ArticleBackNavigation onBack={onBackToArticles} />
         <ArticleHero post={articlePreview} preview transitionId={transitionId} />
       </article>
-      <p className="article-reading-preview-status" role="status">正在展开正文…</p>
+      <p className="article-reading-preview-status" role="status">正在加载正文…</p>
     </main>
   );
   if (state.loading || state.data?.redirect) return <PageLoader />;
@@ -135,7 +135,7 @@ export function PostDetailPage({ type }) {
     return (
       <main className="page-shell reading-page note-reading-page">
         {location.state?.fromHomeFeed ? (
-          <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
+          <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
         ) : null}
         <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
         <SharedMemorySection post={post} onPostChanged={state.reload} />
@@ -169,7 +169,7 @@ export function PostDetailPage({ type }) {
 
       {post.post_type === "article" && post.related?.length ? (
         <section className="related-articles" aria-labelledby="related-articles-title">
-          <header className="related-articles-heading"><h2 id="related-articles-title">继续阅读</h2><p>这些文章与当前内容属于相同合集、分类或标签。</p></header>
+          <header className="related-articles-heading"><h2 id="related-articles-title">继续阅读</h2><p></p></header>
           <div className="related-articles-grid">
             {post.related.map((item) => <PostCard key={item.id} post={item} compact />)}
           </div>
@@ -181,7 +181,7 @@ export function PostDetailPage({ type }) {
   return (
     <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools article-reading-page" : ""}`}>
       {location.state?.fromHomeFeed ? (
-        <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页时间流</button>
+        <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
         <ArticleBackNavigation onBack={onBackToArticles} />

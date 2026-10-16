@@ -122,7 +122,7 @@ function ImageViewer({ item, imageRef, onMediaReady }) {
     {state.src ? <img
       ref={imageRef}
       src={state.src}
-      alt={item.image?.alt_text || "媒体记忆"}
+      alt={item.image?.alt_text || "图片"}
       draggable="false"
     /> : null}
   </div>;

@@ -53,7 +53,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码").fill(account.password);
-  await page.getByRole("button", { name: /登录，继续书写/ }).click();
+  await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -125,7 +125,7 @@ test("Explore uses one useful empty state when every source is empty", async ({ 
   });
   await page.goto("/explore");
 
-  await expect(page.getByRole("heading", { name: "还没有可以偶遇的内容" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "暂时没有可浏览的内容" })).toBeVisible();
   await expect(page.locator(".explore-opening, .explore-section")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "返回首页" })).toBeVisible();
   await expectNoOverflow(page);
@@ -174,7 +174,7 @@ test("mixed roaming content keeps covers, links and seed history through refresh
   }
   hold = true;
   await page.getByRole("button", { name: "换一批内容" }).click();
-  await expect(page.getByRole("button", { name: "正在换一条路" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "正在加载…" })).toBeDisabled();
   await expect(page.locator(".explore-opening-caption h2")).toContainText("一条反复走过的路");
   await expect.poll(() => typeof release).toBe("function");
   hold = false;

@@ -7,7 +7,7 @@ async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
   await page.getByLabel("密码", { exact: true }).fill(account.password);
-  await page.getByRole("button", { name: "登录，继续书写" }).click();
+  await page.getByRole("button", { name: "登录" }).click();
   await expect(page).toHaveURL(/\/home/);
 }
 
@@ -131,7 +131,7 @@ test("P1 personal archive is one coherent desktop directory", async ({ page }, t
 
   const personalPages = [
     ["/me/posts", "我的内容"],
-    ["/me/collections", "我的共同记录册。"],
+    ["/me/collections", "我的合集"],
     ["/me/favorites", "收藏"],
     ["/me/comments", "我的评论"],
     ["/me/notifications", "通知"],

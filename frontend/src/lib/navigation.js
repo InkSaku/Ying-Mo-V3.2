@@ -7,8 +7,8 @@ export const desktopPrimaryNavItems = [
 export const discoveryNavItems = [
   { to: "/articles", label: "文章", description: "阅读完整文章" },
   { to: "/notes", label: "随记", description: "浏览短篇记录" },
-  { to: "/categories", label: "分类", description: "按主题查找" },
-  { to: "/tags", label: "标签", description: "沿关键词漫游" },
+  { to: "/categories", label: "分类", description: "按分类浏览文章" },
+  { to: "/tags", label: "标签", description: "按标签浏览记录" },
   { to: "/archive", label: "归档", description: "按时间回看" },
   { to: "/search", label: "搜索", description: "查找具体内容" },
 ];

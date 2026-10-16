@@ -61,14 +61,14 @@ export function HomePage() {
   return (
     <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
       <HomeSparkEntry key={user.id} />
-      <section className="home-edition-heading" aria-label="映墨日常来信">
+      <section className="home-edition-heading" aria-label="朋友的近况">
         <div className="home-edition-copy">
-          <p className="home-edition-eyebrow">映墨 / {editionDate} · 今日来信</p>
-          <h1>生活正在<br /><span>被我们写下。</span></h1>
-          <p className="home-edition-note">朋友们的近况、路上的风景，和那些想留给未来的片刻。今天，从这一页读起。</p>
+          <p className="home-edition-eyebrow">映墨 · {editionDate} </p>
+          <h1>朋友的<br /><span>近况</span></h1>
+          <p className="home-edition-note">阅读朋友最近发布的文章与随记。</p>
           <div className="home-edition-cue" aria-hidden="true">
             <InkSketch variant="writer" className="ink-home-signature" />
-            <span>一封信，从某个人真实的今天开始。</span>
+            <span></span>
           </div>
         </div>
         <HomeOpeningFeature post={feature} loading={!homeSnapshot} />
@@ -82,7 +82,7 @@ export function HomePage() {
       <div className="home-editorial-columns">
         <section className="home-reading-column" aria-label="朋友的记录">
           <div className="home-feed-toolbar">
-            <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">朋友们刚刚留下</h2></div>
+            <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">最近记录</h2></div>
             <div className="home-feed-filters" aria-label="筛选时间流">
               {feedFilters.map(([value, label]) => (
                 <button key={value} type="button" className={type === value ? "is-active" : ""} aria-pressed={type === value} onClick={() => selectType(value)}>{label}</button>
@@ -93,7 +93,7 @@ export function HomePage() {
         </section>
         <aside className="home-side-rail" aria-label="回望与共同记录">
           <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
-          <Link className="home-side-drafts" to="/me/posts">接着写我的文稿 ↗</Link>
+          <Link className="home-side-drafts" to="/me/posts">我的内容 ↗</Link>
         </aside>
       </div>
     </main>

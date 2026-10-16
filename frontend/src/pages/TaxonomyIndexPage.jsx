@@ -11,26 +11,26 @@ import "../styles/taxonomy-editorial.css";
 
 const CONFIG = {
   category: {
-    title: "栏目目录",
-    description: "按长期主题整理文章，像翻阅刊物目录一样找到连续阅读的入口。",
+    title: "分类",
+    description: "按分类浏览文章。",
     endpoint: "/categories",
     path: "/categories",
-    itemLabel: "栏目",
-    sectionTitle: "全部栏目",
-    sectionDescription: "栏目按编辑顺序排列，收录数量只计算你有权阅读的文章。",
-    emptyTitle: "还没有可见栏目",
-    emptyDescription: "栏目只有在包含你有权阅读的文章时才会出现在这里。",
+    itemLabel: "分类",
+    sectionTitle: "全部分类",
+    sectionDescription: "按分类顺序排列。",
+    emptyTitle: "暂无可查看的分类",
+    emptyDescription: "",
   },
   tag: {
-    title: "主题索引",
-    description: "沿着关键词串联文章与随记，让分散的片段形成新的阅读路径。",
+    title: "标签",
+    description: "按标签浏览文章与随记。",
     endpoint: "/tags",
     path: "/tags",
-    itemLabel: "主题",
-    sectionTitle: "全部主题",
-    sectionDescription: "出现越频繁的主题拥有更清晰的字级，计数已应用内容权限。",
-    emptyTitle: "还没有可见主题",
-    emptyDescription: "主题只有在关联你有权阅读的内容时才会出现在这里。",
+    itemLabel: "标签",
+    sectionTitle: "全部标签",
+    sectionDescription: "",
+    emptyTitle: "暂无可查看的标签",
+    emptyDescription: "",
   },
 };
 
@@ -54,7 +54,7 @@ export function TaxonomyIndexPage({ kind }) {
       <TaxonomyNav />
       <header className="taxonomy-index-hero">
         <div className="taxonomy-index-copy">
-          <span className="taxonomy-kicker">{kind === "category" ? "CATEGORIES / 栏目" : "TAGS / 主题"}</span>
+          <span className="taxonomy-kicker">{kind === "category" ? "" : ""}</span>
           <h1>{config.title}</h1>
           <p>{config.description}</p>
         </div>
@@ -62,11 +62,11 @@ export function TaxonomyIndexPage({ kind }) {
         <dl className="taxonomy-index-facts">
           <div><dt>目录条目</dt><dd className="tabular">{summary.itemCount}</dd></div>
           <div><dt>可读内容</dt><dd className="tabular">{summary.postCount}</dd></div>
-          <div><dt>编排方式</dt><dd>{kind === "category" ? "编辑顺序" : "主题频次"}</dd></div>
+          <div><dt>排列方式</dt><dd>{kind === "category" ? "分类顺序" : "标签频次"}</dd></div>
         </dl>
       </header>
 
-      {kind === "tag" ? <label className="taxonomy-topic-search"><span aria-hidden="true">#</span><input aria-label="搜索主题" placeholder="寻找一个词，比如「旅行」" value={query} maxLength={80} onChange={(event) => setQuery(event.target.value)} /></label> : null}
+      {kind === "tag" ? <label className="taxonomy-topic-search"><span aria-hidden="true">#</span><input aria-label="搜索标签" placeholder="搜索标签名称，例如「旅行」" value={query} maxLength={80} onChange={(event) => setQuery(event.target.value)} /></label> : null}
 
       {items.length ? (
         <section className="taxonomy-register" aria-labelledby="taxonomy-register-title">
@@ -83,10 +83,10 @@ export function TaxonomyIndexPage({ kind }) {
                     <span className="taxonomy-register-order tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                     <span className="taxonomy-category-copy">
                       <strong>{item.name}</strong>
-                      <small>{item.description || "这个栏目暂未填写说明。"}</small>
+                      <small>{item.description || ""}</small>
                     </span>
                     <span className="taxonomy-register-count"><b className="tabular">{item.visible_post_count || 0}</b><small>篇文章</small></span>
-                    <span className="taxonomy-register-action">进入栏目</span>
+                    <span className="taxonomy-register-action">查看分类</span>
                   </Link>
                 </li>
               ))}
@@ -109,7 +109,7 @@ export function TaxonomyIndexPage({ kind }) {
       ) : (
         <EmptyState title={config.emptyTitle} description={config.emptyDescription} />
       )}
-      {kind === "tag" && items.length > 0 && !displayedItems.length ? <EmptyState title="没有找到这个主题" description="换一个词，再沿着书页找一找。" /> : null}
+      {kind === "tag" && items.length > 0 && !displayedItems.length ? <EmptyState title="没有找到这个标签" description="试试其他关键词。" /> : null}
     </main>
   );
 }

@@ -42,7 +42,7 @@ function MediaPreview({ item }) {
         />
       </div>
       {video ? <ProtectedVideo path={video.admin_read_path} label={`Live Photo #${item.id} 视频审计预览`} /> : null}
-      <p>此预览使用独立 Admin 读取接口，每次读取都会写入审计日志。</p>
+      <p>管理员每次预览都会记入操作日志。</p>
     </section>
   );
 }
@@ -105,7 +105,7 @@ export function AdminMediaPage() {
         <label className="admin-filter-search"><span>所有者用户 ID</span><input inputMode="numeric" pattern="[1-9][0-9]*" value={ownerValue} onChange={(event) => setOwnerValue(event.target.value.replace(/\D/g, ""))} placeholder="例如 42" /></label>
         <label><span>类型</span><CustomSelect value={filters.kind} onChange={(event) => updateFilters({ kind: event.target.value, page: 1 })}><option value="">全部类型</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect></label>
         <label><span>状态</span><CustomSelect value={filters.status} onChange={(event) => updateFilters({ status: event.target.value, page: 1 })}><option value="">全部状态</option><option value="active">正常</option><option value="hidden">已隐藏</option></CustomSelect></label>
-        <label><span>绑定</span><CustomSelect value={filters.bound_type} onChange={(event) => updateFilters({ bound_type: event.target.value, page: 1 })}><option value="">全部绑定</option><option value="post">Post</option><option value="collection">Collection</option><option value="avatar">头像</option><option value="unbound">未绑定</option></CustomSelect></label>
+        <label><span>绑定</span><CustomSelect value={filters.bound_type} onChange={(event) => updateFilters({ bound_type: event.target.value, page: 1 })}><option value="">全部绑定</option><option value="post">内容</option><option value="collection">合集</option><option value="avatar">头像</option><option value="unbound">未绑定</option></CustomSelect></label>
         <button className="btn btn-secondary" type="submit" disabled={state.loading || actionBusy}>筛选</button>
       </form>
 
@@ -126,7 +126,7 @@ export function AdminMediaPage() {
                 <small>所有者 @{item.owner?.username || "未知"} · 用户 #{item.owner_id}</small>
                 <small>绑定：{bindingText(item)}</small>
                 <small>Public ID：{item.public_id}</small>
-                {item.live_photo_pair_id ? <small>Pair ID：{item.live_photo_pair_id} · {item.pair.length} 个文件</small> : null}
+                {item.live_photo_pair_id ? <small>配对 ID：{item.live_photo_pair_id} · {item.pair.length} 个文件</small> : null}
               </div>
               <dl className="admin-content-meta">
                 <div><dt>文件</dt><dd>{item.pair.map((part) => part.mime_type).join(" + ")} · {formatBytes(totalBytes)}</dd></div>
@@ -149,7 +149,7 @@ export function AdminMediaPage() {
       <AdminActionDialog
         open={Boolean(action)}
         title={action?.type === "hide" ? "隐藏媒体" : action?.type === "restore" ? "恢复媒体" : "软删除媒体"}
-        description={action?.type === "hide" ? "隐藏后普通读取会立即拒绝；Live Photo 的图片与视频会一起隐藏。" : action?.type === "restore" ? "恢复后仍只按原绑定内容的 ACL 提供普通读取。" : "软删除后不能在此页恢复；存储文件保留供审计与后续清理。"}
+        description={action?.type === "hide" ? "隐藏后，成员将无法查看；Live Photo 的图片与视频会一起隐藏。" : action?.type === "restore" ? "恢复后仍按所属内容的阅读范围展示。" : "软删除后不能在此页恢复；存储文件保留供审计与后续清理。"}
         confirmLabel={action?.type === "hide" ? "确认隐藏" : action?.type === "restore" ? "确认恢复" : "确认软删除"}
         reason={reason}
         busy={actionBusy}
@@ -158,7 +158,7 @@ export function AdminMediaPage() {
         onConfirm={() => { void confirmAction(); }}
         onClose={closeAction}
       >
-        {action?.item?.logical_kind === "live_photo" ? <p className="meta-text">本次操作会同时影响 Pair {action.item.live_photo_pair_id} 的图片与视频。</p> : null}
+        {action?.item?.logical_kind === "live_photo" ? <p className="meta-text">本次操作会同时影响配对组 {action.item.live_photo_pair_id} 的图片与视频。</p> : null}
       </AdminActionDialog>
     </AdminPageFrame>
   );

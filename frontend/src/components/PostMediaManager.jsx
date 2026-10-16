@@ -68,7 +68,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       if (insertIntoBody) await onInsertMedia?.(uploaded.data.id);
       setMessage(insertIntoBody
         ? "图片已上传、插入正文并保存。"
-        : "图片已上传并绑定到当前内容。");
+        : "图片已上传到当前内容。");
       return uploaded.data;
     } catch (uploadError) {
       setError(uploadError.message);
@@ -325,7 +325,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
             );
           })}
         </div>
-      ) : <p className="media-empty">还没有绑定媒体。可以选择文件，也可以直接拖拽或粘贴图片到正文编辑区。</p>}
+      ) : <p className="media-empty">还没有图片。可以选择文件，也可以将图片拖入或粘贴到正文编辑区。</p>}
 
       <section
         className="live-photo-uploader"
@@ -335,7 +335,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
         <div className="live-photo-uploader-header">
           <div>
             <h3 id="live-photo-uploader-title">上传 Live Photo</h3>
-            <p>同时选择静态图片与配对视频，上传后会作为一组媒体绑定并插入当前正文。</p>
+            <p>请选择同一张 Live Photo 的静态图片和配对视频，上传后会一起插入正文。</p>
           </div>
         </div>
 
@@ -386,7 +386,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
         </div>
 
         <div className="live-photo-actions">
-          <p>两份文件会作为同一组 Live Photo 上传、绑定并插入正文，媒体仍只通过鉴权接口读取。</p>
+          <p>图片与视频将作为同一组 Live Photo 保存。</p>
           <button
             className="btn btn-primary live-photo-upload-button"
             type="button"
@@ -401,7 +401,7 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       <ConfirmDialog
         open={Boolean(removeTarget)}
         title={removeTarget?.kind === "live_photo" ? "移除这组 Live Photo？" : "移除这张图片？"}
-        description="媒体会与当前内容解除绑定；正文中的内部媒体占位和封面引用也会同步清理。"
+        description={removeTarget?.kind === "live_photo" ? "这组 Live Photo 将从正文、媒体列表及封面中移除。" : "这张图片将从正文、媒体列表及封面中移除。"}
         confirmLabel="确认移除"
         danger
         busy={busy.startsWith("remove-")}

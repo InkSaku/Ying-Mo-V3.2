@@ -336,7 +336,7 @@ export function WritePage() {
   const isPublished = Boolean(savedPost?.published_at);
   const memoryLink = savedPost?.memory_link || null;
   const inCollection = Boolean(form.collection_id);
-  const title = form.post_type === "article" ? "Article" : "Note";
+  const title = form.post_type === "article" ? "文章" : "随记";
   const inlineMediaIds = useMemo(
     () => mediaIdsInMarkdown(bodyEditorOpen ? editorBody : form.body),
     [bodyEditorOpen, editorBody, form.body],
@@ -442,7 +442,7 @@ export function WritePage() {
           setAutosave({
             status: conflict ? "conflict" : "error",
             message: collectionFailure
-              ? "原 Collection 已不可用。正文仍保留在本地，请改选“不加入 Collection”或其他 Collection 后重试。"
+              ? "原合集已不可用。正文仍保留在本地，请改选“不加入合集”或其他合集后重试。"
               : saveError.message,
             savedAt: null,
           });
@@ -621,15 +621,15 @@ export function WritePage() {
 
   const validatePublish = (checkCollection = true) => {
     const tags = payload.tag_names || [];
-    if (tags.length > 20) return "Tags 最多填写 20 项。";
+    if (tags.length > 20) return "最多添加 20 个标签。";
     if (form.post_type === "article") {
-      if (!form.title.trim()) return "Article 发布前必须填写标题。";
-      if (!form.body.trim()) return "Article 发布前必须填写正文。";
-      if (!slugPattern.test(form.slug.trim())) return "Article Slug 只能使用小写字母、数字和连字符。";
+      if (!form.title.trim()) return "请填写文章标题。";
+      if (!form.body.trim()) return "请填写文章正文。";
+      if (!slugPattern.test(form.slug.trim())) return "文章网址标识只能使用小写字母、数字和连字符。";
     } else {
       const hasMedia = Boolean(savedPost?.cover_media_id || savedPost?.bound_media?.length);
       if (!form.body.trim() && !form.external_video_url.trim() && !hasMedia) {
-        return "Note 至少需要正文、图片、Live Photo 或外部视频之一。";
+        return "随记至少需要文字、图片、Live Photo 或外部视频之一。";
       }
       if (!validExternalUrl(form.external_video_url.trim())) return "外部视频链接必须是有效的 HTTP 或 HTTPS 地址。";
     }
@@ -984,12 +984,12 @@ export function WritePage() {
                 <label className={form.post_type === "article" ? "selected" : ""}>
                   <input type="radio" name="post_type" value="article" checked={form.post_type === "article"}
                     onChange={() => setForm((current) => ({ ...current, post_type: "article", occurred_at: "", location: "", mood: "", external_video_url: "", slug: current.slug || articleSlugFromTitle(current.title), slug_auto: usesAutomaticArticleSlug(current) }))} />
-                  <span>文章 <small>Article</small></span>
+                  <span>文章 <small></small></span>
                 </label>
                 <label className={form.post_type === "note" ? "selected" : ""}>
                   <input type="radio" name="post_type" value="note" checked={form.post_type === "note"}
                     onChange={() => setForm((current) => ({ ...current, post_type: "note", category_id: "", summary: "", slug: "", slug_auto: true }))} />
-                  <span>随记 <small>Note</small></span>
+                  <span>随记 <small></small></span>
                 </label>
                 {isPublished ? <small>首次发布后类型锁定</small> : (memoryLink ? <small>共同回忆补充固定为随记</small> : null)}
               </fieldset>
@@ -997,15 +997,15 @@ export function WritePage() {
 
             <label className="editor-paper-field editor-title-field">
               <span className="sr-only">标题 · {form.post_type === "article" ? "发布时必填" : "可选"}</span>
-              <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "写下值得被慢慢读完的事" : "给此刻留下一行标题"} />
+              <input maxLength={240} value={form.title} onChange={set("title")} placeholder={form.post_type === "article" ? "文章标题（必填）" : "随记标题（选填）"} />
             </label>
 
             {form.post_type === "article" ? (
               <details className="editor-summary-drawer">
-                <summary>摘要 <span>{form.summary.trim() ? "已填写 · 展开编辑" : "可选 · 为阅读留一个入口"}</span></summary>
+                <summary>摘要 <span>{form.summary.trim() ? "已填写 · 展开编辑" : "选填"}</span></summary>
               <label className="editor-paper-field editor-summary-field editor-summary-inline">
                 <span>摘要 · 可选</span>
-                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="用一两句话，为阅读留下入口。" />
+                <textarea className="short-textarea" maxLength={500} value={form.summary} onChange={set("summary")} placeholder="简要介绍文章内容（选填）。" />
               </label>
               </details>
             ) : null}
@@ -1030,7 +1030,7 @@ export function WritePage() {
               <div className="editor-body-toolbar">
                 <div className="editor-body-heading-copy sr-only">
                   <span id="editor-body-heading">正文</span>
-                  <small>BODY / 在纸上慢慢展开</small>
+                  <small></small>
                 </div>
                 <button className="editor-immersive-action" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
                 <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
@@ -1097,17 +1097,17 @@ export function WritePage() {
             ) : null}
           </section>
           ) : (
-            <section className="editor-paper editor-paper-preview" aria-label={`${title} 安全预览`} aria-live="polite">
+            <section className="editor-paper editor-paper-preview" aria-label={`${title} 预览`} aria-live="polite">
               <div className="editor-paper-masthead">
-                <p className="editor-paper-index">PREVIEW / {form.post_type === "article" ? "ARTICLE" : "NOTE"}</p>
-                <span className="editor-preview-status">发布前，再读一遍。</span>
+                <p className="editor-paper-index">{form.post_type === "article" ? "文章预览" : "随记预览"}</p>
+                <span className="editor-preview-status">内容预览</span>
               </div>
               <article className="editor-preview-document">
                 <h1>{form.title.trim() || (form.post_type === "article" ? "未命名文章" : "未命名随记")}</h1>
                 {form.summary ? <p className="editor-preview-summary">{form.summary}</p> : null}
                 {preview.error ? <div className="inline-error" role="alert">{preview.error}</div> : null}
                 {preview.html ? <ProtectedMarkdown html={preview.html} media={savedPost?.bound_media || []} management className="prose editor-preview-prose" /> : null}
-                {!preview.error && !preview.html ? <p className="editor-preview-empty">{preview.loading ? "正在生成安全预览…" : "正文为空，暂无可预览内容。"}</p> : null}
+                {!preview.error && !preview.html ? <p className="editor-preview-empty">{preview.loading ? "正在生成预览…" : "正文为空，暂无可预览内容。"}</p> : null}
                 {preview.loading && preview.html ? <span className="editor-preview-updating">正在更新预览…</span> : null}
               </article>
             </section>
@@ -1132,7 +1132,7 @@ export function WritePage() {
 
         {publicationOpen ? <button className="editor-sidebar-scrim" type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)} /> : null}
         <aside ref={publicationPanelRef} className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} role="dialog" aria-modal={publicationOpen || undefined} aria-label="文稿信息" aria-hidden={!publicationOpen || undefined}>
-          <header className="editor-sidebar-heading"><div><p>文稿信息 <small>PUBLICATION</small></p><h2>整理这篇记录</h2><span>归属与访问设置会随草稿一起保存。</span></div><button type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)}>×</button></header>
+          <header className="editor-sidebar-heading"><div><p><small></small></p><h2>文稿信息</h2><span>合集与阅读范围会随草稿一起保存。</span></div><button type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)}>×</button></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <section className="editor-publication-status" aria-label="发布状态">
             <div className="editor-status"><span>内容状态</span><strong>{postStatusLabel(savedPost?.status)}</strong></div>
@@ -1140,7 +1140,7 @@ export function WritePage() {
             <div className="editor-status"><span>封面图片</span><strong>{savedPost?.cover_media_id ? "已设置" : "未设置"}</strong></div>
           </section>
           {form.post_type === "article" ? <section className="editor-sidebar-section">
-            <header><span>01</span><strong>网址与分类</strong></header>
+            <header><span></span><strong>网址与分类</strong></header>
             <label>
               <span>文章网址</span>
               <input aria-label="文章网址" aria-describedby="article-slug-help" value={form.slug} maxLength={180} onChange={(event) => {
@@ -1157,41 +1157,41 @@ export function WritePage() {
             <label>
               <span>分类</span>
               <CustomSelect value={form.category_id} onChange={set("category_id")}>
-                <option value="">不设置 Category</option>
-                {categoryUnavailable ? <option value={form.category_id}>{savedPost?.category?.name || "当前 Category"}（已停用）</option> : null}
+                <option value="">不设置分类</option>
+                {categoryUnavailable ? <option value={form.category_id}>{savedPost?.category?.name || "当前分类"}（已停用）</option> : null}
                 {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
               </CustomSelect>
             </label>
-          </section> : <section className="editor-sidebar-section"><header><span>01</span><strong>延伸内容</strong></header><label><span>外部视频链接</span><input type="url" value={form.external_video_url} onChange={set("external_video_url")} aria-invalid={!validExternalUrl(form.external_video_url)} placeholder="https://" /></label></section>}
+          </section> : <section className="editor-sidebar-section"><header><span></span><strong>延伸内容</strong></header><label><span>外部视频链接</span><input type="url" value={form.external_video_url} onChange={set("external_video_url")} aria-invalid={!validExternalUrl(form.external_video_url)} placeholder="https://" /></label></section>}
 
           <section className="editor-sidebar-section">
-          <header><span>02</span><strong>归属与访问</strong></header>
+          <header><span></span><strong>合集与阅读范围</strong></header>
           <label>
             <span>合集</span>
             <CustomSelect disabled={Boolean(memoryLink)} value={form.collection_id} onChange={set("collection_id")}>
-              <option value="">不加入 Collection</option>
-              {collectionUnavailable ? <option value={form.collection_id}>原 Collection（当前不可访问）</option> : null}
+              <option value="">不加入合集</option>
+              {collectionUnavailable ? <option value={form.collection_id}>原合集（当前不可访问）</option> : null}
               {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
             </CustomSelect>
             {memoryLink
-              ? <small>共同回忆补充沿用原记录的 Collection；解除关联后可修改。</small>
+              ? <small>共同回忆补充沿用原记录的合集；解除关联后可修改。</small>
               : collectionUnavailable
-              ? <small className="field-error">你已不在原 Collection 中。仍可编辑，但发布前必须先移出。</small>
-              : <small>只能选择你当前有权进入和投稿的 Collection。</small>}
+              ? <small className="field-error">你已不在原合集中。仍可编辑，但发布前必须先移出。</small>
+              : <small>可选择你创建或加入的合集。</small>}
           </label>
 
           <label>
-            <span>可见性</span>
+            <span>阅读范围</span>
             <CustomSelect disabled={inCollection} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
-              <option value="private">仅自己</option>
-              <option value="login_only">所有登录成员</option>
+              <option value="private">{inCollection ? "仅合集成员" : "仅自己"}</option>
+              <option value="login_only">所有映墨成员</option>
             </CustomSelect>
-            {inCollection ? <small>Collection Post 的 visibility 不扩大合集 ACL。</small> : null}
+            {inCollection ? <small>此内容由当前合集成员阅读。</small> : null}
           </label>
           </section>
 
           <section className="editor-sidebar-section editor-sidebar-tags">
-          <header><span>03</span><strong>标签与封面</strong></header>
+          <header><span></span><strong>标签与封面</strong></header>
           <details className="editor-tag-settings">
             <summary>标签 · 已选 {selectedTagNames(form.tag_names).length} 个</summary>
             <TagPicker value={form.tag_names} initialTags={savedPost?.tags || []} disabled={busy} onChange={(names) => setForm((current) => ({ ...current, tag_names: names }))} />

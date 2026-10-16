@@ -20,7 +20,7 @@ export function SparkQueue({ data, now, busy, onCancel }) {
   const running = jobs.find((job) => job.status === "running");
   const ready = jobs.filter((job) => job.status === "queued" && new Date(job.scheduled_at).getTime() <= now);
   if (!jobs.length) return null;
-  const headline = !online ? "等待后台同步任务状态" : running ? "任务正在向前走" : ready.length ? "已经排好队，稍等一下" : "时间已安排，到点后入队";
+  const headline = !online ? "等待后台同步任务状态" : running ? "任务执行中" : ready.length ? "等待执行" : "时间已安排，到点后入队";
   const explanation = !online ? "后台暂未连接，任务状态会在恢复后同步。"
     : running ? "后台正在处理你的任务，结果会自动更新。"
     : ready.length ? data.queue?.busy ? "前序任务正在执行，结束后后台会继续处理队列。无需重复提交。" : "任务已提交，正在等待后台接手。无需重复提交。"

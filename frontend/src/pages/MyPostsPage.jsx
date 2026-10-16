@@ -103,7 +103,7 @@ export function MyPostsPage() {
         setFeedback("内容已归档。");
       } else if (type === "detach") {
         await api.post(`/posts/${post.id}/remove-from-collection`, {});
-        setFeedback("内容已移出 Collection，并恢复为仅自己可见。");
+        setFeedback("内容已移出合集，并恢复为仅自己可见。");
       } else if (type === "delete") {
         await api.delete(`/posts/${post.id}`);
         setFeedback(post.published_at ? "已删除发布内容。" : "已删除草稿。");
@@ -131,7 +131,7 @@ export function MyPostsPage() {
     } catch (error) {
       setFeedback("");
       setActionError(error.status === 404 && post.collection_id
-        ? "普通阅读入口当前不可用。你仍可编辑此内容，或先将它移出原 Collection。"
+        ? "你仍可编辑自己的内容，或将它移出原合集。"
         : error.message);
     } finally {
       setOpeningId(null);
@@ -152,9 +152,9 @@ export function MyPostsPage() {
       <header className="page-heading">
         <InkPageSketch />
         <div>
-          <p className="section-kicker">WRITING DESK / ARCHIVE</p>
+          <p className="section-kicker"></p>
           <h1>我的内容</h1>
-          <p>这里是作者管理入口，即使你已被移出某个 Collection，自己的历史 Post 仍会保留最小管理能力。</p>
+          <p>管理自己的文章、随记和草稿。</p>
         </div>
         <Link className="btn btn-primary" to="/write">新建</Link>
       </header>
@@ -172,8 +172,8 @@ export function MyPostsPage() {
           <input id="my-posts-search" type="search" maxLength={100} value={searchValue} onChange={(event) => setSearchValue(event.target.value)} placeholder="搜索标题、摘要或正文" />
           <CustomSelect aria-label="内容类型" value={postType} onChange={(event) => updateParams({ type: event.target.value, page: "" })}>
             <option value="">全部类型</option>
-            <option value="article">Article</option>
-            <option value="note">Note</option>
+            <option value="article">文章</option>
+            <option value="note">随记</option>
           </CustomSelect>
           <button className="btn btn-secondary" type="submit">搜索</button>
         </form>
@@ -190,7 +190,7 @@ export function MyPostsPage() {
                 <div className="post-management-meta">
                   <span>{postTypeLabel(post.post_type)}</span>
                   <span className={`post-status post-status-${post.status}`}>{statusLabels[post.status] || post.status}</span>
-                  <span>{post.collection_id ? "Collection 内容" : visibilityLabel(post.visibility)}</span>
+                  <span>{post.collection_id ? "合集内容" : visibilityLabel(post.visibility)}</span>
                 </div>
                 <h2>{post.title || (post.post_type === "note" ? "未命名随记" : "未命名文章")}</h2>
                 <p>更新于 {formatDate(post.updated_at, true)}{post.published_at ? ` · 首次发布于 ${formatDate(post.published_at, true)}` : ""}</p>
@@ -235,16 +235,16 @@ export function MyPostsPage() {
           : action?.type === "archive"
             ? "归档这篇内容？"
             : action?.type === "detach"
-              ? "移出原 Collection？"
+              ? "移出原合集？"
               : "删除这篇内容？"}
         description={action?.type === "publish"
-          ? "发布后会按照独立可见性或 Collection 成员范围开放阅读。"
+          ? "发布后，独立内容按所选阅读范围展示；合集内容仅合集成员可读。"
           : action?.type === "archive"
             ? "归档后内容仍可由有权成员阅读，也可以继续编辑。"
             : action?.type === "detach"
-              ? "内容会脱离原 Collection，并自动恢复为仅自己可见。"
+              ? "内容会脱离原合集，并自动恢复为仅自己可见。"
               : action?.post?.published_at
-                ? "发布过的内容会从正常入口移除，这项操作不能在前端撤销。"
+                ? "发布过的内容将不再显示，删除后无法在本页恢复。"
                 : "未发布草稿会被永久删除，这项操作不能撤销。"}
         confirmLabel={action?.type === "publish" ? "确认发布" : action?.type === "archive" ? "确认归档" : action?.type === "detach" ? "确认移出" : "确认删除"}
         danger={action?.type !== "publish"}
@@ -255,7 +255,7 @@ export function MyPostsPage() {
       >
         {action?.type === "publish" && action?.post?.post_type === "article" ? (
           <label>
-            <span>Article Slug</span>
+            <span>文章网址标识</span>
             <input data-autofocus required value={slug} onChange={(event) => {
               setSlug(event.target.value.toLowerCase());
               setActionError("");

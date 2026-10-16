@@ -59,14 +59,14 @@ function RevisionPreview({ post, revisionId, onRestored }) {
       <dl className="revision-facts">
         <div><dt>类型</dt><dd>{postTypeLabel(snapshot.post_type)}</dd></div>
         <div><dt>当次变更</dt><dd>{changed.length ? changed.join("、") : "未记录"}</dd></div>
-        {snapshot.slug ? <div><dt>Slug</dt><dd>{snapshot.slug}</dd></div> : null}
+        {snapshot.slug ? <div><dt>网址标识</dt><dd>{snapshot.slug}</dd></div> : null}
         {snapshot.occurred_at ? <div><dt>记录时间</dt><dd>{formatDate(snapshot.occurred_at, true)}</dd></div> : null}
         {snapshot.location ? <div><dt>地点</dt><dd>{snapshot.location}</dd></div> : null}
         {snapshot.mood ? <div><dt>心情</dt><dd>{snapshot.mood}</dd></div> : null}
-        {snapshot.category ? <div><dt>Category</dt><dd>{snapshot.category.name}</dd></div> : null}
-        {snapshot.tags?.length ? <div><dt>Tags</dt><dd>{snapshot.tags.map((tag) => `#${tag.name}`).join(" ")}</dd></div> : null}
-        {snapshot.collection ? <div><dt>Collection</dt><dd>{snapshot.collection.name}</dd></div> : null}
-        {snapshot.collection_unavailable ? <div><dt>Collection</dt><dd>原合集当前不可访问</dd></div> : null}
+        {snapshot.category ? <div><dt>分类</dt><dd>{snapshot.category.name}</dd></div> : null}
+        {snapshot.tags?.length ? <div><dt>标签</dt><dd>{snapshot.tags.map((tag) => `#${tag.name}`).join(" ")}</dd></div> : null}
+        {snapshot.collection ? <div><dt>合集</dt><dd>{snapshot.collection.name}</dd></div> : null}
+        {snapshot.collection_unavailable ? <div><dt>合集</dt><dd>原合集当前不可访问</dd></div> : null}
       </dl>
       {snapshot.summary ? <p className="revision-summary">{snapshot.summary}</p> : null}
       <ProtectedMarkdown html={snapshot.rendered_html} media={snapshot.bound_media || []} management className="prose revision-prose" />
@@ -74,7 +74,7 @@ function RevisionPreview({ post, revisionId, onRestored }) {
       <ConfirmDialog
         open={confirmOpen}
         title="恢复这个历史版本？"
-        description="当前内容会先保存为一条新的历史记录，然后恢复所选版本。恢复不会删除任何既有 Revision。"
+        description="恢复前会保存当前版本，已有历史版本会保留。"
         confirmLabel="确认恢复"
         busy={busy}
         onConfirm={restore}
@@ -164,7 +164,7 @@ export function PostRevisionsPage() {
             <RevisionPreview key={`${revisionId}-${reloadKey}`} post={post} revisionId={revisionId} onRestored={restored} />
           ) : (
             <section className="revision-preview revision-preview-empty">
-              <EmptyState sketch="rewind" title="翻一翻写过的路" description="从版本列表选择一页，查看当时的内容，再决定是否恢复。" />
+              <EmptyState sketch="rewind" title="选择一个历史版本" description="查看内容后可恢复。" />
             </section>
           )}
         </div>
