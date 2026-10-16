@@ -33,6 +33,8 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   onPaste,
   onUpdateMedia,
   showSourcePreview = true,
+  toolbar,
+  toolbarEnd,
 }, ref) {
   const source = String(value || "");
   const rows = useMemo(() => manageableMediaRows(media), [media]);
@@ -43,6 +45,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   const [sourceMode, setSourceMode] = useState(false);
   const [sourcePreview, setSourcePreview] = useState({ html: "", error: "", loading: false });
   const [previewRetry, setPreviewRetry] = useState(0);
+  const [controlsHost, setControlsHost] = useState(null);
   const mediaContext = useMemo(() => ({ mediaMap, management, onUpdateMedia }), [mediaMap, management, onUpdateMedia]);
 
   useEffect(() => {
@@ -82,10 +85,14 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   }));
 
   return (
-    <div className={`visual-markdown-editor ${className}`}>
+    <div className={`visual-markdown-editor ${className}${toolbar ? " has-commandbar" : ""}`}>
+      <div className={toolbar ? "visual-markdown-commandbar" : undefined}>
+      {toolbar ? <><div className="visual-rich-tools" ref={setControlsHost} hidden={sourceMode} />{toolbar}</> : null}
       <div className="visual-markdown-mode-switch" role="group" aria-label="正文编辑显示模式">
-        <button type="button" aria-pressed={!sourceMode} onClick={() => setSourceMode(false)}>可视编辑</button>
-        <button type="button" aria-pressed={sourceMode} onClick={() => setSourceMode(true)}>Markdown 源码</button>
+        <button type="button" aria-label="可视编辑" aria-pressed={!sourceMode} onClick={() => setSourceMode(false)}>可视编辑</button>
+        <button type="button" aria-label="Markdown 源码" aria-pressed={sourceMode} onClick={() => setSourceMode(true)}>{toolbar ? "源码" : "Markdown 源码"}</button>
+      </div>
+      {toolbarEnd}
       </div>
       <div hidden={!sourceMode} className={`visual-source-workspace ${showSourcePreview ? "has-preview" : ""}`}><textarea
           ref={rawTextareaRef}
@@ -110,6 +117,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
               ref={richEditorRef}
               value={source}
               mediaContext={mediaContext}
+              controlsHost={controlsHost}
               spellCheck={spellCheck}
               onChange={(value) => emitValue(onChange, value)}
               onKeyDown={onKeyDown}

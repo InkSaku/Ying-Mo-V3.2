@@ -54,6 +54,16 @@ const MARKDOWN_SHORTCUTS = [
 ];
 const COMMON_MARKDOWN_ACTIONS = new Set(["heading", "bold", "italic", "quote", "list", "link"]);
 
+function FormatToolGlyph({ action, label }) {
+  const paths = {
+    quote: <><path d="M8 5H3v6h5V5Zm9 0h-5v6h5V5ZM8 11c0 3-2 5-4 5m13-5c0 3-2 5-4 5" /></>,
+    list: <><path d="M7 5h10M7 10h10M7 15h10" /><circle cx="3" cy="5" r=".65" /><circle cx="3" cy="10" r=".65" /><circle cx="3" cy="15" r=".65" /></>,
+    link: <><path d="m8 12 4-4M7 7l2-2a4 4 0 0 1 6 6l-2 2M7 7l-2 2a4 4 0 0 0 6 6l2-2" /></>,
+  };
+  if (!paths[action]) return <span className={`editor-format-glyph editor-format-${action}`} aria-hidden="true">{label}</span>;
+  return <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[action]}</svg>;
+}
+
 function toLocalDatetime(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -993,6 +1003,7 @@ export function WritePage() {
                 </label>
                 {isPublished ? <small>首次发布后类型锁定</small> : (memoryLink ? <small>共同回忆补充固定为随记</small> : null)}
               </fieldset>
+              <div className="editor-cat-perch"><ArticleArchiveCat /></div>
             </div>
 
             <label className="editor-paper-field editor-title-field">
@@ -1027,42 +1038,6 @@ export function WritePage() {
               }}
               onDrop={handleInlineDrop}
             >
-              <div className="editor-body-toolbar">
-                <div className="editor-body-heading-copy sr-only">
-                  <span id="editor-body-heading">正文</span>
-                  <small></small>
-                </div>
-                <button className="editor-immersive-action" type="button" onClick={openBodyEditor}>进入沉浸写作 <span aria-hidden="true">↗</span></button>
-                <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
-                  <button
-                    className="markdown-shortcut-button editor-inline-image-button"
-                    type="button"
-                    disabled={editorUploading}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      captureMediaInsertionSelection();
-                      inlineImageInputRef.current?.click();
-                    }}
-                  >
-                    {editorUploading ? "上传中" : "图片"}
-                  </button>
-                  {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}>{item.label}</button>)}
-                  <details className="editor-more-formats" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
-                    <summary>更多 <span aria-hidden="true">⌄</span></summary>
-                    <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{item.label}</button>)}</div>
-                  </details>
-                  <input
-                    ref={inlineImageInputRef}
-                    className="editor-inline-file-input"
-                    type="file"
-                    accept={IMAGE_ACCEPT}
-                    multiple
-                    disabled={editorUploading}
-                    tabIndex="-1"
-                    onChange={(event) => { void uploadFromInlinePicker(event); }}
-                  />
-                </div>
-              </div>
               <UploadProgress state={editorUploadState} onCancel={cancelInlineUpload} onRetry={editorUploadRetryRef.current ? retryInlineUpload : null} compact />
               <VisualMarkdownEditor
                 ref={inlineBodyRef}
@@ -1078,12 +1053,51 @@ export function WritePage() {
                 placeholder={form.post_type === "article" ? "从这里开始写下正文……" : "记下此刻发生的事……"}
                 ariaLabel="正文"
                 ariaDescribedBy="editor-body-help"
+                toolbar={
+                  <div className="editor-body-toolbar">
+                    <div className="editor-body-heading-copy sr-only">
+                      <span id="editor-body-heading">正文</span>
+                      <small></small>
+                    </div>
+                    <div className="markdown-shortcut-toolbar editor-inline-shortcuts" role="toolbar" aria-label="正文快捷操作">
+                      <button
+                        className="markdown-shortcut-button editor-inline-image-button"
+                        type="button"
+                        disabled={editorUploading}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          captureMediaInsertionSelection();
+                          inlineImageInputRef.current?.click();
+                        }}
+                      >
+                        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="1" /><circle cx="7" cy="7" r="1.3" /><path d="m3 14 4-4 3 3 3-3 4 4" /></svg>
+                        {editorUploading ? "上传中" : "图片"}
+                      </button>
+                      {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}><FormatToolGlyph action={item.action} label={item.label} /></button>)}
+                      <details className="editor-more-formats" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
+                        <summary>更多 <span aria-hidden="true">⌄</span></summary>
+                        <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{item.label}</button>)}</div>
+                      </details>
+                      <input
+                        ref={inlineImageInputRef}
+                        className="editor-inline-file-input"
+                        type="file"
+                        accept={IMAGE_ACCEPT}
+                        multiple
+                        disabled={editorUploading}
+                        tabIndex="-1"
+                        onChange={(event) => { void uploadFromInlinePicker(event); }}
+                      />
+                    </div>
+                  </div>
+                }
+                toolbarEnd={<button className="editor-immersive-action" type="button" title="进入沉浸写作" aria-label="进入沉浸写作" onClick={openBodyEditor}>
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 3H3v4m10-4h4v4M3 13v4h4m10-4v4h-4" /></svg>
+                </button>}
               />
               <div className="editor-inline-drop-hint" aria-hidden={!inlineDraggingImage}>松开即可上传并插入到当前位置</div>
               <small id="editor-body-help" className="editor-body-help">可以粘贴或拖入图片；点选图片后可删除、剪切或复制，按 Enter 在下方继续写。</small>
             </section>
-
-            <div className="editor-cat-perch"><ArticleArchiveCat /></div>
 
             {form.post_type === "note" ? (
               <details className="editor-abstract-drawer">

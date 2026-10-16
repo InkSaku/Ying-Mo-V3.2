@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CustomSelect } from "./CustomSelect";
 import { useEditor, EditorContent, ReactNodeViewRenderer } from "@tiptap/react";
 import { closeHistory } from "@tiptap/pm/history";
@@ -18,7 +19,7 @@ function restoreEditorSelection(editor, source, start, end) {
   editor.chain().focus().setTextSelection({ from, to: Math.max(from, to) }).run();
 }
 
-export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelection, onFocus, onKeyDown, onPaste, placeholder, ariaLabel, ariaDescribedBy, spellCheck, mediaContext }, ref) {
+export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelection, onFocus, onKeyDown, onPaste, placeholder, ariaLabel, ariaDescribedBy, spellCheck, mediaContext, controlsHost }, ref) {
   const propsRef = useRef({ value, onChange, onSelection, onFocus, onKeyDown, onPaste });
   propsRef.current = { value, onChange, onSelection, onFocus, onKeyDown, onPaste };
   const emittedRef = useRef(value);
@@ -126,13 +127,14 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
     if (href) chain.setLink({ href }).run(); else chain.unsetLink().run();
     setLinkDraft(null);
   };
-  return <div className="rich-markdown-block">
-    <div className="rich-block-controls" role="group" aria-label="段落与历史">
+  const controls = <div className="rich-block-controls" role="group" aria-label="段落与历史">
       <CustomSelect aria-label="段落样式" value={heading} onChange={(event) => { const level = Number(event.target.value); if (level) editor.chain().focus().setHeading({ level }).run(); else editor.chain().focus().setParagraph().run(); }}><option value={0}>正文</option>{[1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={level}>标题 {level}</option>)}</CustomSelect>
-      <button type="button" aria-label="撤销正文修改" disabled={!editor.can().undo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().undo().run()}>↶</button>
-      <button type="button" aria-label="重做正文修改" disabled={!editor.can().redo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().redo().run()}>↷</button>
+      <button type="button" title="撤销" aria-label="撤销正文修改" disabled={!editor.can().undo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().undo().run()}><svg viewBox="0 0 20 20" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 5 3 9l4 4M3 9h8a5 5 0 0 1 0 10" transform="translate(0 -2)" /></svg></button>
+      <button type="button" title="重做" aria-label="重做正文修改" disabled={!editor.can().redo()} onMouseDown={(event) => event.preventDefault()} onClick={() => editor.chain().focus().redo().run()}><svg viewBox="0 0 20 20" aria-hidden="true" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="m13 5 4 4-4 4m4-4H9a5 5 0 0 0 0 10" transform="translate(0 -2)" /></svg></button>
       <span>输入 # 加空格可写标题</span>
-    </div>
+    </div>;
+  return <div className="rich-markdown-block">
+    {controlsHost ? createPortal(controls, controlsHost) : controls}
     {linkDraft !== null ? <div className="rich-link-edit"><label>链接地址<input autoFocus aria-label="链接地址" value={linkDraft} onChange={(event) => setLinkDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); saveLink(); } }} /></label><button type="button" onClick={saveLink}>应用链接</button><button type="button" onClick={() => setLinkDraft(null)}>取消</button></div> : null}
     <EditorMediaContext.Provider value={mediaContext || { mediaMap: new Map() }}>
       <div className={editor.isEmpty ? "rich-is-empty" : ""} data-placeholder={placeholder}><EditorContent editor={editor} /></div>
