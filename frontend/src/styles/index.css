@@ -447,7 +447,8 @@ h3 {
 .app-header {
   position: sticky;
   top: 0;
-  z-index: 20;
+  /* Above sticky editor actions; below dialog scrims (95) and dialogs. */
+  z-index: 80;
 }
 
 .header-inner,
@@ -658,10 +659,6 @@ h3 {
   border-top: 1px solid var(--border-soft);
 }
 
-.header-menu-foot .theme-control {
-  justify-content: space-between;
-}
-
 .header-menu-foot .text-button {
   justify-self: start;
 }
@@ -720,16 +717,27 @@ h3 {
   text-underline-offset: 3px;
 }
 
-.theme-control {
+.theme-toggle {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 6px;
-  color: var(--text-4);
-  font-size: 12px;
-  white-space: nowrap;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.theme-control select,
+.theme-toggle svg { width: 22px; height: 22px; }
+.theme-toggle:hover { background: var(--surface-2); color: var(--brand-link); }
+.theme-toggle:active { background: var(--border-soft); }
+.theme-toggle:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+
 .sort-control select {
   min-height: 38px;
   border: 1px solid var(--border);
@@ -6584,7 +6592,6 @@ input[aria-invalid="true"] {
     width: min(100% - 28px, var(--page-width));
   }
 
-  .public-nav .theme-control,
   .public-nav > a:not(.btn) {
     display: none;
   }

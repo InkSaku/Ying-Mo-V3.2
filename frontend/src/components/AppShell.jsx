@@ -102,6 +102,7 @@ export function AppShell() {
           </nav>
 
           <div className="header-actions desktop-actions">
+            <ThemeControl />
             <Link className="btn btn-primary btn-small" to="/write">写作</Link>
             <Link className={`notification-link${unreadCount ? " has-unread" : ""}`} to="/me/notifications" aria-label={notificationLabel}>
               <span>通知</span>
@@ -121,7 +122,6 @@ export function AppShell() {
                   {user?.role === "system_admin" ? <Link to="/admin" onClick={closeOwningMenu}>管理后台</Link> : null}
                 </nav>
                 <div className="header-menu-foot">
-                  <ThemeControl />
                   <button className="text-button" type="button" onClick={handleLogout}>退出登录</button>
                 </div>
               </div>
@@ -129,6 +129,7 @@ export function AppShell() {
           </div>
 
           <div className="mobile-header-actions">
+            <ThemeControl />
             <Link className={`mobile-notification-button${unreadCount ? " has-unread" : ""}`} to="/me/notifications" aria-label={notificationLabel}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6 2.5 6 2.5 7.5H4c0-1.5 2.5-1.5 2.5-7.5Z" /><path d="M9.5 19a2.7 2.7 0 0 0 5 0" /></svg>
               {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
@@ -150,7 +151,6 @@ export function AppShell() {
                   {user?.role === "system_admin" ? <Link to="/admin" onClick={closeOwningMenu}>管理后台</Link> : null}
                 </nav>
                 <div className="mobile-menu-foot">
-                  <ThemeControl />
                   <button className="text-button" type="button" onClick={handleLogout}>退出登录</button>
                 </div>
               </div>

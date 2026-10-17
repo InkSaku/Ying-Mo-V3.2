@@ -140,18 +140,6 @@
   overflow-wrap: anywhere;
 }
 
-.theme-control .custom-select {
-  width: 118px;
-}
-
-.theme-control .custom-select-trigger {
-  min-height: 38px;
-  padding: 6px 8px 6px 10px;
-  border-radius: var(--radius-sm);
-  color: var(--text-2);
-  font-size: 12px;
-}
-
 .sort-control .custom-select {
   width: 142px;
 }
@@ -180,10 +168,6 @@
 }
 
 @media (max-width: 767px) {
-  .theme-control .custom-select {
-    width: 112px;
-  }
-
   .custom-select-panel {
     border-radius: 9px;
   }
