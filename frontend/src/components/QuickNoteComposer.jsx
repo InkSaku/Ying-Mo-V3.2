@@ -1,3 +1,4 @@
+import { invalidateHomeFeedCache } from "../lib/homeFeed";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -171,6 +172,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     try {
       const draft = await persistDraft();
       const result = await api.post(`/posts/${draft.id}/publish`, {});
+      invalidateHomeFeedCache(user.id, window.sessionStorage);
       const published = quickNoteBrowseItem(result.data);
       removeQuickNoteDraft(window.localStorage, storageKey);
       replacePost(null);

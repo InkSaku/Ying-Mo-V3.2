@@ -1,3 +1,4 @@
+import { invalidateHomeFeedCache } from "../lib/homeFeed";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { articleSlugFromTitle, articleSlugWithSuffix, updateTitleAndSlug, usesAutomaticArticleSlug } from "../lib/articleSlug";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -673,6 +674,7 @@ export function WritePage() {
           publishPayload.slug = articleSlugWithSuffix(form.slug.trim(), attempt ? `${post.id}-${attempt + 1}` : post.id);
         }
       }
+      invalidateHomeFeedCache(user.id, window.sessionStorage);
       navigate(published.data.post_type === "article" ? `/articles/${published.data.slug}` : `/notes/${published.data.id}`, { replace: true });
     } catch (publishError) {
       if (publishError.code !== "EDIT_CONFLICT") setError(publishError.message);

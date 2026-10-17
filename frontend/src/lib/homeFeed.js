@@ -55,6 +55,17 @@ export function readHomeFeedCache(userId, type, now = Date.now()) {
   return cached.value;
 }
 
+// A successful publication changes every filter, not only the visible stream.
+// Drop the old reading position too so returning home reveals the new record.
+export function invalidateHomeFeedCache(userId, storage) {
+  for (const type of HOME_FEED_TYPES) {
+    const key = homeFeedCacheKey(userId, type);
+    feedCache.delete(key);
+    feedAnchorCache.delete(key);
+    removeHomeFeedScroll(storage, userId, type);
+  }
+}
+
 export function writeHomeFeedCache(userId, type, value, now = Date.now()) {
   feedCache.set(homeFeedCacheKey(userId, type), { savedAt: now, value });
 }

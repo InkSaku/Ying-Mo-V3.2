@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   captureHomeFeedAnchor,
+  invalidateHomeFeedCache,
   homeFeedAnchorScrollTarget,
   homeFeedCacheKey,
   homeFeedDayKey,
@@ -109,4 +110,23 @@ test("home feed excerpt removes media placeholders and markdown noise", () => {
   assert.equal(homeFeedExcerpt({ feed_excerpt: "接口预览", body: "完整正文" }), "接口预览");
   assert.equal(homeFeedExcerpt({ content_excerpt: "通用浏览预览", body: "完整正文" }), "通用浏览预览");
   assert.equal(homeFeedExcerpt({ summary: "123456" }, 4), "1234...");
+});
+
+test("publication invalidates every feed filter and its old reading position without removing another member’s saved scroll", () => {
+  const storage = memoryStorage();
+  const value = { items: [{ id: 8 }], nextCursor: "next", hasMore: true };
+  for (const userId of [801, 802]) {
+    for (const type of ["all", "article", "note"]) {
+      writeHomeFeedCache(userId, type, value);
+      writeHomeFeedAnchor(userId, type, { postId: 8, offset: -10 });
+      writeHomeFeedScroll(storage, userId, type, 900);
+    }
+  }
+  invalidateHomeFeedCache(801, storage);
+  for (const type of ["all", "article", "note"]) {
+    assert.equal(readHomeFeedCache(801, type), null);
+    assert.equal(readHomeFeedAnchor(801, type), null);
+    assert.equal(readHomeFeedScroll(storage, 801, type), null);
+    assert.equal(readHomeFeedScroll(storage, 802, type), 900);
+  }
 });
