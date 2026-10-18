@@ -30,9 +30,13 @@ export function LandingPage() {
   const paperRef = useRef(null);
 
   useEffect(() => {
-    if (status !== "authenticated") return undefined;
+    // A lazy destination can keep this sheet mounted while its chunk loads.
+    // Browser history already reflects that departure; never redirect it back.
+    const stillOnWelcome = () => window.location.pathname === "/" && paperRef.current?.isConnected;
+    if (status !== "authenticated" || !stillOnWelcome()) return undefined;
     void import("./HomePage").catch(() => {});
     const enterHome = () => {
+      if (!stillOnWelcome()) return;
       navigate("/home", { replace: true });
       window.scrollTo({ top: 0, behavior: "instant" });
     };
@@ -43,7 +47,9 @@ export function LandingPage() {
       return undefined;
     }
     let frame = requestAnimationFrame(() => {
+      if (!stillOnWelcome()) return;
       frame = requestAnimationFrame(() => {
+        if (!stillOnWelcome()) return;
         hasOpenedWelcome = true;
         void playLoginPageTurn(prepareLoginPageTurn(paperRef.current), enterHome, { duration: 550, leadIn: 0 });
       });

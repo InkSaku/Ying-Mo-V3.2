@@ -62,9 +62,20 @@ test("an anonymous or expired session keeps the welcome page usable", async ({ p
 test("leaving the cover during session checking cancels automatic entry", async ({ page }) => {
   await restoreSession(page);
   const release = await holdRefresh(page);
+  let releaseAbout;
+  await page.route("**/src/pages/AboutPage.jsx*", async (route) => {
+    await new Promise((resolve) => { releaseAbout = resolve; });
+    await route.continue();
+  });
   await page.goto("/");
   await page.getByRole("link", { name: "关于映墨", exact: true }).click();
+  await expect.poll(() => Boolean(releaseAbout)).toBe(true);
+  const refresh = page.waitForResponse((response) => response.url().endsWith("/auth/refresh"));
   await release();
+  await refresh;
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await expect(page).toHaveURL(/\/about$/);
+  releaseAbout();
   await expect(page.getByRole("heading", { name: "关于映墨", exact: true })).toBeVisible();
   await expect(page.locator(".login-page-turn")).toHaveCount(0);
   await expect(page).toHaveURL(/\/about$/);
