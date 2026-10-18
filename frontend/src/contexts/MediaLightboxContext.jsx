@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { animatePhoto, cancelPhotoContinuity, photoThumbnail } from "../lib/photoContinuity";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
@@ -325,8 +326,7 @@ function MediaViewer({ item, previousItem, nextItem, canPrevious, canNext, onPre
     if (gesture?.kind === "single" && viewRef.current.scale === 1 && gesture.mode === "vertical") {
       const dy = viewRef.current.slideY;
       if (shouldCommitGesture(dy, gesture.velocityY, viewportRef.current.clientHeight)) {
-        viewRef.current.slideY = Math.sign(dy) * viewportRef.current.clientHeight;
-        settle(onClose);
+        onClose();
         return;
       }
     }
@@ -372,10 +372,28 @@ function MediaViewer({ item, previousItem, nextItem, canPrevious, canNext, onPre
   </div>;
 }
 
-function Lightbox({ gallery, close, move, download }) {
+function Lightbox({ gallery, close, move, download, opener }) {
   const item = gallery.items[gallery.index] || null;
   const dialogRef = useRef(null);
   const backdropRef = useRef(null);
+  const entranceRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (entranceRef.current) return;
+    const root = dialogRef.current;
+    const attempt = () => {
+      const image = root?.querySelector(".media-lightbox-slide-current img");
+      if (!image?.complete || !image.naturalWidth) return;
+      entranceRef.current = true;
+      animatePhoto(image, photoThumbnail(item?.id, opener));
+    };
+    attempt();
+    root?.addEventListener("load", attempt, true);
+    const observer = new MutationObserver(attempt);
+    if (root) observer.observe(root, { childList: true, subtree: true });
+    return () => { root?.removeEventListener("load", attempt, true); observer.disconnect(); };
+  }, [item?.id, opener]);
+
   const first = gallery.firstPosition || 0;
   const position = galleryPosition(first, gallery.index);
   const total = gallery.total || gallery.items.length;
@@ -393,7 +411,7 @@ function Lightbox({ gallery, close, move, download }) {
     return () => controller.abort();
   }, [gallery.index, gallery.items]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     dialogRef.current?.focus();
     const handler = (event) => {
       if (event.key === "Escape") close();
@@ -480,7 +498,9 @@ export function MediaLightboxProvider({ children }) {
     const items = mergeMediaItems([], options.items || []);
     const index = Math.max(0, items.findIndex((item) => item.id === options.initialMediaId));
     if (!items.length) return;
+    cancelPhotoContinuity();
     openerRef.current = options.opener || document.activeElement;
+    if (openerRef.current) openerRef.current.dataset.galleryPath = location.pathname;
     setGallery({
       items,
       index,
@@ -531,6 +551,7 @@ export function MediaLightboxProvider({ children }) {
   }, [urlMediaId]);
 
   const move = useCallback(async (delta) => {
+    cancelPhotoContinuity();
     const current = galleryRef.current;
     if (!current || current.loadingEdge || !current.items.length) return;
     const target = current.index + delta;
@@ -594,11 +615,16 @@ export function MediaLightboxProvider({ children }) {
     return () => { active = false; };
   }, [status, urlMediaId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (urlMediaId || !galleryRef.current) return;
+    const currentItem = galleryRef.current.items[galleryRef.current.index];
+    const image = document.querySelector(".media-lightbox-slide-current img");
+    const thumbnail = photoThumbnail(currentItem?.id, openerRef.current);
+    if (location.pathname === openerRef.current?.dataset.galleryPath) animatePhoto(image, thumbnail, true);
+    else cancelPhotoContinuity();
     setGallery(null);
     restoreFocus();
-  }, [restoreFocus, urlMediaId]);
+  }, [location.pathname, restoreFocus, urlMediaId]);
 
   useEffect(() => {
     if (!gallery) return undefined;
@@ -616,13 +642,14 @@ export function MediaLightboxProvider({ children }) {
 
   useEffect(() => {
     if (status === "authenticated") return;
+    cancelPhotoContinuity();
     setGallery(null);
   }, [status, user?.id]);
 
   const value = useMemo(() => ({ openGallery, hydrateGallery, closeGallery: close }), [close, hydrateGallery, openGallery]);
   return <MediaLightboxContext.Provider value={value}>
     {children}
-    {gallery ? <Lightbox gallery={gallery} close={close} move={move} download={download} /> : null}
+    {gallery ? <Lightbox gallery={gallery} close={close} move={move} download={download} opener={openerRef.current} /> : null}
   </MediaLightboxContext.Provider>;
 }
 

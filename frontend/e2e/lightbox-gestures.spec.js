@@ -9,7 +9,7 @@ const imagePaths = ["coast.jpg", "train.jpg"].map((name) => fileURLToPath(new UR
 async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
-  await page.getByLabel("密码").fill(account.password);
+  await page.getByLabel("密码", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }

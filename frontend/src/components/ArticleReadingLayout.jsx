@@ -182,7 +182,10 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
             <div className="article-reading-settings-panel">
               <div><span>字号</span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => changeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => changeFontSize(1)}>A＋</button></div>
               <button type="button" onClick={() => setFontSize(null)}>恢复默认字号</button>
-              <button type="button" onClick={() => setMode(resolved === "dark" ? "light" : "dark")}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
+              <button type="button" onClick={(event) => {
+                const box = event.currentTarget.getBoundingClientRect();
+                setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
+              }}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
             </div>
           </details>
           <button type="button" className="article-reading-favorite" disabled={!favorite?.ready || favorite.busy} aria-pressed={favorite?.favorited || false} onClick={() => { void favorite?.toggleFavorite(); }}><span aria-hidden="true">{favorite?.favorited ? "♥" : "♡"}</span>{favorite?.busy ? "处理中" : favorite?.favorited ? "已收藏" : "收藏文章"}</button>

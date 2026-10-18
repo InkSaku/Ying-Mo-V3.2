@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("collection library wraps its volumes and keeps creation accessible", async ({ page }, testInfo) => {
   await page.goto('/login');
   await page.getByLabel('用户名或邮箱').fill('editor_e2e');
-  await page.getByLabel('密码').fill('password123');
+  await page.getByLabel('密码', { exact: true }).fill('password123');
   await page.getByRole('button', { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.route('**/api/v1/collections?*', route => route.fulfill({ json: {
@@ -40,7 +40,7 @@ test("collection detail behaves as a shared volume across all reading views", as
 
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
-  await page.getByLabel("密码").fill(account.password);
+  await page.getByLabel("密码", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
   await page.route("**/api/v1/collections/coast-book", route => route.fulfill({ json: { data: collection } }));

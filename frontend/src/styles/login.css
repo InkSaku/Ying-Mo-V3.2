@@ -55,8 +55,32 @@
 .login-paper .login-field input { display: block; width: 100%; height: 48px; padding: 10px 0; border: 0; border-bottom: 1px solid #bcbcb3; border-radius: 0; background: transparent; color: #242520; font-family: inherit; font-size: 14px; box-shadow: none; }
 .login-paper .login-field input::placeholder { color: #85857c; font-size: 12px; }
 .login-paper .login-field input:focus { outline: none; border-bottom-color: #334b76; box-shadow: 0 1px 0 #334b76; }
+.login-password-control { position: relative; }
+.login-paper .login-password-control input { padding-right: 52px; }
+.login-password-toggle {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 140ms ease-out, background-color 140ms ease-out;
+}
+.login-password-toggle svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.login-password-toggle:hover { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 7%, transparent); }
+.login-password-toggle:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+.login-password-toggle:disabled { cursor: wait; opacity: .6; }
+.login-paper .login-field input::-ms-reveal { display: none; }
 .login-submit { margin-top: 12px; min-height: 50px; padding: 12px 20px; width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid #242520; border-radius: 0; color: #f8f7f3; background: #242520; font-family: inherit; font-size: 14px; cursor: pointer; }
 .login-submit:hover { background: #3b403b; }
+.login-submit:active:not(:disabled) { transform: translateY(1px); }
 .login-submit:disabled { opacity: .6; cursor: wait; }
 .login-submit > span:last-child { font-size: 24px; line-height: 1; }
 .login-join { text-align: center; margin-top: 22px; font-size: 11px; color: var(--login-muted); }

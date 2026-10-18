@@ -64,19 +64,13 @@ test.beforeAll(async ({ request }) => {
   }
 });
 
-test("the spark companion starts in the welcome area and becomes a persistent shortcut", async ({ page }, testInfo) => {
+test("the spark companion stays in its corner during the login page turn", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page);
   const entry = page.getByRole("link", { name: "进入续火花助手" });
-  await expect(entry).toHaveClass(/is-center/);
-  await expect(entry).toContainText("续火花助手");
-  const center = await entry.boundingBox();
-  expect(Math.abs(center.x + center.width / 2 - 720)).toBeLessThan(30);
-  expect(Math.abs(center.y + center.height / 2 - 450)).toBeLessThan(30);
-  await page.screenshot({ path: testInfo.outputPath("spark-welcome-center.png") });
-  await expect(entry).toHaveClass(/is-traveling/);
-  await page.screenshot({ path: testInfo.outputPath("spark-welcome-moving.png") });
   await expect(entry).toHaveClass(/is-docked/);
+  await expect(entry).toContainText("续火花助手");
+  await expect(page.locator(".login-page-turn")).toHaveCount(0);
   const dock = await entry.boundingBox();
   expect(dock.x).toBeGreaterThan(1200);
   expect(dock.y).toBeLessThan(160);

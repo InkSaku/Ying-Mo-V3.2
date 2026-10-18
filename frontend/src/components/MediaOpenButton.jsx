@@ -4,6 +4,7 @@ export function MediaOpenButton({ item, items = null, context = "media", paginat
   const { openGallery } = useMediaLightbox();
   if (!item) return children || null;
   return <button
+    data-media-id={item.id}
     type="button"
     className={`media-lightbox-trigger ${className}`}
     aria-label={label || "在灯箱中查看媒体"}

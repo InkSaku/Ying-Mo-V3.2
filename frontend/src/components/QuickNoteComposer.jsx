@@ -1,3 +1,4 @@
+import { usePaperDisclosure } from "../hooks/usePaperDisclosure";
 import { invalidateHomeFeedCache } from "../lib/homeFeed";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -54,6 +55,13 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
   const postRef = useRef(null);
   const [expanded, setExpanded] = useState(Boolean(restoredRef.current));
   const [promptOpen, setPromptOpen] = useState(appearance !== "homePrompt" || Boolean(restoredRef.current) || autoFocus);
+  const [paperRef, rememberPaper] = usePaperDisclosure(`${promptOpen}:${expanded}`);
+  const promptButtonRef = useRef(null);
+  const closePrompt = () => {
+    rememberPaper();
+    setPromptOpen(false);
+    window.requestAnimationFrame(() => promptButtonRef.current?.focus({ preventScroll: true }));
+  };
   const [collections, setCollections] = useState([]);
   const [optionsError, setOptionsError] = useState("");
   const [busy, setBusy] = useState("");
@@ -177,8 +185,10 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
       removeQuickNoteDraft(window.localStorage, storageKey);
       replacePost(null);
       setForm(initialQuickNoteForm());
+      rememberPaper();
       setExpanded(false);
       setPromptOpen(false);
+      if (appearance === "homePrompt") window.requestAnimationFrame(() => promptButtonRef.current?.focus({ preventScroll: true }));
       setMessage("随记已发布，并已加入下方的最新记录。");
       onPublished?.(published);
     } catch (publishError) {
@@ -290,8 +300,9 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
 
   if (appearance === "homePrompt" && !promptOpen) {
     const hasDraft = quickNoteHasLocalContent(form, post?.id);
-    return <section className="quick-note-composer is-paper is-home-prompt" aria-labelledby="quick-note-title">
-      <button type="button" className="home-prompt-activate" onClick={() => {
+    return <section ref={paperRef} className="quick-note-composer is-paper is-home-prompt" aria-labelledby="quick-note-title">
+      <button ref={promptButtonRef} type="button" className="home-prompt-activate" aria-expanded="false" aria-controls="quick-note-writing" onClick={() => {
+        rememberPaper();
         setPromptOpen(true);
         window.requestAnimationFrame(() => bodyInputRef.current?.focus());
       }}>
@@ -307,17 +318,17 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
   }
 
   return (
-    <section className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" || appearance === "homePrompt" ? "is-paper" : ""} ${appearance === "homePrompt" ? "is-home-prompt is-prompt-open" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
+    <section ref={paperRef} id="quick-note-writing" className={`quick-note-composer ${expanded ? "is-expanded" : ""} ${appearance === "paper" || appearance === "homePrompt" ? "is-paper" : ""} ${appearance === "homePrompt" ? "is-home-prompt is-prompt-open" : ""}`} aria-labelledby="quick-note-title" aria-busy={Boolean(busy) || undefined}>
       <div className="quick-note-heading">
         <div>
           <p className="hero-kicker"></p>
           <h2 id="quick-note-title">{appearance === "paper" || appearance === "homePrompt" ? "写随记" : ""}</h2>
         </div>
         <div className="quick-note-heading-actions">
-          <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setExpanded((current) => !current)}>
+          <button className="text-button" type="button" disabled={Boolean(busy)} aria-expanded={expanded} aria-controls="quick-note-details" onClick={() => { rememberPaper(); setExpanded((current) => !current); }}>
             {expanded ? "收起补充项" : "时间、地点与心情"}
           </button>
-          {appearance === "homePrompt" ? <button className="text-button" type="button" disabled={Boolean(busy)} onClick={() => setPromptOpen(false)}>收起</button> : null}
+          {appearance === "homePrompt" ? <button className="text-button" type="button" disabled={Boolean(busy)} onClick={closePrompt}>收起</button> : null}
         </div>
       </div>
 
@@ -328,7 +339,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         maxLength={20000}
         placeholder={appearance === "paper" || appearance === "homePrompt" ? "写点什么，或留下一张照片……" : "写下此刻的想法、见闻或生活片段……"}
         aria-label="快速随记正文"
-        onFocus={() => setExpanded(true)}
+        onFocus={() => { if (!expanded) { rememberPaper(); setExpanded(true); } }}
         onChange={set("body")}
         onKeyDown={(event) => {
           if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
@@ -352,7 +363,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
       ) : null}
 
       {expanded ? (
-        <div className="quick-note-fields">
+        <div id="quick-note-details" className="quick-note-fields">
           <label>
             <span>发生时间</span>
             <input type="datetime-local" value={form.occurred_at} disabled={Boolean(busy)} onChange={set("occurred_at")} />

@@ -1,3 +1,4 @@
+import { PAPER_EASE, paperMotionAllowed } from "../lib/paperMotion";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import {
@@ -59,6 +60,7 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
   const preserveFramesRef = useRef({ first: 0, second: 0 });
   const sectionRef = useRef(null);
   const sentinelRef = useRef(null);
+  const celebratedRef = useRef(null);
   const restoreRef = useRef(cachedRef.current && typeof window !== "undefined" ? {
     anchor: readHomeFeedAnchor(userId, type),
     fallback: readHomeFeedScroll(window.sessionStorage, userId, type),
@@ -229,6 +231,23 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
     });
     if (anchor) preserveAnchorAfterRender(anchor);
   }, [capturePosition, commit, newPost, preserveAnchorAfterRender, type]);
+
+  useLayoutEffect(() => {
+    if (!newPost || celebratedRef.current === newPost.id) return;
+    const entry = [...(sectionRef.current?.querySelectorAll("[data-feed-post-id]") || [])]
+      .find((node) => node.dataset.feedPostId === String(newPost.id));
+    if (!entry) return;
+    celebratedRef.current = newPost.id;
+    if (!paperMotionAllowed()) return;
+    const tint = getComputedStyle(entry).getPropertyValue("--surface-alt").trim()
+      || "color-mix(in srgb, var(--brand-link) 7%, var(--page))";
+    const animation = entry.animate([
+      { transform: "translateY(-8px)", opacity: .6, backgroundColor: tint },
+      { transform: "translateY(0)", opacity: 1, backgroundColor: tint, offset: .3 },
+      { transform: "translateY(0)", opacity: 1, backgroundColor: "transparent" },
+    ], { duration: 900, easing: PAPER_EASE });
+    return () => animation.cancel();
+  }, [feed.items, newPost]);
 
   const memoryIndex = homeFeedMemoryInterludeIndex(feed.items.length, feed.memoryInterlude);
   let previousStreamDay = "";

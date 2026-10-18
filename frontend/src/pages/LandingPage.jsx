@@ -1,81 +1,99 @@
 import { InkBrandMark } from "../components/InkBrandMark";
-import { Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Link, useNavigate, useNavigationType } from "react-router-dom";
 import { InkSketch } from "../components/InkSketch";
+import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { playLoginPageTurn, prepareLoginPageTurn } from "../lib/loginPageTurn";
 import "../styles/login.css";
 import "../styles/landing.css";
 
-const promises = [
-  { number: "01", title: "写文章与随记", copy: "保存文字、照片和 Live Photo。", icon: "pen" },
-  { number: "02", title: "与朋友共享合集", copy: "选择合集成员，一起阅读和添加记录。", icon: "people" },
-  { number: "03", title: "查看往年今日", copy: "回看往年同一天的记录。", icon: "sun" },
+const details = [
+  { title: "写下来", copy: "用文章与随记，保存文字、照片和 Live Photo。" },
+  { title: "一起留存", copy: "和选定的朋友，共同整理一本合集。" },
+  { title: "日后重读", copy: "翻开往年今日，回看当时的生活。" },
 ];
 
-function PromiseIcon({ name }) {
-  if (name === "pen") {
-    return <svg viewBox="0 0 52 52" aria-hidden="true"><path d="M10 40c9-2 18-7 25-15L42 18c1-1 1-3 0-4l-4-4c-1-1-3-1-4 0l-7 7C19 25 14 33 12 41" /><path d="m27 17 8 8M11 41c4-1 7 0 9 3M8 45c9 1 19 0 28-3" /></svg>;
-  }
-  if (name === "people") {
-    return <svg viewBox="0 0 52 52" aria-hidden="true"><path d="M18 27c-6 1-10 5-11 12M34 27c6 1 10 5 11 12M26 29c-7 0-12 5-13 13h26c-1-8-6-13-13-13Z" /><path d="M26 10c5 0 8 4 8 9s-3 9-8 9-8-4-8-9 3-9 8-9ZM13 15c3 0 5 3 5 7s-2 7-5 7M39 15c-3 0-5 3-5 7s2 7 5 7" /></svg>;
-  }
-  return <svg viewBox="0 0 52 52" aria-hidden="true"><path d="M26 15c7 0 12 5 12 12S33 39 26 39s-12-5-12-12 5-12 12-12Z" /><path d="M26 5v6M26 43v5M5 27h6M42 27h6M11 11l5 5M37 38l4 4M41 11l-5 5M15 38l-4 4" /><path d="M20 28c2 2 4 3 7 3 2 0 4-1 6-3" /></svg>;
+let hasOpenedWelcome = false;
+
+function EntryArrow({ small = false }) {
+  return <svg className={small ? "landing-nav-arrow" : "landing-entry-arrow"} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+    {small ? <path d="M6 18 18 6M7 6h11v11" /> : <path d="M3 12h18m-6-6 6 6-6 6" />}
+  </svg>;
 }
 
 export function LandingPage() {
   usePageMeta("", { indexable: true });
+  const { status } = useAuth();
+  const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  const paperRef = useRef(null);
+
+  useEffect(() => {
+    if (status !== "authenticated") return undefined;
+    void import("./HomePage").catch(() => {});
+    const enterHome = () => {
+      navigate("/home", { replace: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    // Only the browser's welcome entrance gets a cover turn. Internal links
+    // return straight home, and replace keeps Back from replaying the cover.
+    if (hasOpenedWelcome || navigationType !== "POP") {
+      enterHome();
+      return undefined;
+    }
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        hasOpenedWelcome = true;
+        void playLoginPageTurn(prepareLoginPageTurn(paperRef.current), enterHome, { duration: 550, leadIn: 0 });
+      });
+    });
+    // Navigation away or a session change before the turn must cancel entry.
+    // Once started, the sheet intentionally survives this route's unmount.
+    return () => cancelAnimationFrame(frame);
+  }, [status, navigate, navigationType]);
+
+  return <WelcomeSheet paperRef={paperRef} checking={status === "loading"} />;
+}
+
+// Shared with the development replay; this sheet never checks authentication.
+export function WelcomeSheet({ paperRef, checking = false }) {
   return (
-    <main className="login-paper landing-paper">
+    <main ref={paperRef} className="login-paper landing-paper">
+      {checking ? <span className="sr-only" role="status">正在确认登录状态。</span> : null}
       <header className="login-masthead landing-masthead">
         <Link to="/" className="login-wordmark" aria-label="映墨欢迎页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <nav className="landing-nav" aria-label="公开导航">
           <Link to="/about">关于映墨</Link>
-          <Link className="landing-nav-login" to="/login">登录 <span aria-hidden="true">↗</span></Link>
+          <Link to="/login">登录 <EntryArrow small /></Link>
         </nav>
       </header>
 
       <section className="landing-hero" aria-labelledby="landing-title">
         <div className="landing-copy">
-          <p className="landing-eyebrow"><span aria-hidden="true">✦</span> 朋友间的邀请制记录空间</p>
-          <h1 id="landing-title">把今天，<br /><em>轻轻</em>放进时间里。</h1>
-          <p className="landing-lead">写文章、记日常、存照片，<br className="landing-desktop-break" />也和朋友一起整理合集。</p>
+          <h1 id="landing-title"><span>把今天，</span><span>轻轻放进时间里。</span></h1>
+          <p className="landing-lead">写字、存照片，<br />也和朋友一起记录生活。</p>
           <div className="landing-actions" aria-label="进入映墨">
-            <Link className="landing-primary" to="/register"><span><small>第一次来</small>使用邀请码注册</span><span className="landing-action-arrow" aria-hidden="true">⟶</span></Link>
-            <Link className="landing-secondary" to="/login"><span><small>已经是成员</small>登录</span><span aria-hidden="true">↗</span></Link>
+            <Link className="landing-primary" to="/login"><span>进入映墨</span><EntryArrow /></Link>
           </div>
-          <p className="landing-trust"><span>需要邀请码注册</span><span>登录后阅读</span></p>
+          <p className="landing-join"><span>有邀请码？</span><Link to="/register">加入我们</Link></p>
         </div>
 
-        <div className="landing-illustration" aria-label="墨团推开书房的门">
-          <p className="landing-page-number" aria-hidden="true">第 〇 页&nbsp; / &nbsp;从这里开始</p>
-          <div className="landing-ink-wash" aria-hidden="true" />
+        <figure className="landing-illustration" aria-hidden="true">
           <InkSketch variant="welcome" className="ink-entry-art" />
-          <p className="landing-handwritten" aria-hidden="true"><br /><span></span></p>
-          <blockquote><br /></blockquote>
-          <span className="landing-seal" aria-hidden="true">映</span>
-          <svg className="landing-flight" viewBox="0 0 160 80" aria-hidden="true"><path d="M4 65c34 9 43-30 78-22 19 5 19-24 43-19" /><path d="m119 19 12 4-8 9M139 9c5 1 8 4 10 8M142 24c5 0 9 2 13 5" /></svg>
-        </div>
+        </figure>
       </section>
 
-      <section className="landing-promises" aria-label="映墨可以做什么">
-        <header className="landing-promises-intro"><p>在这里</p><h2>在映墨可以做什么</h2></header>
-        <div className="landing-promise-list">
-          {promises.map((item) => (
-            <article className="landing-promise" key={item.number}>
-              <span className="landing-promise-number">{item.number}</span>
-              <PromiseIcon name={item.icon} />
-              <div><h3>{item.title}</h3><p>{item.copy}</p></div>
-            </article>
+      <section className="landing-details" aria-labelledby="landing-details-title">
+        <h2 id="landing-details-title" className="sr-only">在映墨可以做什么</h2>
+        <dl className="landing-detail-list">
+          {details.map((item) => (
+            <div key={item.title}><dt>{item.title}</dt><dd>{item.copy}</dd></div>
           ))}
-        </div>
+        </dl>
       </section>
 
-      <section className="landing-closing" aria-label="开始使用映墨">
-        <p aria-hidden="true"></p>
-        <h2>准备好邀请码，<br />就可以加入。</h2>
-        <Link to="/register">使用邀请码注册 <span aria-hidden="true">⟶</span></Link>
-      </section>
-
-      <footer className="login-colophon landing-colophon"><span>映墨 · 留给生活的一页</span><span></span></footer>
+      <footer className="login-colophon landing-colophon"><span>映墨 · 留给生活的一页</span><span>朋友间的邀请制空间 · 登录后阅读</span></footer>
     </main>
   );
 }

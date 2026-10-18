@@ -1,0 +1,13 @@
+/* Keep article shared elements inside the single theme snapshot. */
+html[data-theme-ink] { --ink-x: 50vw; --ink-y: 50vh; }
+html[data-theme-ink] * { view-transition-name: none !important; transition: none !important; }
+html[data-theme-ink]::view-transition { pointer-events: none; }
+html[data-theme-ink]::view-transition-group(root),
+html[data-theme-ink]::view-transition-image-pair(root) { animation: none; isolation: isolate; }
+html[data-theme-ink]::view-transition-old(root),
+html[data-theme-ink]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html[data-theme-ink]::view-transition-old(root) { z-index: 1; }
+html[data-theme-ink]::view-transition-new(root) {
+  z-index: 2;
+  clip-path: circle(0 at var(--ink-x) var(--ink-y));
+}

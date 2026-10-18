@@ -57,6 +57,13 @@ const AdminNotificationsPage = lazyNamed(() => import("./pages/AdminNotification
 const AdminLogsPage = lazyNamed(() => import("./pages/AdminLogsPage"), "AdminLogsPage");
 const SparkPage = lazyNamed(() => import("./pages/SparkPage"), "SparkPage");
 const NotFoundPage = lazyNamed(() => import("./pages/NotFoundPage"), "NotFoundPage");
+const LoginTurnPreview = import.meta.env.DEV
+  ? lazyNamed(() => import("./pages/LoginTurnPreview"), "LoginTurnPreview") : null;
+const ThemeInkPreview = import.meta.env.DEV
+  ? lazyNamed(() => import("./pages/ThemeInkPreview"), "ThemeInkPreview") : null;
+
+const PaperMotionPreview = import.meta.env.DEV
+  ? lazyNamed(() => import("./pages/PaperMotionPreview"), "PaperMotionPreview") : null;
 
 export function App() {
   return (
@@ -71,6 +78,10 @@ export function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      {import.meta.env.DEV ? <Route path="/dev/login-page-turn" element={<LoginTurnPreview />} /> : null}
+      {import.meta.env.DEV ? <Route path="/dev/theme-ink" element={<ThemeInkPreview />} /> : null}
+
+      {import.meta.env.DEV ? <Route path="/dev/paper-motion" element={<PaperMotionPreview />} /> : null}
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/home" element={<HomePage />} />

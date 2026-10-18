@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { HOME_SPARK_WELCOME_KEY } from "../lib/homeSparkWelcome";
 
 function InkSparkRunner() {
   return <svg viewBox="0 0 156 142" fill="none" role="img" aria-label="小墨团举着一簇火花">
@@ -23,18 +21,7 @@ function InkSparkRunner() {
 }
 
 export function HomeSparkEntry() {
-  const [welcome] = useState(() => window.sessionStorage.getItem(HOME_SPARK_WELCOME_KEY) === "1");
-  const [phase, setPhase] = useState(() => welcome && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "center" : "docked");
-
-  useEffect(() => {
-    if (welcome) window.sessionStorage.removeItem(HOME_SPARK_WELCOME_KEY);
-    if (!welcome || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-    const departure = window.setTimeout(() => setPhase("traveling"), 700);
-    const arrival = window.setTimeout(() => setPhase("docked"), 2050);
-    return () => { window.clearTimeout(departure); window.clearTimeout(arrival); };
-  }, [welcome]);
-
-  return <Link className={`home-spark-entry is-${phase}`} to="/tools/spark" aria-label="进入续火花助手">
+  return <Link className="home-spark-entry is-docked" to="/tools/spark" aria-label="进入续火花助手">
     <span className="home-spark-entry-art"><InkSparkRunner /></span>
     <span className="home-spark-entry-copy">
       <span className="home-spark-entry-kicker">映墨工具</span>

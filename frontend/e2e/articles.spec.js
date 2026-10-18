@@ -10,7 +10,7 @@ const coverPaths = ["coast.jpg", "train.jpg", "desk.jpg"].map((name) => (
 async function login(page) {
   await page.goto("/login");
   await page.getByLabel("用户名或邮箱").fill(account.username);
-  await page.getByLabel("密码").fill(account.password);
+  await page.getByLabel("密码", { exact: true }).fill(account.password);
   await page.getByRole("button", { name: /登录/ }).click();
   await expect(page).toHaveURL(/\/home/);
 }
@@ -171,6 +171,15 @@ test("opening an article and returning preserves the selected row and filters", 
   await expect(page.locator(".article-reading-page:not(.article-reading-preview) h1")).toHaveText(title);
   if (await page.evaluate(() => Boolean(document.startViewTransition))) {
     expect(await page.evaluate(() => window.articleTransitionCalls)).toBeGreaterThan(0);
+    // Theme ink must temporarily absorb the article's named layers into root,
+    // then restore them so the following return transition still works.
+    const themeButton = page.locator(".theme-toggle:visible");
+    await themeButton.click();
+    await themeButton.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme-ink", "dark");
+    expect(await page.locator(".article-reading-page:not(.article-reading-preview)").evaluate((element) => getComputedStyle(element).viewTransitionName)).toBe("none");
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme-ink");
+    expect(await page.locator(".article-reading-page:not(.article-reading-preview)").evaluate((element) => getComputedStyle(element).viewTransitionName)).toBe("article-page");
   }
   await page.getByRole("button", { name: "返回文章目录" }).click();
   await expect(page).toHaveURL(/\/articles$/);

@@ -1,0 +1,27 @@
+.theme-ink-preview { min-height: 100svh; background: var(--page); color: var(--text); font-family: var(--serif); }
+.ink-preview-header, .ink-preview-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 1160px; margin: 0 auto; padding: 24px 32px; }
+.ink-preview-header > div { display: flex; align-items: center; gap: 24px; }
+.ink-preview-header a { display: inline-flex; align-items: center; min-height: 44px; color: var(--text-2); font-size: 12px; text-decoration: none; }
+.ink-preview-header .ink-preview-brand { gap: 12px; color: var(--text); font-size: 24px; }
+.ink-preview-brand svg { width: 24px; height: 28px; }
+.ink-preview-main { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 64px 80px; max-width: 1160px; margin: 0 auto; padding: 88px 32px 64px; }
+.ink-preview-copy h1 { margin: 0 0 24px; font-size: clamp(32px, 4vw, 56px); line-height: 1.5; font-weight: 400; text-wrap: balance; }
+.ink-preview-copy > p { margin: 0; color: var(--text-3); font-size: 14px; line-height: 2; }
+.ink-preview-switch { display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; min-height: 50px; margin: 32px 0 12px; padding: 12px 20px; border: 1px solid var(--text); border-radius: 2px; background: var(--text); color: var(--page); font: inherit; font-size: 14px; cursor: pointer; }
+.ink-preview-switch svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.ink-preview-copy .ink-preview-hint { font-size: 12px; }
+.ink-preview-photo { margin: 0; }
+.ink-preview-photo img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.ink-preview-photo figcaption, .ink-preview-note p { margin: 12px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.ink-preview-note { grid-column: 1 / -1; padding-top: 32px; border-top: 1px solid var(--border); }
+.ink-preview-note label { display: block; margin-bottom: 16px; font-size: 14px; }
+.ink-preview-note textarea { display: block; width: 100%; min-height: 100px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--border-strong); border-radius: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; line-height: 1.9; resize: vertical; }
+.ink-preview-footer { color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.theme-ink-preview :is(a, button, textarea):focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+@media (max-width: 700px) {
+  .ink-preview-header, .ink-preview-footer { padding: 16px 24px; gap: 16px; }
+  .ink-preview-header > div { gap: 12px; }
+  .ink-preview-main { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 48px 24px 40px; }
+  .ink-preview-note { grid-column: auto; }
+  .ink-preview-footer { flex-wrap: wrap; gap: 4px 24px; }
+}

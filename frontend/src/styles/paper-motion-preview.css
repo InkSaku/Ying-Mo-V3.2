@@ -1,0 +1,40 @@
+.paper-motion-preview { width: min(1120px, calc(100% - 64px)); margin: auto; padding-bottom: 48px; }
+.paper-preview-header { display: flex; justify-content: space-between; align-items: center; min-height: 88px; border-bottom: 1px solid var(--border); }
+.paper-preview-header > a { color: var(--text); font-size: 22px; }
+.paper-preview-intro { padding: 56px 0 44px; }
+.paper-preview-intro h1 { margin: 0 0 22px; font-size: clamp(30px, 4vw, 46px); font-weight: 400; line-height: 1.5; }
+.paper-preview-intro p, .paper-preview-label p { color: var(--text-3); line-height: 1.9; }
+.paper-preview-row { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 48px; padding: 40px 0; border-top: 1px solid var(--border); align-items: start; }
+.paper-preview-label h2 { margin: 0 0 12px; font-size: 24px; font-weight: 400; }
+.paper-motion-preview button { cursor: pointer; }
+.paper-preview-label button, .paper-preview-photo-expanded button, .paper-preview-note-heading button { border: 0; background: transparent; padding: 8px 0; min-height: 44px; color: var(--brand-link); }
+.paper-preview-book-stage .collection-card { display: block; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.paper-preview-book-stage { min-height: 320px; }
+.paper-preview-book-button { width: 240px; padding: 0; border: 0; text-align: left; background: transparent; color: var(--text); }
+.paper-preview-book-button .collection-card-cover-frame { height: 240px; overflow: hidden; border-left: 7px solid var(--border); }
+.paper-preview-book-button img { width: 100%; height: 100%; object-fit: cover; }
+.paper-preview-book-button h3 { margin: 16px 0 8px; font-size: 21px; font-weight: 400; }
+.paper-preview-book-button span, .paper-preview-open-book span { font-size: 12px; color: var(--text-3); }
+.paper-preview-open-book { display: grid; grid-template-columns: 230px 1fr; gap: 32px; align-items: center; }
+.paper-preview-book-cover { height: 288px; border-left: 7px solid var(--border); }
+.paper-preview-book-cover img { width: 100%; height: 100%; object-fit: cover; }
+.paper-preview-open-book h3 { font-size: 28px; font-weight: 400; }
+.paper-preview-open-book p { line-height: 1.9; }
+.paper-preview-photo-stage { position: relative; min-height: 230px; }
+.paper-preview-thumbnail { width: 200px; height: 144px; border: 0; padding: 0; background: var(--surface); }
+.paper-preview-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.paper-preview-thumbnail:disabled { cursor: default; }
+.paper-preview-photo-caption { font-size: 12px; color: var(--text-3); }
+.paper-preview-photo-expanded { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; background: rgb(9 10 12 / .94); color: #f5f1ea; }
+.paper-preview-photo-expanded button { color: inherit; }
+.paper-preview-photo-expanded > img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 140px); }
+.paper-preview-note { border-block: 1px solid var(--text); box-sizing: border-box; }
+.paper-preview-note-prompt { display: flex; align-items: center; gap: 24px; width: 100%; min-height: 88px; border: 0; padding: 16px 0; text-align: left; background: transparent; color: var(--text); }
+.paper-preview-note-prompt strong { font-weight: 400; white-space: nowrap; }
+.paper-preview-note-prompt span { color: var(--text-3); flex: 1; }
+.paper-preview-note-prompt small { color: var(--brand-link); white-space: nowrap; }
+.paper-preview-note-heading { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; }
+.paper-preview-note textarea { display: block; width: 100%; min-height: 120px; margin: 8px 0; padding: 14px; resize: vertical; background: var(--surface); border: 1px solid var(--border); color: var(--text); font: inherit; }
+.paper-preview-note > p { font-size: 12px; color: var(--text-3); }
+.paper-preview-footer { display: flex; gap: 28px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; }
+@media(max-width: 760px) { .paper-motion-preview { width: calc(100% - 40px); } .paper-preview-row { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 32px 0; } .paper-preview-intro { padding: 36px 0; } .paper-preview-open-book { grid-template-columns: minmax(0, 1fr); gap: 8px; } .paper-preview-book-cover { width: 230px; } .paper-preview-open-book h3 { margin-bottom: 12px; } .paper-preview-note-prompt { gap: 12px; flex-wrap: wrap; } .paper-preview-note-prompt span { font-size: 14px; } }

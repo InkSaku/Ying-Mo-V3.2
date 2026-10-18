@@ -8,7 +8,10 @@ export function ThemeControl() {
   const next = modes[(modes.indexOf(mode) + 1) % modes.length];
   const label = `当前主题：${labels[mode]}，点击切换为${labels[next]}`;
   return (
-    <button className="theme-toggle" type="button" onClick={() => setMode(next)} aria-label={label} title={label}>
+    <button className="theme-toggle" type="button" onClick={(event) => {
+      const box = event.currentTarget.getBoundingClientRect();
+      setMode(next, { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
+    }} aria-label={label} title={label}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         {mode === "light" ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5" /></> : null}
         {mode === "dark" ? <path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 8.7 8.7 0 1 0 20.5 14Z" /> : null}

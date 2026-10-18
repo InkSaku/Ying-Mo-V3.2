@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { revealCollection } from "../lib/collectionOpening";
 import { CustomSelect } from "../components/CustomSelect";
 import { Pagination } from "../components/Pagination";
 import { PostCard } from "../components/PostCard";
@@ -150,6 +151,7 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
 
 export function CollectionDetailPage() {
   const { slug } = useParams();
+  const coverRef = useRef(null);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const memory = readCollectionMemoryState(searchParams);
@@ -177,6 +179,10 @@ export function CollectionDetailPage() {
       setNotificationPreference({ level: previous, loading: false, saving: false, message: "", error: error.message });
     }
   };
+  useLayoutEffect(() => {
+    if (state.data && !state.loading && !state.error) revealCollection(slug, coverRef.current);
+  }, [slug, state.data, state.loading, state.error]);
+
   const changeMemory = (next) => setSearchParams(collectionMemorySearchParams(next));
   const changeView = (view) => changeMemory({ ...memory, view, page: 1 });
   if (state.loading) return <PageLoader />;
@@ -184,7 +190,7 @@ export function CollectionDetailPage() {
   const collection = state.data;
   return <main className="page-shell collection-memory-page">
     <header className="collection-hero collection-volume-hero">
-      <div className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span></span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
+      <div ref={coverRef} className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span></span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
       <div className="collection-volume-copy">
         <Link className="collection-volume-back" to="/collections">返回合集目录</Link>
         <span className="collection-volume-kicker"></span>

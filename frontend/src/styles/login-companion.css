@@ -1,0 +1,80 @@
+.login-companion {
+  --reader-look-x: 0px;
+  --reader-look-y: 0px;
+  --reader-lean: 0deg;
+  --reader-head-y: 0px;
+  --reader-book-y: 0px;
+  --reader-book-angle: 0deg;
+  --reader-head-angle: var(--reader-lean);
+  --reader-eye-x: var(--reader-look-x);
+  --reader-eye-y: var(--reader-look-y);
+  pointer-events: none;
+}
+.reader-lines, .reader-accent {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.reader-accent { stroke: var(--brand-link); }
+.reader-head {
+  transform-origin: 114px 108px;
+  transform: translateY(var(--reader-head-y)) rotate(var(--reader-head-angle));
+  transition: transform 180ms ease-out;
+}
+.reader-arrival { animation: reader-look-up 480ms cubic-bezier(.16, 1, .3, 1) both; }
+.reader-face {
+  stroke: var(--page);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: opacity 100ms ease-out;
+}
+.reader-eyes {
+  transform: translate(var(--reader-eye-x), var(--reader-eye-y));
+  transition: transform 160ms ease-out, opacity 120ms ease-out;
+}
+.reader-eyes-closed { opacity: 0; }
+.reader-book {
+  transform-origin: 120px 140px;
+  transform: translateY(var(--reader-book-y)) rotate(var(--reader-book-angle));
+  transition: transform 280ms cubic-bezier(.16, 1, .3, 1);
+}
+.reader-book-paper, .reader-hands { fill: var(--page); }
+.reader-bookmark { transform-origin: 151px 119px; }
+.reader-question, .reader-raised-arms, .reader-cover-marks { opacity: 0; transition: opacity 140ms ease-out; }
+.reader-hello { opacity: .75; }
+.login-companion[data-pose="curious"] {
+  --reader-head-y: -6px;
+  --reader-head-angle: 5deg;
+  --reader-eye-x: 3px;
+  --reader-eye-y: -1px;
+  --reader-book-y: -3px;
+}
+.login-companion[data-pose="reading"], .login-companion[data-pose="waiting"] {
+  --reader-head-y: 6px;
+  --reader-head-angle: -3deg;
+  --reader-eye-x: 0px;
+  --reader-eye-y: 4px;
+}
+.login-companion:is([data-pose="reading"], [data-pose="waiting"]) .reader-eyes-open { opacity: 0; }
+.login-companion:is([data-pose="reading"], [data-pose="waiting"]) .reader-eyes-closed { opacity: 1; }
+.login-companion:is([data-pose="reading"], [data-pose="waiting"]) .reader-hello { opacity: 0; }
+.login-companion[data-pose="waiting"] .reader-bookmark { animation: reader-bookmark-settle 480ms ease-out; }
+.login-companion[data-pose="covered"] {
+  --reader-book-y: -62px;
+  --reader-head-angle: 0deg;
+  --reader-eye-x: 0px;
+  --reader-eye-y: 0px;
+}
+.login-companion[data-pose="covered"] .reader-face { opacity: 0; }
+.login-companion[data-pose="covered"] :is(.reader-raised-arms, .reader-cover-marks) { opacity: 1; }
+.login-companion[data-pose="covered"] :is(.reader-hello, .reader-star) { opacity: 0; }
+.login-companion[data-pose="covered"] .reader-bookmark { animation: reader-bookmark-settle 450ms ease-out; }
+.login-companion[data-pose="error"] { --reader-head-angle: -9deg; --reader-eye-x: -1px; --reader-eye-y: 1px; }
+.login-companion[data-pose="error"] .reader-question { opacity: 1; }
+.login-companion[data-pose="error"] :is(.reader-star, .reader-hello) { opacity: 0; }
+@keyframes reader-look-up { from { transform: translateY(7px); } to { transform: translateY(0); } }
+@keyframes reader-bookmark-settle { 0%, 100% { transform: rotate(0deg); } 35% { transform: rotate(9deg); } 68% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .login-companion * { animation: none !important; transition: none !important; }
+}
