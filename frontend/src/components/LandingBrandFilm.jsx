@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "../styles/landing-brand-film.css";
 
-const filmUrl = `${import.meta.env.BASE_URL}brand-film/yingmo-brand-film-web.mp4`;
+const filmUrl = `${import.meta.env.BASE_URL}brand-film/yingmo-brand-film-web-audio.mp4`;
 const posterUrl = `${import.meta.env.BASE_URL}brand-film/poster.webp`;
 
 export function LandingBrandFilm() {
@@ -64,7 +64,7 @@ export function LandingBrandFilm() {
       </div>
       <figcaption className="landing-film-caption">
         <span>YING MO — A Page Kept in Time</span>
-        <small>14.5 秒 · 无声影片</small>
+        <small>14.5 秒 · 建议开启声音</small>
       </figcaption>
       <p id="landing-film-description" className="landing-film-description">影片里的页面仅供观看。</p>
       {notice ? <p className="landing-film-feedback" role="status">{notice}</p> : null}
