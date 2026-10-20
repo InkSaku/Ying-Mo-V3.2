@@ -1,0 +1,18 @@
+.page-tear {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+.page-tear-half, .page-tear-copy, .page-tear-edge-shadow, .page-tear-edge { position: absolute; inset: 0; }
+.page-tear-copy { overflow: hidden; background: var(--tear-paper); }
+.page-tear-half { will-change: transform; }
+.page-tear-edge { background: var(--tear-rim); }
+.page-tear-edge-shadow { filter: drop-shadow(0 0 1px color-mix(in srgb, var(--tear-ink) 35%, transparent)); }
+.page-tear-copy .reader-arrival, .page-tear-copy .login-companion * { animation: none !important; }
+.page-tear-copy .login-submit:disabled { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .page-tear { display: none; } }

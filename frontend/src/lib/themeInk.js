@@ -13,7 +13,7 @@ export function playThemeInk(update, { origin, theme } = {}) {
   cancelThemeInk();
   const root = document.documentElement;
   const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (!document.startViewTransition || motion.matches || document.hidden || document.querySelector(".login-page-turn")) {
+  if (!document.startViewTransition || motion.matches || document.hidden || document.querySelector(".login-page-turn, .page-tear")) {
     update();
     return;
   }

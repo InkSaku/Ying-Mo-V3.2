@@ -41,6 +41,7 @@
   filter: drop-shadow(-5px 5px 12px rgb(0 0 0 / 12%));
 }
 .login-turn-crease { stroke: color-mix(in srgb, var(--turn-ink) 18%, transparent); stroke-width: .8; }
+.login-turn-front .app-frame * { animation: none !important; transition: none !important; }
 .login-turn-front .reader-arrival { animation: none; }
 .login-turn-front .login-companion[data-pose="turning"] .reader-book { animation: reader-turn-page 300ms ease-out both; }
 .login-turn-front .login-companion[data-pose="turning"] .reader-head { transform: translateY(5px) rotate(-3deg); }

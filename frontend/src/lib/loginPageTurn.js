@@ -13,7 +13,7 @@ function svgElement(name, attributes = {}) {
 
 // Take a detached, inert visual copy before the auth context replaces the route.
 // Replace fields instead of copying values, including a revealed password.
-export function prepareLoginPageTurn(source) {
+export function prepareLoginPageTurn(source, { submitLabel = "已登录" } = {}) {
   if (!source || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
   try {
     const clone = source.cloneNode(true);
@@ -38,7 +38,7 @@ export function prepareLoginPageTurn(source) {
     });
     clone.querySelectorAll("button").forEach((button) => { button.disabled = true; });
     const submit = clone.querySelector(".login-submit > span");
-    if (submit) submit.textContent = "已登录";
+    if (submit) submit.textContent = submitLabel;
     const style = getComputedStyle(source);
     const bounds = source.getBoundingClientRect();
     clone.style.width = `${bounds.width}px`;

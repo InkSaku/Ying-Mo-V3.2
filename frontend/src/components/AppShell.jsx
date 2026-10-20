@@ -15,6 +15,7 @@ import {
 import { unreadBadgeText } from "../lib/notificationCount";
 import { ThemeControl } from "./ThemeControl";
 import { PageLoader } from "./States";
+import { useArticlePageTurn } from "../hooks/useArticlePageTurn";
 
 function NavLinks({ items, onNavigate }) {
   return items.map(({ to, label }) => (
@@ -39,6 +40,7 @@ function closeOwningMenu(event) {
 }
 
 export function AppShell() {
+  useArticlePageTurn();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

@@ -5,7 +5,8 @@ import { LoginCompanion } from "../components/LoginCompanion";
 import "../styles/login.css";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
-import { prepareLoginPageTurn, playLoginPageTurn } from "../lib/loginPageTurn";
+import { prepareLoginPageTurn } from "../lib/loginPageTurn";
+import { playPageTear } from "../lib/pageTear";
 
 export function LoginPage() {
   usePageMeta("登录");
@@ -69,13 +70,15 @@ export function LoginPage() {
     const destination = next && next.startsWith("/") && !next.startsWith("//") ? next : "/home";
     const isHome = destination.split(/[?#]/)[0] === "/home";
     const snapshot = prepareLoginPageTurn(paperRef.current);
+    const submitBounds = event.nativeEvent.submitter?.getBoundingClientRect();
+    const originX = submitBounds ? submitBounds.left + submitBounds.width / 2 : undefined;
     if (isHome) void import("./HomePage").catch(() => {});
     try {
       await login(form);
-      void playLoginPageTurn(snapshot, () => {
+      void playPageTear(snapshot, () => {
         navigate(destination, { replace: true });
         if (isHome) window.scrollTo({ top: 0, behavior: "instant" });
-      }, { full: isHome });
+      }, { originX });
     } catch (err) {
       setError(err.message);
       setInvalidCredentials(err.code === "INVALID_CREDENTIALS");

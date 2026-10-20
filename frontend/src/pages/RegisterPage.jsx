@@ -1,5 +1,5 @@
 import { InkBrandMark } from "../components/InkBrandMark";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { InkSketch } from "../components/InkSketch";
 import "../styles/login.css";
@@ -8,6 +8,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { fieldErrorsFrom } from "../lib/api";
 import { needsEmailVerification } from "../lib/accountSecurity";
+import { prepareLoginPageTurn } from "../lib/loginPageTurn";
+import { playPageTear } from "../lib/pageTear";
 
 export function RegisterPage() {
   usePageMeta("注册");
@@ -19,6 +21,7 @@ export function RegisterPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const paperRef = useRef(null);
 
   const set = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -27,12 +30,17 @@ export function RegisterPage() {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (busy) return;
+    const snapshot = prepareLoginPageTurn(paperRef.current, { submitLabel: "已注册" });
+    const submitBounds = event.nativeEvent.submitter?.getBoundingClientRect();
+    const originX = submitBounds ? submitBounds.left + submitBounds.width / 2 : undefined;
     setBusy(true);
     setError("");
     setFieldErrors({});
     try {
       const user = await register(form);
-      navigate(needsEmailVerification(user) ? "/verify-email?registered=1" : "/home", { replace: true });
+      const destination = needsEmailVerification(user) ? "/verify-email?registered=1" : "/home";
+      void playPageTear(snapshot, () => navigate(destination, { replace: true }), { originX });
     } catch (err) {
       setError(err.message);
       setFieldErrors(fieldErrorsFrom(err));
@@ -42,7 +50,7 @@ export function RegisterPage() {
   };
 
   return (
-    <main className="login-paper register-paper">
+    <main ref={paperRef} className="login-paper register-paper">
       <header className="login-masthead">
         <Link to="/" className="login-wordmark" aria-label="映墨首页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <span className="login-edition">文字与日常 · 从此开始</span>

@@ -2,12 +2,14 @@ const snapshots = new Map();
 const MAX_AGE_MS = 15 * 60 * 1000;
 
 export function canAnimateArticleNavigation() {
-  return typeof document.startViewTransition === "function"
-    && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 export function navigateWithArticleTransition(navigate, readySelector) {
-  if (!canAnimateArticleNavigation()) {
+  // Forward reading uses the paper fold installed by AppShell. Keep the
+  // native return transition and the directory restoration independent.
+  if (readySelector === ".article-reading-page h1" || !canAnimateArticleNavigation()
+    || typeof document.startViewTransition !== "function") {
     navigate();
     return;
   }
