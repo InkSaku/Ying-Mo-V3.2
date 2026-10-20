@@ -1,3 +1,4 @@
+import { LandingBrandFilm } from "../components/LandingBrandFilm";
 import { InkBrandMark } from "../components/InkBrandMark";
 import { useEffect, useRef } from "react";
 import { Link, useNavigate, useNavigationType } from "react-router-dom";
@@ -98,6 +99,8 @@ export function WelcomeSheet({ paperRef, checking = false }) {
           ))}
         </dl>
       </section>
+
+      <LandingBrandFilm />
 
       <footer className="login-colophon landing-colophon"><span>映墨 · 留给生活的一页</span><span>朋友间的邀请制空间 · 登录后阅读</span></footer>
     </main>
