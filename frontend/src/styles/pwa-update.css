@@ -1,0 +1,89 @@
+.pwa-update-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(480px, calc(100% - 40px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 32px 40px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--page);
+  color: var(--text);
+  box-shadow: 0 20px 64px color-mix(in srgb, var(--text) 18%, transparent);
+  font-family: var(--serif);
+  text-align: center;
+}
+
+.pwa-update-dialog::backdrop {
+  background: rgb(20 21 19 / 34%);
+}
+
+.pwa-update-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.pwa-update-close svg { width: 22px; height: 22px; }
+.pwa-update-close path { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.pwa-update-close:hover { background: var(--surface-2); color: var(--text); }
+.pwa-update-art { width: 240px; max-width: 100%; margin: 0 auto 16px; pointer-events: none; }
+.pwa-update-art svg { display: block; width: 100%; height: auto; }
+
+.pwa-update-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.pwa-update-description { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.8; }
+.pwa-update-actions { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 32px; }
+.pwa-update-actions button {
+  display: inline-flex;
+  min-width: 136px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  font: 500 15px/1.5 var(--serif);
+  cursor: pointer;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+.pwa-update-later { background: transparent; color: var(--text-2); }
+.pwa-update-later:hover { color: var(--text); background: var(--surface-2); }
+.pwa-update-refresh { background: var(--text); color: var(--page); }
+.pwa-update-refresh:hover { background: var(--text-2); }
+.pwa-update-refresh svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.pwa-update-dialog button:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+.pwa-update-dialog h2:focus { outline: none; }
+.pwa-update-dialog button:disabled { opacity: .55; cursor: default; }
+.pwa-update-save-note { margin: 16px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.7; }
+.pwa-update-error { margin: 16px 0 0; color: var(--danger); font-size: 13px; line-height: 1.7; }
+
+@media (max-width: 540px) {
+  .pwa-update-dialog { width: calc(100% - 32px); padding: 32px 24px 24px; }
+  .pwa-update-art { width: 200px; }
+  .pwa-update-dialog h2 { font-size: 26px; }
+  .pwa-update-actions { gap: 8px; margin-top: 24px; }
+  .pwa-update-actions button { min-width: 0; flex: 1; padding-inline: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pwa-update-dialog button { transition: none; }
+}

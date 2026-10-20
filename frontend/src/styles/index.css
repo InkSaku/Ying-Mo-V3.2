@@ -900,22 +900,6 @@ h3 {
   background: var(--tag-soft);
 }
 
-.notification-toast .pwa-update-action {
-  width: auto;
-  padding: 0 8px;
-  border-radius: var(--radius-sm);
-  color: var(--brand-link);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.notification-toast.pwa-update-toast {
-  top: auto;
-  bottom: max(16px, env(safe-area-inset-bottom));
-}
-
 .notification-toast button:disabled {
   cursor: wait;
   opacity: 0.58;
@@ -6369,10 +6353,6 @@ input[aria-invalid="true"] {
 
   .app-frame {
     padding-bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom));
-  }
-
-  .notification-toast.pwa-update-toast {
-    bottom: calc(var(--mobile-nav-h) + max(16px, env(safe-area-inset-bottom)));
   }
 
   .landing-hero {
