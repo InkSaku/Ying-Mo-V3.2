@@ -19,17 +19,6 @@ class Mail:
     text: str
 
 
-class MemoryMailer:
-    def __init__(self, outbox, *, fail_sending=False):
-        self.outbox = outbox
-        self.fail_sending = fail_sending
-
-    def send(self, message):
-        if self.fail_sending:
-            raise MailDeliveryError("memory mail delivery failed")
-        self.outbox.append(message)
-
-
 class ConsoleMailer:
     def send(self, message):
         recipient_id = hmac.new(
@@ -74,11 +63,7 @@ class SMTPMailer:
 
 def init_mailer(app):
     backend = str(app.config.get("MAIL_BACKEND", "console")).strip().lower()
-    outbox = []
-    app.extensions["mail_outbox"] = outbox
-    if backend == "memory":
-        mailer = MemoryMailer(outbox, fail_sending=bool(app.config.get("MAIL_MEMORY_FAIL")))
-    elif backend == "console":
+    if backend == "console":
         mailer = ConsoleMailer()
     elif backend == "smtp":
         mailer = SMTPMailer(app)

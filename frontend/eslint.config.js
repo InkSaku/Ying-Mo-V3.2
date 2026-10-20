@@ -18,7 +18,7 @@ const sourceRules = {
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "test-results/**", "playwright-report/**"],
+    ignores: ["dist/**", "node_modules/**"],
   },
   {
     files: ["src/**/*.{js,jsx}"],
@@ -37,7 +37,7 @@ export default [
     rules: sourceRules,
   },
   {
-    files: ["tests/**/*.js", "scripts/**/*.mjs", "vite.config.js", "eslint.config.js"],
+    files: ["scripts/**/*.mjs", "vite.config.js", "eslint.config.js"],
     languageOptions: {
       ecmaVersion: "latest",
       globals: globals.node,

@@ -6,7 +6,7 @@ React + JavaScript + Vite + React Router + Tailwind CSS v4 + 原生 fetch。
 
 ```bash
 cp .env.example .env
-npm install
+npm ci
 npm run dev
 ```
 
@@ -21,12 +21,10 @@ python run.py
 
 ```bash
 npm run check
-npm run test:e2e
 npm run preview
 ```
 
-`npm run check` 会依次执行 ESLint、全部 Node 回归、Vite 生产构建和包体预算校验。只需要单独构建时可使用 `npm run build`。
-`npm run test:e2e` 会自动启动隔离后端与 Vite，用 Playwright Chromium 回归写作器的自动保存、图片插入、版式设置、排序和移动端布局。
+`npm run check` 依次执行 ESLint、Vite 生产构建和包体预算／PWA 校验。单独构建使用 `npm run build`；页面与业务流程按改动范围手动验证。
 
 ## 主要路由
 

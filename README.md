@@ -1,933 +1,130 @@
 # 映墨 · Ying-Mo
 
-> 写字，也和朋友一起记录生活。
+写字，也和朋友一起记录生活。面向现实朋友的邀请制记录空间，支持文章、随记、私有媒体、共同合集、互动与回顾。技术栈为 React 19 + Vite、Flask + SQLAlchemy。
 
-**映墨（Ying-Mo）** 是一个面向现实朋友的小型、长期、邀请制记录空间。  
-它不是公开内容平台，也不以流量、推荐或陌生人社交为目标，而是用于保存文章、随记、照片、旅行、学习记录，以及朋友之间共同经历的内容。
+## 按需阅读
 
-项目采用 **React + Vite** 前端、**Flask + SQLAlchemy** 后端，并围绕「成员准入、内容归属、Collection 权限、私有媒体、长期可维护」完成了完整的全栈实现。
-
----
-
-## 项目定位
-
-映墨希望解决一个很简单的问题：
-
-> 有些内容值得长期保存，也值得和真正认识的人一起记录，但并不适合公开发布到互联网。
-
-因此，项目从产品层面坚持以下边界：
-
-- **邀请制注册**：只有持有站长邀请码的人能够成为成员。
-- **公开页与内容空间分离**：游客只能看到站点介绍，不会看到成员作品、用户列表或内容统计。
-- **内容归作者本人所有**：Article、Note、评论、媒体等都保留真实作者归属。
-- **Collection 是共同记录空间**：由一个创建者和指定成员共同阅读、共同投稿。
-- **权限由后端统一执行**：前端隐藏按钮不是权限边界，真正的 ACL 判断始终发生在服务端。
-- **长期记录优先**：支持 Markdown、图片、Live Photo、公式、脚注、代码、归档、搜索与个人内容管理。
-- **数据可带走、可恢复**：成员可导出自己的内容与原始媒体，站点维护者可创建、校验并恢复完整备份。
-
----
-
-## 主要功能
-
-### 内容创作
-
-映墨统一使用 `Post` 承载两种主要内容类型：
-
-- **Article**
-  - 适合长文、教程、学习笔记、旅行记录等长期内容
-  - 支持标题、摘要、Slug、Category、Tag
-  - Markdown 安全渲染
-  - 代码高亮
-  - 表格
-  - 脚注
-  - 行内 / 块级数学公式
-  - 长文目录与阅读进度
-
-- **Note**
-  - 适合短记录、生活片段和即时想法
-  - 支持发生时间、地点、心情、外部视频链接
-  - 同样支持 Markdown 与媒体内容
-
-创作器支持：
-
-- 草稿创建与编辑
-- 约 1.2 秒延迟自动保存
-- 手动保存
-- 发布 / 归档
-- 多窗口编辑冲突检测
-- `edit_version` 乐观并发控制
-- Markdown 快捷工具栏
-- 编辑 / 安全预览切换
-- 默认可视化图片块编辑，并保留可切换的 Markdown 源码模式
-- 图片拖拽、文件选择和剪贴板粘贴，均按光标位置插入
-- 图片块拖动或上下移动排序，以及 ALT、可见图注、尺寸、对齐设置
-- 大图上传前浏览器端压缩、逐文件进度、取消与失败重试
-- 正文内部媒体占位符（只在源码模式和存储层可见）
-- 浏览器离线副本与意外关闭后的草稿恢复
-
-站点同时提供可安装的 PWA 外壳。成员可从「个人资料 → 安装映墨」将站点添加到桌面、Dock、开始菜单或手机主屏幕，并通过应用图标快捷进入写随记、写文章和搜索。PWA 只预缓存无用户数据的前端静态外壳；API、文章内容与受保护媒体不进入 Service Worker 离线缓存。
-
----
-
-### Collection 共同记录
-
-Collection 用于保存多人共同经历，例如：
-
-- 一次旅行
-- 一个长期项目
-- 一段共同生活
-- 学习计划
-- 朋友之间的专题记录
-
-权限模型保持简单：
-
-```text
-Collection Creator
-        +
-Collection Members
-        ↓
-同时决定阅读权与投稿权
-```
-
-核心规则：
-
-- 每个 Collection 只有一个 Creator。
-- Creator 可以指定多个系统成员加入。
-- Creator + Members 是唯一的普通读写 ACL。
-- Collection 内 Post 不通过自身 visibility 扩大访问范围。
-- 成员被移除后，立即失去普通读取与投稿权限。
-- 作者仍可从个人管理入口处理自己曾发布的历史内容。
-- Post 被移出 Collection 后自动成为独立 `private` 内容。
-- Collection 删除后，内部 Post 自动脱离并回落为独立 `private`。
-
----
-
-### 媒体与 Live Photo
-
-媒体不是公开静态文件，而是受权限保护的资源。
-
-支持：
-
-- JPEG
-- PNG
-- WebP
-- HEIC / HEIF
-- 图片缩略图
-- Post 正文图片
-- Post / Collection 封面
-- 用户头像
-- iPhone Live Photo 图片 + 视频配对
-
-生产环境媒体可存储在：
-
-- 本地私有目录（开发）
-- S3-compatible 私有对象存储
-- 腾讯云 COS 等兼容服务
-
-浏览器不会获得永久公开对象存储 URL。  
-媒体读取仍会经过后端，并重新检查对应 Post / Collection 的访问权限。
-
-Post、Collection 影像墙、年度回顾、我的媒体和往年今日复用同一套沉浸灯箱。图片以逻辑媒体记忆浏览，Live Photo 的静态图和动态片段只计为一个条目；灯箱支持深链接、键盘/滑动切换、缩放、焦点恢复和原 Post 跳转。列表读取缩略图，灯箱读取去除 EXIF 的授权 WebP 展示图并短时预加载相邻图片，只有媒体所有者可以下载原文件。生产环境建议安装 `ffmpeg`，用于把 Live Photo 动态片段转换为无元数据、浏览器友好的 H.264 MP4；转换或播放失败时仍显示静态照片。
-
-成员可在写作页或媒体抽屉中维护 ALT 文本、可见图注、展示尺寸与对齐，也可在「我的媒体」中检索图片、下载原文件、识别重复文件并批量隐藏或恢复未绑定媒体；所有管理操作仍校验媒体所有权。
-
-### 长期保存与回顾
-
-- Collection 成员可独立选择「全部 / 仅重要 / 静音」通知；成员变化和所有权变更等直接通知不被静音吞掉。
-- 「年度回顾」按当前访问权限汇总自己的发布内容、月份、类型、Collection、地点和媒体，不保存额外画像或公开榜单。
-- 「数据导出」生成包含 Markdown、JSON 清单和本人原始媒体的 ZIP，不包含其他成员无权导出的数据。
-- 运维备份覆盖数据库业务表和私有媒体，并在恢复前校验结构与文件校验和。
-
----
-
-### 成员与互动
-
-成员登录后可以：
-
-- 浏览首页动态
-- 查看 Article / Note
-- 查看自己有权限进入的 Collection
-- 搜索内容
-- 按年月归档浏览
-- 浏览 Category / Tag
-- 查看成员主页
-- 使用 6 种固定表情回应 Post 和评论
-- 收藏
-- 评论、一级引用回复与 `@` 当前可访问成员
-- 接收带回复摘要和评论精确跳转的站内通知
-- 管理自己的内容、评论、收藏与 Collection
-
----
-
-### 账号与安全
-
-账号系统包括：
-
-- 邀请码注册
-- 登录 / 登出
-- Refresh Session
-- 多设备会话管理
-- 一键退出全部设备
-- 邮箱验证
-- 忘记密码
-- 密码重置
-- 重置后撤销既有 Refresh Session
-
-邮箱验证不会阻断正常成员使用，主要用于建立可信的账号恢复通道。
-
-一次性账号令牌：
-
-- 原始 Token 不写入数据库
-- 数据库仅保存 HMAC 摘要
-- 支持过期、撤销、单次消费
-- 密码重置接口避免邮箱枚举
-- 邮件与日志避免输出完整敏感令牌
-
----
-
-### Admin 后台
-
-系统管理员拥有独立后台，用于站点治理与维护：
-
-- Dashboard
-- 用户管理
-- Post 管理
-- Collection 管理
-- 评论管理
-- Category / Tag 管理
-- 媒体管理
-- 首页精选内容管理
-- 站点设置
-- 系统通知
-- Admin 操作日志
-
-高风险操作要求填写 `reason`，并写入 Admin Log。
-
-需要注意：
-
-> `system_admin` 身份不会自动绕过普通内容 API 的 ACL。
-
-管理员扩大读取范围只发生在专用 `/admin` 接口中。
-
----
-
-## 隐私与访问控制
-
-映墨的权限控制不是仅靠前端路由实现。
-
-普通业务查询会在数据库查询阶段直接应用 ACL，包括：
-
-- 首页
-- Post 列表
-- Collection
-- 搜索
-- Archive
-- Profile
-- Category
-- Tag
-- Favorite
-- 评论
-- 媒体
-
-对于无权访问的登录用户，资源级接口通常返回 `404`，避免泄露对象是否存在。
-
-游客访问内容 API 时统一要求认证。
-
-公开 HTML 页面不会输出成员作品或用户私有数据：
-
-```text
-/
-└── 站点介绍
-
-/about
-└── 关于映墨
-
-成员内容
-└── 登录 + 后端 ACL 后访问
-```
-
-Sitemap 只传播公开介绍页，RSS 默认关闭。
-
----
-
-## 技术栈
-
-### Frontend
-
-- React 19
-- React Router 7
-- Vite 7
-- Tailwind CSS 4 构建集成
-- KaTeX
-- highlight.js
-- Fontsource Variable Fonts
-  - Noto Serif SC Variable
-  - JetBrains Mono Variable
-- ESLint
-- Node.js 原生 Test Runner
-
-前端字体由项目自身打包和提供，避免 macOS、iOS、Android、Windows 因系统字体不同产生明显视觉差异。
-
-### Backend
-
-- Python 3.11+
-- Flask 3
-- Flask App Factory
-- Flask Blueprint
-- SQLAlchemy
-- Flask-SQLAlchemy
-- Flask-Migrate / Alembic
-- Flask-JWT-Extended
-- Flask-Limiter
-- Flask-CORS
-- Pillow
-- Python-Markdown
-- Bleach
-- boto3
-- PyMySQL
-- Gunicorn
-- Redis
-- pytest
-
-### Production Infrastructure
-
-推荐生产架构：
-
-```text
-                ┌─────────────────────┐
-                │      Browser        │
-                │ Desktop / iOS /     │
-                │ Android             │
-                └──────────┬──────────┘
-                           │ HTTPS
-                           ▼
-                ┌─────────────────────┐
-                │        Nginx        │
-                └─────────┬───────────┘
-                          │
-             ┌────────────┴────────────┐
-             │                         │
-             ▼                         ▼
-┌────────────────────────┐   ┌────────────────────────┐
-│ React / Vite dist      │   │ Flask / Gunicorn      │
-│ Static Frontend        │   │ /api/v1               │
-└────────────────────────┘   └───────────┬────────────┘
-                                        │
-                      ┌─────────────────┼─────────────────┐
-                      │                 │                 │
-                      ▼                 ▼                 ▼
-             ┌────────────────┐ ┌──────────────┐ ┌─────────────────┐
-             │ MySQL 8        │ │ Redis        │ │ Private Object  │
-             │ Business Data  │ │ Rate Limit   │ │ Storage / COS   │
-             └────────────────┘ └──────────────┘ └─────────────────┘
-                                        │
-                                        ▼
-                               ┌─────────────────┐
-                               │ SMTP Provider   │
-                               │ Account Email   │
-                               └─────────────────┘
-```
-
----
-
-## 项目结构
-
-```text
-Ying-Mo-V3.2/
-├── backend/
-│   ├── app/                    # Flask 应用与业务模块
-│   ├── migrations/             # Alembic 数据库迁移
-│   ├── scripts/                # 校验与维护脚本
-│   ├── tests/                  # 后端自动化测试
-│   ├── .env.example            # 环境变量模板
-│   ├── requirements.txt
-│   ├── run.py
-│   └── gunicorn.conf.py
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/         # 通用组件
-│   │   ├── contexts/           # Auth / Theme 等上下文
-│   │   ├── hooks/
-│   │   ├── lib/                # API、Markdown、媒体等基础逻辑
-│   │   ├── pages/              # 页面
-│   │   └── styles/
-│   ├── scripts/                # 构建产物校验
-│   ├── tests/                  # 前端回归测试
-│   ├── package.json
-│   └── vite.config.js
-│
-├── docs/
-│   ├── product.md              # 产品与业务规则基线
-│   ├── backend/
-│   │   ├── P0_ACCEPTANCE.md
-│   │   ├── P1_ACCEPTANCE.md
-│   │   └── VALIDATION.md
-│   └── frontend/
-│
-└── README.md
-```
-
-### 文档入口
-
-日常开发先读本 README，再按任务查产品或设计规范。以下目录统一说明现存文档的职责；后续直接维护对应文件，不新增平行规范或重复交接文档。
-
-| 文档 | 作用 |
+| 资料 | 用途 |
 | --- | --- |
-| [产品需求](docs/product.md) | 产品模型、权限、接口与业务规则的唯一需求基线 |
-| [前端设计规范](docs/frontend/DESIGN.md) | 视觉、组件、布局及双端验收的唯一设计基线 |
-| [前端启动说明](frontend/README.md) | 前端目录内的启动、构建、路由和认证／媒体约束速查 |
-| [迁移说明](backend/migrations/README) | 数据库迁移目录入口，具体操作回到本 README |
-| [共同回忆方案](docs/SHARED_MEMORY_DEVELOPMENT_PLAN.md) | 关系模型、并发、权限生命周期、测试矩阵及尚待执行的上线条件 |
-| [产品审查](docs/PRODUCT_REVIEW_2026-09-08.md) | 2026-09-08 的产品判断、依据和后续方向；建议不自动成为需求 |
-| [前端联调历史](docs/frontend/INTEGRATION_BASELINE.md) | 各阶段接口约定、实现细节与真实联调结果，非当前状态快照 |
-| [后端验证历史](docs/backend/VALIDATION.md) | 实际命令、数据库／浏览器验证及外部环境缺口 |
-| [P0 验收](docs/backend/P0_ACCEPTANCE.md) | 初始核心功能的需求—接口—测试对应矩阵 |
-| [P1 验收](docs/backend/P1_ACCEPTANCE.md) | 阶段 21–27 创作、账号恢复、阅读与版本能力的完成定义 |
-| [轻量互动验收](docs/backend/V37_ACCEPTANCE.md) | 回应、引用、提及、通知和失权边界的专项历史验收 |
-| [媒体记忆验收](docs/backend/MEDIA_MEMORY_ACCEPTANCE.md) | 灯箱、Live Photo、相册和媒体权限的专项历史验收 |
+| [产品规范](docs/product.md) | 按章节查业务模型、权限与接口 |
+| [UI 规范](docs/frontend/DESIGN.md) | 视觉、组件、布局、动效与响应式 |
+| [前端说明](frontend/README.md) | 启动、路由、认证与媒体约束 |
+| [共同回忆](docs/backend/SHARED_MEMORY.md) | 关系模型、权限生命周期与并发约束 |
+| [续火花](docs/backend/SPARK.md) | 浏览器后台、服务器部署与维护 |
+| `designs/`、`docs/frontend/prototypes/`、`docs/assets/` | 按需查看 UI 原型、插画与截图 |
+| `skills/yingmo-handdrawn-ui/SKILL.md` | 项目的详细 UI 风格参考 |
 
-验收文档中的通过记录只对应当时执行范围，不代表当前代码或生产环境已通过。依赖清单 `backend/requirements.txt` 是安装输入，不属于可删除的说明文档；pytest 缓存内的 README 是工具生成文件，不进入项目文档体系。
+## 目录
 
----
+```text
+backend/app/          Flask 业务、权限、媒体、备份与续火花
+backend/migrations/   连续增量迁移，数据库升级所需
+backend/scripts/      本地续火花启动、UI 演示数据生成
+frontend/src/         页面、组件、样式与客户端逻辑
+frontend/public/      图标、PWA 和品牌视频
+frontend/scripts/     构建产物与包体校验
+deploy/              部署脚本与后台 systemd 服务
+docs/                产品、设计与必要的开发运维说明
+designs/             UI 设计资料
+```
 
 ## 本地开发
 
-### 1. 克隆仓库
-
-```bash
-git clone https://github.com/InkSaku/Ying-Mo-V3.2.git
-cd Ying-Mo-V3.2
-```
-
-### 2. 启动后端
+后端（Python 3.11+）：
 
 ```bash
 cd backend
-
 python3 -m venv .venv
 source .venv/bin/activate
-
 python -m pip install -r requirements.txt
-
 cp .env.example .env
-```
-
-至少修改以下配置：
-
-```env
-SECRET_KEY=replace-with-a-strong-secret-at-least-32-bytes
-JWT_SECRET_KEY=replace-with-another-strong-secret-at-least-32-bytes
-REGISTRATION_INVITE_CODE=replace-with-your-invite-code
-```
-
-初始化数据库：
-
-```bash
+# 编辑 .env 后继续
 flask --app run.py db upgrade
-```
-
-如需创建系统管理员：
-
-```bash
 flask --app run.py create-admin
-```
-
-启动：
-
-```bash
 python run.py
 ```
 
-默认后端地址：
+`.env` 至少设置不同且各不少于 32 字节的 `SECRET_KEY`、`JWT_SECRET_KEY`，以及 `REGISTRATION_INVITE_CODE`。完整变量见[环境模板](backend/.env.example)。开发默认使用 SQLite；后端监听 `http://127.0.0.1:8000`。
 
-```text
-http://127.0.0.1:8000
-```
-
-本地测试续火花时，还需要在另一个终端运行独立后台：
-
-```bash
-cd backend
-.venv/bin/python -m playwright install chromium
-.venv/bin/python scripts/run_local_spark.py
-```
-
-该脚本仅允许开发环境和本机数据库。首次启动会生成固定的凭证加密密钥并保存到本地 `.env`（权限 `600`），以后重复启动沿用该密钥；不会输出密钥。若网站后端已在运行，首次生成后重启 `python run.py` 一次。脚本检查数据库和真实 Chromium 后启动 worker，保持这个终端运行即可。可加 `--check` 只完成配置和检查。前端、网站后端、续火花后台是三个独立进程。
-
-打开 `/tools/spark` 应看到“后台服务在线”，点击“扫码连接抖音”，用手机抖音扫描网页二维码并确认，再在网页确认连接的账号。系统自动安排联系人同步；保存好友与问候计划、完成模拟检查后，显式开启每日计划。备用脚本导入收纳在折叠入口中。无需先部署服务器即可测试这一流程。
-
----
-
-### 3. 启动前端
-
-新开一个终端：
+另开终端启动前端：
 
 ```bash
 cd frontend
-
+cp .env.example .env
 npm ci
 npm run dev
 ```
 
-默认前端地址：
+地址为 `http://127.0.0.1:5173`，`/api` 默认代理到后端；`VITE_DEV_API_PROXY` 可覆盖代理地址。
 
-```text
-http://127.0.0.1:5173
-```
-
-开发环境中，Vite 会自动将 `/api` 代理至：
-
-```text
-http://127.0.0.1:8000
-```
-
-如需修改：
-
-```bash
-VITE_DEV_API_PROXY=http://127.0.0.1:8000 npm run dev
-```
-
----
-
-## 环境变量
-
-完整模板见：
-
-```text
-backend/.env.example
-```
-
-### 基础配置
-
-```env
-APP_ENV=development
-
-DATABASE_URL=sqlite+pysqlite:///yingmo_dev.db
-
-SECRET_KEY=...
-JWT_SECRET_KEY=...
-REGISTRATION_INVITE_CODE=...
-
-CORS_ORIGINS=http://127.0.0.1:5173
-SITE_URL=http://127.0.0.1:5173
-```
-
-### Production 数据库
-
-```env
-APP_ENV=production
-DATABASE_URL=mysql+pymysql://user:password@host:3306/yingmo?charset=utf8mb4
-```
-
-### Redis
-
-```env
-RATELIMIT_STORAGE_URI=redis://127.0.0.1:6379/0
-```
-
-### 私有对象存储
-
-```env
-MEDIA_STORAGE_BACKEND=s3
-
-S3_BUCKET=your-private-bucket
-S3_PREFIX=yingmo-media
-S3_ENDPOINT_URL=...
-S3_REGION=...
-S3_ACCESS_KEY_ID=...
-S3_SECRET_ACCESS_KEY=...
-```
-
-生产 Bucket 应保持私有。
-
-### SMTP
-
-```env
-MAIL_BACKEND=smtp
-MAIL_FROM=no-reply@example.com
-
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USERNAME=...
-SMTP_PASSWORD=...
-SMTP_USE_TLS=true
-```
-
-不要将真实 Secret、数据库密码、COS Key 或 SMTP Password 提交到 Git。
-
----
-
-## 数据库迁移
-
-查看当前迁移：
-
-```bash
-cd backend
-flask --app run.py db heads
-```
-
-升级：
-
-```bash
-flask --app run.py db upgrade
-```
-
-当前迁移体系包括：
-
-- V3.2 基线业务表
-- P0 Release Schema
-- `public → login_only` 数据迁移
-- Post `edit_version`
-- 邮箱可信与账号恢复相关 Schema
-- 长期保存、轻量互动、媒体展示衍生图、图片版式与共同回忆关系 Schema；代码迁移头以 `db heads` 为准，目标数据库版本以 `db current` 为准
-
-生产环境部署新版本前，应先备份数据库，再执行 migration。
-
----
-
-## 测试与质量门禁
-
-### Backend
-
-```bash
-cd backend
-
-python -m pytest -q
-python -m compileall -q app tests migrations scripts run.py gunicorn.conf.py
-python scripts/verify_static.py
-python -m pip check
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm run check
-npm run test:e2e
-```
-
-`npm run check` 会执行：
-
-```text
-ESLint
-  ↓
-Node 回归测试
-  ↓
-Vite production build
-  ↓
-Bundle verification
-```
-
-`npm run test:e2e` 会启动隔离的临时后端与 Vite 服务，并用 Playwright Chromium 验证登录、自动保存、按光标插图、图片块设置与排序，以及移动端编辑布局；临时数据库和上传目录会在服务退出后清理。
-
-完整的实际验证记录以：
-
-[`docs/backend/VALIDATION.md`](docs/backend/VALIDATION.md)
-
-为准。
-
----
-
-## Production Build
-
-### 续火花助手（第二阶段：网页扫码与首次设置）
-
-入口为 `/tools/spark`，个人空间与侧栏提供链接。复用映墨成员登录，每位有效成员管理一个抖音账号；登录态、好友、配置、执行记录均独立。主入口使用抖音官方网页生成的二维码，用户在手机上扫码确认；服务器连接如需后续操作，会在本页显示“继续完成登录”的官方画面，完成后在映墨核对账号并绑定。本地脚本导入作为备用方式保留。服务器更新步骤与验收边界见 [服务器扫码后续验证](docs/backend/SPARK_SERVER_LOGIN.md)。
-
-第二阶段需要数据库迁移 `20261014_0015`，新增临时登录会话表及账号引导状态字段。更新前停止 worker、备份数据库和密钥，再执行 `flask --app run.py db upgrade`，重启网站后端与 worker。已有第一阶段账号的已启用计划保留；首次绑定、更换账号或重连均暂停每日发送，同号重连保留好友和模板，完成核对与模拟检查后再显式恢复。改变好友选择或消息/通道设置后，需要重新检查。仅保存默认值不算已经完成设置。
-
-扫码请求与普通任务共用一个串行后台：到期自动发送优先，扫码之后为其他就绪任务安排一次执行机会；手动发送不会持续压住扫码请求。排队期限 30 分钟，实际扫码窗口最长 180 秒，候选登录态等待账号确认最长 5 分钟。进入账号确认后浏览器即关闭。取消、过期和重启会清理临时二维码/候选凭证；停止后台期间，超时会话在接口读取或后台恢复时清理，过期会话始终不能确认。
-
-二维码与候选登录态加密保存，仅本人通过带 JWT 请求头的接口读取。前端使用鉴权 Blob 请求展示二维码，不把 token 放进图片地址。稳定身份使用带来源的内部摘要比对，昵称和抖音号仅用于展示；无法确认同号时按新账号处理。登录页的普通“验证码登录”选项不会被当作安全挑战，实际验证提示会停止此次连接。
-
-续火花包含联系人同步、好友选择与排序、消息模板、每日计划、模拟运行、立即执行、失败补发、consumer / creator 双通道、抖音号采集和每周采集。自动任务在独立进程中运行，不依赖打开网页。站内运行记录区分排队、执行、成功、部分成功、失效、平台验证、待确认与停止。
-
-安装后端依赖并升级迁移后，配置独立的 `SPARK_CREDENTIAL_KEY`。在服务器终端执行下面的命令生成密钥，再将输出写入权限为 `600` 的 `backend/.env`；不要提交密钥，也不要在每次部署时重新生成：
-
-```bash
-cd /var/www/yingmo/backend
-.venv/bin/python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
-
-登录态使用 Fernet 加密存入数据库，执行时只在内存解密。数据库备份包含加密登录态，密钥应另行安全备份；丢失或更换密钥后需重新导入登录态。更新同一账号的凭证会保留已确认身份的好友选择；不能确认相同账号时会清空好友名单，避免把旧名单用于新账号。
-
-4 核 4 GB、最多十位成员采用一个后台进程、一个 Chromium、一个任务子进程，依次执行所有账号任务。不要把调度器放进 Gunicorn，不要在多台机器上启动此后台。准备浏览器与 systemd 服务（示例使用 `www-data`；部署路径或运行用户不同时调整服务文件）：
-
-```bash
-sudo install -d -m 700 -o www-data -g www-data /var/lib/yingmo-spark
-sudo /var/www/yingmo/backend/.venv/bin/python -m playwright install-deps chromium
-sudo -u www-data env PLAYWRIGHT_BROWSERS_PATH=/var/lib/yingmo-spark/browsers \
-  /var/www/yingmo/backend/.venv/bin/python -m playwright install chromium
-sudo install -m 644 /var/www/yingmo/deploy/yingmo-spark.service /etc/systemd/system/yingmo-spark.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now yingmo-spark
-sudo systemctl status yingmo-spark
-```
-
-运行用户需要读取代码和 `.env`，但不要开放给无关用户。浏览器运行于非 root 用户并启用 Chromium sandbox；保留系统的用户命名空间支持。服务默认使用 `MemoryMax=1800M`、每个任务最长 1200 秒，全部子进程随服务停止，单实例文件锁也会由执行子进程持有。
-
-本地启动与检查（脚本准备固定本地密钥；检查只启动空白 Chromium，不访问抖音）：
+使用续火花还需第三个终端：
 
 ```bash
 cd backend
 .venv/bin/python -m playwright install chromium
-.venv/bin/python scripts/run_local_spark.py --check
 .venv/bin/python scripts/run_local_spark.py
 ```
 
-部署后端更新前停止 `yingmo-spark`，执行数据库迁移后重启。原有 `deploy/deploy.sh` 会对已安装的该服务进行这两步；首次安装仍按上面的命令执行。保存计划会撤销旧配置的自动任务并重新安排；关闭每日发送后，不启动新的每日发送与补发，手动任务和单独配置的每周采集仍可运行。关闭每周采集请将采集日期设为关闭；解绑会取消该账号全部任务并删除登录态与好友。服务重启时不自动重放中断的发送。跨日过期的发送任务取消，不集中补发过去几天的消息。
+脚本仅面向本机开发，首次生成并保存固定加密密钥。首次生成后重启网站后端，再打开 `/tools/spark`。详见[续火花说明](docs/backend/SPARK.md)。
 
-进入续火花页面会先显示使用风险提示，完整说明作者自娱自乐、违反抖音社区公约及封号风险。点击“我已知悉”关闭；勾选“不再提示”后，仅在当前浏览器按网站账号记住选择。未勾选、清除浏览器数据或更换账号时会再次提示；此选择不启用每日计划，也不触发发送。
-
-每位好友每日的真实发送有独立记录，Enter 前写入执行意图。已成功或结果不明的发送不会再发；只有确认在发送之前失败的好友才安排 45 分钟后的补发，每个账号每日至多一次补发批次。遇到平台验证或登录失效时暂停对应账号的计划。消息已进入发送阶段时，取消或解绑无法撤回它；界面保留待确认结果。
-
-上游核心固定为 `douyin-keeper` 的 `07d9c52e373f5e2c39da91415d7a53e9e1d7294c`，出处、改造说明与 MIT 版权见 `backend/app/spark/vendor/NOTICE.md` 和 `LICENSE`。验收范围及实账号验证边界见 [第一阶段记录](docs/backend/SPARK_ACCEPTANCE.md)、[第二阶段记录](docs/backend/SPARK_PHASE_TWO_ACCEPTANCE.md)。
-
-独立扫码探测可运行 `.venv/bin/python scripts/verify_spark_qr_spike.py`，需要先停止当前 worker，以共享文件锁保证只开一个浏览器。它只把临时二维码写入本机私有 `instance`，登录态留在内存，随后用新浏览器只读验证联系人，不绑定网站账号、不发送消息。`--probe` 仅检测二维码渲染，退出后该二维码不能登录。普通用户直接用网站入口，不需要运行探测脚本。
-
-前端：
+## 开发验证
 
 ```bash
 cd frontend
-
-npm ci
 npm run check
 ```
 
-成功后生产文件位于：
+依次执行 ESLint、Vite 生产构建、路由包体与 PWA 缓存规则校验。产物位于 `frontend/dist/`；`npm run preview` 可本地预览。历史自动化测试及专用测试工具已移除，修改后按涉及范围验证页面、API 与权限。
 
-```text
-frontend/dist/
-```
-
-可直接由 Nginx 提供。
-
-构建同时生成：
-
-```text
-app.webmanifest
-sw.js
-workbox-*.js
-pwa-192.png
-pwa-512.png
-pwa-maskable-512.png
-```
-
-PWA 在生产环境要求 HTTPS。建议让 Nginx 对 Service Worker 和 Web App Manifest 使用可重新验证的缓存策略：
-
-```nginx
-location = /sw.js {
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
-    try_files $uri =404;
-}
-
-location = /app.webmanifest {
-    default_type application/manifest+json;
-    add_header Cache-Control "no-cache";
-    try_files $uri =404;
-}
-```
-
-其余带内容哈希的前端静态资源仍可长期缓存。部署脚本会在重新加载 Nginx 前检查 PWA 清单、Service Worker 和 HTML manifest 元数据是否存在。
-
-后端：
+后端在 `backend/` 中执行：
 
 ```bash
-cd backend
-
-python -m pip install -r requirements.txt
-flask --app run.py db upgrade
-
-gunicorn --check-config -c gunicorn.conf.py run:app
-gunicorn -c gunicorn.conf.py run:app
+python -m compileall -q app migrations scripts run.py gunicorn.conf.py
+python -m pip check
+flask --app run.py db heads
 ```
 
-生产环境建议通过 systemd、Supervisor 或其他进程管理器托管 Gunicorn，而不是直接保持终端进程。
+迁移及写入验证使用临时数据库。
 
----
+## 数据库迁移与部署
 
-## 推荐上线流程
+在 `backend/` 执行 `flask --app run.py db heads` 查看代码迁移头，`db current` 查看目标数据库版本，`db upgrade` 升级。迁移目录是数据库升级链，不能作为历史记录删除。部署前先完成并校验备份。
 
-```text
-Local Development
-      ↓
-Run Tests / Build
-      ↓
-git commit
-      ↓
-git push origin main
-      ↓
-Production Server
-      ↓
-git pull origin main
-      ↓
-Install Changed Dependencies
-      ↓
-Database Migration
-      ↓
-Frontend Build
-      ↓
-Restart Backend When Needed
-      ↓
-Smoke Test
-```
+生产环境使用 `APP_ENV=production`、MySQL、共享 Redis 限流、私有 S3 兼容存储和 SMTP。配置明确的 `SITE_URL`、`CORS_ORIGINS` 与安全 Cookie；密钥、数据库及对象存储密码只放环境变量。建议安装 `ffmpeg` 转换 Live Photo 视频。
 
-常用流程：
+服务器默认路径为 `/var/www/yingmo`，已有部署环境运行 `bash deploy/deploy.sh`。脚本要求 `main` 分支和干净工作区，更新代码、停止已安装的续火花后台、安装依赖、迁移、重启后端及后台、构建前端并检查 Nginx 与健康端点。首次配置续火花服务见[部署说明](docs/backend/SPARK.md)。
 
-```bash
-# backend
-cd backend
-python -m pip install -r requirements.txt
-flask --app run.py db upgrade
+Nginx 提供 `frontend/dist/` 并将 `/api` 转发到 Gunicorn。PWA 要求 HTTPS；`/sw.js` 使用 `Cache-Control: no-cache, no-store, must-revalidate`，`/app.webmanifest` 使用 `Cache-Control: no-cache`；带哈希的静态资源可长期缓存。API、成员内容及受保护媒体不得进入 Service Worker 离线缓存。
 
-# frontend
-cd ../frontend
-npm ci
-npm run check
-```
+## 维护
 
-只有 Nginx 配置发生变化时才需要重新加载 Nginx；单纯替换新的 `dist` 静态产物通常无需修改 Nginx 配置。
-
----
-
-## 维护命令
-
-创建管理员：
+在 `backend/` 中运行：
 
 ```bash
 flask --app run.py create-admin
-```
-
-检查孤立媒体：
-
-```bash
 flask --app run.py cleanup-orphan-media --dry-run
-```
-
-删除确认后的孤立媒体：
-
-```bash
-flask --app run.py cleanup-orphan-media --delete
-```
-
-清理过期 Session：
-
-```bash
 flask --app run.py purge-expired-sessions
-```
-
-创建并校验完整备份：
-
-```bash
 flask --app run.py backup-create --output /secure/path/ying-mo-backup.zip
 flask --app run.py backup-verify --input /secure/path/ying-mo-backup.zip
 ```
 
-恢复会覆盖当前数据库业务数据和媒体目录，必须先在隔离环境验证，并显式确认：
+确认孤立媒体后使用 `cleanup-orphan-media --delete`。恢复会覆盖数据库业务数据与媒体，先在隔离环境验证：
 
 ```bash
 flask --app run.py backup-restore --input /secure/path/ying-mo-backup.zip --confirm RESTORE
 ```
 
-备份含密码哈希、账户资料及私有内容。生成文件权限会收紧为仅所有者可读写，但仍应存放在加密、受访问控制的目录或备份系统中。
+备份含账号与私有数据，需安全保管。旧 Schema 备份需在匹配旧代码的隔离环境恢复，再升级迁移。
 
----
+## 关键约束
 
-## API
-
-业务 API 统一位于：
-
-```text
-/api/v1
-```
-
-主要模块：
-
-```text
-/auth
-/posts
-/collections
-/uploads
-/comments
-/interactions
-/notifications
-/search
-/archive
-/categories
-/tags
-/users
-/admin
-```
-
-具体接口行为以代码、产品文档和测试为准，不建议把 README 当作 API Schema 的唯一来源。
-
----
-
-## 设计原则
-
-映墨没有试图成为“大而全”的内容社区。
-
-项目刻意不引入：
-
-- 公共内容广场
-- 推荐算法
-- 粉丝 / 关注体系
-- 热榜
-- 陌生人社交
-- 复杂创作者等级
-- 一人一码的邀请码追踪系统
-- 普通成员之间的细粒度发布 / 评论资格体系
-
-它更关注的是：
-
-```text
-长期保存
-+
-真实作者
-+
-朋友共同记录
-+
-清晰权限
-+
-私有媒体
-+
-可靠账号恢复
-+
-跨设备一致体验
-```
-
----
-
-## 项目状态
-
-当前主线：
-
-```text
-main
-```
-
-项目已完成核心产品闭环，并进入以稳定性、部署维护和细节优化为主的阶段。
-
-如需判断某项能力是否已经过真实自动化或外部基础设施验证，请查看：
-
-```text
-docs/backend/VALIDATION.md
-```
-
-README 只描述当前项目能力，不替代实际验证记录。
-
----
+- 游客仅访问公开介绍与账号流程；成员内容 API 均需登录，统一前缀 `/api/v1`。
+- Collection 创建者与成员共同决定普通读写权限；内容移出或合集删除后回落为独立 `private`。
+- 作者归属不变；管理员仅在专用后台 API 获得扩展读取权限。
+- 媒体通过受保护 API 读取；退出或会话失效时释放本地 Blob URL。
+- Access Token 仅存前端内存，Refresh Token 由 HttpOnly Cookie 管理。
+- 数据库迁移、备份恢复、续火花浏览器依赖与上游许可证都是运行维护所需文件。
 
 ## License
 
-当前仓库未附带独立开源许可证文件。
-
-除非仓库后续明确加入 `LICENSE`，否则代码、设计与项目内容默认保留相应权利，不应视为自动授予复制、分发或商业使用许可。
-
----
-
-<p align="center">
-  <strong>映墨 · Ying-Mo</strong><br />
-  写字，也和朋友一起记录生活。
-</p>
+项目未附独立开源许可证，代码、设计与内容保留相应权利。续火花上游代码的 MIT 许可与出处见 `backend/app/spark/vendor/LICENSE` 和 `NOTICE.md`。

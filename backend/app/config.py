@@ -107,19 +107,6 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
 
 
-class TestingConfig(BaseConfig):
-    APP_ENV = "testing"
-    TESTING = True
-    JWT_COOKIE_CSRF_PROTECT = False
-    SQLALCHEMY_ENGINE_OPTIONS = {}
-    MAIL_BACKEND = "memory"
-    MEMORY_CONTRIBUTIONS_ENABLED = True
-
-    @classmethod
-    def database_uri(cls):
-        return _db_url("TEST_DATABASE_URL", "sqlite+pysqlite:///:memory:")
-
-
 class ProductionConfig(BaseConfig):
     APP_ENV = "production"
     SPARK_WORKER_LOCK = os.getenv("SPARK_WORKER_LOCK", "/var/lib/yingmo-spark/worker.lock")
@@ -204,7 +191,6 @@ class ProductionConfig(BaseConfig):
 
 CONFIGS = {
     "development": DevelopmentConfig,
-    "testing": TestingConfig,
     "production": ProductionConfig,
 }
 
