@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "../styles/landing-brand-film.css";
 
-const filmUrl = `${import.meta.env.BASE_URL}brand-film/yingmo-brand-film-web-audio.mp4`;
+const filmUrl = `${import.meta.env.BASE_URL}brand-film/yingmo-brand-film-web-audio-v3.mp4`;
 const posterUrl = `${import.meta.env.BASE_URL}brand-film/poster.webp`;
 
 export function LandingBrandFilm() {
