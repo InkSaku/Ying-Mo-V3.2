@@ -11,6 +11,14 @@ from app.common.validation import USERNAME_RE, normalize_email, normalize_userna
 
 
 def register_commands(app):
+    @app.cli.command("spark-repair-harvest-pauses")
+    @click.option("--apply", is_flag=True, help="Apply only proven first-harvest pause recoveries; default is read-only.")
+    @with_appcontext
+    def spark_repair_harvest_pauses(apply):
+        import json
+        from app.spark.repair import repair_harvest_pauses
+        click.echo(json.dumps(repair_harvest_pauses(apply=apply), ensure_ascii=False))
+
     @app.cli.command("backup-create")
     @click.option("--output", required=True, type=click.Path(dir_okay=False, path_type=str))
     @with_appcontext

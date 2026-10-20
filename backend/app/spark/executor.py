@@ -11,7 +11,8 @@ from app.models.spark import now_utc
 from .notifications import notify_send_result
 from .context import _execution
 from .credentials import CredentialError, decrypt_state
-from .service import config_for, enqueue, local_now, reset_schedule, selected_contacts, validation_fingerprint, validation_ready
+from .service import (config_for, enqueue, local_now, reset_schedule, resume_schedule, selected_contacts,
+                      sending_plan_fingerprint, validation_fingerprint, validation_ready)
 
 
 class Cancelled(Exception):
@@ -185,11 +186,25 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         with driver_factory(cfg) as driver:
             if job.kind in ("sync", "harvest"):
                 status, data = driver.sync() if job.kind == "sync" else driver.harvest()
+                # Discard the browser operation's repeatable-read snapshot before
+                # inspecting current selection/configuration. API edits lock the
+                # same account row, so refreshing metadata cannot bless a new plan.
+                account_id = job.account_id
+                db.session.rollback()
+                db.session.scalar(db.select(SparkAccount).where(SparkAccount.user_id == account_id).with_for_update())
+                db.session.scalar(db.select(SparkJob).where(SparkJob.id == job_id).with_for_update())
                 job, account = assert_active(job_id)
                 if status == "succeeded":
+                    was_validated = validation_ready(account)
+                    checked_behavior = sending_plan_fingerprint(account)
                     merge_consumer(account, data) if job.kind == "sync" else merge_creator(account, data)
+                    if was_validated:
+                        if checked_behavior == sending_plan_fingerprint(account):
+                            account.validation_fingerprint = validation_fingerprint(account)
+                        else:
+                            account.validation_fingerprint = account.validated_at = None
                     account.session_status = "ready"
-                    reset_schedule(account)
+                    resume_schedule(account)
                 elif status in ("expired", "blocked"):
                     account.session_status = status
                     reset_schedule(account)

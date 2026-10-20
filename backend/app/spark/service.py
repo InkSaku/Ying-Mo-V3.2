@@ -120,6 +120,16 @@ def reset_schedule(account, now=None):
     account.next_harvest_at = next_weekly(cfg, now) if eligible else None
 
 
+def resume_schedule(account, now=None):
+    """Restore suspended schedules without discarding an existing due task."""
+    daily, weekly = account.next_run_at, account.next_harvest_at
+    reset_schedule(account, now)
+    if daily is not None and account.next_run_at is not None:
+        account.next_run_at = daily
+    if weekly is not None and account.next_harvest_at is not None:
+        account.next_harvest_at = weekly
+
+
 def cancel_jobs(account, *, automatic_only=False):
     query = db.select(SparkJob).where(SparkJob.account_id == account.user_id, SparkJob.status.in_(ACTIVE_JOB_STATUSES))
     if automatic_only:
@@ -140,14 +150,38 @@ def selected_contacts(account):
     return [c for c in contacts_for(account) if c.selected]
 
 
-def validation_fingerprint(account):
+def _plan_fingerprint(account, targets):
     cfg = config_for(account)
-    targets = [{"id": c.id, "name": c.display_name, "order": c.selected_order,
-                "profile": {k: c.profile.get(k) for k in ("has_conversation", "ambiguous", "missing_in_sync", "short_id", "user_id")}}
-               for c in selected_contacts(account)]
     return hashlib.sha256(json.dumps({"credential": account.credential_revision, "targets": targets,
         "allow_first_message": cfg["allow_first_message"], "messages": cfg["messages"]},
         sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def validation_fingerprint(account):
+    # Keep the stored format compatible with all existing successful checks.
+    targets = [{"id": c.id, "name": c.display_name, "order": c.selected_order,
+                "profile": {k: c.profile.get(k) for k in ("has_conversation", "ambiguous", "missing_in_sync", "short_id", "user_id")}}
+               for c in selected_contacts(account)]
+    return _plan_fingerprint(account, targets)
+
+
+def sending_plan_fingerprint(account):
+    """The checked send behavior, excluding optional consumer profile enrichment.
+
+    Consumer sends locate the existing conversation by display_name. Creator
+    sends depend on creator identity/nickname, so those fields remain protected.
+    None and False safety flags both mean the same thing to the executor.
+    """
+    targets = []
+    for contact in selected_contacts(account):
+        profile = contact.profile or {}
+        behavior = {key: bool(profile.get(key)) for key in ("has_conversation", "ambiguous", "missing_in_sync")}
+        if not behavior["has_conversation"]:
+            behavior.update({key: profile.get(key) for key in ("short_id", "user_id")})
+            behavior["nickname"] = profile.get("nickname") or contact.display_name
+        targets.append({"id": contact.id, "name": contact.display_name,
+                        "order": contact.selected_order, "profile": behavior})
+    return _plan_fingerprint(account, targets)
 
 
 def validation_ready(account):
