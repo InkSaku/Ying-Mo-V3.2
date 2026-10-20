@@ -191,7 +191,7 @@ test("spark workspace explains queued retries and keeps filtered selections", as
   await expect(page.getByRole("navigation", { name: "续火花设置步骤" }).getByRole("link", { name: /设置问候/ })).toHaveAttribute("aria-current", "step");
   state.worker.online = false;
   await page.getByRole("button", { name: "刷新状态", exact: true }).click();
-  await expect(page.getByText("后台服务暂未连接。配置会保存，任务会等待服务恢复；不会显示为已发送。", { exact: true })).toBeVisible();
+  await expect(page.getByText("续火花服务暂时不可用，扫码、同步和发送需要等待恢复。你可以先保存好友选择和每日计划；页面会自动更新状态。若长时间未恢复，请联系网站管理员。", { exact: true })).toBeVisible();
   await expect(queuePanel.locator(".spark-run-status")).toHaveText("状态待同步");
   await expect(queuePanel.locator(".spark-moving-flame")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "重新扫码连接", exact: true })).toBeDisabled();

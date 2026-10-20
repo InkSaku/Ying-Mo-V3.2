@@ -44,7 +44,7 @@ class PlaywrightDriver:
                 self.mode = "consumer"
             logged, _ = automation.check_login(self.page)
             if not logged:
-                return "expired", "抖音登录态已失效，请重新导入"
+                return "expired", "抖音登录已过期，请重新扫码连接"
             return automation.send_to_contact(self.page, contact["display_name"], message, dry_run, before_send)
         self.mode = "creator"
         ok, why = creator_channel._do_send(self.page, self.context,
@@ -55,7 +55,7 @@ class PlaywrightDriver:
         if "已尝试" in why:
             return "unknown", "已尝试发送但未确认结果，请到抖音查看；不会自动重发"
         if any(x in why for x in ("登录", "cookie")):
-            return "expired", "抖音登录态已失效，请重新导入"
+            return "expired", "抖音登录已过期，请重新扫码连接"
         if any(x in why for x in ("频繁", "验证码", "验证")):
             return "blocked", "平台要求验证或提示操作频繁"
         return "failed", "未能准确定位好友或聊天输入框，未发送消息"

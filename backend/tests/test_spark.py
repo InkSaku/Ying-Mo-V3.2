@@ -108,6 +108,49 @@ def run(response):
     return db.session.get(SparkJob, job_id)
 
 
+@pytest.mark.parametrize("kind", ["sync", "harvest", "dry_run", "send"])
+def test_unexpected_execution_error_has_safe_actionable_guidance(client, kind):
+    user_id, token = member(client, "sparkfailurehelp")
+    bind(client, token)
+    add_friend(user_id)
+
+    class BrokenDriver(Driver):
+        def __enter__(self):
+            raise RuntimeError("secret URL sessionid=should-never-leak")
+
+    job_id = queue(client, token, kind).get_json()["data"]["id"]
+    execute_job(job_id, BrokenDriver, sleep=lambda _: None)
+    job = db.session.get(SparkJob, job_id)
+    assert job.status == "failed"
+    assert job.result["error_code"] == "EXECUTION_FAILED"
+    message = job.result["message"]
+    assert "检查服务运行状态" not in message
+    assert "should-never-leak" not in json.dumps(job.result)
+    assert "核对" in message if kind == "send" else "联系网站管理员" in message
+    assert db.session.scalar(db.select(db.func.count()).select_from(SparkDelivery)) == 0
+
+
+@pytest.mark.parametrize("kind", ["sync", "harvest"])
+@pytest.mark.parametrize("status,guidance", [("expired", "重新扫码"), ("blocked", "手机抖音"), ("failed", "联系网站管理员")])
+def test_sync_failures_distinguish_login_verification_and_unknown_errors(client, kind, status, guidance):
+    _, token = member(client, "sparkfailurestates")
+    bind(client, token)
+
+    class FailedSync(Driver):
+        def sync(self):
+            return status, []
+
+        def harvest(self):
+            return status, {}
+
+    job_id = queue(client, token, kind).get_json()["data"]["id"]
+    execute_job(job_id, FailedSync)
+    job = db.session.get(SparkJob, job_id)
+    assert job.status == status
+    assert guidance in job.result["message"]
+    assert ("联系人同步" if kind == "sync" else "抖音号采集") in job.result["message"]
+
+
 def test_dry_run_publishes_current_recipient_before_browser_check(client):
     user_id, token = member(client, "sparkprogress")
     bind(client, token)

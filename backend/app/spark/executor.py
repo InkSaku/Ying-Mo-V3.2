@@ -116,7 +116,7 @@ def mark_intent(job_id, delivery_id, limit):
     db.session.commit()
 
 
-def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认", *, cancelled=False):
+def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认", *, cancelled=False, error_code=None):
     # The parent may still hold a running-job snapshot after the child committed
     # success. Discard that transaction and lock the current row before deciding
     # to interrupt; committed send intents remain the source of truth.
@@ -134,7 +134,8 @@ def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认
         elif delivery.status == "checking":
             delivery.status, delivery.reason = "failed", "发送前任务已中断，未发送"
     job.status = "unknown" if unknown else "cancelled" if job.cancel_requested or cancelled else "failed"
-    job.result = {**(job.result or {}), "message": reason}
+    job.result = {**(job.result or {}), "message": reason,
+                  **({"error_code": error_code} if error_code else {})}
     job.finished_at = now_utc()
     notify_send_result(job)
     db.session.commit()
@@ -165,7 +166,8 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         return
     except CredentialError:
         job.status, job.finished_at = "failed", now_utc()
-        job.result = {"message": "登录态无法解密，请联系管理员检查加密密钥或重新导入。"}
+        job.result = {"message": "无法读取已保存的抖音登录信息，请重新扫码连接。如果仍然失败，请联系网站管理员。",
+                      "error_code": "CREDENTIAL_UNREADABLE"}
         account.session_status = "error"
         reset_schedule(account)
         notify_send_result(job)
@@ -209,7 +211,13 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                     account.session_status = status
                     reset_schedule(account)
                 job.status = status if status in ("succeeded", "expired", "blocked") else "failed"
-                job.result = {"message": "同步完成" if status == "succeeded" else "同步未完成，请检查登录态后重试。", "count": len(data)}
+                operation = "联系人同步" if job.kind == "sync" else "抖音号采集"
+                message = {
+                    "succeeded": f"{operation}完成",
+                    "expired": f"{operation}未完成：抖音登录已过期，请重新扫码连接。",
+                    "blocked": f"{operation}未完成：抖音要求验证或限制了操作，请先在手机抖音查看提示，再重新连接。",
+                }.get(status, f"{operation}未完成，请稍后重试。如果多次失败，请联系网站管理员并提供这条记录的时间。")
+                job.result = {"message": message, "count": len(data)}
             else:
                 targets = selected_contacts(account)
                 checked_fingerprint = validation_fingerprint(account)
@@ -257,7 +265,9 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                             except Exception:
                                 delivery = db.session.get(SparkDelivery, delivery_id) if delivery_id else None
                                 status = "unknown" if delivery and delivery.status == "sending" else "failed"
-                                reason = "发送结果未确认，不会自动重发" if status == "unknown" else "发送前操作失败，未发送消息"
+                                reason = ("模拟检查遇到问题，没有发送消息，请稍后重试检查。" if dry
+                                          else "发送结果未确认，请到手机抖音核对聊天记录；不会自动重发" if status == "unknown"
+                                          else "发送前操作失败，未发送消息")
                             if not dry:
                                 delivery = db.session.get(SparkDelivery, delivery_id)
                                 attempted = delivery.status == "sending"
@@ -306,6 +316,9 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         interrupted(job_id, "任务已停止；已尝试发送的结果需要到抖音确认", cancelled=True)
     except Exception:
         db.session.rollback()
-        interrupted(job_id, "后台执行失败，请检查服务运行状态后重试")
+        operation = {"sync": "联系人同步", "harvest": "抖音号采集", "dry_run": "模拟检查", "send": "消息发送"}[job.kind]
+        guidance = ("请先到抖音私信核对已发送的消息，再查看每位好友的执行结果，避免重复发送。" if job.kind == "send"
+                    else "请稍后重试。如果多次失败，请联系网站管理员并提供这条记录的时间。")
+        interrupted(job_id, f"{operation}遇到问题，未能完成。{guidance}", error_code="EXECUTION_FAILED")
     finally:
         _execution.reset(token)

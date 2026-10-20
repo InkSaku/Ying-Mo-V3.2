@@ -127,6 +127,11 @@
 .spark-run-event { display: grid; grid-template-columns: minmax(100px, 1fr) 3fr; gap: 16px; padding: 10px 0; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; border-top: 1px solid var(--border); margin-top: 10px; }
 .spark-run-event strong { font-weight: 500; }
 .spark-run-event span { color: var(--text-3); }
+.spark-run-recovery { margin-top: 16px; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; }
+.spark-run-recovery > strong { font-weight: 600; color: var(--text); }
+.spark-run-recovery p { margin: 6px 0; }
+.spark-recovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
+.spark-recovery-actions > span { color: var(--text-2); font-size: 13px; }
 .spark-progress { width: 100%; height: 4px; accent-color: var(--brand-link); appearance: none; border: 0; border-radius: 2px; overflow: hidden; background: var(--border); }
 .spark-progress::-webkit-progress-bar { background: var(--border); }
 .spark-progress::-webkit-progress-value { background: var(--brand-link); transition: width .35s ease; }

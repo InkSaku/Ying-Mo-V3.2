@@ -10,7 +10,7 @@ import { SparkBinding } from "../components/SparkBinding";
 import { SparkQueue, SparkRunBadge } from "../components/SparkQueue";
 import { InkSketch } from "../components/InkSketch";
 import { ErrorState, PageLoader } from "../components/States";
-import { sparkJobDuration, sparkJobPhase, sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
+import { sparkJobDuration, sparkJobPhase, sparkJobRecovery, sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
 import "../styles/spark.css";
 
 const numericFields = [
@@ -224,7 +224,7 @@ function SparkWorkspace() {
 
       {error ? <div className="inline-error" role="alert">{error}</div> : null}
       {notice ? <div className="inline-success" role="status">{notice}</div> : null}
-      {!data.worker.online ? <p className="spark-service-note">后台服务暂未连接。配置会保存，任务会等待服务恢复；不会显示为已发送。</p> : null}
+      {!data.worker.online ? <p className="spark-service-note">续火花服务暂时不可用，扫码、同步和发送需要等待恢复。你可以先保存好友选择和每日计划；页面会自动更新状态。若长时间未恢复，请联系网站管理员。</p> : null}
       {["expired", "blocked", "error"].includes(data.session_status) ? <div className="spark-service-note"><p>抖音登录需要处理，自动发送已暂停。请重新扫码连接；遇到平台验证时先在抖音官方客户端查看提示。</p><button className="text-button" disabled={Boolean(busy) || !data.worker.online} onClick={() => { void startLogin(); }}>重新扫码连接</button></div> : null}
       {data.jobs.some((job) => job.status === "unknown") ? <p className="spark-service-note">存在发送结果待确认的记录，请到抖音私信查看。助手不会自动重发这些消息。</p> : null}
       <nav className="spark-steps" aria-label="续火花设置步骤">{["连接抖音", "选择好友", "设置发送计划", "检查并开启"].map((label, index) => <a href={`#spark-step-${index + 1}`} key={label} className={stepComplete[index] ? "is-complete" : ""} aria-current={currentStep === index ? "step" : undefined}><span>{stepComplete[index] ? "✓" : `0${index + 1}`}</span><div>{label}<small>{stepComplete[index] ? "已完成" : currentStep === index ? "下一步" : "待完成"}</small></div></a>)}</nav>
@@ -333,11 +333,21 @@ function SparkWorkspace() {
         {!visibleJobs.length ? <p className="spark-empty">{data.jobs.length ? "这里还没有相关记录。" : "还没有执行记录。完成好友和计划设置后，先来一次模拟检查。"}</p> : null}
         <div className="spark-run-list">{visibleJobs.map((job) => {
           const phase = sparkJobPhase(job, data.worker.online, now);
+          const recovery = sparkJobRecovery(job);
+          const retryAllowed = recovery?.retryKind && data.worker.online && (job.kind === "dry_run" ? canCheck : canQueue) && !["expired", "blocked", "error"].includes(data.session_status);
           return <details className={`spark-run is-${phase.key}`} key={job.id} open={["queued", "running", "unknown", "failed", "partial", "expired", "blocked"].includes(job.status) ? true : undefined}>
           <summary><span><strong>{sparkKindLabels[job.kind]}{job.source === "retry" ? <em>失败补发</em> : null}</strong><small>{sourceLabels[job.source]} · {sparkTime(job.scheduled_at)}{job.result.events?.length ? ` · ${job.result.events.length} 位好友` : ""}</small></span><SparkRunBadge phase={phase} /></summary>
           {job.status === "queued" ? <p className="spark-meta">{phase.key === "scheduled" ? `${sparkTime(job.scheduled_at)} 到点后进入队列。` : phase.key === "stopping" ? "停止请求已提交，等待后台确认。" : !data.worker.online ? "后台暂未连接，排队状态会在恢复后同步。" : `已等待 ${sparkJobDuration(job, now)} · ${data.queue?.busy ? "前序任务正在执行，完成后继续处理队列。" : "等待后台接手。"}`}{job.source === "retry" ? "仅重试未发送成功的好友，已发送或结果待确认的对象会跳过。" : ""}</p> : null}
           {job.status === "running" ? <p className="spark-meta spark-run-clock" aria-live="off">{data.worker.online ? `已执行 ${sparkJobDuration(job, now)} · 结果自动更新` : "后台暂未连接，当前执行状态待同步。"}</p> : null}
-          {job.result.message ? <p>{job.result.message}</p> : null}
+          {recovery ? <div className="spark-run-recovery" role="group" aria-label={`${sparkKindLabels[job.kind]}处理建议`}>
+            <strong>{recovery.title}</strong><p>{recovery.message}</p>
+            {recovery.hint ? <p>{recovery.hint}</p> : null}
+            <div className="spark-recovery-actions">
+              {recovery.retryKind ? <button className="btn btn-secondary" disabled={!retryAllowed} onClick={() => { void queue(recovery.retryKind); }}>{busy === recovery.retryKind ? "正在提交" : recovery.label}</button> : null}
+              {recovery.target ? <a className="text-button" href={recovery.target}>{recovery.label}</a> : null}
+              {recovery.retryKind && !retryAllowed ? <span>{!data.worker.online ? "服务恢复后即可重试，页面会自动更新。" : activeJobs.length ? "已有任务在进行，请在任务队列查看进度。" : ["expired", "blocked", "error"].includes(data.session_status) || !data.bound ? "请先到“连接抖音”处理账号连接。" : "请先保存好友选择与每日计划，再重试检查。"}</span> : null}
+            </div>
+          </div> : job.result.message ? <p>{job.result.message}</p> : null}
           {job.kind === "dry_run" && job.status === "running" && data.worker.online ? <p className="spark-meta" role="status">
             {job.result.progress ? `已检查 ${job.result.progress.completed}/${job.result.progress.total} 位${job.result.progress.current_name ? `，正在检查：${job.result.progress.current_name}` : "，正在整理结果"}` : "正在打开抖音并检查会话，请稍候。"}模拟检查不会发送消息。
           </p> : null}

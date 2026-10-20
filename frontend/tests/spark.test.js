@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sparkMessages, sparkTime, sparkStatusLabels, sparkJobPhase, sparkDuration, sparkJobDuration } from "../src/lib/spark.js";
+import { sparkMessages, sparkTime, sparkStatusLabels, sparkJobPhase, sparkJobRecovery, sparkDuration, sparkJobDuration } from "../src/lib/spark.js";
 
 test("spark schedule displays Beijing time independently of browser timezone", () => {
   assert.match(sparkTime("2026-10-14T13:00:00Z"), /21:00/);
@@ -33,4 +33,37 @@ test("timers measure ready waiting or execution and do not include scheduled del
   assert.equal(sparkDuration("2026-10-14T13:01:00Z", now), "00:00");
   assert.equal(sparkDuration(null, now), "—");
   assert.equal(sparkDuration("invalid", now), "—");
+});
+
+test("old sync failures offer recovery without asking members to diagnose a server", () => {
+  const recovery = sparkJobRecovery({ kind: "sync", status: "failed", result: { message: "后台执行失败，请检查服务运行状态后重试" } });
+  assert.equal(recovery.retryKind, "sync");
+  assert.match(recovery.message, /不会发送消息/);
+  assert.match(recovery.hint, /联系网站管理员.*记录的时间/);
+  assert.doesNotMatch(JSON.stringify(recovery), /检查服务运行状态|重新扫码/);
+  assert.match(sparkJobRecovery({ kind: "sync", status: "failed", result: { message: "执行超时" } }).message, /等待时间过长/);
+  assert.match(sparkJobRecovery({ kind: "sync", status: "failed", result: { message: "服务已重启" } }).message, /服务重新启动/);
+  assert.equal(sparkJobRecovery({ kind: "sync", status: "succeeded" }), null);
+});
+
+test("expired, blocked and unreadable credentials lead to connection steps", () => {
+  for (const status of ["expired", "blocked"]) {
+    const recovery = sparkJobRecovery({ kind: "sync", status, result: {} });
+    assert.equal(recovery.target, "#spark-step-1");
+    assert.equal(recovery.retryKind, undefined);
+  }
+  const recovery = sparkJobRecovery({ kind: "sync", status: "failed", result: { error_code: "CREDENTIAL_UNREADABLE" } });
+  assert.equal(recovery.target, "#spark-step-1");
+  assert.match(recovery.message, /重新扫码/);
+});
+
+test("send failures never offer a direct retry, including uncertain partial sends", () => {
+  for (const status of ["failed", "partial", "unknown", "expired", "blocked"]) {
+    const recovery = sparkJobRecovery({ kind: "send", status, result: {} });
+    assert.equal(recovery.retryKind, undefined);
+    assert.match(`${recovery.message}${recovery.hint}`, /核对聊天记录/);
+  }
+  const recovery = sparkJobRecovery({ kind: "send", status: "partial", result: { events: [{ status: "unknown" }] } });
+  assert.match(recovery.message, /不会自动重发/);
+  assert.equal(recovery.target, null);
 });
