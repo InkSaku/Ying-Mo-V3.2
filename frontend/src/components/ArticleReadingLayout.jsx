@@ -5,14 +5,6 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useReadingPanels } from "../hooks/useReadingPanels";
 import "../styles/archive-cat.css";
 
-function decodeHash(value) {
-  try {
-    return decodeURIComponent(String(value || "").replace(/^#/, ""));
-  } catch {
-    return "";
-  }
-}
-
 export function ArticleReadingLayout({ outline, children, opening, favorite }) {
   const contentRef = useRef(null);
   const columnRef = useRef(null);
@@ -72,16 +64,6 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
       observer.disconnect();
     };
   }, [normalizedOutline, showToc]);
-
-  useEffect(() => {
-    const targetId = decodeHash(window.location.hash);
-    if (!targetId || !normalizedOutline.some((item) => item.id === targetId)) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById(targetId)?.scrollIntoView();
-      setActiveId(targetId);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [normalizedOutline]);
 
   useEffect(() => {
     let frame = 0;

@@ -1,0 +1,10 @@
+.prose :is(h1,h2,h3,h4,h5,h6)[id] { scroll-margin-top: calc(var(--header-h, 68px) + 24px); }
+.heading-jump-target { outline: 2px solid var(--brand-link); outline-offset: 8px; background: color-mix(in srgb, var(--brand-link) 8%, transparent); }
+.heading-jump-notice { position: fixed; z-index: 95; left: 50%; bottom: 32px; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; max-width: min(640px, calc(100vw - 32px)); padding: 8px 16px; background: var(--surface); color: var(--text-2); border: 1px solid var(--border); font: 13px/1.6 var(--serif); box-shadow: 0 8px 28px rgb(20 20 19 / 15%); }
+.heading-jump-notice span { min-width: 0; overflow-wrap: anywhere; }
+.heading-jump-notice button { flex-shrink: 0; min-height: 44px; padding: 4px 0; background: transparent; border: 0; font: inherit; color: var(--brand-link); cursor: pointer; }
+.heading-jump-notice button:last-child { min-width: 32px; color: var(--text-2); font-size: 20px; }
+.heading-jump-notice button:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+@media (max-width: 767px) {
+  .heading-jump-notice { bottom: calc(88px + env(safe-area-inset-bottom)); width: calc(100vw - 32px); gap: 12px; }
+}

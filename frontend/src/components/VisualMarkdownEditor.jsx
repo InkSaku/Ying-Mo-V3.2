@@ -12,8 +12,24 @@ import { api } from "../lib/api";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import "../styles/rich-markdown.css";
 import { manageableMediaRows } from "../lib/postMedia";
+import { escapeLinkText, sourceLinkSelection } from "../lib/contentLinks";
 
 const RichMarkdownBlock = lazy(() => import("./RichMarkdownBlock"));
+const ContentLinkDialog = lazy(() => import("./ContentLinkDialog").then((module) => ({ default: module.ContentLinkDialog })));
+const HeadingLinkWarnings = lazy(() => import("./HeadingLinkWarnings"));
+
+function PendingLinkDialog({ onClose }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog.showModal();
+    return () => dialog.close();
+  }, []);
+  return <dialog ref={dialogRef} className="content-link-dialog" aria-label="插入链接" onCancel={(event) => { event.preventDefault(); onClose(); }} onKeyDown={(event) => event.stopPropagation()}>
+    <p role="status">正在准备链接选项…</p>
+    <button type="button" className="btn btn-secondary" onClick={onClose}>取消</button>
+  </dialog>;
+}
 
 function emitValue(onChange, value) {
   onChange?.({ target: { value } });
@@ -35,6 +51,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   showSourcePreview = true,
   toolbar,
   toolbarEnd,
+  postId,
 }, ref) {
   const source = String(value || "");
   const rows = useMemo(() => manageableMediaRows(media), [media]);
@@ -46,6 +63,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
   const [sourcePreview, setSourcePreview] = useState({ html: "", error: "", loading: false });
   const [previewRetry, setPreviewRetry] = useState(0);
   const [controlsHost, setControlsHost] = useState(null);
+  const [linkDraft, setLinkDraft] = useState(null);
   const mediaContext = useMemo(() => ({ mediaMap, management, onUpdateMedia }), [mediaMap, management, onUpdateMedia]);
 
   useEffect(() => {
@@ -68,6 +86,18 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
       (sourceMode ? rawTextareaRef.current : richEditorRef.current)?.focus();
     },
     applyFormat(action) {
+      if (sourceMode && action === "link") {
+        const textarea = rawTextareaRef.current;
+        const start = textarea?.selectionStart ?? source.length;
+        const end = textarea?.selectionEnd ?? start;
+        const pending = { ...sourceLinkSelection(source, start, end), sourceMode: true, preparing: true };
+        setLinkDraft(pending);
+        void import("../lib/headingAnchors").then(({ sourceHeadingInfo }) => {
+          const headings = sourceHeadingInfo(source).headings.filter((heading) => heading.anchorOffset <= start || heading.anchorOffset >= end);
+          setLinkDraft((current) => current === pending ? { ...pending, preparing: false, headings } : current);
+        }).catch(() => setLinkDraft((current) => current === pending ? { ...pending, preparing: false, headings: [], headingError: "标题选项暂时无法加载，请关闭后重试。" } : current));
+        return true;
+      }
       return !sourceMode && (richEditorRef.current?.applyFormat(action) || false);
     },
     get selectionStart() {
@@ -84,6 +114,26 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
     },
   }));
 
+  const closeLink = () => {
+    const fromSource = linkDraft?.sourceMode;
+    setLinkDraft(null);
+    window.requestAnimationFrame(() => (fromSource ? rawTextareaRef.current : richEditorRef.current)?.focus());
+  };
+  const applyLink = ({ href, text, heading }) => {
+    if (linkDraft.sourceMode) {
+      const insertion = href ? `[${escapeLinkText(text)}](${href.replace(/\(/g, "%28").replace(/\)/g, "%29")})` : escapeLinkText(text);
+      const edits = [{ start: linkDraft.start, end: linkDraft.end, text: insertion }];
+      const marker = heading && !heading.anchorId ? ` {#${heading.id}}` : "";
+      if (marker) edits.push({ start: heading.anchorOffset, end: heading.anchorOffset, text: marker });
+      let next = source;
+      for (const edit of edits.sort((left, right) => right.start - left.start)) next = next.slice(0, edit.start) + edit.text + next.slice(edit.end);
+      emitValue(onChange, next);
+      const cursor = linkDraft.start + insertion.length + (marker && heading.anchorOffset <= linkDraft.start ? marker.length : 0);
+      window.requestAnimationFrame(() => rawTextareaRef.current?.setSelectionRange(cursor, cursor));
+    } else richEditorRef.current?.applyLink({ href, text, heading });
+    closeLink();
+  };
+
   return (
     <div className={`visual-markdown-editor ${className}${toolbar ? " has-commandbar" : ""}`}>
       <div className={toolbar ? "visual-markdown-commandbar" : undefined}>
@@ -94,6 +144,8 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
       </div>
       {toolbarEnd}
       </div>
+      {source.includes("#ym-h-") ? <Suspense fallback={null}><HeadingLinkWarnings source={source} /></Suspense> : null}
+      {linkDraft ? linkDraft.preparing ? <PendingLinkDialog onClose={closeLink} /> : <Suspense fallback={<PendingLinkDialog onClose={closeLink} />}><ContentLinkDialog draft={linkDraft} excludePostId={postId} onApply={applyLink} onRemove={() => applyLink({ href: "", text: linkDraft.text })} onClose={closeLink} /></Suspense> : null}
       <div hidden={!sourceMode} className={`visual-source-workspace ${showSourcePreview ? "has-preview" : ""}`}><textarea
           ref={rawTextareaRef}
           className="visual-markdown-source"
@@ -121,6 +173,7 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
               spellCheck={spellCheck}
               onChange={(value) => emitValue(onChange, value)}
               onKeyDown={onKeyDown}
+              onRequestLink={(draft) => setLinkDraft({ ...draft, sourceMode: false })}
               onPaste={onPaste}
               onSelection={(start, end) => { selectionRef.current = [start, end]; }}
               placeholder={placeholder}

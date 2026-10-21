@@ -5,8 +5,9 @@ import { Markdown } from "@tiptap/markdown";
 import { TableKit } from "@tiptap/extension-table";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
-import diff from "fast-diff";
 import { InternalMedia } from "./internalMediaNode.js";
+import { AnchoredHeading } from "./anchoredHeading.js";
+export { mapTextOffset } from "./textOffset.js";
 
 const RawBlock = Node.create({
   name: "rawMarkdownBlock", group: "block", atom: true, priority: 50,
@@ -65,23 +66,10 @@ const SafeCodeBlock = CodeBlock.extend({
 
 export function richMarkdownExtensions(mediaExtension = InternalMedia) {
   return [
-    StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] }, link: { openOnClick: false, autolink: false }, underline: false, codeBlock: false }), SafeCodeBlock,
+    StarterKit.configure({ heading: false, link: { openOnClick: false, autolink: false }, underline: false, codeBlock: false }), AnchoredHeading, SafeCodeBlock,
     TableKit.configure({ table: { resizable: false, renderWrapper: true } }), TaskList, TaskItem.configure({ nested: true }),
     RawBlock, RawInline, ExternalImage, mediaExtension, Markdown,
   ];
-}
-
-export function mapTextOffset(from, to, offset) {
-  const position = Math.max(0, Math.min(Number(offset) || 0, from.length));
-  if (from === to) return position;
-  let oldIndex = 0; let newIndex = 0;
-  for (const [kind, text] of diff(from, to)) {
-    if (kind === 1) { newIndex += text.length; continue; }
-    if (position <= oldIndex + text.length) return newIndex + (kind === 0 ? position - oldIndex : 0);
-    oldIndex += text.length;
-    if (kind === 0) newIndex += text.length;
-  }
-  return to.length;
 }
 
 const cursorMarker = "YMEDITORCURSOR9Q7Z";

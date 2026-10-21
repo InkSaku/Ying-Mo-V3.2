@@ -83,6 +83,7 @@ export default defineConfig({
         onlyExplicitManualChunks: true,
         manualChunks(id) {
           if (id.includes("/node_modules/pinyin-pro/")) return "article-pinyin";
+          if (id.includes("/node_modules/marked/")) return "markdown-lexer";
           if (/\/node_modules\/(?:@tiptap\/|prosemirror-|marked\/|orderedmap\/|w3c-keyname\/|rope-sequence\/)/.test(id)) return "rich-editor";
         },
       },

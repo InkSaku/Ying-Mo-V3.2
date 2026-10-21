@@ -22,6 +22,7 @@ function isSaveShortcut(event) {
 
 export function MarkdownEditorDialog({
   open,
+  postId,
   value,
   dirty,
   saving,
@@ -249,6 +250,7 @@ export function MarkdownEditorDialog({
             >
               <VisualMarkdownEditor
                 showSourcePreview={false}
+                postId={postId}
                 ref={textareaRef}
                 className="markdown-editor-visual"
                 value={value}

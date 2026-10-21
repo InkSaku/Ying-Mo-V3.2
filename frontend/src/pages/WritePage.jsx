@@ -1043,6 +1043,7 @@ export function WritePage() {
               <UploadProgress state={editorUploadState} onCancel={cancelInlineUpload} onRetry={editorUploadRetryRef.current ? retryInlineUpload : null} compact />
               <VisualMarkdownEditor
                 ref={inlineBodyRef}
+                postId={savedPost?.id}
                 className="editor-body-visual"
                 value={form.body}
                 media={savedPost?.bound_media || []}
@@ -1242,6 +1243,7 @@ export function WritePage() {
 
       <MarkdownEditorDialog
         open={bodyEditorOpen}
+        postId={savedPost?.id}
         value={editorBody}
         dirty={editorBody !== editorBaseline}
         saving={editorSaving}

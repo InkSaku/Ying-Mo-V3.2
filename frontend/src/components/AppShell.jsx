@@ -16,6 +16,7 @@ import { unreadBadgeText } from "../lib/notificationCount";
 import { ThemeControl } from "./ThemeControl";
 import { PageLoader } from "./States";
 import { useArticlePageTurn } from "../hooks/useArticlePageTurn";
+import { HeadingNavigation } from "./HeadingNavigation";
 
 function NavLinks({ items, onNavigate }) {
   return items.map(({ to, label }) => (
@@ -79,6 +80,7 @@ export function AppShell() {
 
   return (
     <div className="app-frame">
+      <HeadingNavigation />
       <header className="site-header app-header">
         <div className="header-inner">
           <Link className="brand" to="/home">

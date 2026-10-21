@@ -8,9 +8,63 @@ from markdown.extensions import Extension
 from markdown.extensions.toc import slugify_unicode
 from markdown.inlinepatterns import InlineProcessor
 from markdown.preprocessors import Preprocessor
+from markdown.treeprocessors import Treeprocessor
 
 
 MEDIA_PLACEHOLDER_RE = re.compile(r"\[\[ym-media:(\d+)\]\]")
+HEADING_ANCHOR_RE = re.compile(r"[ \t]+\{#(ym-h-[a-zA-Z0-9-]+)\}[ \t]*$")
+
+
+class HeadingAnchorProcessor(Treeprocessor):
+    def run(self, root):
+        for element in root.iter():
+            if element.tag not in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                continue
+            trailing = element[-1].tail if len(element) else element.text
+            match = HEADING_ANCHOR_RE.search(trailing or "")
+            if match:
+                element.set("data-ym-heading", match.group(1))
+                if len(element):
+                    element[-1].tail = trailing[:match.start()]
+                else:
+                    element.text = trailing[:match.start()]
+
+
+class HeadingAnchorIds(Treeprocessor):
+    def run(self, root):
+        # Let toc allocate its usual text-based IDs first, then retain those as
+        # aliases so adding a fixed reference never breaks an existing #link.
+        occupied = {element.get("id") for element in root.iter() if element.get("id")}
+        replacements = {}
+        for element in root.iter():
+            requested = element.attrib.pop("data-ym-heading", None)
+            if not requested:
+                continue
+            original = element.get("id")
+            anchor_id = requested
+            number = 2
+            while anchor_id in occupied and anchor_id != original:
+                anchor_id = f"{requested}-{number}"
+                number += 1
+            occupied.add(anchor_id)
+            element.set("id", anchor_id)
+            if original and original != anchor_id:
+                replacements[original] = anchor_id
+                element.insert(0, etree.Element("span", {"id": original, "class": "heading-anchor-alias"}))
+
+        def update(tokens):
+            for token in tokens:
+                token["id"] = replacements.get(token["id"], token["id"])
+                update(token.get("children", []))
+        update(self.md.toc_tokens)
+
+
+class HeadingAnchorExtension(Extension):
+    def extendMarkdown(self, md):
+        md.treeprocessors.register(HeadingAnchorProcessor(md), "ym_heading_anchor", 6)
+        md.treeprocessors.register(HeadingAnchorIds(md), "ym_heading_anchor_ids", 4)
+
+
 INLINE_MATH_RE = re.compile(
     r"(?<!\\)(?<!\$)\$(?![\s$])((?:\\.|[^$\n])+?)(?<![\s\\])\$(?![$\w\\])"
 )
@@ -278,8 +332,10 @@ def allowed_attribute(tag, name, value):
             return value in {"footnote", "math-block"}
         return name == "data-math"
     if tag == "span":
+        if name == "id":
+            return re.fullmatch(r"[-\w]+", value) is not None
         if name == "class":
-            return value == "math-inline"
+            return value in {"math-inline", "heading-anchor-alias"}
         return name == "data-math"
     if tag in {"li", "sup"}:
         return name == "id" and FOOTNOTE_ID_RE.fullmatch(value) is not None
@@ -321,7 +377,7 @@ def render_safe_markdown_document(value):
         return {"html": "", "outline": []}
     renderer = markdown.Markdown(
         extensions=[
-            InternalMediaExtension(), MathExtension(), "fenced_code", "tables", "sane_lists", "footnotes", "toc",
+            InternalMediaExtension(), MathExtension(), HeadingAnchorExtension(), "fenced_code", "tables", "sane_lists", "footnotes", "toc",
         ],
         extension_configs={
             "footnotes": {"BACKLINK_TITLE": "返回正文中的脚注 {}"},

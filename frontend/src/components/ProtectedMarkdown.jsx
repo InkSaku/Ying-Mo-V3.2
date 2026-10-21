@@ -1,4 +1,6 @@
-import { createElement, lazy, Suspense, useMemo } from "react";
+import { createElement, Fragment, lazy, Suspense, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { internalLinkPath } from "../lib/contentLinks";
 import { isIgnorableMarkdownWhitespace, sameHeadingText } from "../lib/markdownRender";
 import { mediaPresentation } from "../lib/postMedia";
 import { ProtectedImage } from "./ProtectedImage";
@@ -197,6 +199,9 @@ function renderNode(node, key, index, management, galleryItems, parentTag = "") 
     props.className = node.getAttribute("class");
   } else if (tag === "div" && node.hasAttribute("class")) {
     props.className = node.getAttribute("class");
+  } else if (tag === "span" && node.getAttribute("class") === "heading-anchor-alias") {
+    props.id = node.getAttribute("id");
+    props.className = "heading-anchor-alias";
   } else if ((tag === "li" || tag === "sup") && node.hasAttribute("id")) {
     props.id = node.getAttribute("id");
   } else if (/^h[1-6]$/.test(tag) && node.hasAttribute("id")) {
@@ -207,6 +212,12 @@ function renderNode(node, key, index, management, galleryItems, parentTag = "") 
     renderNode(child, `${key}-${childIndex}`, index, management, galleryItems, tag)
   ));
 
+  const internalPath = tag === "a" ? internalLinkPath(props.href) : null;
+  if (internalPath && /^\/articles\/[^/?#]+\/?(?:[?#].*)?$/.test(internalPath)) {
+    props.to = internalPath;
+    delete props.href;
+    return createElement(Link, props, ...children);
+  }
   return createElement(tag, props, ...children);
 }
 
@@ -219,7 +230,10 @@ export function ProtectedMarkdown({ html, media = [], management = false, galler
     const first = nodes.find((node) => node.nodeType === ELEMENT_NODE || node.textContent.trim());
     return nodes.map((node, nodeIndex) => {
       if (node === first && node.nodeType === ELEMENT_NODE && node.tagName === "H1" && sameHeadingText(node.textContent, suppressLeadingTitle)) {
-        return node.id ? <span key={`markdown-${nodeIndex}`} id={node.id} className="article-body-title-anchor" aria-hidden="true" /> : null;
+        return <Fragment key={`markdown-${nodeIndex}`}>
+          {node.id ? <span id={node.id} className="article-body-title-anchor" aria-hidden="true" /> : null}
+          {[...node.querySelectorAll(".heading-anchor-alias[id]")].map((alias) => <span key={alias.id} id={alias.id} className="article-body-title-anchor" aria-hidden="true" />)}
+        </Fragment>;
       }
       return renderNode(node, `markdown-${nodeIndex}`, index, management, galleryItems);
     });

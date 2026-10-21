@@ -431,6 +431,47 @@ def list_posts():
     )
 
 
+@bp.get("/link-options")
+@jwt_required(locations=["headers"])
+def link_options():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    args = parse_pagination(default_size=8, max_size=20)
+    query = (request.args.get("q") or "").strip()
+    excluded = request.args.get("exclude")
+    if not args or len(query) > 100 or (excluded is not None and (
+        len(excluded) > 19 or not excluded.isascii() or not excluded.isdigit()
+        or not 1 <= int(excluded) <= 9223372036854775807
+    )):
+        return error_response("VALIDATION_ERROR", "文章查询或分页参数不合法。", 422)
+    page, size = args
+    stmt = db.select(Post).where(
+        readable_post_predicate(actor.id, include_archived=True),
+        Post.post_type == PostType.ARTICLE.value,
+    )
+    if query:
+        stmt = stmt.where(Post.title.contains(query, autoescape=True))
+    if excluded:
+        stmt = stmt.where(Post.id != int(excluded))
+    total = db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    rows = db.session.scalars(
+        stmt.order_by(Post.published_at.desc(), Post.id.desc())
+        .offset((page - 1) * size).limit(size)
+    ).all()
+    return success_response([
+        {
+            "id": post.id,
+            "title": post.title,
+            "href": f"/articles/{current_article_slug(post.id) or post.slug_candidate}",
+            "author_name": post.author.nickname,
+            "collection_name": post.collection.name if post.collection else None,
+            "visibility": post.visibility,
+        }
+        for post in rows
+    ], meta=pagination_meta(page, size, total))
+
+
 @bp.get("/filter-options")
 @jwt_required(locations=["headers"])
 def filter_options():
