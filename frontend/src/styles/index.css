@@ -3424,55 +3424,151 @@ input[aria-invalid="true"] {
 .reaction-picker {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .reaction-options {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 7px;
+  min-height: 44px;
 }
 
-.reaction-options button {
+.reaction-options .reaction-chip,
+.reaction-options .reaction-add {
   min-width: 44px;
-  min-height: 38px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 7px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 5px 10px;
+  padding: 0 12px;
   background: var(--surface);
   color: var(--text-2);
+  font: inherit;
+  font-size: 14px;
   cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
-.reaction-options button:hover,
-.reaction-options button.selected {
+.reaction-options .reaction-add { padding: 0; color: var(--text-3); }
+.reaction-options .reaction-chip:hover,
+.reaction-options .reaction-add:hover,
+.reaction-options .reaction-add[aria-expanded="true"],
+.reaction-options .reaction-chip.selected {
   border-color: var(--brand-link);
-  background: var(--tag-soft);
+  background: color-mix(in srgb, var(--brand-link) 7%, var(--surface));
+  color: var(--brand-link);
 }
 
-.reaction-options button:disabled {
+.reaction-options button[aria-disabled="true"] {
   cursor: wait;
-  opacity: 0.72;
+  opacity: .72;
 }
 
 .reaction-picker-compact {
   margin-top: 10px;
 }
 
-.reaction-picker-compact .reaction-options button {
-  min-width: 36px;
-  min-height: 32px;
-  padding: 3px 8px;
+.reaction-picker-compact .reaction-options { gap: 4px; }
+.reaction-picker-compact .reaction-options .reaction-chip {
+  min-width: 44px;
+  gap: 5px;
+  padding: 0 9px;
   font-size: 12px;
 }
+
+.reaction-chip-emoji { display: inline-block; font-size: 21px; line-height: 1; transform-origin: 50% 85%; }
+.reaction-picker-compact .reaction-chip-emoji { font-size: 18px; }
+.reaction-chip-emoji[data-flying] { visibility: hidden; }
+.reaction-count { display: inline-flex; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.reaction-digit { position: relative; display: inline-block; width: 1ch; height: 1.4em; overflow: hidden; }
+.reaction-digit > span { display: block; line-height: 1.4em; }
+.reaction-digit .reaction-digit-old { position: absolute; inset: 0; }
+
+/* Bencho's capsule/flight mechanics, scoped to the response controls.
+   Copyright (c) 2026 Lorenzo Cabra, MIT; /licenses/bencho-MIT.txt. */
+.reaction-menu {
+  position: fixed;
+  z-index: 1100;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 60px;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 30px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 12%, transparent);
+  transform-origin: 0 0;
+  isolation: isolate;
+}
+.reaction-choice {
+  flex: 1 0 0;
+  min-width: 0;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.reaction-choice > span { display: block; font-size: 24px; line-height: 1; transform-origin: 50% 90%; pointer-events: none; }
+.reaction-menu-compact .reaction-choice > span { font-size: 22px; }
+.reaction-choice[aria-checked="true"] { background: color-mix(in srgb, var(--brand-link) 9%, transparent); }
+.reaction-options button:focus-visible,
+.reaction-choice:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+.reaction-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: var(--text);
+  color: var(--page);
+  font: 12px/1.6 var(--serif);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.reaction-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1101;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  font-size: 22px;
+  line-height: 1;
+  pointer-events: none;
+}
+.reaction-menu[inert] { pointer-events: none; }
 
 .reaction-error {
   margin: 0;
   color: var(--danger);
-  font-size: 11px;
+  font-size: 12px;
+}
+
+@media (max-width: 639px) {
+  .comment-toolbar:has(.reaction-picker) { flex-wrap: wrap; gap: 8px 16px; }
+  .comment-toolbar:has(.reaction-picker) .comment-actions { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-options button { transition: none; }
+  .reaction-choice > span { transform: none !important; }
 }
 
 .interaction-favorite-row {
