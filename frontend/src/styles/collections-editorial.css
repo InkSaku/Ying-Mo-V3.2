@@ -24,16 +24,42 @@ html:not([data-theme="dark"]):has(.collection-library-page) {
 .collection-library-page .collection-card-cover-frame::after { display: none; }
 .collection-library-page .collection-card-shelf,
 .collection-library-page .collection-book-link { width: 100%; min-width: 0; }
-.collection-library-page .collection-card-cover-frame { width: 100%; height: auto; aspect-ratio: 4 / 3; border: 1px solid var(--border); border-radius: 0; box-shadow: none; transform: none; overflow: hidden; }
+.collection-library-page .collection-book-link { padding: 12px 20px 22px; perspective: none; }
+.collection-library-page .collection-shelf-stage { position: relative; width: min(100%, 240px); aspect-ratio: 4 / 5; margin-inline: auto; perspective: 1000px; perspective-origin: 50% 45%; }
+.collection-library-page .collection-shelf-book { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(2deg) rotateY(20deg); transition: transform 300ms cubic-bezier(.22,.7,.2,1); }
+.collection-library-page .collection-shelf-back { position: absolute; inset: 0; background: var(--border); border: 1px solid var(--text-3); box-shadow: 2px 6px 12px rgb(0 0 0 / .08); }
+.collection-library-page .collection-shelf-pages { position: absolute; inset: 4px 2px 3px; background: var(--page); border: 1px solid var(--border); transform: translateZ(12px); transform-style: preserve-3d; }
+.collection-library-page .collection-shelf-pages::before,
+.collection-library-page .collection-shelf-pages::after { content: ""; position: absolute; background: var(--surface); border-block: 3px double var(--border); }
+.collection-library-page .collection-shelf-pages::before { left: 100%; top: 0; width: 12px; height: 100%; transform-origin: left; transform: rotateY(90deg); }
+.collection-library-page .collection-shelf-pages::after { top: 100%; left: 0; width: 100%; height: 12px; transform-origin: top; transform: rotateX(-90deg); }
+.collection-library-page .collection-shelf-spine { position: absolute; top: 0; left: 0; width: 14px; height: 100%; background: var(--brand-link); border: 1px solid color-mix(in srgb, var(--text) 30%, transparent); transform-origin: left; transform: rotateY(-90deg); backface-visibility: hidden; }
+.collection-library-page .collection-shelf-hinge { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: left center; transform: translateZ(14px); }
+.collection-library-page .collection-card-cover-frame { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: 4 / 5; border: 1px solid var(--border); border-radius: 0; box-shadow: inset 2px 0 5px rgb(0 0 0 / .08); transform: none; overflow: hidden; backface-visibility: hidden; }
+.collection-library-page .collection-shelf-hinge > .collection-card-cover-frame::before { display: block; position: absolute; z-index: 4; inset: 0 auto 0 12px; width: 1px; border-radius: 0; background: color-mix(in srgb, var(--text) 18%, transparent); box-shadow: -3px 0 5px rgb(0 0 0 / .08); pointer-events: none; content: ""; }
+.collection-library-page .collection-shelf-lining { position: absolute; inset: 0; background: var(--surface); border: 1px solid var(--border); box-shadow: inset -3px 0 8px rgb(0 0 0 / .06); backface-visibility: hidden; transform: rotateY(180deg); }
+/* The front is a separate hinged board; these parts have no intrinsic size in
+   other shelf contexts, which keep their existing flat-card presentation. */
+.collection-library-page .collection-book-link:hover .collection-card-cover-frame { transform: none; box-shadow: inset 2px 0 5px rgb(0 0 0 / .08); }
 .collection-library-page .collection-card-shelf .card-cover { border-radius: 0; filter: none; }
-.collection-library-page .collection-book-fallback { position: relative; background: var(--surface); color: var(--text); padding: 28px; border-left: 8px solid var(--border); }
+.collection-library-page .collection-book-fallback { position: relative; background: var(--surface); color: var(--text); padding: clamp(14px, 2vw, 28px); border-left: 0; }
 .collection-library-page .collection-book-fallback::after { content: ""; position: absolute; width: 52px; height: 6px; right: 28px; bottom: 20px; border-bottom: 1px solid var(--brand-link); transform: rotate(-5deg); }
-.collection-library-page .collection-book-fallback strong { font-size: 26px; font-weight: 400; }
+.collection-library-page .collection-book-fallback strong { font-size: clamp(18px, 2vw, 26px); font-weight: 400; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
 .collection-library-page .collection-card-volume { color: var(--brand-link); background: var(--page); font-size: 9px; border-radius: 0; }
 .collection-library-page .collection-card-content { padding-top: 20px; }
-.collection-library-page .collection-card-shelf h3 { font-size: 23px; font-weight: 400; line-height: 1.5; }
+.collection-library-page .collection-card-shelf h3 { font-size: 23px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
 .collection-library-page .collection-card-content > p { -webkit-line-clamp: 2; font-size: 13px; line-height: 1.8; }
 .collection-library-page a:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .collection-library-page .collection-book-link:hover .collection-shelf-book { transform: translateY(-7px) translateZ(8px) rotateY(0deg); }
+}
+.collection-library-page .collection-book-link:focus-visible .collection-shelf-book,
+.collection-library-page .collection-card-shelf:has(h3 a:focus-visible) .collection-shelf-book { transform: translateY(-5px) rotateY(0deg); }
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .collection-library-page .collection-shelf-book { transform: none; transition: none; }
+  .collection-library-page .collection-book-link:focus-visible .collection-shelf-book,
+  .collection-library-page .collection-card-shelf:has(h3 a:focus-visible) .collection-shelf-book { transform: none; }
+}
 @media(max-width: 979px) {
   .collection-library-page.collection-library-page-editorial { padding: 32px; }
   .collection-library-page .collection-library-hero { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; }
@@ -50,6 +76,15 @@ html:not([data-theme="dark"]):has(.collection-library-page) {
   .collection-library-page .collection-library-index { gap: 12px; flex-wrap: wrap; }
   .collection-library-page .collection-library-index > span { font-size: 32px; }
   .collection-library-page .collection-library-index p { max-width: 14em; }
-  .collection-library-page .collection-bookshelf-track { grid-template-columns: minmax(0,1fr); gap: 32px; }
-  .collection-library-page .collection-card-cover-frame { aspect-ratio: 16 / 10; }
+  .collection-library-page .collection-bookshelf-track { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 32px 24px; }
+  .collection-library-page .collection-book-link { padding: 8px 10px 18px; }
+  .collection-library-page .collection-shelf-book { transform: none; transition: none; }
+  .collection-library-page .collection-book-link:focus-visible .collection-shelf-book,
+  .collection-library-page .collection-card-shelf:has(h3 a:focus-visible) .collection-shelf-book { transform: none; }
+  .collection-library-page .collection-card-shelf h3 { font-size: 18px; }
+  .collection-library-page .collection-card-content { padding-top: 12px; }
+}
+@media(max-width: 379px) {
+  .collection-library-page .collection-bookshelf-track { grid-template-columns: minmax(0,1fr); }
+  .collection-library-page .collection-shelf-stage { width: min(100%, 220px); }
 }

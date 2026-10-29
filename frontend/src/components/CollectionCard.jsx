@@ -12,7 +12,11 @@ export function CollectionCard({ collection, variant = "", index = 0 }) {
     return (
       <article className="collection-card collection-card-shelf">
         <Link className="collection-book-link" to={collectionPath} onClick={(event) => startCollectionOpening(event, collection.slug)} aria-label={`打开合集：${collection.name}`}>
-          <div className="collection-card-cover-frame">
+          <div className="collection-shelf-stage"><div className="collection-shelf-book">
+            <span className="collection-shelf-back" aria-hidden="true" />
+            <span className="collection-shelf-pages" aria-hidden="true" />
+            <span className="collection-shelf-spine" aria-hidden="true" />
+            <div className="collection-shelf-hinge"><div className="collection-card-cover-frame">
             <ProtectedImage
               media={collection.cover_media}
               useOriginal
@@ -21,7 +25,8 @@ export function CollectionCard({ collection, variant = "", index = 0 }) {
               fallback={<div className="collection-book-fallback" aria-hidden="true"><span></span><strong>{collection.name}</strong></div>}
             />
             <span className="collection-card-volume" aria-hidden="true">VOL. {catalogueNumber}</span>
-          </div>
+            </div><span className="collection-shelf-lining" aria-hidden="true" /></div>
+          </div></div>
         </Link>
         <div className="collection-card-content">
           <h3><Link to={collectionPath} onClick={(event) => startCollectionOpening(event, collection.slug)}>{collection.name}</Link></h3>
