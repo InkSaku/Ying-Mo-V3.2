@@ -14,6 +14,10 @@ const spring = (draw) => Array.from({ length: 37 }, (_, i) => {
 const mix = (a, b, p) => a + (b - a) * p;
 const center = (rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
 
+function ReactionFace() {
+  return <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M20.5 12.5a8.5 8.5 0 1 1-9-9M7.8 14.3c1.5 2.1 4.9 2.1 6.4 0M8 9h.01M13 9h.01M19 2v6M16 5h6" /></svg>;
+}
+
 function ReactionCount({ count, reduced }) {
   const root = useRef(null);
   const previous = useRef(count);
@@ -58,6 +62,7 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
   const [flight, setFlight] = useState(null);
   const [reduced, setReduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const root = useRef(null), trigger = useRef(null), menu = useRef(null), flyer = useRef(null);
+  const surface = useRef(null), returningFace = useRef(null);
   const chips = useRef(new Map()), glyphs = useRef([]), animations = useRef(new Map());
   const oldRects = useRef(new Map()), startedFlight = useRef(null), landing = useRef(null);
   const initialSignature = useRef(JSON.stringify(normalizeReactions(initialState)));
@@ -140,7 +145,7 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
     const rightEdge = leftEdge + (viewport?.width || window.innerWidth) - 24;
     const bottomEdge = topEdge + (viewport?.height || window.innerHeight) - 24;
     const above = anchor.top - topEdge >= 86;
-    setPosition({
+    setPosition((existing) => existing ? { ...existing, anchor } : {
       left: Math.max(leftEdge, Math.min(anchor.left, rightEdge - width)),
       top: Math.max(topEdge, Math.min(above ? anchor.top - 74 : anchor.bottom + 14, bottomEdge - 60)),
       width,
@@ -182,27 +187,66 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
 
   useLayoutEffect(() => {
     const element = menu.current;
-    if (!position || !element) return;
+    const skin = surface.current;
+    if (!position || !element || !skin) return;
     const { anchor, left, top, width } = position;
-    const dx = anchor.left - left, dy = anchor.top - top;
-    const from = getComputedStyle(element), matrix = new DOMMatrix(from.transform);
-    const running = animations.current.has(element);
-    const fromWidth = running ? parseFloat(from.width) : open ? 44 : width;
-    const fromHeight = running ? parseFloat(from.height) : open ? 44 : 60;
-    const fromX = running ? matrix.e : open ? dx : 0, fromY = running ? matrix.f : open ? dy : 0;
-    play(element, spring((p) => ({
-      // Keep the spring's travel, but never overshoot the viewport's width budget.
-      width: `${mix(fromWidth, open ? width : 44, Math.min(1, p))}px`,
-      height: `${mix(fromHeight, open ? 60 : 44, p)}px`,
-      transform: `translate(${mix(fromX, open ? 0 : dx, p)}px, ${mix(fromY, open ? 0 : dy, p)}px)`,
-      borderRadius: `${mix(open ? 22 : 30, open ? 30 : 22, p)}px`,
-    })), open ? 320 : 240, () => { if (!open) setPosition(null); });
+    // The add button can move when chips appear. Its layout position, rather
+    // than the opening snapshot or an in-flight FLIP transform, is the return.
+    const buttonRect = trigger.current.getBoundingClientRect();
+    const buttonTransform = new DOMMatrix(getComputedStyle(trigger.current).transform);
+    const destination = open ? { left, top, width, height: 60 } : {
+      left: buttonRect.left - buttonTransform.e,
+      top: buttonRect.top - buttonTransform.f,
+      width: 44, height: 44,
+    };
+    const from = animations.current.has(skin) ? skin.getBoundingClientRect()
+      : open ? anchor : { left, top, width, height: 60 };
+    // Keep a full-size inner row. Only the surface transforms, so closing
+    // never reflows six buttons into a shrinking flex box.
+    const samples = Array.from({ length: 37 }, (_, index) => {
+      const t = index / 36;
+      return index === 36 ? 1 : (1 - (1 + 8 * t) * Math.exp(-8 * t)) / (1 - 9 * Math.exp(-8));
+    });
+    const frames = samples.map((p) => {
+      const w = mix(from.width, destination.width, p), h = mix(from.height, destination.height, p);
+      const radius = mix(open ? 22 : 30, open ? 30 : 22, p);
+      return {
+        transform: `translate(${mix(from.left, destination.left, p) - left}px, ${mix(from.top, destination.top, p) - top}px) scale(${w / width}, ${h / 60})`,
+        borderRadius: `${radius * width / w}px / ${radius * 60 / h}px`,
+      };
+    });
+    const duration = open ? 320 : 380;
+    const face = returningFace.current;
+    const faceStyle = getComputedStyle(face), faceMatrix = new DOMMatrix(faceStyle.transform);
+    const faceFrom = animations.current.has(face) ? {
+      x: faceMatrix.e, y: faceMatrix.f, opacity: parseFloat(faceStyle.opacity),
+    } : { x: from.left - left + from.width / 2 - 22, y: from.top - top + from.height / 2 - 22, opacity: open ? 1 : 0 };
+    const faceFrames = samples.map((p) => ({
+      transform: `translate(${mix(faceFrom.x, destination.left - left + destination.width / 2 - 22, p)}px, ${mix(faceFrom.y, destination.top - top + destination.height / 2 - 22, p)}px)`,
+      opacity: open ? faceFrom.opacity * Math.max(0, 1 - p * 3) : mix(faceFrom.opacity, 1, Math.max(0, (p - .55) / .45)),
+    }));
+    play(skin, frames, duration, () => {
+      // Hold the endpoint until React removes the portal. Cancelling a filled
+      // animation first would flash the full-size surface back for one frame.
+      Object.assign(skin.style, frames.at(-1));
+      if (!open) setPosition(null);
+    });
+    play(face, faceFrames, duration, () => Object.assign(face.style, faceFrames.at(-1)));
     [...element.querySelectorAll(".reaction-choice")].forEach((button, index) => {
+      const style = getComputedStyle(button), matrix = new DOMMatrix(style.transform);
+      const opacity = parseFloat(style.opacity);
+      const rect = button.getBoundingClientRect();
+      const dx = destination.left + 22 - (rect.left - matrix.e + rect.width / 2);
+      const dy = destination.top + 22 - (rect.top - matrix.f + rect.height / 2);
+      button.style.opacity = "1";
       play(button, open ? [
         { opacity: 0, transform: "translateY(8px) scale(.65)", offset: 0 },
         { opacity: 0, transform: "translateY(8px) scale(.65)", offset: .08 + index * .035 },
         { opacity: 1, transform: "translateY(0) scale(1)", offset: 1 },
-      ] : [{ opacity: 1 }, { opacity: 0 }], open ? 300 : 100);
+      ] : samples.map((p) => ({
+        opacity: opacity * Math.max(0, 1 - p * 1.8),
+        transform: `translate(${mix(matrix.e, dx, p)}px, ${mix(matrix.f, dy, p)}px) scale(${mix(matrix.a, .3, p)})`,
+      })), open ? 300 : duration, () => { if (!open) button.style.opacity = "0"; });
     });
     if (open) (element.querySelector('[aria-checked="true"]') || element.querySelector("button"))?.focus({ preventScroll: true });
     // Unrelated state updates must not restart the capsule's spring.
@@ -331,11 +375,11 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
         aria-label={`${item.label}，当前 ${item.count} 人${state.selected === item.kind ? "，再次点击取消" : ""}`}
         onClick={() => { void choose(item.kind); }}
       ><span className="reaction-chip-emoji" data-flying={flight?.kind === item.kind || undefined} aria-hidden="true">{item.emoji}</span><ReactionCount count={flight?.kind === item.kind ? flight.previousCount : item.count} reduced={reduced} /></button>)}
-      <button ref={trigger} type="button" className="reaction-add" aria-label={busy ? "正在保存回应" : open ? "关闭回应选择器" : "添加回应"}
+      <button ref={trigger} type="button" className="reaction-add" data-morphing={Boolean(position) && !reduced || undefined} aria-label={busy ? "正在保存回应" : open ? "关闭回应选择器" : "添加回应"}
         aria-expanded={open} aria-controls={position ? menuId : undefined} aria-haspopup="menu" aria-disabled={busy || undefined}
         onClick={() => { if (open) close(true); else show(); }}
         onKeyDown={(event) => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); show(); } if (event.key === "Escape") close(true); }}
-      ><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true"><path d="M20.5 12.5a8.5 8.5 0 1 1-9-9M7.8 14.3c1.5 2.1 4.9 2.1 6.4 0M8 9h.01M13 9h.01M19 2v6M16 5h6" /></svg></button>
+      ><ReactionFace /></button>
     </div>
     <span className="sr-only" role="status">{busy ? "正在保存回应" : notice}</span>
     {error ? <p className="reaction-error" role="alert">{error}</p> : null}
@@ -343,7 +387,8 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
       style={{ left: position.left, top: position.top, width: position.width }} onKeyDown={menuKeys}
       onPointerMove={(event) => { if (event.pointerType === "mouse") magnify(event.clientX); }} onPointerLeave={() => magnify()}
       onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) close(); }}
-    >{state.items.map((item, index) => <button key={item.kind} className="reaction-choice" type="button" role="menuitemradio" aria-checked={state.selected === item.kind} aria-label={item.label}
+    ><span ref={surface} className="reaction-menu-surface" aria-hidden="true" /><span ref={returningFace} className="reaction-menu-return" aria-hidden="true"><ReactionFace /></span>
+      {state.items.map((item, index) => <button key={item.kind} className="reaction-choice" type="button" role="menuitemradio" aria-checked={state.selected === item.kind} aria-label={item.label}
       onFocus={() => magnify(null, index)} onClick={(event) => { void choose(item.kind, event.currentTarget); }}
     ><span ref={(element) => { glyphs.current[index] = element; }} aria-hidden="true">{item.emoji}</span></button>)}
       {hovered >= 0 && open ? <span className="reaction-tip" aria-hidden="true" style={{ left: `${(hovered + .5) / 6 * 100}%` }}>{state.items[hovered].label}</span> : null}

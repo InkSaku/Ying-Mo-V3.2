@@ -925,8 +925,7 @@ h3 {
   align-items: start;
   padding: 5px max(8px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px, env(safe-area-inset-left));
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--page) 96%, transparent);
-  backdrop-filter: blur(14px);
+  background: var(--page);
 }
 
 .mobile-bottom-nav > a {
@@ -936,24 +935,32 @@ h3 {
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 1px;
+  gap: 3px;
   border-radius: var(--radius-xs);
   color: var(--text-4);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.15;
   text-decoration: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 160ms ease-out;
 }
 
+/* Glyph-only motion and the stationary dot follow Bencho Dock (MIT).
+   Source: cabralorenzo/bencho@30ab35a/blocks/dock; /licenses/bencho-MIT.txt. */
 .mobile-bottom-nav > a::before {
   position: absolute;
-  top: -5px;
+  bottom: -1px;
   left: 50%;
-  width: 0;
-  height: 2px;
-  background: var(--brand-link);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
   content: "";
-  transform: translateX(-50%);
-  transition: width 160ms ease;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) scale(.45);
+  transition: opacity 160ms ease-out, transform 280ms cubic-bezier(.24,1.34,.38,1);
 }
 
 .mobile-bottom-nav > a.active {
@@ -961,23 +968,46 @@ h3 {
 }
 
 .mobile-bottom-nav > a.active::before {
-  width: 34px;
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
+
+.mobile-bottom-nav > a:focus-visible { outline: 2px solid var(--brand-link); outline-offset: -2px; }
+.mobile-bottom-nav > a.active > span:last-child { font-weight: 500; }
 
 .mobile-bottom-icon {
   position: relative;
   display: grid;
   place-items: center;
+  width: 28px;
+  height: 28px;
 }
 
+.mobile-bottom-glyph {
+  display: grid;
+  place-items: center;
+  transform-origin: center bottom;
+  transition: transform 280ms cubic-bezier(.24,1.34,.38,1);
+}
+.mobile-bottom-nav > a.active .mobile-bottom-glyph { transform: translateY(-2px) scale(1.04); }
+.mobile-bottom-nav > a:active .mobile-bottom-glyph { transform: translateY(0) scale(.92); transition-duration: 90ms; }
+
 .mobile-bottom-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 1.45;
+  stroke-width: 1.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bottom-nav > a,
+  .mobile-bottom-nav > a::before,
+  .mobile-bottom-glyph { transition: none; }
+  .mobile-bottom-nav > a.active .mobile-bottom-glyph,
+  .mobile-bottom-nav > a:active .mobile-bottom-glyph { transform: none; }
 }
 
 .mobile-bottom-badge {
@@ -3457,6 +3487,7 @@ input[aria-invalid="true"] {
 }
 
 .reaction-options .reaction-add { padding: 0; color: var(--text-3); }
+.reaction-options .reaction-add[data-morphing] { opacity: 0; }
 .reaction-options .reaction-chip:hover,
 .reaction-options .reaction-add:hover,
 .reaction-options .reaction-add[aria-expanded="true"],
@@ -3501,13 +3532,33 @@ input[aria-invalid="true"] {
   align-items: center;
   height: 60px;
   padding: 8px;
+  border: 1px solid transparent;
+  color: var(--text);
+  isolation: isolate;
+}
+.reaction-menu-surface {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
   border: 1px solid var(--border-strong);
   border-radius: 30px;
   background: var(--surface);
-  color: var(--text);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 12%, transparent);
+  transition: box-shadow 180ms ease-out;
   transform-origin: 0 0;
-  isolation: isolate;
+  pointer-events: none;
+}
+.reaction-menu-return {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  opacity: 0;
+  color: var(--text-3);
+  pointer-events: none;
 }
 .reaction-choice {
   flex: 1 0 0;
@@ -3555,6 +3606,7 @@ input[aria-invalid="true"] {
   pointer-events: none;
 }
 .reaction-menu[inert] { pointer-events: none; }
+.reaction-menu[inert] .reaction-menu-surface { box-shadow: none; }
 
 .reaction-error {
   margin: 0;
@@ -3569,6 +3621,7 @@ input[aria-invalid="true"] {
 @media (prefers-reduced-motion: reduce) {
   .reaction-options button { transition: none; }
   .reaction-choice > span { transform: none !important; }
+  .reaction-menu-surface { transition: none; }
 }
 
 .interaction-favorite-row {

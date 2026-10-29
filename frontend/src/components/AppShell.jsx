@@ -28,10 +28,10 @@ function NavLinks({ items, onNavigate }) {
 
 function MobileNavIcon({ name }) {
   const paths = {
-    home: <><path d="M3 10.5 12 3l9 7.5" /><path d="M5.5 9.5V21h13V9.5M9 21v-6h6v6" /></>,
+    home: <><path d="m3.5 10 7.6-6.1a1.5 1.5 0 0 1 1.8 0l7.6 6.1" /><path d="M5 9v10a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9M9.5 20.5v-6h5v6" /></>,
     discover: <><circle cx="12" cy="12" r="8.5" /><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z" /></>,
-    write: <><path d="M4 20h4l11-11-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4M4 20h16" /></>,
-    profile: <><circle cx="12" cy="8" r="3.5" /><path d="M5.5 21v-2.5a6.5 6.5 0 0 1 13 0V21" /></>,
+    write: <><path d="m4.5 17 .7-3.4 9.6-9.5a1.7 1.7 0 0 1 2.4 0l1.7 1.7a1.7 1.7 0 0 1 0 2.4L9.4 17.8l-3.4.7a1.3 1.3 0 0 1-1.5-1.5Z" /><path d="m13.5 5.5 5 5M4 21h16" /></>,
+    profile: <><circle cx="12" cy="7.5" r="3.5" /><path d="M5 20.5v-1.8a5.2 5.2 0 0 1 5.2-5.2h3.6a5.2 5.2 0 0 1 5.2 5.2v1.8" /></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -169,7 +169,7 @@ export function AppShell() {
           return (
             <NavLink key={to} to={to} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
               <span className="mobile-bottom-icon">
-                <MobileNavIcon name={icon} />
+                <span className="mobile-bottom-glyph"><MobileNavIcon name={icon} /></span>
                 {to === "/me" && badgeText ? <span className="mobile-bottom-badge" aria-hidden="true">{badgeText}</span> : null}
               </span>
               <span>{label}</span>

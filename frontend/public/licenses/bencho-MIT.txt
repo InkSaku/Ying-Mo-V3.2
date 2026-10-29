@@ -1,5 +1,6 @@
-Bencho Emoji Reactions
+Bencho Emoji Reactions / Magnifying Dock
 Source: https://github.com/cabralorenzo/bencho/tree/30ab35a575eb83eed8f086a6893d4d6426f4fa91/blocks/emoji-reactions
+Source: https://github.com/cabralorenzo/bencho/tree/30ab35a575eb83eed8f086a6893d4d6426f4fa91/blocks/dock
 
 MIT License
 
