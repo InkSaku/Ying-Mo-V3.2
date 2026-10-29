@@ -20,6 +20,7 @@ import {
 } from "../lib/collectionMemories";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 import { CollectionSketch } from "../components/CollectionSketch";
+import { CollectionSharePill } from "../components/CollectionSharePill";
 import "../styles/collection-detail-editorial.css";
 
 function MemoryFilters({ data, memory, onChange, media = false }) {
@@ -189,6 +190,7 @@ export function CollectionDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const memory = readCollectionMemoryState(searchParams);
   const state = useAsyncData(() => api.get(`/collections/${encodeURIComponent(slug)}`), [slug]);
+  const [membership, setMembership] = useState(null);
   const [notificationPreference, setNotificationPreference] = useState({ level: "all", loading: true, saving: false, message: "", error: "" });
   usePageMeta(state.data?.name || "合集");
   useEffect(() => {
@@ -220,7 +222,13 @@ export function CollectionDetailPage() {
   const changeView = (view) => changeMemory({ ...memory, view, page: 1 });
   if (state.loading) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
-  const collection = state.data;
+  const collection = membership?.id === state.data.id ? { ...state.data, ...membership } : state.data;
+  const updateMembership = (next) => setMembership({
+    id: collection.id,
+    creator: next.creator,
+    members: next.members,
+    auto_add_future_members: next.auto_add_future_members ?? collection.auto_add_future_members,
+  });
   return <main className="page-shell collection-memory-page">
     <header className="collection-hero collection-volume-hero">
       <div ref={coverRef} className="collection-volume-cover-frame"><ProtectedImage media={collection.cover_media} useOriginal alt="" className="collection-hero-cover" fallback={<div className="collection-volume-fallback" aria-hidden="true"><span></span><CollectionSketch /><strong>{collection.name}</strong><small>{formatDate(collection.updated_at)}</small></div>} /></div>
@@ -234,6 +242,7 @@ export function CollectionDetailPage() {
           <div><dt>合集成员</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
           <div><dt>更新于</dt><dd>{formatDate(collection.updated_at)}</dd></div>
         </dl>
+        <CollectionSharePill key={`${collection.id}-${collection.creator.id}-${user.id}`} collection={collection} user={user} onMembersChange={updateMembership} />
         <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>添加记录</Link></div>
       </div>
     </header>

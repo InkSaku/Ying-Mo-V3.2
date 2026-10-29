@@ -73,6 +73,89 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-memory-page .collection-volume-copy .btn { border-radius: 2px; }
 .collection-memory-page .collection-volume-copy .btn-primary { background: var(--text); color: var(--page); box-shadow: none; }
 
+/* The colophon's shared roster, address and invitation stay together in every view. */
+.collection-memory-page .collection-share { width: min(100%, 440px); margin-top: 22px; color: var(--text); font-size: 13px; }
+.collection-memory-page .collection-share-pill {
+  display: flex;
+  align-items: stretch;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+}
+.collection-memory-page .collection-share button { font: inherit; cursor: pointer; }
+.collection-memory-page .collection-share-pill button { min-height: 46px; border: 0; background: transparent; color: var(--text-2); transition: background-color 150ms ease-out, color 150ms ease-out; }
+.collection-memory-page .collection-share-pill button:hover,
+.collection-memory-page .collection-share-pill button[aria-expanded="true"] { background: color-mix(in srgb, var(--brand-link) 8%, var(--surface)); color: var(--brand-link); }
+.collection-memory-page .collection-share-members { position: relative; display: flex; align-items: center; gap: 9px; padding: 6px 12px 6px 8px; border-radius: 24px 0 0 24px; }
+.collection-memory-page .collection-share-avatars { display: flex; align-items: center; flex-shrink: 0; }
+.collection-memory-page .collection-share-avatars > span { display: flex; }
+.collection-memory-page .collection-share-avatars > span + span { margin-left: -12px; }
+.collection-memory-page .collection-share-avatar,
+.collection-memory-page .collection-share-overflow { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 30px; width: 30px; height: 30px; overflow: hidden; border: 1px solid var(--surface); border-radius: 50%; background: var(--border-soft); }
+.collection-memory-page .collection-share-avatar > * { width: 100%; height: 100%; min-height: 0; border: 0; border-radius: inherit; object-fit: cover; }
+.collection-memory-page .collection-share-overflow { position: relative; color: var(--text-2); font-size: 10px; font-variant-numeric: tabular-nums; }
+.collection-memory-page .collection-share-count { white-space: nowrap; font-size: 12px; }
+.collection-memory-page .collection-share-count strong { font-weight: 500; font-variant-numeric: tabular-nums; }
+.collection-memory-page .collection-share-action { display: inline-flex; justify-content: center; align-items: center; gap: 5px; flex-shrink: 0; padding: 8px 11px; white-space: nowrap; }
+.collection-memory-page .collection-share-pill .collection-share-action { border-left: 1px solid var(--border); }
+.collection-memory-page .collection-share-action:last-child { border-radius: 0 24px 24px 0; }
+.collection-memory-page .collection-share-action svg { width: 16px; height: 16px; flex-shrink: 0; }
+.collection-memory-page .collection-share-pill .collection-share-invite { color: var(--brand-link); }
+.collection-memory-page .collection-share-tooltip { position: absolute; z-index: 10; left: 0; bottom: calc(100% + 8px); width: max-content; max-width: min(290px, 75vw); padding: 6px 10px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: var(--text-2); font-size: 11px; line-height: 1.7; text-align: left; overflow-wrap: anywhere; visibility: hidden; pointer-events: none; }
+.collection-memory-page .collection-share-members:hover .collection-share-tooltip,
+.collection-memory-page .collection-share-members:focus-visible .collection-share-tooltip { visibility: visible; }
+.collection-memory-page .collection-share-feedback { color: var(--brand-link); font-size: 12px; line-height: 1.7; }
+.collection-memory-page .collection-share-feedback:not(:empty) { margin-top: 9px; }
+.collection-memory-page .collection-share-panel { margin-top: 12px; padding: 18px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+.collection-memory-page .collection-share-panel > header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.collection-memory-page .collection-share-panel h2 { margin: 0; color: var(--text); font-family: var(--serif); font-size: 19px; font-weight: 400; line-height: 1.5; }
+.collection-memory-page .collection-share-panel h2 small { margin-left: 6px; color: var(--text-2); font-size: 12px; }
+.collection-memory-page .collection-share-panel button { min-height: 36px; padding: 5px 9px; border: 1px solid var(--border); border-radius: 3px; background: transparent; color: var(--text-2); }
+.collection-memory-page .collection-share-panel > header button,
+.collection-memory-page .collection-share-panel .collection-share-joined { padding-inline: 0; border: 0; color: var(--brand-link); }
+.collection-memory-page .collection-share-note { margin: 10px 0; color: var(--text-2); font-size: 12px; line-height: 1.8; }
+.collection-memory-page .collection-share-search,
+.collection-memory-page .collection-share-manual-copy { display: grid; gap: 7px; color: var(--text-2); font-size: 12px; }
+.collection-memory-page .collection-share-manual-copy { margin-top: 10px; }
+.collection-memory-page .collection-share input[type="search"],
+.collection-memory-page .collection-share input[readonly] { width: 100%; min-width: 0; min-height: 42px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 3px; background: var(--page); color: var(--text); font: inherit; font-size: 16px; caret-color: var(--brand-link); }
+.collection-memory-page .collection-share input::placeholder { color: var(--text-2); opacity: 1; }
+.collection-memory-page .collection-share input:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+.collection-memory-page .collection-share-list { max-height: 260px; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; scrollbar-width: thin; scrollbar-color: var(--border) var(--surface); }
+.collection-memory-page .collection-share-list > li + li { border-top: 1px solid var(--border-soft); }
+.collection-memory-page .collection-share-person { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 3px; color: var(--text); text-decoration: none; cursor: pointer; }
+.collection-memory-page .collection-share-person:hover,
+.collection-memory-page .collection-share-person:focus-within { background: color-mix(in srgb, var(--brand-link) 6%, var(--surface)); }
+.collection-memory-page .collection-share-person > span:not(.collection-share-avatar) { display: grid; flex: 1; min-width: 0; gap: 3px; overflow-wrap: anywhere; }
+.collection-memory-page .collection-share-person strong { font-size: 13px; font-weight: 500; }
+.collection-memory-page .collection-share-person small { color: var(--text-2); font-size: 11px; }
+.collection-memory-page .collection-share-person em { flex-shrink: 0; color: var(--brand-link); font-size: 11px; font-style: normal; }
+.collection-memory-page .collection-share-person input { width: 16px; height: 16px; flex-shrink: 0; margin: 0; accent-color: var(--brand-link); }
+.collection-memory-page .collection-share-error { margin: 10px 0; color: var(--text); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.collection-memory-page .collection-share-error a { color: var(--brand-link); text-decoration: underline; text-underline-offset: 3px; }
+.collection-memory-page .collection-share-panel footer { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.collection-memory-page .collection-share-panel footer > span { margin-right: auto; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.collection-memory-page .collection-share-panel .collection-share-confirm { border-color: var(--brand-link); background: var(--brand-link); color: var(--surface); }
+.collection-memory-page .collection-share button:disabled { opacity: .55; cursor: wait; }
+.collection-memory-page .collection-share button[type="submit"]:disabled,
+.collection-memory-page .collection-share-person:has(input:disabled) { cursor: default; }
+
+@media (min-width: 768px) and (max-width: 979px), (max-width: 479px) {
+  .collection-memory-page .collection-share.is-creator .collection-share-pill { display: grid; grid-template-columns: 1fr 1fr; width: 100%; border-radius: 18px; }
+  .collection-memory-page .collection-share.is-creator .collection-share-members { grid-column: 1 / -1; justify-content: center; border-bottom: 1px solid var(--border); border-radius: 18px 18px 0 0; }
+  .collection-memory-page .collection-share.is-creator .collection-share-action { border-left: 0; border-radius: 0 0 0 18px; }
+  .collection-memory-page .collection-share.is-creator .collection-share-invite { border-left: 1px solid var(--border); border-radius: 0 0 18px 0; }
+}
+@media (max-width: 479px) {
+  .collection-memory-page .collection-share-panel { padding: 14px; }
+  .collection-memory-page .collection-share-panel footer { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collection-memory-page .collection-share-pill button { transition: none; }
+}
+
 .collection-memory-page .collection-volume-nav {
   position: sticky;
   z-index: 8;

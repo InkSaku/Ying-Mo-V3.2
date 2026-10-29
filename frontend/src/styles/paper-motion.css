@@ -1,4 +1,5 @@
 .paper-motion-layer { position: fixed; inset: 0; z-index: 1100; overflow: hidden; pointer-events: none; }
+.paper-opening-backdrop { position: absolute; inset: 0; background: var(--page); }
 .paper-opening-stage { perspective: 1000px; perspective-origin: 50% 45%; }
 .paper-opening-book { transform-style: preserve-3d; pointer-events: none; }
 .paper-opening-front::before { position: absolute; z-index: 4; inset: 0 auto 0 12px; width: 1px; background: color-mix(in srgb, var(--text) 18%, transparent); box-shadow: -3px 0 5px rgb(0 0 0 / .08); content: ""; }
