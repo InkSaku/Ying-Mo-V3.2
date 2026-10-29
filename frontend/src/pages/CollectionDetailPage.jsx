@@ -64,6 +64,33 @@ function TimelineView({ slug, memory, onChange }) {
   </section>;
 }
 
+function MediaAccordionRow({ row, offset, items, pagination }) {
+  const [active, setActive] = useState(0);
+  const [anchored, setAnchored] = useState(false);
+  return <div className="collection-media-accordion-row" style={{ "--media-row-count": row.length }} data-anchored={anchored || undefined}>
+    {row.map((item, index) => {
+      const position = (offset + index) % 5;
+      const title = item.post.title || (item.post.post_type === "note" ? "一则随记" : "一篇文章");
+      const author = item.author?.nickname || "成员";
+      const kind = item.kind === "live_photo" ? "Live Photo" : "图片";
+      return <article key={item.id} className={`collection-media-memory${active === index ? " is-expanded" : ""}`} style={{ "--media-grid-column": position === 0 ? "span 7" : position === 1 ? "span 5" : "span 4", "--media-grid-ratio": position < 2 ? "16 / 10" : "4 / 3" }}
+        onPointerEnter={(event) => {
+          if (event.pointerType !== "mouse" || event.currentTarget.parentElement.querySelector(":focus-visible")) return;
+          setAnchored(false);
+          setActive(index);
+        }}
+        onFocusCapture={() => setActive(index)}
+        // Settle the opener before its existing click handler measures the photo.
+        onPointerDownCapture={(event) => {
+          if (event.target.closest(".media-lightbox-trigger")) { setAnchored(true); setActive(index); }
+        }}>
+        <MediaOpenButton item={item} items={items} context="collection" pagination={pagination} label={`在灯箱中查看${author}的${kind}：${title}`}><ProtectedImage media={item.image} alt={`来自${author}的共同影像：${title}`} /></MediaOpenButton>
+        <Link to={postHref(item.post)} className="collection-media-caption"><strong>{title}</strong><small><span>{author}</span><time dateTime={item.occurred_at || undefined}>{formatDate(item.occurred_at)}</time></small><span className="collection-media-kind">{kind} / {postTypeLabel(item.post.post_type)}</span></Link>
+      </article>;
+    })}
+  </div>;
+}
+
 function MediaWallView({ slug, memory, onChange }) {
   const { hydrateGallery } = useMediaLightbox();
   const path = collectionMemoryApiPath(slug, memory, 24);
@@ -91,10 +118,16 @@ function MediaWallView({ slug, memory, onChange }) {
   }, [hydrateGallery, pagination.page, pagination.page_size, pagination.total, pagination.total_pages, state.data?.items]);
   if (state.loading) return <PageLoader label="正在整理共同影像" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
+  const items = state.data?.items || [];
+  const rowCount = Math.ceil(items.length / 5);
+  const rows = Array.from({ length: rowCount }, (_, index) => {
+    const offset = Math.floor(index * items.length / rowCount);
+    return { offset, items: items.slice(offset, Math.floor((index + 1) * items.length / rowCount)) };
+  });
   return <section className="collection-memory-view" aria-labelledby="collection-media-heading">
     <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p></p></div></div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} media />
-    {state.data?.items?.length ? <div className="collection-media-wall">{state.data.items.map((item) => <article key={item.id} className="collection-media-memory"><MediaOpenButton item={item} items={state.data.items} context="collection" pagination={{ page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || state.data.items.length, totalPages: pagination.total_pages || 1, loadPage }}><ProtectedImage media={item.image} alt={`来自${item.author?.nickname || "成员"}的共同影像`} /></MediaOpenButton><Link to={postHref(item.post)} className="collection-media-caption"><strong>{item.post.title || (item.post.post_type === "note" ? "一则随记" : "一篇文章")}</strong><small><span>{item.author?.nickname || "成员"}</span><time dateTime={item.occurred_at || undefined}>{formatDate(item.occurred_at)}</time></small><span className="collection-media-kind">{item.kind === "live_photo" ? "Live Photo" : "图片"} / {postTypeLabel(item.post.post_type)}</span></Link></article>)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
+    {items.length ? <div className={`collection-media-wall${items.length > 2 ? " has-accordion" : ""}`}>{rows.map((row) => <MediaAccordionRow key={`${path}:${row.items.map((item) => item.id).join(",")}`} row={row.items} offset={row.offset} items={items} pagination={{ page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || items.length, totalPages: pagination.total_pages || 1, loadPage }} />)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
     <Pagination page={pagination.page || 1} totalPages={pagination.total_pages || 0} onChange={(page) => onChange({ ...memory, page })} />
   </section>;
 }

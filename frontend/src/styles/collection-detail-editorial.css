@@ -171,6 +171,58 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-memory-page .collection-media-memory > .media-lightbox-trigger { border-radius: 0; }
 .collection-memory-page .collection-media-caption strong { font-weight: 400; }
 .collection-memory-page .collection-media-memory img { filter: none; }
+.collection-memory-page .collection-media-accordion-row { display: contents; }
+
+/* Bencho Image Accordion's fixed-width negotiation, adapted without its springs.
+   Source and MIT notice: /licenses/bencho-MIT.txt. */
+@media (min-width: 980px) {
+  .collection-memory-page .collection-media-wall.has-accordion { display: flex; flex-direction: column; }
+  .collection-memory-page .has-accordion .collection-media-accordion-row {
+    display: flex;
+    gap: 12px;
+    container-type: inline-size;
+    --media-photo-height: clamp(220px, 22vw, 260px);
+    --media-caption-width: calc((100cqw - (var(--media-row-count) - 1) * 12px) / (var(--media-row-count) + 2.5) * 3.5);
+  }
+  .collection-memory-page .has-accordion .collection-media-memory {
+    flex: 1 1 0;
+    overflow: hidden;
+    transition: flex-grow 280ms cubic-bezier(.22, .7, .2, 1);
+  }
+  .collection-memory-page .has-accordion .collection-media-memory.is-expanded { flex-grow: 3.5; }
+  .collection-memory-page .has-accordion .collection-media-memory > .media-lightbox-trigger {
+    display: block;
+    height: var(--media-photo-height);
+    aspect-ratio: auto;
+  }
+  .collection-memory-page .has-accordion .collection-media-caption {
+    /* Every caption keeps its final width and participates in row sizing even
+       when hidden, so long titles never move the rows below on selection. */
+    width: var(--media-caption-width);
+    visibility: hidden;
+    opacity: 0;
+    overflow-wrap: anywhere;
+    transition: opacity 140ms ease-out;
+  }
+  .collection-memory-page .has-accordion .is-expanded .collection-media-caption { visibility: visible; opacity: 1; }
+  .collection-memory-page .has-accordion .media-lightbox-trigger:focus-visible,
+  .collection-memory-page .has-accordion .collection-media-caption:focus-visible { outline: 2px solid var(--brand-link); outline-offset: -2px; }
+  .collection-memory-page .has-accordion .collection-media-accordion-row[data-anchored] .collection-media-memory,
+  .collection-memory-page .has-accordion .collection-media-accordion-row:has(:focus-visible) .collection-media-memory { transition: none; }
+}
+
+@media (min-width: 901px) and (max-width: 979px) {
+  .collection-memory-page .has-accordion .collection-media-memory { grid-column: var(--media-grid-column); }
+}
+@media (max-width: 979px) {
+  /* display: contents flattens the rows; use the original page-wide sequence
+     instead of restarting nth-child's crop pattern in every wrapper. */
+  .collection-memory-page .has-accordion .collection-media-memory > .media-lightbox-trigger { aspect-ratio: var(--media-grid-ratio); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collection-memory-page .has-accordion .collection-media-memory,
+  .collection-memory-page .has-accordion .collection-media-caption { transition: none; }
+}
 
 .collection-memory-page .post-card-context:empty { display: none; }
 .collection-memory-page .post-card-context .tag { padding: 0; border: 0; background: transparent; font-size: 12px; }
