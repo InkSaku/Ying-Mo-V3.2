@@ -43,7 +43,7 @@ npm run preview
 - 邮箱验证和密码重置令牌只从 URL fragment `#token=...` 读取，页面初始化后立即通过 History API 清除；误入 Query 的令牌会被删除而不会被消费，页面使用 `no-referrer`；不得改用 query、路径、Web Storage 或日志持久化。
 - 密码重置成功后前端清理当前认证状态与受保护媒体 Blob URL，并通过只含事件类型和时间的短暂同源存储事件通知其他标签页立即清理；服务端同时撤销该账号全部 Refresh Session。
 - 独立 Post 与 Collection Post 的可见性不在前端猜测或扩权。
-- 媒体继续通过受保护 API 和 Blob URL 生命周期读取；退出或会话失效时必须释放本地对象 URL。
+- 媒体继续通过受保护 API 和 Blob URL 生命周期读取；列表图片接近视口才请求，同时最多 4 个媒体请求；离开页面后的 Blob 在内存保留最多 10 分钟、64MB，退出或会话失效时必须立即释放本地对象 URL。
 
 ## 欢迎页品牌影片
 

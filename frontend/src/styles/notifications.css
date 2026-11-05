@@ -1,0 +1,106 @@
+/* A quiet inbox: one sentence per event, grouped by day, separated only by hairlines. */
+.inbox-page .ink-personal-margin { display: none; }
+.inbox-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.inbox-header h1 { margin: 0; font-size: 32px; font-weight: 400; line-height: 1.4; letter-spacing: .04em; }
+.inbox-count { margin: 0; color: var(--text-3); font-size: 13px; }
+.inbox-count .tabular { color: var(--brand-link); }
+.inbox-read-all { min-height: 44px; margin-left: auto; color: var(--brand-link); font-size: 13px; }
+.inbox-feedback { margin-top: 16px; }
+
+.inbox-day { margin-top: 32px; }
+.inbox-day h2 { margin: 0 0 4px; color: var(--text-3); font-size: 13px; font-weight: 400; letter-spacing: .04em; }
+.inbox-day ul { margin: 0; padding: 0; list-style: none; }
+
+.inbox-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 16px 0;
+}
+.inbox-row + .inbox-row { border-top: 1px solid var(--border); }
+
+.inbox-avatar { position: relative; display: block; width: 36px; height: 36px; color: var(--text); }
+.inbox-avatar .inbox-avatar-image { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.inbox-avatar .ink-brand-mark { display: block; width: 30px; height: 33px; margin: 1px auto 0; }
+/* The only unread signal besides darker text. */
+.inbox-row.is-unread .inbox-avatar::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--page);
+  border-radius: 50%;
+  background: var(--brand-link);
+}
+
+.inbox-copy { min-width: 0; }
+.inbox-title { margin: 0; color: var(--text-3); font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+.inbox-title strong { margin-right: .35em; color: var(--text-2); font-weight: 500; }
+.inbox-row.is-unread .inbox-title { color: var(--text); }
+.inbox-row.is-unread .inbox-title strong { color: var(--text); }
+.inbox-link { color: inherit; text-decoration: none; }
+.inbox-link::after { content: ""; position: absolute; inset: 0; }
+.inbox-link:hover { color: var(--brand-link); text-decoration: none; }
+.inbox-link:hover strong { color: inherit; }
+.inbox-link:focus-visible { outline: none; }
+.inbox-link:focus-visible::after { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+.inbox-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 62ch;
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.inbox-meta { display: flex; align-items: center; gap: 12px; min-height: 24px; }
+.inbox-meta time { order: 2; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.inbox-read {
+  position: relative;
+  z-index: 1;
+  order: 1;
+  min-height: 44px;
+  margin-block: -10px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--brand-link);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.inbox-read:disabled { color: var(--text-3); cursor: default; }
+.inbox-read:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+@media (hover: hover) {
+  .inbox-read { opacity: 0; transition: opacity 120ms ease-out; }
+  .inbox-row:hover .inbox-read, .inbox-read:focus-visible { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .inbox-read { transition: none; } }
+
+@media (max-width: 767px) {
+  .inbox-header { padding-top: 8px; padding-bottom: 8px; }
+  .inbox-header h1 { font-size: 28px; }
+  .inbox-day { margin-top: 24px; }
+  .inbox-row { grid-template-columns: 32px minmax(0, 1fr); gap: 4px 12px; padding: 14px 0; }
+  .inbox-avatar { width: 32px; height: 32px; }
+  .inbox-avatar .ink-brand-mark { width: 26px; height: 29px; }
+  .inbox-meta { grid-column: 2; justify-content: space-between; }
+  .inbox-meta time { order: 1; }
+  .inbox-read { order: 2; }
+}

@@ -62,14 +62,14 @@ def replace_members(collection, creator_id, member_ids, actor_id):
         db.session.add(Notification(
             user_id=user_id, actor_id=actor_id, kind="collection_member_added",
             target_type="collection",
-            collection_id=collection.id, message=f"你已加入 Collection「{collection.name}」。"
+            collection_id=collection.id, message=f"你已加入合集「{collection.name}」。"
         ))
     for user_id in removed:
         db.session.delete(current_links[user_id])
         db.session.add(Notification(
             user_id=user_id, actor_id=actor_id, kind="collection_member_removed",
             target_type="collection",
-            collection_id=collection.id, message=f"你已被移出 Collection「{collection.name}」。"
+            collection_id=collection.id, message=f"你已被移出合集「{collection.name}」。"
         ))
     return {"added": sorted(added), "removed": sorted(removed)}
 

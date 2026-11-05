@@ -7,6 +7,7 @@ import uuid
 from urllib.parse import parse_qs, urlsplit
 
 from .credentials import validate_state
+from .vendor.automation import CHAT_URL, check_login
 
 
 class LoginBrowserError(Exception):
@@ -171,6 +172,7 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
     from playwright.sync_api import sync_playwright
     headless = login_browser_headless() if headless is None else headless
     display = {}
+    profile_loaded = False
     scan_signal = {}
     issue_signal = {}
     issued_qr = None
@@ -186,7 +188,7 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
             context = browser.new_context(viewport={"width": 1366, "height": 800}, locale="zh-CN")
             page = context.new_page()
             def observe_profile(response):
-                nonlocal issued_qr, issued_token, handoff_observed, signal_revision
+                nonlocal issued_qr, issued_token, handoff_observed, signal_revision, profile_loaded
                 url = urlsplit(response.url)
                 if url.hostname and (url.hostname == "douyin.com" or url.hostname.endswith(".douyin.com")) and "passport" in url.path and any(word in url.path for word in ("qr", "scan")):
                     try:
@@ -226,14 +228,16 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
                 if url.hostname != "www.douyin.com" or "/user/profile/self/" not in url.path:
                     return
                 try:
-                    user = response.json().get("user", {})
-                    if isinstance(user, dict):
+                    payload = response.json()
+                    user = payload.get("user", {})
+                    if payload.get("status_code") == 0 and isinstance(user, dict) and (user.get("uid") or user.get("sec_uid")):
+                        profile_loaded = True
                         display.update({k: user[k] for k in ("nickname", "unique_id") if isinstance(user.get(k), str)})
                 except Exception:
                     pass
             context.on("response", observe_profile)
             # The chat route renders the official login modal without navigating home.
-            page.goto("https://www.douyin.com/chat", wait_until="domcontentloaded", timeout=30000)
+            page.goto(CHAT_URL, wait_until="domcontentloaded", timeout=30000)
             previous = None
             sampled_at = 0
             sampled_revision = -1
@@ -241,6 +245,9 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
             verification_page = None
             verification_url = None
             preview_at = 0
+            session_seen = False
+            ready_since = None
+            ready_cookies = None
             while time.monotonic() < deadline:
                 interaction = assert_current()
                 if not context.pages:
@@ -248,7 +255,8 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
                 if page.is_closed():
                     page = context.pages[0]
                 cookies = context.cookies()
-                has_session = any(c["name"].startswith("sessionid") and c["value"] for c in cookies)
+                chat_cookies = context.cookies(CHAT_URL)
+                has_session = any(c["name"].startswith("sessionid") and c["value"] for c in chat_cookies)
                 visible_challenge = browser_challenge(context)
                 if time.monotonic() - sampled_at > 4 or sampled_revision != signal_revision or has_session:
                     # Only cookie names and structural signals, never cookie values,
@@ -267,11 +275,27 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
                     sampled_at = time.monotonic()
                     sampled_revision = signal_revision
                 if has_session:
+                    session_seen = True
                     on_status("verifying")
-                    page.wait_for_timeout(1500)
-                    assert_current()
-                    state = clean_browser_state(context.storage_state())
-                    return state, identity_profile(state, display)
+                    # A phone confirmation / the first session cookie can arrive
+                    # before the SDK has finished its redirect and saved state.
+                    # Require authenticated page evidence and stable auth cookies
+                    # before handing credentials to a new task browser.
+                    signature = sorted((c["name"], c["domain"], c["path"], c["value"]) for c in chat_cookies
+                        if c["name"].startswith(("sessionid", "uid_tt", "sid_tt")))
+                    logged, _ = check_login(page)
+                    authenticated = profile_loaded or page.locator(".conversationConversationItemtitle:visible").count() > 0
+                    if visible_challenge or not logged or not authenticated:
+                        ready_since = ready_cookies = None
+                    elif signature != ready_cookies:
+                        ready_cookies, ready_since = signature, time.monotonic()
+                    elif time.monotonic() - ready_since >= 3:
+                        assert_current()
+                        state = clean_browser_state(context.storage_state())
+                        return state, identity_profile(state, display)
+                    page.wait_for_timeout(1000)
+                    continue
+                ready_since = ready_cookies = None
                 if scan_signal.get("data_error_code") == 0:
                     if scan_signal.get("data_status") in ("refused", "4", 4):
                         raise LoginBrowserError("cancelled", "抖音扫码登录已被拒绝，本次连接已结束。")
@@ -329,6 +353,9 @@ def observe_login(on_qr, on_status, assert_current, timeout=300, *, headless=Non
                         previous = digest
                         status = "waiting_scan"
                 page.wait_for_timeout(1500)
+            if session_seen:
+                raise LoginBrowserError("blocked" if browser_challenge(context) else "interrupted",
+                    "手机已确认登录，但抖音私信页面尚未完成登录或验证，未保存本次登录信息。请重新连接并完成官方页面提示。")
             if handoff_observed:
                 raise LoginBrowserError("interrupted", login_handoff_reason(scan_signal))
             raise LoginBrowserError("expired", "等待扫码超时，请重新连接。")

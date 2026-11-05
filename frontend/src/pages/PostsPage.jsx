@@ -71,7 +71,7 @@ function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
         <div className="articles-drawn-opening"><CollectionSketch /><p aria-hidden="true">Between the lines.<br /><span>A little life.</span></p></div>
         <aside className="articles-hero-note" aria-label="文章目录概览">
           <strong>{openingCopy}</strong>
-          <p>共 {total || 0} 篇可阅读文章{latestPost?.published_at ? <><br />本页首篇发布于 {formatDate(latestPost.published_at)}</> : null}</p>
+          <p>共 {total || 0} 篇可阅读文章{latestPost?.published_at ? <span className="articles-hero-note-latest"><br />本页首篇发布于 {formatDate(latestPost.published_at)}</span> : null}</p>
           <nav aria-label="内容类型切换"><Link className="active" to="/articles">文章</Link><Link to="/notes">随记</Link></nav>
           <a href="#browse-content">进入目录 <span aria-hidden="true">↓</span></a>
         </aside>

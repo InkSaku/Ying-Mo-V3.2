@@ -23,7 +23,7 @@ from app.posts.service import (
     DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
     publish_post, update_article_slug,
 )
-from app.posts.browsing import estimate_reading_minutes, first_display_media, serialize_browse_post
+from app.posts.browsing import estimate_reading_minutes, serialize_browse_posts
 from app.posts.revisions import (
     changed_snapshot_fields, create_revision, restore_revision_snapshot,
     revision_detail, snapshot_post,
@@ -424,9 +424,8 @@ def list_posts():
         stmt.order_by(*order)
         .offset((page - 1) * size).limit(size)
     ).all()
-    display_media = first_display_media(rows)
     return success_response(
-        [serialize_browse_post(p, actor_id=actor.id, display_media=display_media) for p in rows],
+        serialize_browse_posts(rows, actor_id=actor.id),
         meta=pagination_meta(page, size, total),
     )
 

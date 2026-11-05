@@ -76,6 +76,7 @@ function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
     return (
       <figure className={`inline-protected-media inline-live-photo ${presentationClass}`}>
         <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
+          eager
           path={imagePath(group.image, management)}
           alt={group.image.alt_text || ""}
           className="inline-protected-image"
@@ -94,6 +95,7 @@ function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
   return (
     <figure className={`inline-protected-media ${presentationClass}`}>
       <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
+          eager
         path={imagePath(group.image, management)}
         alt={group.image.alt_text || ""}
         className="inline-protected-image"

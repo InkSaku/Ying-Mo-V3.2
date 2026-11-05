@@ -12,7 +12,7 @@ def open_browser(state_path=None, **ctx_kwargs):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, chromium_sandbox=True, args=["--disable-dev-shm-usage", "--disable-gpu"])
         try:
-            options = {"viewport": {"width": 1366, "height": 800}, **ctx_kwargs}
+            options = {"viewport": {"width": 1366, "height": 800}, "locale": "zh-CN", **ctx_kwargs}
             context = browser.new_context(storage_state=execution_state(), **options)
             page = context.new_page()
             yield p, browser, context, page

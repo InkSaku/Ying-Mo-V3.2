@@ -1,4 +1,5 @@
-import { InkSketch } from "../components/InkSketch";
+import { HomeFriendshipArt } from "../components/HomeFriendshipArt";
+import { HomeMarginObjects } from "../components/HomeMarginObjects";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { HomeFeed } from "../components/HomeFeed";
@@ -60,16 +61,15 @@ export function HomePage() {
 
   return (
     <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
-      <HomeSparkEntry key={user.id} />
       <section className="home-edition-heading" aria-label="朋友的近况">
         <div className="home-edition-copy">
           <p className="home-edition-eyebrow">映墨 · {editionDate} </p>
           <h1>朋友的<br /><span>近况</span></h1>
           <p className="home-edition-note">阅读朋友最近发布的文章与随记。</p>
           <div className="home-edition-cue" aria-hidden="true">
-            <InkSketch variant="writer" className="ink-home-signature" />
-            <span></span>
+            <HomeFriendshipArt />
           </div>
+          <HomeMarginObjects boundaryRef={pageRef} />
         </div>
         <HomeOpeningFeature post={feature} loading={!homeSnapshot} />
       </section>
@@ -93,6 +93,8 @@ export function HomePage() {
         </section>
         <aside className="home-side-rail" aria-label="回望与共同记录">
           <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
+          <span className="home-margin-pocket" data-home-margin-pocket="aside" aria-hidden="true" />
+          <HomeSparkEntry />
           <Link className="home-side-drafts" to="/me/posts">我的内容 ↗</Link>
         </aside>
       </div>

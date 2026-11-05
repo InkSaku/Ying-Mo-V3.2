@@ -3,7 +3,7 @@ from sqlalchemy import case, func, or_
 from app.access import readable_post_predicate
 from app.extensions import db
 from app.models import Post, PostType, post_tags
-from app.posts.browsing import serialize_browse_post
+from app.posts.browsing import serialize_browse_posts
 
 
 RELATED_LIMIT = 4
@@ -78,8 +78,9 @@ def related_articles(post, actor_id, *, limit=RELATED_LIMIT):
     ).all()
 
     source_tag_names = {tag.id: tag.name for tag in active_tags}
-    result = []
-    for candidate, _relation_score in rows:
+    candidates = [candidate for candidate, _relation_score in rows]
+    items = serialize_browse_posts(candidates, actor_id=actor_id)
+    for candidate, item in zip(candidates, items, strict=True):
         reasons = []
         if post.collection_id is not None and candidate.collection_id == post.collection_id:
             reasons.append(f"同属「{post.collection.name}」合集")
@@ -101,7 +102,5 @@ def related_articles(post, actor_id, *, limit=RELATED_LIMIT):
         if candidate.author_id == post.author_id:
             reasons.append("同一作者")
 
-        item = serialize_browse_post(candidate, actor_id=actor_id)
         item["related_reasons"] = reasons
-        result.append(item)
-    return result
+    return items

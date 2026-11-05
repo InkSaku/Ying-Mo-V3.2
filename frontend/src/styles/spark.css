@@ -1,210 +1,204 @@
+/* A plain workspace on paper: hairlines and whitespace divide the steps; only the next action is solid ink. */
 .spark-page { min-width: 0; }
-.spark-page :is(button, a, input, textarea):focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
-.spark-page .btn { min-height: 42px; padding: 10px 16px; font-size: 13px; }
-.spark-page .btn:disabled { opacity: .45; cursor: not-allowed; }
-.spark-page .text-button { min-height: 36px; font-size: 12px; }
-.spark-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; padding: 8px 0 28px; align-items: center; }
-.spark-hero .hero-kicker { font-size: 10px; margin: 0 0 12px; color: var(--brand-link); letter-spacing: .08em; }
-.spark-hero h1 { font-size: clamp(25px, 2.6vw, 36px); font-weight: 500; line-height: 1.5; letter-spacing: -.025em; margin: 0 0 10px; }
-.spark-hero p { color: var(--text-3); font-size: 13px; margin: 0; line-height: 1.9; }
-.spark-status-line { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 16px; font-size: 12px; color: var(--text-3); }
-.spark-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); }
+.spark-page .ink-personal-margin { display: none; }
+.spark-page :is(button, a, input, textarea, summary):focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+.spark-page .btn { min-height: 44px; padding: 10px 16px; border-radius: 2px; font-size: 14px; }
+.spark-page .btn-primary { --brand: var(--text); --on-brand: var(--surface); background: var(--text); border-color: var(--text); }
+.spark-page .btn:disabled { border: 1px solid var(--border); background: transparent; box-shadow: none; color: var(--text-3); opacity: 1; cursor: not-allowed; -webkit-text-fill-color: var(--text-3); }
+.spark-page .text-button { min-height: 44px; font-size: 13px; }
+
+/* Heading and the single status summary. */
+.spark-hero { display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: end; gap: 24px; padding-bottom: 16px; }
+.spark-hero h1 { margin: 0 0 4px; font-size: 32px; font-weight: 400; line-height: 1.4; letter-spacing: .04em; }
+.spark-hero p { margin: 0; color: var(--text-3); font-size: 14px; line-height: 1.8; }
+.spark-hero-companion { display: block; width: 112px; }
+.spark-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 24px; margin: 0; padding: 16px 0; border-block: 1px solid var(--border); }
+.spark-summary > div { min-width: 0; }
+.spark-summary dt { margin-bottom: 4px; color: var(--text-3); font-size: 12px; }
+.spark-summary dd { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.spark-status-dot { flex: none; align-self: center; width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); }
 .spark-status-dot.is-ready { background: var(--brand-link); }
-.spark-next-time { display: grid; gap: 6px; position: relative; padding: 16px 0 16px 54px; color: var(--text-3); }
-.spark-next-time svg { position: absolute; left: 0; top: 25px; width: 35px; height: 46px; fill: none; stroke: var(--brand-link); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(7deg); }
-.spark-next-time > span { color: var(--brand-link); font-size: 11px; }
-.spark-next-time strong { font: 22px var(--serif); color: var(--text); }
-.spark-next-time small { font-size: 11px; }
-.spark-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--border); margin: 0 0 26px; }
-.spark-steps a { display: flex; align-items: center; gap: 12px; padding: 16px 12px; color: var(--text-3); font-size: 13px; text-decoration: none; min-width: 0; }
-.spark-steps a + a { border-left: 1px solid var(--border); }
-.spark-steps a[aria-current=step] { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 5%, transparent); }
-.spark-steps a > span { display: grid; place-items: center; flex: 0 0 26px; height: 26px; border: 1px solid var(--border); font: 11px var(--mono); border-radius: 50%; }
-.spark-steps a.is-complete > span { color: var(--brand-link); border-color: color-mix(in srgb, var(--brand-link) 35%, var(--border)); }
-.spark-steps a > div { display: grid; gap: 4px; }
-.spark-steps small { font-size: 10px; color: var(--text-3); }
-.spark-section { scroll-margin-top: 90px; min-width: 0; }
-.spark-section-heading { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; }
-.spark-section-heading > span { font: 11px var(--mono); color: var(--brand-link); }
-.spark-section-heading h2 { font-size: 18px; font-weight: 500; margin: 0 0 6px; }
-.spark-section-heading p { font-size: 12px; color: var(--text-3); margin: 0; line-height: 1.8; }
-.spark-page > #spark-step-1 { padding-bottom: 22px; }
-.spark-account-card { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--border); background: var(--surface); }
-.spark-account-avatar { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 7%, var(--surface)); font-size: 19px; }
-.spark-account-identity { display: grid; gap: 5px; flex: 1; min-width: 0; }
-.spark-account-identity :is(small, span) { font-size: 11px; color: var(--text-3); overflow-wrap: anywhere; }
-.spark-account-identity strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
-.spark-account-card .btn { flex-shrink: 0; }
-.spark-login-session { border-left: 2px solid var(--brand-link); padding: 4px 20px; margin: 20px 0; max-width: 600px; font-size: 13px; line-height: 1.8; }
-.spark-qr-area { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 20px; }
-.spark-qr-area img { display: block; background: white; padding: 10px; max-width: 100%; width: 200px; height: auto; }
-.spark-account-confirm p { color: var(--text-3); font-size: 13px; line-height: 1.9; }
-.spark-page > #spark-step-1 > .spark-help { display: inline-block; vertical-align: top; margin: 8px 22px 0 0; }
-.spark-page > #spark-step-1 > .spark-help[open] { display: block; }
-.spark-service-note { border-left: 2px solid var(--brand-link); padding: 10px 16px; color: var(--text-3); font-size: 13px; line-height: 1.9; }
-.spark-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.spark-meta { font-size: 11px; color: var(--text-3); line-height: 1.9; }
-.spark-help { margin-top: 18px; font-size: 12px; color: var(--text-3); }
-.spark-help summary { cursor: pointer; padding: 10px 0; color: var(--brand-link); min-height: 36px; }
-.spark-help p, .spark-help li { line-height: 1.9; overflow-wrap: anywhere; }
-.spark-help pre { font: 11px/1.9 var(--mono); overflow: auto; padding: 16px; background: var(--surface); border: 1px solid var(--border); white-space: pre; }
-.spark-help form { display: grid; gap: 12px; margin-top: 12px; }
-.spark-inline-help { margin: 0; }
-.spark-inline-help[open] { flex-basis: 100%; }
-.spark-inline-help p { margin: 0; }
-.spark-workspace { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 28px; align-items: start; }
-.spark-workspace > .spark-friends, .spark-plan-column > .spark-section { border: 1px solid var(--border); padding: 22px; background: var(--surface); }
-.spark-plan-column { display: grid; gap: 20px; min-width: 0; }
-.spark-plan-form { display: grid; gap: 16px; }
-.spark-page label:not(.spark-contact):not(.spark-switch) { display: grid; gap: 8px; font-size: 12px; }
-.spark-page input:not([type=checkbox]):not([type=file]), .spark-page textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 2px; padding: 10px 12px; background: var(--page); color: var(--text); font: inherit; }
-.spark-page textarea { resize: vertical; line-height: 1.8; }
-.spark-time-field { display: flex; align-items: center; gap: 12px; }
-.spark-time-field input { max-width: 175px; min-height: 42px; }
-.spark-time-field small { color: var(--text-3); font-size: 11px; }
-.spark-switch { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; line-height: 1.8; }
-.spark-page input[type=checkbox] { accent-color: var(--brand-link); width: 16px; height: 16px; flex: 0 0 auto; margin: 2px 0; }
-.spark-search { margin-top: 18px; }
-.spark-list-toolbar { margin: 12px 0 0; display: grid; gap: 6px; }
-.spark-filters { display: flex; flex-wrap: wrap; gap: 5px; }
-.spark-filters button { background: transparent; border: 1px solid transparent; color: var(--text-3); padding: 7px 10px; min-height: 36px; font: 11px var(--serif); border-radius: 2px; cursor: pointer; }
-.spark-filters button[aria-pressed=true] { color: var(--brand-link); border-color: var(--border); background: color-mix(in srgb, var(--brand-link) 5%, var(--surface)); }
-.spark-bulk-actions { display: flex; gap: 16px; }
-.spark-bulk-actions .text-button { font-size: 10px; }
-.spark-contact-list { max-height: 420px; overflow-y: auto; overscroll-behavior: contain; margin: 0 0 16px; border-top: 1px solid var(--border); scrollbar-width: thin; }
-.spark-contact { display: flex; gap: 10px; align-items: center; padding: 13px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.spark-contact:hover, .spark-contact.is-selected { background: color-mix(in srgb, var(--brand-link) 4%, transparent); }
-.spark-contact > span:not(.spark-streak):not(.spark-contact-avatar) { display: grid; gap: 5px; min-width: 0; }
-.spark-contact .spark-contact-avatar { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; border: 1px solid var(--border); border-radius: 50%; color: var(--text-3); font-size: 12px; background: var(--page); }
-.spark-contact strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
-.spark-contact small { font-size: 11px; color: var(--text-3); overflow-wrap: anywhere; line-height: 1.7; }
-.spark-streak { margin-left: auto; font: 11px var(--mono); white-space: nowrap; color: var(--brand-link); }
-.spark-empty { padding: 24px 8px; color: var(--text-3); font-size: 12px; line-height: 1.9; }
+.spark-status-dot:is(.is-expired, .is-blocked, .is-error) { background: var(--danger, #8d3d32); }
+
+.spark-page > .inline-error, .spark-page > .inline-success { margin-top: 16px; }
+.spark-service-note { margin: 16px 0 0; padding: 2px 0 2px 16px; border-left: 2px solid var(--brand-link); color: var(--text-2); font-size: 14px; line-height: 1.8; }
+.spark-service-note.is-urgent { border-left-color: var(--danger, #8d3d32); }
+
+/* Step index. */
+.spark-steps { display: flex; flex-wrap: wrap; gap: 4px 32px; margin: 8px 0 0; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.spark-steps a { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text-3); font-size: 14px; text-decoration: none; }
+.spark-steps a > span { font: 12px var(--mono); }
+.spark-steps a.is-complete > span { color: var(--brand-link); }
+.spark-steps a[aria-current=step] { box-shadow: 0 1px var(--brand-link); color: var(--brand-link); }
+.spark-steps a:hover { color: var(--brand-link); text-decoration: none; }
+.spark-steps i { font-style: normal; }
+
+/* Sections. */
+.spark-section { min-width: 0; scroll-margin-top: 90px; }
+.spark-section-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 16px; }
+.spark-section-heading > span { font: 12px var(--mono); color: var(--brand-link); }
+.spark-section-heading > div { flex: 1 1 0; min-width: 160px; }
+.spark-section-heading h2 { margin: 0 0 4px; font-size: 22px; font-weight: 400; line-height: 1.4; }
+.spark-section-heading p { margin: 0; color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-heading-action.btn { flex-shrink: 0; margin-left: auto; padding-inline: 12px; font-size: 13px; }
+.spark-meta { color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-meta.is-danger { color: var(--danger, #8d3d32); }
+.spark-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.spark-empty { margin: 0; padding: 8px 0; color: var(--text-3); font-size: 14px; line-height: 1.8; }
 .spark-empty strong { color: var(--text); font-weight: 500; }
-.spark-selection-footer { justify-content: space-between; font-size: 12px; padding-bottom: 4px; }
-.spark-selection-footer > span { display: grid; grid-template-columns: auto 1fr; gap: 3px 6px; align-items: baseline; }
-.spark-selection-footer strong { font: 20px var(--mono); color: var(--brand-link); }
-.spark-selection-footer small { grid-column: 1 / -1; font-size: 10px; color: var(--text-3); }
-.spark-message-preview { padding: 14px 16px; border-left: 2px solid color-mix(in srgb, var(--brand-link) 40%, var(--border)); background: color-mix(in srgb, var(--brand-link) 3%, var(--page)); }
-.spark-message-preview > span { font-size: 10px; color: var(--brand-link); }
-.spark-message-preview p { margin: 9px 0; font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
-.spark-message-preview small { font-size: 10px; line-height: 1.8; color: var(--text-3); }
-.spark-plan-form .spark-help { margin: 0; border-block: 1px solid var(--border); }
+
+/* 01 Connection: one row until a login is in progress. */
+.spark-page > .spark-connection { margin-top: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+.spark-connection:not(.is-bound) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 0 24px; }
+.spark-connection:not(.is-bound) .spark-section-heading { margin-bottom: 0; }
+.spark-connection:not(.is-bound) .spark-connection-tools { grid-column: 1 / -1; }
+.spark-connection:not(.is-bound) .spark-binding:has(.spark-login-session) { grid-column: 1 / -1; margin-top: 16px; }
+.spark-account-card { display: flex; align-items: center; gap: 16px; }
+.spark-account-avatar { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 2px; font-size: 20px; }
+.spark-account-identity { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; min-width: 0; }
+.spark-account-identity strong { font-size: 18px; font-weight: 400; overflow-wrap: anywhere; }
+.spark-account-identity span { color: var(--text-3); font-size: 13px; overflow-wrap: anywhere; }
+.spark-account-card .btn { flex-shrink: 0; }
+.spark-login-session { max-width: 600px; margin: 16px 0 0; padding: 4px 0 4px 16px; border-left: 2px solid var(--brand-link); font-size: 14px; line-height: 1.8; }
+.spark-login-session:has(.spark-verification) { max-width: none; }
+.spark-qr-area { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 20px; }
+.spark-qr-area img { display: block; width: 200px; max-width: 100%; height: auto; padding: 10px; background: white; }
+.spark-account-confirm p { color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-connection-tools { display: flex; flex-wrap: wrap; gap: 0 24px; margin-top: 8px; }
+.spark-connection-tools > .spark-meta { flex-basis: 100%; margin: 0; }
+.spark-connection-tools > .spark-help[open] { flex-basis: 100%; padding-bottom: 12px; }
+.spark-help { margin: 0; color: var(--text-3); font-size: 13px; }
+.spark-help summary { display: flex; align-items: center; min-height: 44px; color: var(--brand-link); cursor: pointer; }
+.spark-help summary::before { content: "+"; margin-right: 8px; font: 13px var(--mono); }
+.spark-help[open] > summary::before { content: "−"; }
+.spark-help p, .spark-help li { line-height: 1.8; overflow-wrap: anywhere; }
+.spark-help pre { overflow: auto; padding: 12px 16px; border: 1px solid var(--border); font: 12px/1.8 var(--mono); white-space: pre; }
+.spark-help form { display: grid; gap: 12px; margin-top: 8px; }
+
+/* 02 Friends and 03 Plan. */
+.spark-workspace { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: start; margin-top: 32px; }
+.spark-workspace.is-empty { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.spark-workspace.is-empty .spark-plan-form { max-width: 560px; }
+.spark-plan-column { min-width: 0; }
+.spark-plan-form { display: grid; gap: 20px; }
+.spark-page label:not(.spark-contact):not(.spark-switch) { display: grid; gap: 8px; font-size: 14px; }
+.spark-page input:not([type=checkbox]):not([type=file]), .spark-page textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong, var(--border)); border-radius: 2px; background: transparent; color: var(--text); font: inherit; font-size: 16px; }
+.spark-page textarea { min-height: 112px; line-height: 1.8; resize: vertical; }
+.spark-page input[type=checkbox] { flex: 0 0 auto; width: 16px; height: 16px; margin: 2px 0; accent-color: var(--brand-link); }
+.spark-page .spark-search input { padding-left: 0; border-width: 0 0 1px; border-radius: 0; }
+.spark-list-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0 16px; margin: 4px 0; }
+.spark-filters { display: flex; flex-wrap: wrap; gap: 16px; }
+.spark-filters button { min-height: 44px; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-3); font: 13px var(--serif); cursor: pointer; }
+.spark-filters button[aria-pressed=true] { border-color: var(--brand-link); color: var(--brand-link); }
+.spark-bulk-actions { display: flex; gap: 16px; }
+.spark-bulk-actions .text-button { font-size: 12px; }
+.spark-contact-list { max-height: 320px; margin-bottom: 12px; overflow-y: auto; scrollbar-width: thin; }
+.spark-contact { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.spark-contact:last-child { border-bottom: 0; }
+.spark-contact:hover strong { color: var(--brand-link); }
+.spark-contact > span:not(.spark-streak):not(.spark-contact-avatar) { display: grid; gap: 2px; min-width: 0; }
+.spark-contact .spark-contact-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 2px; color: var(--text-3); font-size: 13px; }
+.spark-contact strong { font-size: 15px; font-weight: 400; overflow-wrap: anywhere; }
+.spark-contact small { color: var(--text-3); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.spark-streak { margin-left: auto; color: var(--brand-link); font: 12px var(--mono); white-space: nowrap; }
+.spark-selection-footer { justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
+.spark-selection-footer > span { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0 6px; }
+.spark-selection-footer strong { color: var(--brand-link); font: 20px var(--mono); }
+.spark-selection-footer small { grid-column: 1 / -1; color: var(--text-3); font-size: 12px; }
+.spark-friends-queue-link { display: inline-flex; margin-bottom: 12px; color: var(--brand-link); font-size: 13px; line-height: 1.8; }
+.spark-friends-more { margin-top: 8px; }
+.spark-friends-more .spark-help { margin-top: 0; }
+.spark-harvest-action { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+
+.spark-time-field { display: flex; align-items: center; gap: 12px; }
+.spark-plan .spark-time-field input { max-width: 180px; font-size: 18px; font-variant-numeric: tabular-nums; }
+.spark-time-field small { color: var(--text-3); font-size: 12px; }
+.spark-message-preview { position: relative; padding: 2px 80px 2px 16px; border-left: 2px solid var(--brand-link); }
+.spark-message-preview > span, .spark-message-preview small { color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-message-preview p { margin: 4px 0; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.spark-message-sketch { position: absolute; top: 2px; right: 0; width: 64px; }
+.spark-plan-form .spark-help { border-block: 1px solid var(--border); }
 .spark-advanced-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 8px 0 16px; }
 .spark-advanced-grid > :is(.spark-switch, p), .spark-advanced-grid > label:last-child { grid-column: 1 / -1; }
+.spark-switch { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.8; }
 .spark-plan-footer { justify-content: space-between; }
-.spark-check-status { padding: 14px 16px; background: var(--page); border: 1px solid var(--border); margin-bottom: 16px; }
-.spark-check-status strong { font-size: 13px; font-weight: 500; }
-.spark-check-status p { color: var(--text-3); font-size: 11px; line-height: 1.9; margin: 8px 0 0; }
-.spark-check-status.is-ready { border-color: color-mix(in srgb, var(--brand-link) 30%, var(--border)); }
+
+/* 04 Launch. */
+.spark-launch { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 48px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); }
+.spark-launch:has(.spark-manual-send) { grid-template-columns: minmax(0, 1fr) 240px; }
+.spark-launch > .spark-section-heading { grid-column: 1 / -1; margin-bottom: 8px; }
+.spark-launch-main { min-width: 0; }
+.spark-check-status strong { font-size: 15px; font-weight: 400; }
 .spark-check-status.is-ready strong { color: var(--brand-link); }
-.spark-history-link { display: inline-flex; align-items: center; min-height: 36px; font-size: 11px; margin-right: 12px; color: var(--brand-link); }
-.spark-current-progress { margin-top: 10px; }
-.spark-activation-actions { gap: 12px; }
-.spark-manual-send { display: flex; gap: 18px; align-items: center; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 20px; }
-.spark-manual-send > div { flex: 1; min-width: 0; }
-.spark-manual-send strong { font-size: 12px; font-weight: 500; }
-.spark-manual-send p { color: var(--text-3); font-size: 11px; line-height: 1.9; margin: 6px 0 0; }
-.spark-manual-send .btn { flex-shrink: 0; }
-.spark-history { border-top: 1px solid var(--border); margin-top: 32px; padding-top: 24px; }
-.spark-history-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; }
-.spark-history-heading .hero-kicker { margin: 0 0 6px; font-size: 10px; color: var(--brand-link); }
-.spark-history-heading h2 { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
-.spark-history-heading p:last-child { font-size: 12px; color: var(--text-3); margin: 0; }
-.spark-run-list { margin-top: 14px; }
-.spark-run { border: 1px solid var(--border); background: var(--surface); margin-bottom: 10px; padding: 16px 18px; font-size: 12px; }
-.spark-run summary { display: flex; justify-content: space-between; gap: 16px; cursor: pointer; align-items: center; }
-.spark-run summary > span:first-child { display: grid; gap: 7px; min-width: 0; }
-.spark-run summary strong { font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 10px; }
-.spark-run summary strong::before { content: '+'; font: 14px var(--mono); color: var(--text-3); }
-.spark-run[open] summary strong::before { content: '−'; }
-.spark-run summary em { font-style: normal; color: var(--brand-link); font-size: 10px; }
-.spark-run summary small { color: var(--text-3); font-size: 10px; padding-left: 20px; line-height: 1.7; }
-.spark-run-status { color: var(--text-3); white-space: nowrap; padding: 4px 8px; border: 1px solid var(--border); border-radius: 2px; font-size: 11px; }
-.spark-run-status:is(.is-succeeded, .is-running) { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 5%, var(--surface)); }
-.spark-run-status:is(.is-failed, .is-partial, .is-unknown, .is-blocked, .is-expired) { color: var(--danger, #944c3c); border-color: color-mix(in srgb, var(--danger, #944c3c) 20%, var(--border)); }
-.spark-run > p { line-height: 1.9; }
-.spark-run-event { display: grid; grid-template-columns: minmax(100px, 1fr) 3fr; gap: 16px; padding: 10px 0; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; border-top: 1px solid var(--border); margin-top: 10px; }
-.spark-run-event strong { font-weight: 500; }
-.spark-run-event span { color: var(--text-3); }
-.spark-run-recovery { margin-top: 16px; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; }
-.spark-run-recovery > strong { font-weight: 600; color: var(--text); }
-.spark-run-recovery p { margin: 6px 0; }
-.spark-recovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 12px; }
-.spark-recovery-actions > span { color: var(--text-2); font-size: 13px; }
-.spark-progress { width: 100%; height: 4px; accent-color: var(--brand-link); appearance: none; border: 0; border-radius: 2px; overflow: hidden; background: var(--border); }
+.spark-check-status p { margin: 4px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-current-progress { margin-top: 8px; }
+.spark-history-link { display: inline-flex; align-items: center; min-height: 44px; margin-right: 12px; color: var(--brand-link); font-size: 13px; }
+.spark-activation-actions { margin-top: 16px; }
+.spark-launch-footnote { margin: 12px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-manual-send { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding-left: 24px; border-left: 1px solid var(--border); }
+.spark-manual-send strong { font-size: 15px; font-weight: 400; }
+.spark-manual-send p { margin: 4px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+
+/* Queue and history use the same stable task identity across polling updates. */
+.spark-queue-panel { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: start; gap: 32px; margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); scroll-margin-top: 90px; }
+.spark-queue-intro { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.spark-queue-intro > div { min-width: 0; }
+.spark-queue-companion { display: none; }
+.spark-queue-intro .hero-kicker { margin: 0 0 4px; color: var(--brand-link); font-size: 12px; letter-spacing: .04em; }
+.spark-queue-intro h2 { margin: 0; font-size: 22px; font-weight: 400; line-height: 1.4; }
+.spark-queue-explanation { margin: 4px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-queue-intro small { display: block; margin-top: 8px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-queue-items { display: grid; gap: 16px; min-width: 0; }
+.spark-queue-item { min-width: 0; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.spark-queue-item:last-child { padding-bottom: 0; border-bottom: 0; }
+.spark-queue-item-heading, .spark-queue-item-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.spark-queue-item-heading strong { font-size: 15px; font-weight: 400; }
+.spark-queue-item-footer { margin-top: 8px; }
+.spark-queue-item-footer > span { color: var(--text-3); font: 12px var(--mono); font-variant-numeric: tabular-nums; }
+.spark-queue-timing { margin: 12px 0; color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-queue-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 16px 0 12px; padding: 0; list-style: none; }
+.spark-queue-stages li { position: relative; padding-top: 20px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-queue-stages li:not(:last-child)::after { content: ""; position: absolute; top: 5px; right: 4px; left: 14px; height: 1px; background: var(--border); }
+.spark-queue-stages i { position: absolute; top: 0; left: 0; width: 11px; height: 11px; border: 1px solid var(--line-strong, var(--border)); border-radius: 50%; background: var(--page); }
+.spark-queue-stages .is-done { color: var(--brand-link); }
+.spark-queue-stages .is-done i { border-color: var(--brand-link); background: var(--brand-link); }
+.spark-queue-stages .is-done::after { background: var(--brand-link); }
+.spark-queue-item:is(.is-running, .is-queued) .spark-queue-stages .is-current { color: var(--brand-link); }
+.spark-queue-item:is(.is-running, .is-queued) .spark-queue-stages .is-current i { border-color: var(--brand-link); animation: spark-node-breathe 2s ease-in-out infinite; }
+.spark-queue-progress { display: grid; gap: 8px; color: var(--text-3); font-size: 12px; line-height: 1.8; }
+.spark-progress { width: 100%; height: 4px; overflow: hidden; border: 0; border-radius: 2px; appearance: none; background: var(--border); accent-color: var(--brand-link); }
 .spark-progress::-webkit-progress-bar { background: var(--border); }
 .spark-progress::-webkit-progress-value { background: var(--brand-link); transition: width .35s ease; }
 .spark-progress::-moz-progress-bar { background: var(--brand-link); }
-@media (max-width: 1100px) {
-  .spark-workspace { gap: 18px; }
-  .spark-workspace > .spark-friends, .spark-plan-column > .spark-section { padding: 18px; }
-  .spark-activation-actions .btn { flex: 1 1 auto; }
-  .spark-steps a { gap: 8px; padding-inline: 8px; font-size: 12px; }
-}
-@media (max-width: 900px) {
-  .spark-workspace { grid-template-columns: 1fr; }
-  .spark-hero { gap: 16px; }
-  .spark-next-time { padding-left: 0; }
-  .spark-next-time svg { display: none; }
-}
-@media (max-width: 600px) {
-  .spark-page .text-button, .spark-filters button { min-height: 44px; }
-  .spark-page .btn { min-height: 44px; }
-  .spark-page label:not(.spark-contact):not(.spark-switch) { font-size: 13px; }
-  .spark-check-status p, .spark-manual-send p, .spark-meta { font-size: 12px; }
-  .spark-hero { grid-template-columns: 1fr; gap: 18px; padding-bottom: 22px; }
-  .spark-next-time { border-left: 2px solid var(--brand-link); padding: 2px 0 2px 14px; }
-  .spark-next-time strong { font-size: 20px; }
-  .spark-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 22px; }
-  .spark-steps a:nth-child(3) { border-left: 0; }
-  .spark-steps a:nth-child(n+3) { border-top: 1px solid var(--border); }
-  .spark-account-card { flex-wrap: wrap; gap: 12px; padding: 16px; }
-  .spark-account-card .btn { width: 100%; }
-  .spark-qr-area { grid-template-columns: 1fr; gap: 8px; }
-  .spark-workspace > .spark-friends, .spark-plan-column > .spark-section { padding: 16px; }
-  .spark-contact-list { max-height: 360px; }
-  .spark-contact .spark-contact-avatar { display: none; }
-  .spark-selection-footer { align-items: center; }
-  .spark-selection-footer .btn { padding-inline: 10px; }
-  .spark-plan-footer { gap: 6px; }
-  .spark-plan-footer .btn { width: 100%; }
-  .spark-manual-send { flex-direction: column; align-items: stretch; gap: 12px; }
-  .spark-activation-actions { flex-direction: column; align-items: stretch; }
-  .spark-advanced-grid { grid-template-columns: 1fr; }
-  .spark-run { padding: 14px; }
-  .spark-run-event { grid-template-columns: 1fr; gap: 4px; }
-}
 
-/* Queue and history use the same stable task identity across polling updates. */
-.spark-queue-panel { scroll-margin-top: 90px; display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 28px; align-items: center; margin-top: 30px; padding: 24px; border: 1px solid color-mix(in srgb, var(--brand-link) 25%, var(--border)); background: color-mix(in srgb, var(--brand-link) 3%, var(--surface)); }
-.spark-queue-intro { display: flex; gap: 16px; align-items: center; min-width: 0; }
-.spark-queue-intro > div { min-width: 0; }
-.spark-queue-companion { flex: 0 0 104px; width: 104px; height: auto; }
-.spark-queue-companion svg { display: block; width: 100%; height: auto; }
-.spark-queue-intro .hero-kicker { color: var(--brand-link); font-size: 10px; margin: 0 0 8px; letter-spacing: .04em; }
-.spark-queue-intro h2 { font-size: 18px; font-weight: 500; line-height: 1.6; margin: 0; }
-.spark-queue-explanation { color: var(--text-3); font-size: 12px; line-height: 1.9; margin: 8px 0 0; }
-.spark-queue-intro small { display: block; font-size: 11px; line-height: 1.8; color: var(--text-3); margin-top: 8px; }
-.spark-queue-items { display: grid; gap: 12px; min-width: 0; }
-.spark-queue-item { padding: 16px 18px; background: var(--page); border: 1px solid var(--border); min-width: 0; }
-.spark-queue-item-heading, .spark-queue-item-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.spark-queue-item-heading strong { font-size: 13px; font-weight: 500; }
-.spark-queue-item-footer { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 6px; }
-.spark-queue-item-footer > span { color: var(--text-3); font: 11px var(--mono); font-variant-numeric: tabular-nums; }
-.spark-queue-timing { color: var(--text-3); font-size: 12px; line-height: 1.8; margin: 16px 0; }
-.spark-queue-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; margin: 20px 0 16px; list-style: none; }
-.spark-queue-stages li { color: var(--text-3); font-size: 11px; line-height: 1.8; position: relative; padding-top: 20px; }
-.spark-queue-stages li:not(:last-child)::after { content: ''; position: absolute; height: 1px; background: var(--border); left: 14px; right: 4px; top: 5px; }
-.spark-queue-stages i { position: absolute; left: 0; top: 0; width: 11px; height: 11px; border: 1px solid var(--border); border-radius: 50%; background: var(--page); }
-.spark-queue-stages .is-done { color: var(--brand-link); }
-.spark-queue-stages .is-done i { background: var(--brand-link); border-color: var(--brand-link); }
-.spark-queue-stages .is-done::after { background: color-mix(in srgb, var(--brand-link) 30%, var(--border)); }
-.spark-queue-item:is(.is-running, .is-queued) .spark-queue-stages .is-current { color: var(--brand-link); }
-.spark-queue-item:is(.is-running, .is-queued) .spark-queue-stages .is-current i { border-color: var(--brand-link); animation: spark-node-breathe 2s ease-in-out infinite; }
-.spark-queue-progress { display: grid; gap: 8px; font-size: 11px; color: var(--text-3); line-height: 1.9; }
-.spark-run-status { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.spark-run-status.is-queued { color: var(--brand-link); border-color: color-mix(in srgb, var(--brand-link) 25%, var(--border)); }
+.spark-history { margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border); scroll-margin-top: 90px; }
+.spark-history-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+.spark-history-heading h2 { margin: 0 0 4px; font-size: 22px; font-weight: 400; line-height: 1.4; }
+.spark-history-heading p { margin: 0; color: var(--text-3); font-size: 13px; line-height: 1.8; }
+.spark-run-list { margin-top: 8px; }
+.spark-run { padding: 16px 0; border-bottom: 1px solid var(--border); font-size: 13px; animation: spark-record-arrive .25s ease-out both; }
+.spark-run:last-child { border-bottom: 0; }
+.spark-run:is(.is-queued, .is-running) { padding-left: 12px; border-left: 2px solid var(--brand-link); }
+.spark-run summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; }
+.spark-run summary > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.spark-run summary strong { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 400; }
+.spark-run summary strong::before { content: "+"; color: var(--text-3); font: 13px var(--mono); }
+.spark-run[open] summary strong::before { content: "−"; }
+.spark-run summary em { color: var(--brand-link); font-size: 12px; font-style: normal; }
+.spark-run summary small { padding-left: 16px; color: var(--text-3); font-size: 12px; line-height: 1.7; }
+.spark-run > p { line-height: 1.8; }
+.spark-run-clock { font-variant-numeric: tabular-nums; }
+.spark-run-status { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.spark-run-status:is(.is-succeeded, .is-running, .is-queued) { color: var(--brand-link); }
+.spark-run-status:is(.is-failed, .is-partial, .is-unknown, .is-blocked, .is-expired) { color: var(--danger, #8d3d32); }
+.spark-run-event { display: grid; grid-template-columns: minmax(100px, 1fr) 3fr; gap: 16px; margin-top: 8px; padding: 8px 0 0; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.spark-run-event strong { font-weight: 400; }
+.spark-run-event span { color: var(--text-3); }
+.spark-run-recovery { margin-top: 12px; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.spark-run-recovery > strong { color: var(--text); font-weight: 500; }
+.spark-run-recovery p { margin: 4px 0; }
+.spark-recovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.spark-recovery-actions > span { color: var(--text-2); font-size: 13px; }
 .spark-status-motion { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
 .spark-status-motion svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .spark-queue-dots { display: flex; align-items: center; gap: 2px; }
@@ -213,205 +207,71 @@
 .spark-queue-dots i:nth-child(3) { animation-delay: .36s; }
 .spark-moving-flame { transform-origin: center bottom; animation: spark-flame-breathe 1.8s ease-in-out infinite; }
 .spark-finished-check path { stroke-dasharray: 24; animation: spark-check-draw .4s ease-out both; }
-.spark-static-dot { width: 4px; height: 4px; background: currentColor; border-radius: 50%; }
-.spark-run { animation: spark-record-arrive .25s ease-out both; transition: border-color .3s ease, background-color .3s ease; }
-.spark-run:is(.is-queued, .is-running) { border-left: 2px solid var(--brand-link); }
-.spark-run-clock { font-variant-numeric: tabular-nums; }
+.spark-static-dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
 @keyframes spark-node-breathe { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-link) 10%, transparent); } }
 @keyframes spark-dot-wave { 0%, 70%, 100% { opacity: .4; transform: translateY(0); } 35% { opacity: 1; transform: translateY(-2px); } }
 @keyframes spark-flame-breathe { 50% { opacity: .65; transform: scale(.9) rotate(-4deg); } }
 @keyframes spark-check-draw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @keyframes spark-record-arrive { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Official login remains in its server context while the member operates it. */
+.spark-verification { max-width: 1080px; margin-block: 20px; }
+.spark-verification-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.spark-verification-heading span { color: var(--text-3); font-size: .85rem; }
+.spark-verification-screen { overflow: hidden; border: 1px solid var(--border); border-radius: 2px; background: #fff; cursor: pointer; }
+.spark-verification-screen img { display: block; width: 100%; height: auto; touch-action: none; user-select: none; }
+.spark-verification-screen > p { padding: 36px 20px; }
+.spark-verification-screen.is-enlarged { max-height: 600px; overflow: auto; }
+.spark-verification-screen.is-enlarged img { width: 1366px; max-width: none; }
+.spark-verification-controls { margin-top: 14px; }
+.spark-verification-controls form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.spark-verification-controls label { display: grid; gap: 8px; font-size: .88rem; }
+.spark-verification-controls input { width: min(300px, 100%); min-width: 0; }
+.spark-verification-keys { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; }
+
 @media (max-width: 1100px) {
-  .spark-queue-panel { grid-template-columns: 1fr; gap: 20px; }
-  .spark-queue-companion { flex-basis: 90px; width: 90px; }
+  .spark-workspace { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .spark-queue-panel { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 }
-@media (max-width: 600px) {
-  .spark-queue-panel { padding: 16px; gap: 16px; }
-  .spark-queue-intro { gap: 10px; }
-  .spark-queue-companion { flex-basis: 64px; width: 64px; }
-  .spark-queue-intro h2 { font-size: 17px; }
-  .spark-queue-item { padding: 14px; }
-  .spark-queue-item-heading { align-items: flex-start; gap: 8px; }
-  .spark-run summary { gap: 8px; }
-  .spark-run-status { padding: 4px 6px; }
+@media (max-width: 767px) {
+  .spark-hero { display: block; padding-top: 8px; padding-bottom: 12px; }
+  .spark-hero h1 { font-size: 28px; }
+  .spark-hero-companion, .spark-message-sketch { display: none; }
+  .spark-summary { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; }
+  .spark-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 36px; }
+  .spark-summary dt { margin: 0; }
+  .spark-summary dd { justify-content: flex-end; font-size: 14px; text-align: right; }
+  /* Finished and pending steps shrink to their mark; the current step keeps its name. */
+  .spark-steps { flex-wrap: nowrap; gap: 16px; }
+  .spark-steps a { flex: none; min-width: 24px; justify-content: center; }
+  .spark-steps a:not([aria-current=step]) > div { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .spark-page > .spark-connection { margin-top: 24px; padding-bottom: 24px; }
+  .spark-connection:not(.is-bound) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .spark-connection:not(.is-bound) .spark-binding:has(.spark-login-session) { margin-top: 0; }
+  .spark-connection:not(.is-bound) .spark-account-card .btn { width: 100%; }
+  .spark-account-card { flex-wrap: wrap; gap: 12px; }
+  .spark-account-identity { flex: 1 1 calc(100% - 60px); }
+  .spark-account-card.is-bound .btn { width: 100%; }
+  .spark-qr-area { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .spark-workspace, .spark-launch, .spark-queue-panel, .spark-history { margin-top: 24px; }
+  .spark-launch, .spark-queue-panel, .spark-history { padding-top: 24px; }
+  .spark-launch:has(.spark-manual-send) { grid-template-columns: minmax(0, 1fr); }
+  .spark-section-heading h2, .spark-history-heading h2, .spark-queue-intro h2 { font-size: 20px; }
+  .spark-contact-list { max-height: 300px; }
+  .spark-plan-footer .btn, .spark-activation-actions .btn { width: 100%; }
+  .spark-plan-footer { gap: 8px; }
+  .spark-manual-send { padding: 16px 0 0; border-top: 1px solid var(--border); border-left: 0; }
+  .spark-advanced-grid { grid-template-columns: minmax(0, 1fr); }
+  .spark-message-preview { padding-right: 0; }
+  .spark-run summary { flex-wrap: wrap; gap: 8px; }
+  .spark-run-event { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .spark-verification-heading { flex-direction: column; align-items: start; gap: 4px; }
+  .spark-verification-controls form { flex-direction: column; align-items: stretch; }
+  .spark-verification-controls input { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .spark-progress::-webkit-progress-value { transition: none; }
   .spark-run, .spark-queue-dots i, .spark-moving-flame, .spark-finished-check path,
   .spark-queue-item:is(.is-running, .is-queued) .spark-queue-stages .is-current i { animation: none; transition: none; }
 }
-
-/* Editorial workspace: one illustrated opening, a quiet index, then two working columns. */
-.app-frame .spark-page { width: min(100%, 1440px); padding: 28px 40px 80px; grid-template-columns: 140px minmax(0, 1fr); column-gap: 48px; }
-.spark-page > .personal-navigation { top: calc(var(--header-h) + 28px); }
-.spark-page .ink-personal-margin { display: none; }
-.spark-page .personal-navigation-heading { padding-top: 12px; margin-bottom: 18px; }
-.spark-page .personal-nav { gap: 16px; }
-.spark-page .personal-nav a { min-height: 44px; }
-.spark-page .btn { min-height: 44px; font-size: 14px; border-radius: 2px; }
-.spark-page .btn-primary { --brand: var(--text); --on-brand: var(--surface); background: var(--text); border-color: var(--text); }
-.spark-page .text-button { min-height: 44px; font-size: 12px; }
-.spark-hero { grid-template-columns: minmax(0, 1fr) 210px; gap: 32px; padding: 4px 0 28px; }
-.spark-hero .hero-kicker { font-size: 12px; letter-spacing: .08em; margin-bottom: 14px; }
-.spark-hero h1 { font-size: clamp(28px, 2.7vw, 38px); font-weight: 400; line-height: 1.5; }
-.spark-hero p { font-size: 14px; }
-.spark-status-line { gap: 8px 18px; margin-top: 20px; font-size: 12px; }
-.spark-status-item { display: inline-flex; align-items: center; gap: 7px; }
-.spark-hero-scene { display: grid; justify-items: center; }
-.spark-hero-companion { width: 190px; max-width: 100%; }
-.spark-hero-scene .spark-next-time { padding: 0; gap: 4px; text-align: center; }
-.spark-hero-scene .spark-next-time > span, .spark-hero-scene .spark-next-time small { font-size: 12px; }
-.spark-hero-scene .spark-next-time strong { font-size: 17px; font-weight: 400; }
-.spark-steps { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0; padding: 12px 0; border: 0; border-top: 1px solid var(--border); background: transparent; }
-.spark-steps a { min-height: 44px; padding: 4px 0; gap: 9px; font-size: 14px; border: 0; }
-.spark-steps a + a, .spark-steps a:nth-child(n+3) { border: 0; }
-.spark-steps a > span { flex: 0 0 22px; height: 22px; border: 0; border-radius: 0; font-size: 12px; }
-.spark-steps a > div { display: flex; gap: 8px; align-items: baseline; }
-.spark-steps small { font-size: 12px; }
-.spark-steps a.is-complete { color: var(--text-3); }
-.spark-steps a.is-complete small { display: none; }
-.spark-steps a[aria-current=step] { color: var(--brand-link); background: transparent; box-shadow: 0 1px var(--brand-link); }
-.spark-steps a[aria-current=step] > span { color: var(--brand-link); }
-.spark-steps a:hover { color: var(--brand-link); }
-.spark-page > .spark-connection { padding: 20px 24px 10px; margin: 0 0 36px; border: 0; background: color-mix(in srgb, var(--text) 3%, var(--page)); }
-.spark-connection .spark-account-card { padding: 0; border: 0; background: transparent; gap: 16px; }
-.spark-connection .spark-account-avatar { width: 44px; height: 48px; flex-basis: 44px; border-radius: 2px; background: var(--page); border: 1px solid var(--border); color: var(--text); font-size: 22px; }
-.spark-connection .spark-account-identity { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
-.spark-account-identity > small { flex-basis: 100%; font-size: 12px; }
-.spark-account-identity strong { font-size: 18px; font-weight: 400; }
-.spark-account-identity > span { font-size: 12px; }
-.spark-connection-tools { display: flex; flex-wrap: wrap; gap: 0 24px; margin: 4px 0 0 60px; }
-.spark-connection-tools > .spark-help { margin: 0; font-size: 12px; }
-.spark-connection-tools > .spark-help[open] { flex-basis: 100%; padding-bottom: 12px; }
-.spark-help summary { min-height: 44px; padding-block: 12px; }
-.spark-workspace { gap: 40px; align-items: stretch; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); }
-.spark-workspace > .spark-friends, .spark-plan-column > .spark-section { padding: 22px 0 0; background: transparent; border: 0; border-top: 2px solid var(--text); border-radius: 0; }
-.spark-plan-column { display: flex; min-width: 0; }
-.spark-plan-column > .spark-plan { display: flex; flex-direction: column; width: 100%; }
-.spark-section-heading { align-items: baseline; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
-.spark-section-heading > span { font-size: 12px; }
-.spark-section-heading h2 { font-size: 23px; font-weight: 400; margin-bottom: 8px; }
-.spark-section-heading p { font-size: 12px; }
-.spark-heading-action { margin-left: auto; flex-shrink: 0; }
-.spark-heading-action.btn { min-height: 44px; font-size: 12px; padding-inline: 12px; }
-.spark-friends-queue-link { display: inline-flex; font-size: 12px; line-height: 1.8; color: var(--brand-link); margin-bottom: 12px; }
-.spark-page label:not(.spark-contact):not(.spark-switch) { font-size: 14px; }
-.spark-page input:not([type=checkbox]):not([type=file]), .spark-page textarea { border-color: color-mix(in srgb, var(--text) 48%, var(--page)); background: transparent; font-size: 16px; min-height: 46px; }
-.spark-search { margin-top: 0; }
-.spark-page .spark-search input { border-width: 0 0 1px; border-radius: 0; padding-left: 0; }
-.spark-list-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 14px; margin: 12px 0 6px; }
-.spark-filters { gap: 16px; }
-.spark-filters button { padding: 8px 0; min-height: 44px; font-size: 12px; border: 0; border-radius: 0; border-bottom: 2px solid transparent; }
-.spark-filters button[aria-pressed=true] { background: transparent; border-color: var(--brand-link); }
-.spark-bulk-actions { gap: 16px; }
-.spark-bulk-actions .text-button { font-size: 12px; }
-.spark-contact-list { height: 300px; max-height: 300px; margin-bottom: 16px; border-top: 0; padding: 3px; }
-.spark-contact { padding: 12px 8px; gap: 12px; border-bottom-color: color-mix(in srgb, var(--border) 60%, transparent); min-height: 66px; }
-.spark-contact .spark-contact-avatar { width: 34px; height: 34px; flex-basis: 34px; border: 0; border-radius: 2px; background: color-mix(in srgb, var(--text) 4%, var(--page)); }
-.spark-contact strong { font-size: 16px; }
-.spark-contact small, .spark-streak { font-size: 12px; }
-.spark-contact.is-selected { background: color-mix(in srgb, var(--brand-link) 5%, transparent); }
-.spark-selection-footer { padding: 14px 0 0; border-top: 1px solid var(--border); }
-.spark-selection-footer small { font-size: 12px; }
-.spark-friends-more { border-top: 1px solid var(--border); margin-top: 20px; }
-.spark-friends-more .spark-help { margin-top: 4px; }
-.spark-harvest-action { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
-.spark-plan-form { gap: 22px; flex: 1; }
-.spark-time-field small { font-size: 12px; }
-.spark-plan .spark-time-field input { max-width: 190px; font: 22px var(--mono); }
-.spark-page .spark-plan textarea { min-height: 120px; }
-.spark-message-preview { position: relative; padding: 18px 84px 18px 20px; border: 0; border-left: 2px solid var(--brand-link); background: color-mix(in srgb, var(--brand-link) 3%, var(--page)); }
-.spark-message-preview > span, .spark-message-preview small { font-size: 12px; }
-.spark-message-preview p { font-size: 17px; margin: 12px 0; }
-.spark-message-sketch { position: absolute; width: 64px; right: 12px; top: 20px; opacity: .7; }
-.spark-plan-footer { margin-top: auto; }
-.spark-meta, .spark-switch { font-size: 12px; }
-.spark-launch { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 20px 40px; padding: 28px; margin-top: 36px; background: color-mix(in srgb, var(--text) 3%, var(--page)); border: 0; }
-.spark-launch > .spark-section-heading { grid-column: 1 / -1; margin: 0; }
-.spark-launch-main { min-width: 0; }
-.spark-readiness { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
-.spark-readiness span { display: inline-flex; gap: 6px; }
-.spark-readiness i { font-style: normal; }
-.spark-readiness .is-done i { color: var(--brand-link); }
-.spark-launch .spark-check-status { padding: 0; border: 0; background: transparent; }
-.spark-launch .spark-check-status > strong { display: none; }
-.spark-launch .spark-check-status p { font-size: 13px; margin: 0; }
-.spark-launch .spark-activation-actions { flex-direction: row-reverse; justify-content: flex-end; }
-.spark-launch-footnote { font-size: 12px; color: var(--text-3); line-height: 1.8; margin: 14px 0 0; }
-.spark-launch .spark-manual-send { border-top: 0; border-left: 1px solid var(--border); margin: 0; padding: 0 0 0 28px; flex-direction: column; align-items: stretch; justify-content: center; gap: 12px; }
-.spark-launch .spark-manual-send > div { flex: 0; }
-.spark-manual-send strong { font-size: 15px; }
-.spark-manual-send p { font-size: 12px; }
-.spark-history { border: 0; border-top: 1px solid var(--text); border-radius: 0; background: transparent; padding: 26px 0 0; margin-top: 40px; }
-.spark-history-heading h2 { font-size: 24px; font-weight: 400; }
-.spark-history-heading .hero-kicker { font-size: 12px; }
-.spark-history .spark-run { border-width: 0 0 1px; background: transparent; margin: 0; padding: 18px 4px; }
-.spark-history .spark-run:is(.is-queued, .is-running) { border-left-width: 2px; padding-left: 12px; }
-.spark-run summary strong { font-size: 15px; }
-.spark-run summary small, .spark-run summary em, .spark-run-status { font-size: 12px; }
-.spark-queue-companion { display: none; }
-@media (max-width: 1100px) {
-  .app-frame .spark-page { display: block; padding: 24px 28px 80px; }
-  .spark-page > .personal-navigation { margin-bottom: 20px; }
-  .spark-workspace { gap: 28px; }
-}
-@media (max-width: 900px) {
-  .spark-workspace { grid-template-columns: 1fr; gap: 32px; }
-  .spark-hero { grid-template-columns: minmax(0, 1fr) 170px; }
-  .spark-hero-companion { width: 160px; }
-  .spark-steps { gap: 6px 22px; }
-}
-@media (max-width: 600px) {
-  .app-frame .spark-page { padding: 20px 20px 64px; }
-  .spark-hero { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-bottom: 20px; }
-  .spark-hero h1 { font-size: 29px; max-width: 12em; }
-  .spark-hero-scene { display: flex; gap: 18px; justify-content: flex-start; }
-  .spark-hero-companion { width: 100px; flex: 0 0 100px; }
-  .spark-hero-scene .spark-next-time { text-align: left; border: 0; }
-  .spark-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; padding: 12px 0; }
-  .spark-steps a { font-size: 13px; gap: 4px; }
-  .spark-steps a > div { flex-wrap: wrap; gap: 0 6px; }
-  .spark-steps small { font-size: 12px; }
-  .spark-page > .spark-connection { padding: 16px; margin-bottom: 28px; }
-  .spark-connection .spark-account-card { gap: 12px; }
-  .spark-connection .spark-account-identity { flex: 1 1 calc(100% - 60px); }
-  .spark-connection-tools { margin: 8px 0 0; gap: 0 20px; }
-  .spark-section-heading { gap: 8px; margin-bottom: 20px; }
-  .spark-section-heading h2 { font-size: 23px; }
-  .spark-friends > .spark-section-heading > div { flex: 1; }
-  .spark-heading-action { margin-left: 22px; }
-  .spark-workspace > .spark-friends, .spark-plan-column > .spark-section { padding: 20px 0 0; }
-  .spark-contact .spark-contact-avatar { display: grid; }
-  .spark-contact { gap: 8px; padding-inline: 4px; }
-  .spark-contact-list { height: 300px; }
-  .spark-launch { grid-template-columns: minmax(0, 1fr); padding: 20px; gap: 20px; margin-top: 28px; }
-  .spark-launch .spark-activation-actions { flex-direction: column-reverse; align-items: stretch; }
-  .spark-launch .spark-manual-send { border-left: 0; border-top: 1px solid var(--border); padding: 20px 0 0; }
-  .spark-run summary { flex-wrap: wrap; }
-  .spark-history-heading { align-items: flex-start; }
-}
-
-/* Official login remains in its server context while the member operates it. */
-.spark-verification { margin-block: 20px; max-width: 1080px; }
-.spark-verification-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.spark-verification-heading span { color: var(--text-3); font-size: .85rem; }
-.spark-verification-screen { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; cursor: pointer; }
-.spark-verification-screen img { width: 100%; height: auto; display: block; user-select: none; }
-.spark-verification-screen > p { padding: 36px 20px; }
-.spark-verification-controls { margin-top: 14px; }
-.spark-verification-controls form { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
-.spark-verification-controls label { display: grid; gap: 8px; font-size: .88rem; }
-.spark-verification-controls input { width: min(300px, 100%); min-width: 0; }
-.spark-verification-keys { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; }
-@media (max-width: 640px) {
-  .spark-verification-heading { align-items: start; flex-direction: column; gap: 4px; }
-  .spark-verification-controls form { align-items: stretch; flex-direction: column; }
-  .spark-verification-controls input { width: 100%; }
-}
-
-.spark-login-session:has(.spark-verification) { max-width: 1120px; }
-
-.spark-verification-screen img { touch-action: none; }
-.spark-verification-screen.is-enlarged { overflow: auto; max-height: 600px; }
-.spark-verification-screen.is-enlarged img { width: 1366px; max-width: none; }
+@media print { .spark-hero-companion { display: none; } }

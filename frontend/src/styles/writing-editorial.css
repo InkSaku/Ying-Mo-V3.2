@@ -117,15 +117,16 @@
 .editor-page .editor-sidebar.is-open { display: block; }
 .editor-page .editor-sidebar-scrim { display: block; background: rgb(0 0 0 / 22%); backdrop-filter: none; }
 .editor-page .editor-sidebar-heading { padding-bottom: 20px; border: 0; }
-.editor-page .editor-sidebar-heading > button { display: block; border: 0; background: var(--surface-2); border-radius: 3px; }
+.editor-page .editor-sidebar-heading > button { display: block; width: 44px; height: 44px; border: 0; background: var(--surface-2); border-radius: 3px; }
 .editor-page .editor-sidebar-heading h2 { font-size: 23px; font-weight: 400; }
 .editor-page .editor-sidebar-heading span { font-size: 11px; line-height: 1.9; }
 .editor-page .editor-publication-status { padding: 14px 0; border: 0; }
 .editor-page .editor-sidebar-section { padding: 20px 0; border: 0; gap: 18px; }
+.editor-page .editor-sidebar-section > header { grid-template-columns: minmax(0, 1fr); }
 .editor-page .editor-sidebar-section > header > span { display: none; }
 .editor-page .editor-sidebar-section > header > strong { font-weight: 400; }
 .editor-page .editor-sidebar input,
-.editor-page .editor-sidebar .custom-select-trigger { border: 0; border-radius: 3px; background: var(--surface-2); min-height: 40px; padding: 8px 10px; }
+.editor-page .editor-sidebar .custom-select-trigger { border: 0; border-radius: 3px; background: var(--surface-2); min-height: 44px; padding: 8px 10px; font-size: 16px; }
 .editor-page .editor-sidebar .editor-cover-panel { border: 0; background: transparent; }
 .editor-page .editor-cover-placeholder { min-height: 110px; background: var(--surface-2); }
 .editor-page .editor-publish-readiness { border: 0; }

@@ -181,3 +181,11 @@ html:not([data-theme="dark"]):has(.search-page) {
   .search-page .search-collection-grid,
   .search-page .search-filtered-members .search-member-list { grid-template-columns: 1fr; }
 }
+/* The search box is the first thing on a phone. */
+@media (max-width: 767px) {
+  .search-opening-sketch,
+  .search-page .search-hero-copy p:empty { display: none; }
+  .search-page { padding-top: 8px; }
+  .search-page .search-hero { gap: 8px; padding: 8px 0 24px; }
+  .search-page .search-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+}

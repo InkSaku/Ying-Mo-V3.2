@@ -20,6 +20,13 @@ export const mobilePrimaryNavItems = [
   { to: "/me", label: "我的", icon: "profile" },
 ];
 
+// Search and notifications already have their own icons in the mobile header.
+export const mobileMenuNavItems = [
+  ...discoveryNavItems.slice(0, 2),
+  { to: "/collections", label: "合集" },
+  ...discoveryNavItems.slice(2).filter(({ to }) => to !== "/search"),
+];
+
 export function pathMatches(pathname, target) {
   return pathname === target || pathname.startsWith(`${target}/`);
 }

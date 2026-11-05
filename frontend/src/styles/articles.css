@@ -827,6 +827,32 @@ html:not([data-theme="dark"]):has(.browse-page-article) {
   .articles-drawn-opening { width: 220px; justify-self: end; padding-top: 40px; }
   .articles-drawn-opening > p { font-size: 21px; }
 }
+/* Phones reach the first article right after a one-line page title. */
+@media (max-width: 767px) {
+  .browse-page-article { padding-top: 8px; }
+  .browse-page-article .browse-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; padding: 8px 0 12px; }
+  .browse-page-article .browse-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+  .browse-page-article .browse-hero-copy > p,
+  .articles-drawn-opening,
+  .browse-page-article .articles-hero-note > strong,
+  .browse-page-article .articles-hero-note > a,
+  .articles-hero-note-latest,
+  .article-magazine-opening-label { display: none; }
+  .browse-page-article .articles-hero-note { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0; border: 0; }
+  .browse-page-article .articles-hero-note > p { margin: 0; line-height: 1.6; }
+  .browse-page-article .articles-hero-note > nav { margin: 0; padding: 0; border: 0; }
+  .browse-page-article .articles-hero-note > nav a { min-height: 44px; display: inline-flex; align-items: center; }
+  .browse-page-article .browse-section-heading { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .browse-page-article .browse-editorial-section { margin-top: 16px; }
+  .articles-lead-visual { height: 190px; }
+  .articles-lead-story > .articles-entry-number { top: 12px; left: 12px; font-size: 32px; }
+  .articles-lead-copy { width: 100%; margin: 0; padding: 12px 0 0; }
+  .articles-lead-story.without-media { min-height: 0; padding-block: 0; }
+  .articles-lead-story.without-media .articles-lead-copy { width: 100%; padding: 0; }
+  .browse-page-article .articles-lead-story h3 { max-width: none; margin: 8px 0; font-size: 24px; line-height: 1.45; letter-spacing: .015em; }
+  .articles-lead-copy > p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+}
+
 @media print {
   .browse-page-article {
     width: auto;

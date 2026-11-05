@@ -1,6 +1,20 @@
 """Real platform adapter. No mock mode exists in the production worker."""
 from .vendor import automation, creator_channel, creator_map
 from .vendor.browser import open_browser
+from .errors import FAILURES, failure
+
+
+def operation_failure(result, fallback):
+    code = result.get("error_code")
+    if code not in FAILURES:
+        error = result.get("error", "")
+        code = ("PLATFORM_VERIFICATION" if "平台要求验证" in error else
+                "LOGIN_EXPIRED" if any(word in error for word in ("登录", "sessionid", "cookie", "二维码")) else fallback)
+    public = failure(code)
+    details = {"message": public["error"], "error_code": public["error_code"]}
+    if result.get("diagnostic"):
+        details["diagnostic"] = result["diagnostic"]
+    return public["status"], details
 
 
 class PlaywrightDriver:
@@ -20,16 +34,14 @@ class PlaywrightDriver:
         result = automation.fetch_chat_contacts()
         error = result.get("error")
         if error:
-            status = "blocked" if "平台要求验证" in error else "expired" if any(x in error for x in ("登录", "sessionid", "二维码")) else "failed"
-            return status, []
+            return operation_failure(result, "SYNC_FAILED")
         return "succeeded", result["names"]
 
     def harvest(self):
         result = creator_map.collect_short_id_map()
         error = result.get("error")
         if error:
-            status = "blocked" if "平台要求验证" in error else "expired" if any(x in error for x in ("登录", "sessionid", "cookie")) else "failed"
-            return status, {}
+            return operation_failure(result, "HARVEST_FAILED")
         return "succeeded", result["mapping"]
 
     def send(self, contact, message, dry_run, before_send):

@@ -1,10 +1,12 @@
 import math
 import re
 
-from app.access import is_collection_member
+from sqlalchemy.orm import joinedload, load_only, selectinload
+
+from app.access import is_collection_member, member_collection_ids
 from app.extensions import db
-from app.models import Media, MediaKind, PostType
-from app.posts.service import current_article_slug
+from app.models import Media, MediaKind, Post, PostType, User
+from app.posts.service import current_article_slug, current_article_slugs
 
 
 MARKDOWN_TOKEN_RE = re.compile(r"[`*_#>\[\](){}!|~-]+")
@@ -50,11 +52,31 @@ def _active_media(media):
     return bool(media and media.status == "active" and media.deleted_at is None)
 
 
-def serialize_browse_post(post, *, actor_id=None, display_media=None):
+def _preload_browse_relations(posts):
+    """Fill unloaded relationships in place, whatever the caller's query eager-loaded."""
+    db.session.execute(
+        db.select(Post).options(
+            load_only(Post.id),
+            joinedload(Post.author),
+            joinedload(Post.category),
+            joinedload(Post.collection),
+            joinedload(Post.cover_media),
+            selectinload(Post.tags),
+        ).where(Post.id.in_([post.id for post in posts]))
+    ).unique().scalars().all()
+    db.session.scalars(
+        db.select(User).options(selectinload(User.avatar_media)).where(
+            User.id.in_({post.author_id for post in posts}),
+        )
+    ).all()
+
+
+def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None, member_ids=None):
     data = post.to_dict(include_body=False)
     data["content_excerpt"] = (post.summary or post.body or "")[:BROWSE_EXCERPT_SOURCE_LIMIT]
     if post.post_type == PostType.ARTICLE.value:
-        data["slug"] = current_article_slug(post.id) or post.slug_candidate
+        slug = slugs.get(post.id) if slugs is not None else current_article_slug(post.id)
+        data["slug"] = slug or post.slug_candidate
         data["reading_minutes"] = estimate_reading_minutes(post.body)
     else:
         data["reading_minutes"] = None
@@ -62,7 +84,14 @@ def serialize_browse_post(post, *, actor_id=None, display_media=None):
     collection_visible = (
         post.collection
         and post.collection.deleted_at is None
-        and (actor_id is None or is_collection_member(actor_id, post.collection))
+        and (
+            actor_id is None
+            or (
+                post.collection.id in member_ids
+                if member_ids is not None
+                else is_collection_member(actor_id, post.collection)
+            )
+        )
     )
     data["collection"] = (
         {"id": post.collection.id, "name": post.collection.name, "slug": post.collection.slug}
@@ -74,5 +103,16 @@ def serialize_browse_post(post, *, actor_id=None, display_media=None):
 
 
 def serialize_browse_posts(posts, *, actor_id=None):
+    if not posts:
+        return []
+    _preload_browse_relations(posts)
     media = first_display_media(posts)
-    return [serialize_browse_post(post, actor_id=actor_id, display_media=media) for post in posts]
+    slugs = current_article_slugs([post.id for post in posts if post.post_type == PostType.ARTICLE.value])
+    member_ids = (
+        member_collection_ids(actor_id, {post.collection for post in posts})
+        if actor_id is not None else None
+    )
+    return [
+        serialize_browse_post(post, actor_id=actor_id, display_media=media, slugs=slugs, member_ids=member_ids)
+        for post in posts
+    ]

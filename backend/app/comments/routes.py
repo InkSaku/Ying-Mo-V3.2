@@ -301,7 +301,7 @@ def create_comment():
             post=post,user_id=recipient,actor_id=actor.id,
             kind="comment_reply" if replied else "post_comment",
             comment_id=comment.id,
-            message="有人回复了你的评论。" if replied else "有人评论了你的 Post。",
+            message="有人回复了你的评论。" if replied else "有人评论了你的内容。",
         )
     for user in mentioned:
         if user.id not in {actor.id,recipient}:

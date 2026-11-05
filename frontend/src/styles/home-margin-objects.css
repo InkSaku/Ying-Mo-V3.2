@@ -1,0 +1,115 @@
+.home-margin-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.home-margin-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.home-margin-tools button {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--brand-link);
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.home-margin-tools button:disabled {
+  color: var(--text-3);
+  opacity: .6;
+  cursor: default;
+}
+
+.home-margin-pocket {
+  display: block;
+  flex: none;
+  width: 112px;
+  height: 96px;
+  pointer-events: none;
+}
+
+.home-side-rail > .home-margin-pocket {
+  margin: 16px 0 0 auto;
+}
+
+.home-margin-layer {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
+  overflow: clip;
+  pointer-events: none;
+}
+
+.home-margin-layer[hidden] { display: none; }
+
+.home-margin-object {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text);
+  pointer-events: none;
+  touch-action: auto;
+  user-select: none;
+}
+
+.home-margin-object-art,
+.home-margin-object-art > :is(svg, img) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.home-margin-object:focus-visible,
+.home-margin-tools button:focus-visible {
+  outline: 2px solid var(--brand-link);
+  outline-offset: 4px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.home-margin-object {
+    pointer-events: auto;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  button.home-margin-object.is-grabbed {
+    z-index: 3;
+    cursor: grabbing;
+  }
+}
+
+/* Phones keep the first screen for real records. */
+@media (max-width: 767px) {
+  .home-margin-layer,
+  .home-margin-controls,
+  .home-margin-pocket { display: none; }
+}
+
+@media print {
+  .home-margin-layer,
+  .home-margin-controls,
+  .home-margin-pocket { display: none !important; }
+}

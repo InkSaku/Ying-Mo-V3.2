@@ -29,8 +29,8 @@ function copyBook(source) {
   return copy;
 }
 
-function bounds(rect) {
-  return { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` };
+function placement(rect, base) {
+  return { transform: `translate(${rect.left - base.left}px, ${rect.top - base.top}px) scale(${rect.width / base.width}, ${rect.height / base.height})` };
 }
 
 // Reserve space for both boards, including the near edge under perspective.
@@ -71,7 +71,11 @@ export function startCollectionOpening(event, slug) {
   scene.layer.append(backdrop);
   const stage = document.createElement("div");
   stage.className = "paper-opening-stage";
-  fitRect(stage, rect);
+  const centre = centredBookRect();
+  // Keep the 3D scene's size and perspective stable throughout the turn.
+  // Resizing its boards every frame forces mobile browsers to repaint them.
+  fitRect(stage, centre);
+  stage.style.transformOrigin = "0 0";
   stage.style.perspective = getComputedStyle(source).perspective;
   stage.style.perspectiveOrigin = "50% 45%";
   const book = copyBook(original);
@@ -79,6 +83,10 @@ export function startCollectionOpening(event, slug) {
   const hinge = book.querySelector(".collection-shelf-hinge");
   const front = book.querySelector(".collection-card-cover-frame");
   front.classList.add("paper-opening-front");
+  // Give the two faces distinct planes so they cannot fight at the hinge.
+  front.style.transform = "translateZ(0.5px)";
+  const lining = book.querySelector(".collection-shelf-lining");
+  lining.style.transform = "rotateY(180deg) translateZ(0.5px)";
   const pages = book.querySelector(".collection-shelf-pages");
   pages.classList.add("paper-opening-pages");
   const title = card.querySelector("h3")?.textContent || "";
@@ -96,7 +104,7 @@ export function startCollectionOpening(event, slug) {
   }
   // Pixel transform origins from the snapshot must follow the changing 4:5 size.
   hinge.style.transformOrigin = "left center";
-  book.querySelector(".collection-shelf-lining").style.transformOrigin = "center center";
+  lining.style.transformOrigin = "center center";
   book.style.transformOrigin = "center center";
   stage.append(book);
   scene.layer.append(stage);
@@ -118,8 +126,7 @@ export function startCollectionOpening(event, slug) {
     scene.finish();
   };
   observer.observe(document.body, { childList: true, subtree: true });
-  const centre = centredBookRect();
-  scene.animate(stage, [bounds(rect), bounds(centre)], { duration: TRAVEL, easing: PAPER_EASE, fill: "forwards" });
+  scene.animate(stage, [placement(rect, centre), placement(centre, centre)], { duration: TRAVEL, easing: PAPER_EASE, fill: "forwards" });
   scene.animate(book, [
     { transform: book.style.transform },
     { transform: "translateY(-6px) rotateX(0deg) rotateY(0deg)", offset: .65 },
@@ -133,12 +140,14 @@ export function startCollectionOpening(event, slug) {
   // As the front board crosses the spine, compensate its newly visible left
   // half. Both tracks share timing, so the whole open spread stays centred.
   scene.animate(stage, angles.map((angle) => ({
-    ...bounds(angle ? turnRect(centre, angle, Number.parseFloat(stage.style.perspective) || 1000) : centre),
+    ...placement(angle ? turnRect(centre, angle, Number.parseFloat(stage.style.perspective) || 1000) : centre, centre),
     offset: angle / 158,
   })), turnOptions);
-  const exit = scene.animate(scene.layer, [
-    { opacity: 1 }, { opacity: 1, offset: HANDOFF / DURATION }, { opacity: 0 },
-  ], { duration: DURATION, easing: "linear", fill: "both" });
+  // Fading the common ancestor flattens its 3D descendants. Fade the boards
+  // only after the turn, with a separate backdrop for the destination page.
+  const exitOptions = { delay: HANDOFF, duration: DURATION - HANDOFF, easing: "linear", fill: "forwards" };
+  scene.animate(backdrop, [{ opacity: 1 }, { opacity: 0 }], exitOptions);
+  const exit = scene.animate(stage, [{ opacity: 1 }, { opacity: 0 }], exitOptions);
   opening = { scene, slug, finish, revealed: false };
   void exit.finished.then(finish, finish);
 }

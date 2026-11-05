@@ -14,11 +14,11 @@ bp=Blueprint("notifications",__name__)
 
 
 INACCESSIBLE_COLLECTION_MESSAGES = {
-    "collection_member_added": "一条 Collection 成员通知的目标当前不可访问。",
-    "collection_member_removed": "你已被移出一个 Collection。",
-    "post_removed_from_collection": "你的 Post 已从一个 Collection 移出。",
-    "collection_creator_received": "一条 Collection 创建者变更通知的目标当前不可访问。",
-    "collection_creator_transferred": "一条 Collection 创建者变更通知的目标当前不可访问。",
+    "collection_member_added": "一条合集成员通知的目标当前不可访问。",
+    "collection_member_removed": "你已被移出一个合集。",
+    "post_removed_from_collection": "你的内容已从一个合集移出。",
+    "collection_creator_received": "一条合集创建者变更通知的目标当前不可访问。",
+    "collection_creator_transferred": "一条合集创建者变更通知的目标当前不可访问。",
 }
 
 

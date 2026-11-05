@@ -35,6 +35,16 @@ def current_article_slug(post_id):
     return row.slug if row else None
 
 
+def current_article_slugs(post_ids):
+    if not post_ids:
+        return {}
+    return dict(db.session.execute(
+        db.select(ArticleSlug.current_post_id, ArticleSlug.slug).where(
+            ArticleSlug.current_post_id.in_(post_ids),
+        )
+    ).tuples().all())
+
+
 def apply_tags(post, tag_names):
     if tag_names is None:
         return
@@ -195,9 +205,9 @@ def publish_post(post, actor_id, slug=None, *, memory_root=None):
                     post_id=post.id,
                     collection_id=post.collection_id,
                     message=(
-                        f"有人补充了你在 Collection「{post.collection.name}」中的共同回忆。"
+                        f"有人补充了你在合集「{post.collection.name}」中的共同回忆。"
                         if is_root_author
-                        else f"Collection「{post.collection.name}」有一篇新的成员投稿。"
+                        else f"合集「{post.collection.name}」有一篇新的成员投稿。"
                     ),
                 )
     if post.category and post.category.first_used_at is None:

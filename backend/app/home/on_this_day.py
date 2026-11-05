@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app.access import readable_post_predicate, semantic_time_expression
 from app.extensions import db
 from app.models import Post
-from app.posts.browsing import first_display_media, serialize_browse_post
+from app.posts.browsing import serialize_browse_posts
 
 
 def utc_today():
@@ -38,14 +38,11 @@ def on_this_day_data(actor_id, *, page=1, size=20, today=None, include_facets=Tr
         stmt.order_by(year_expr.desc(), time_expr.desc(), Post.id.desc())
         .offset((page - 1) * size).limit(size)
     ).all()
-    display_media = first_display_media(rows)
-    items = []
-    for post in rows:
-        item = serialize_browse_post(post, actor_id=actor_id, display_media=display_media)
+    items = serialize_browse_posts(rows, actor_id=actor_id)
+    for post, item in zip(rows, items, strict=True):
         memory_year = post.semantic_time.year
         item["memory_year"] = memory_year
         item["years_ago"] = today.year - memory_year
-        items.append(item)
 
     year_facets = []
     if include_facets:

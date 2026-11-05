@@ -22,6 +22,7 @@ def create_app(config_name=None, config_overrides=None):
     config_class = get_config(environment)
 
     app = Flask(__name__)
+    app.json.ensure_ascii = False
     app.config.from_object(config_class)
     app.config["SQLALCHEMY_DATABASE_URI"] = config_class.database_uri()
     if config_overrides:

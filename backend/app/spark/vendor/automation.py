@@ -18,6 +18,7 @@ from datetime import datetime
 from .browser import open_browser
 from .config import load_config
 from .guard import detect_rate_limit
+from ..errors import browser_failure, failure
 
 logger = logging.getLogger("douyin-spark")
 
@@ -54,8 +55,8 @@ def check_login(page) -> tuple[bool, str]:
         except Exception:
             continue
 
-    cookies = page.context.cookies()
-    if not any(c["name"].startswith("sessionid") for c in cookies):
+    cookies = page.context.cookies(CHAT_URL)
+    if not any(c["name"].startswith("sessionid") and c["value"] for c in cookies):
         return False, "未检测到 sessionid Cookie"
     return True, "ok"
 
@@ -240,20 +241,26 @@ _EXTRACT_JS = """
 """
 
 
-def _open_chat_page(page) -> bool:
+def _open_chat_page(page, *, raise_on_failure=False) -> bool:
     """打开抖音私信页并等待加载，返回是否成功。"""
+    last_error = None
     for attempt in range(3):
         try:
             page.goto(CHAT_URL, timeout=90000, wait_until="domcontentloaded")
             return True
         except Exception as e:
-            logger.info("打开页面失败（第 %s 次）: %s", attempt + 1, str(e)[:80])
-            time.sleep(5)
+            last_error = e
+            logger.info("打开页面失败（第 %s 次）: %s", attempt + 1, type(e).__name__)
+            if attempt < 2:
+                time.sleep(5)
+    if raise_on_failure and last_error is not None:
+        raise last_error
     return False
 
 
 def _scroll_and_extract(page, collected: list[dict], max_rounds: int = 20) -> None:
     """滚动聊天列表并提取联系人，直到没有新数据。"""
+    stable = 0
     for _ in range(max_rounds):
         data = page.evaluate(_EXTRACT_JS) or []
         new_items = [x for x in data if x not in collected]
@@ -261,8 +268,7 @@ def _scroll_and_extract(page, collected: list[dict], max_rounds: int = 20) -> No
             collected.extend(new_items)
             stable = 0
         else:
-            stable = getattr(_scroll_and_extract, "_stable", 0) + 1
-            _scroll_and_extract._stable = stable
+            stable += 1
             if stable >= 2:
                 break
         try:
@@ -276,46 +282,64 @@ def _scroll_and_extract(page, collected: list[dict], max_rounds: int = 20) -> No
 def fetch_chat_contacts() -> dict:
     """从抖音私信页左侧聊天列表读取联系人（含火花天数），供网页端勾选。"""
     result = {"at": _now(), "names": [], "error": None}
-
+    stage = "browser"
     try:
         with open_browser() as (p, browser, context, page):
-            if not _open_chat_page(page):
-                result["error"] = "无法打开抖音私信页面"
+            stage = "page"
+            if not _open_chat_page(page, raise_on_failure=True):
+                result.update(failure("CHAT_PAGE_UNAVAILABLE"))
                 return result
 
             page.wait_for_timeout(10000)
-            logged, why = check_login(page)
-            if not logged:
-                result["error"] = why
-                return result
-
-            if detect_rate_limit(page):
-                result["error"] = "平台要求验证或提示操作频繁"
-                return result
-
+            stage = "contacts"
             collected: list[dict] = []
             for attempt in range(3):
+                error = _contact_page_failure(page)
+                if error:
+                    result.update(error)
+                    return result
                 try:
                     page.wait_for_selector(".conversationConversationItemtitle", timeout=45000)
                 except Exception:
                     logger.info("第 %s 次等待联系人列表超时", attempt + 1)
 
-                _scroll_and_extract._stable = 0
+                # A delayed login redirect or challenge can appear while waiting
+                # for the list, including after a freshly confirmed QR login.
+                error = _contact_page_failure(page)
+                if error:
+                    result.update(error)
+                    return result
                 _scroll_and_extract(page, collected)
 
                 if collected:
                     break
                 try:
+                    if attempt == 2:
+                        break
                     page.reload(wait_until="domcontentloaded", timeout=90000)
                     page.wait_for_timeout(12000)
-                except Exception:
-                    pass
+                except Exception as error:
+                    result.update(browser_failure(error, "page"))
+                    return result
 
+            if not collected:
+                result.update(failure("CONTACTS_NOT_READY"))
+                return result
             result["names"] = collected
             logger.info("已读取聊天列表联系人 %s 个", len(result["names"]))
     except Exception as e:
-        logger.error("获取联系人异常: %s", e)
-        result["error"] = f"获取联系人异常: {e}"
+        result.update(browser_failure(e, stage))
+        logger.error("获取联系人失败: %s", result["error_code"])
     return result
+
+
+def _contact_page_failure(page):
+    logged, _ = check_login(page)
+    if not logged:
+        return failure("LOGIN_EXPIRED")
+    restriction = detect_rate_limit(page)
+    if restriction:
+        return failure("PLATFORM_NETWORK_ERROR" if restriction == "网络异常" else "PLATFORM_VERIFICATION")
+    return None
 
 

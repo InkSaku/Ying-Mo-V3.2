@@ -181,7 +181,7 @@ def register():
                 kind="collection_member_added",
                 target_type="collection",
                 collection_id=collection.id,
-                message=f"你已自动加入 Collection「{collection.name}」，现在可以阅读并投稿。",
+                message=f"你已自动加入合集「{collection.name}」，现在可以阅读并投稿。",
             ))
         access, refresh = _issue_session(user)
         _verification_token, raw_verification_token = issue_account_token(

@@ -7,6 +7,7 @@ import {
   desktopPrimaryNavItems,
   discoveryNavItems,
   discoveryPaths,
+  mobileMenuNavItems,
   mobilePrimaryNavItems,
   pathMatches,
   pathMatchesAny,
@@ -133,7 +134,9 @@ export function AppShell() {
           </div>
 
           <div className="mobile-header-actions">
-            <ThemeControl />
+            <NavLink className="mobile-header-icon" to="/search" aria-label="搜索">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
+            </NavLink>
             <Link className={`mobile-notification-button${unreadCount ? " has-unread" : ""}`} to="/me/notifications" aria-label={notificationLabel}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6 2.5 6 2.5 7.5H4c0-1.5 2.5-1.5 2.5-7.5Z" /><path d="M9.5 19a2.7 2.7 0 0 0 5 0" /></svg>
               {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
@@ -143,18 +146,14 @@ export function AppShell() {
                 <span aria-hidden="true">•••</span>
               </summary>
               <div className="mobile-menu-panel">
-                <p className="header-menu-eyebrow"></p>
                 <nav aria-label="更多导航">
-                  {[...discoveryNavItems.slice(0, 2), { to: "/collections", label: "合集" }, ...discoveryNavItems.slice(2)].map(({ to, label }) => (
+                  {mobileMenuNavItems.map(({ to, label }) => (
                     <NavLink key={to} to={to} onClick={closeOwningMenu} className={({ isActive }) => isActive ? "active" : ""}>{label}</NavLink>
                   ))}
-                  <Link className="mobile-notification-link" to="/me/notifications" onClick={closeOwningMenu}>
-                    <span>通知</span>
-                    {badgeText ? <span className="notification-badge" aria-hidden="true">{badgeText}</span> : null}
-                  </Link>
                   {user?.role === "system_admin" ? <Link to="/admin" onClick={closeOwningMenu}>管理后台</Link> : null}
                 </nav>
                 <div className="mobile-menu-foot">
+                  <ThemeControl showLabel />
                   <button className="text-button" type="button" onClick={handleLogout}>退出登录</button>
                 </div>
               </div>

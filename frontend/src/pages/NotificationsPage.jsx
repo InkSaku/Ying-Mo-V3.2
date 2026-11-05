@@ -1,15 +1,16 @@
-import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { InkBrandMark } from "../components/InkBrandMark";
 import { Pagination } from "../components/Pagination";
 import { PersonalNav } from "../components/PersonalNav";
+import { ProtectedImage } from "../components/ProtectedImage";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
-import { formatDate } from "../lib/format";
-import { markNotificationReadForNavigation } from "../lib/notifications";
+import { groupNotificationsByDay, markNotificationReadForNavigation, notificationClock, notificationSentence } from "../lib/notifications";
 import { clampPageToTotal } from "../lib/pagination";
+import "../styles/notifications.css";
 
 const PAGE_SIZE = 20;
 
@@ -18,28 +19,44 @@ function cleanPage(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+function InboxAvatar({ actor }) {
+  return <span className="inbox-avatar" aria-hidden="true">
+    {actor
+      ? <ProtectedImage media={actor.avatar_media} alt="" className="inbox-avatar-image" fallback={<InkBrandMark />} />
+      : <InkBrandMark />}
+  </span>;
+}
+
 export function NotificationsPage() {
   usePageMeta("通知");
   const [params, setParams] = useSearchParams();
   const page = cleanPage(params.get("page"));
   const state = useAsyncData(() => api.get(`/notifications?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  const unreadState = useAsyncData(() => api.get("/notifications/unread-count"), []);
   const reloadNotifications = state.reload;
+  const reloadUnread = unreadState.reload;
   const [busy, setBusy] = useState(null);
   const [actionError, setActionError] = useState("");
   const [message, setMessage] = useState("");
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
   const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const unreadCount = unreadState.data?.unread_count ?? null;
+  const pageUnreadCount = state.data?.filter((item) => !item.is_read).length || 0;
+  const hasUnread = unreadCount > 0 || pageUnreadCount > 0;
 
   useEffect(() => {
     if (pageNeedsClamp) setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
   }, [clampedPage, pageNeedsClamp, setParams]);
 
   useEffect(() => {
-    const handleNewNotifications = () => { void reloadNotifications(); };
+    const handleNewNotifications = () => {
+      void reloadNotifications();
+      void reloadUnread();
+    };
     window.addEventListener("yingmo:new-notifications", handleNewNotifications);
     return () => window.removeEventListener("yingmo:new-notifications", handleNewNotifications);
-  }, [reloadNotifications]);
+  }, [reloadNotifications, reloadUnread]);
 
   const announceNotificationChange = () => {
     window.dispatchEvent(new CustomEvent("yingmo:notifications-changed"));
@@ -53,8 +70,8 @@ export function NotificationsPage() {
       if (kind === "all") await api.post("/notifications/read-all", {});
       else await api.post(`/notifications/${id}/read`, {});
       announceNotificationChange();
-      setMessage(kind === "all" ? "全部通知已标记为已读。" : "通知已标记为已读。");
-      await state.reload();
+      setMessage(kind === "all" ? "全部通知已标为已读。" : "通知已标为已读。");
+      await Promise.all([state.reload(), reloadUnread()]);
     } catch (error) {
       setActionError(`${kind === "all" ? "全部标记" : "标记已读"}失败：${error.message}`);
     } finally {
@@ -71,56 +88,56 @@ export function NotificationsPage() {
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell personal-page-shell ink-inbox-page" aria-busy={state.loading || Boolean(busy) || pageNeedsClamp || undefined}>
+    <main className="page-shell personal-page-shell inbox-page" aria-busy={state.loading || Boolean(busy) || pageNeedsClamp || undefined}>
       <PersonalNav />
-      <header className="page-heading">
-        {state.data?.length ? <InkPageSketch /> : null}
-        <div><p className="section-kicker"></p><h1>通知</h1><p></p></div>
-        {state.data?.some((item) => !item.is_read) ? (
-          <button className="btn btn-secondary" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("all"); }}>
-            {busy === "all" ? "处理中" : "全部已读"}
+      <header className="inbox-header">
+        <h1>通知</h1>
+        {state.data?.length ? <p className="inbox-count">{unreadCount === null
+          ? pageUnreadCount ? <>本页 <span className="tabular">{pageUnreadCount}</span> 条未读</> : unreadState.loading ? "正在读取未读数…" : "未读数暂不可用"
+          : unreadCount ? <><span className="tabular">{unreadCount}</span> 条未读</> : "都读完了"}</p> : null}
+        {hasUnread ? (
+          <button className="text-button inbox-read-all" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("all"); }}>
+            {busy === "all" ? "处理中" : "全部标为已读"}
           </button>
         ) : null}
       </header>
-      {actionError ? <div className="inline-error notification-feedback" role="alert">{actionError}</div> : null}
-      {message ? <div className="inline-success notification-feedback" role="status">{message}</div> : null}
-      {state.loading ? <div className="profile-refresh" role="status">正在更新通知…</div> : null}
-      {state.data?.length && !pageNeedsClamp ? <div className="ink-inbox-summary">
-        <p><span className="tabular">{pagination.total ?? state.data.length}</span> 条通知<span className="ink-inbox-unread">本页 {state.data.filter((item) => !item.is_read).length} 条未读</span></p>
-        <span></span>
-      </div> : null}
+      {actionError ? <div className="inline-error inbox-feedback" role="alert">{actionError}</div> : null}
+      <span className="sr-only" role="status">{message}</span>
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
-        <div className="notification-list">
-          {state.data.map((item) => (
-            <article key={item.id} className={item.is_read ? "" : "unread"}>
-              <div className="notification-copy">
-                <div className="notification-message-row">
-                  {!item.is_read ? <span className="notification-unread-label">未读</span> : null}
-                  <p>{item.message}</p>
-                </div>
-                {item.summary ? <p className="notification-summary">“{item.summary}”</p> : null}
-                <time dateTime={item.created_at}>{formatDate(item.created_at, true)}</time>
-              </div>
-              <div className="notification-actions">
-                {item.target_url ? (
-                  <Link
-                    to={item.target_url}
-                    aria-label={`${item.is_read ? "查看" : "查看并标记已读"}：${item.message}`}
-                    onClick={() => markReadOnOpen(item)}
-                  >
-                    {item.is_read ? "查看" : "查看并标记已读"}
-                  </Link>
-                ) : null}
-                {!item.is_read ? (
-                  <button className="text-button" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("one", item.id); }}>
-                    {busy === item.id ? "处理中" : "标记已读"}
-                  </button>
-                ) : null}
-              </div>
-            </article>
+        <div className="inbox-days">
+          {groupNotificationsByDay(state.data).map((group) => (
+            <section className="inbox-day" key={group.key} aria-label={group.label}>
+              <h2>{group.label}</h2>
+              <ul>
+                {group.items.map((item) => {
+                  const sentence = notificationSentence(item);
+                  const label = <>{sentence.actor ? <strong>{sentence.actor}</strong> : null}{sentence.text}</>;
+                  return (
+                    <li key={item.id} className={`inbox-row${item.is_read ? "" : " is-unread"}`}>
+                      <InboxAvatar actor={sentence.actor ? item.actor : null} />
+                      <div className="inbox-copy">
+                        <p className="inbox-title">
+                          {item.is_read ? null : <span className="sr-only">未读：</span>}
+                          {item.target_url ? <Link className="inbox-link" to={item.target_url} onClick={() => markReadOnOpen(item)}>{label}</Link> : label}
+                        </p>
+                        {sentence.summary ? <p className="inbox-summary">{sentence.summary}</p> : null}
+                      </div>
+                      <div className="inbox-meta">
+                        <time className="tabular" dateTime={item.created_at}>{notificationClock(item.created_at)}</time>
+                        {item.is_read ? null : (
+                          <button className="inbox-read" type="button" disabled={Boolean(busy) || state.loading} onClick={() => { void runAction("one", item.id); }}>
+                            {busy === item.id ? "处理中" : "标为已读"}
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           ))}
         </div>
-      ) : <EmptyState sketch="inbox" title="还没有通知" description="" />}
+      ) : <EmptyState sketch="inbox" title="还没有通知" description="朋友的评论、提及和合集动态会出现在这里。" />}
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}

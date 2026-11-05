@@ -25,6 +25,26 @@ def is_collection_member(user_id, collection):
     ) is True
 
 
+def member_collection_ids(user_id, collections):
+    """Batch form of is_collection_member for serializing a page of posts."""
+    active = [
+        collection for collection in collections
+        if collection is not None
+        and collection.deleted_at is None
+        and collection.status == CollectionStatus.ACTIVE.value
+    ]
+    allowed = {collection.id for collection in active if collection.creator_id == user_id}
+    pending = {collection.id for collection in active} - allowed
+    if pending:
+        allowed.update(db.session.scalars(
+            db.select(CollectionMember.collection_id).where(
+                CollectionMember.user_id == user_id,
+                CollectionMember.collection_id.in_(pending),
+            )
+        ))
+    return allowed
+
+
 def collection_member_predicate(user_id):
     return and_(
         Collection.deleted_at.is_(None),

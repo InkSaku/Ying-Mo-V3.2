@@ -36,8 +36,8 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
   const showSession = session && !(data.bound && session.status === "succeeded");
   return <div className="spark-binding">
     <div className={`spark-account-card${data.bound ? " is-bound" : ""}`}>
-      <span className="spark-account-avatar" aria-hidden="true">{data.bound ? Array.from(data.account_profile.nickname || "抖音")[0] : "↗"}</span>
-      <div className="spark-account-identity"><small>{data.bound ? "已连接的抖音账号" : "连接抖音账号"}</small><strong>{data.bound ? data.account_profile.nickname || "抖音账号" : "使用你的抖音账号发送问候"}</strong><span>{data.bound ? data.account_profile.short_id ? `抖音号 ${data.account_profile.short_id}` : data.contacts_updated_at ? `已同步 ${data.contacts.length} 位联系人` : "账号已连接，等待同步好友" : "手机扫码 · 核对账号 · 同步好友"}</span></div>
+      {data.bound ? <><span className="spark-account-avatar" aria-hidden="true">{Array.from(data.account_profile.nickname || "抖音")[0]}</span>
+        <div className="spark-account-identity"><strong>{data.account_profile.nickname || "抖音账号"}</strong><span>{data.account_profile.short_id ? `抖音号 ${data.account_profile.short_id}` : data.contacts_updated_at ? `已同步 ${data.contacts.length} 位联系人` : "账号已连接，等待同步好友"}</span></div></> : null}
       {!active ? <button className={`btn ${data.bound ? "btn-secondary" : "btn-primary"}`} disabled={Boolean(busy) || !data.credential_storage_ready || !data.worker.online} onClick={onStart}>{data.bound ? "重新扫码连接" : "扫码连接抖音"}</button> : null}
     </div>
     {showSession ? <div className="spark-login-session" aria-live="polite">
@@ -57,6 +57,5 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
       </div> : null}
       {active ? <button className="text-button danger-text" disabled={Boolean(busy)} onClick={onCancel}>取消连接</button> : null}
     </div> : null}
-    {!data.worker.online ? <p className="spark-meta">后台恢复在线后即可开始扫码连接。</p> : null}
   </div>;
 }

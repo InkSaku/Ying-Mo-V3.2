@@ -38,7 +38,8 @@ function ReactionCount({ count, reduced }) {
       animations.push(digit.animate([{ transform: `translateY(${up * 100}%)` }, { transform: "translateY(0)" }], { duration: 300, easing: "cubic-bezier(.22,.8,.25,1)" }));
       const exit = old.animate([{ transform: "translateY(0)" }, { transform: `translateY(${-up * 100}%)` }], { duration: 300, easing: "cubic-bezier(.22,.8,.25,1)", fill: "forwards" });
       animations.push(exit);
-      exit.finished.then(() => { old.remove(); exit.cancel(); }).catch(() => {});
+      const finish = () => { old.remove(); exit.cancel(); };
+      exit.finished.then(finish, finish);
     });
     return () => { animations.forEach((animation) => animation.cancel()); ghosts.forEach((ghost) => ghost.remove()); };
   }, [count, reduced]);
@@ -79,12 +80,17 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
     animations.current.get(element)?.cancel();
     const animation = element.animate(frames, { duration, fill: "both" });
     animations.current.set(element, animation);
-    animation.finished.then(() => {
+    const finish = () => {
+      window.clearTimeout(timeout);
       if (animations.current.get(element) !== animation) return;
       animations.current.delete(element);
-      animation.cancel();
       done?.();
-    }).catch(() => {});
+      animation.cancel();
+    };
+    // A cancelled or stalled animation must also release hidden controls and
+    // flying glyphs. Superseded animations cannot finish the replacement.
+    const timeout = window.setTimeout(finish, duration + 100);
+    animation.finished.then(finish, finish);
   };
 
   const commit = (next) => {

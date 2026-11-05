@@ -215,7 +215,30 @@ export function WritePage() {
   const routeReadyRef = useRef(!postId);
   const offlineKeyRef = useRef("");
   const offlineFormRef = useRef(form);
+  const offlinePendingFormRef = useRef(null);
+  // State lags one commit behind the route loader; effects in that commit must
+  // still see that a recoverable copy is waiting for the writer's decision.
+  const offlineRecoveryPendingRef = useRef(false);
+  const flushOfflineDraft = useCallback(() => {
+    const pendingForm = offlinePendingFormRef.current;
+    if (!pendingForm) return;
+    offlinePendingFormRef.current = null;
+    writeOfflineDraft(window.localStorage, offlineKeyRef.current, pendingForm);
+  }, []);
   usePageMeta(postId ? "编辑记录" : "新建记录");
+
+  useEffect(() => {
+    const flushWhenHidden = () => {
+      if (document.visibilityState === "hidden") flushOfflineDraft();
+    };
+    window.addEventListener("pagehide", flushOfflineDraft);
+    document.addEventListener("visibilitychange", flushWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", flushOfflineDraft);
+      document.removeEventListener("visibilitychange", flushWhenHidden);
+      flushOfflineDraft();
+    };
+  }, [flushOfflineDraft]);
 
   useEffect(() => {
     const handleOnline = () => setOnline(true);
@@ -243,8 +266,11 @@ export function WritePage() {
     const generation = editorGenerationRef.current + 1;
     editorGenerationRef.current = generation;
     routeReadyRef.current = false;
+    // A newly created draft keeps the same form; its pending copy follows it to the new key.
+    if (createdRouteRef.current !== Number(postId)) flushOfflineDraft();
     const storageKey = offlineDraftKey(user?.id, postId, requestedType, requestedCollection);
     offlineKeyRef.current = storageKey;
+    offlineRecoveryPendingRef.current = false;
     setOfflineRecovery(null);
     setOptionsError("");
 
@@ -285,6 +311,7 @@ export function WritePage() {
           setForm(loadedForm);
           const localCopy = readOfflineDraft(window.localStorage, storageKey);
           if (localCopy && draftFingerprint(draftPayloadFromForm(localCopy.form)) !== loadedFingerprint) {
+            offlineRecoveryPendingRef.current = true;
             setOfflineRecovery(localCopy);
           } else if (localCopy) {
             removeOfflineDraft(window.localStorage, storageKey);
@@ -313,6 +340,7 @@ export function WritePage() {
       setForm(freshForm);
       const localCopy = readOfflineDraft(window.localStorage, storageKey);
       if (localCopy && draftFingerprint(draftPayloadFromForm(localCopy.form)) !== freshFingerprint) {
+        offlineRecoveryPendingRef.current = true;
         setOfflineRecovery(localCopy);
       }
       setAutosave({ status: "idle", message: "", savedAt: null });
@@ -320,7 +348,7 @@ export function WritePage() {
       setLoading(false);
     }
     return () => { active = false; };
-  }, [postId, reloadKey, requestedCollection, requestedType, user?.id]);
+  }, [flushOfflineDraft, postId, reloadKey, requestedCollection, requestedType, user?.id]);
 
   useEffect(() => {
     if (!bodyEditorOpen && workspaceMode !== "preview") return undefined;
@@ -384,19 +412,19 @@ export function WritePage() {
   }, [savedPost]);
 
   useEffect(() => {
-    if (loading || !routeReadyRef.current || offlineRecovery) return undefined;
+    if (loading || !routeReadyRef.current || offlineRecoveryPendingRef.current) return undefined;
     const localForm = bodyEditorOpen ? { ...form, body: editorBody } : form;
     offlineFormRef.current = localForm;
     const fingerprint = draftFingerprint(draftPayloadFromForm(localForm));
     if (fingerprint === lastSavedFingerprintRef.current) {
+      offlinePendingFormRef.current = null;
       removeOfflineDraft(window.localStorage, offlineKeyRef.current);
       return undefined;
     }
-    const timer = window.setTimeout(() => {
-      writeOfflineDraft(window.localStorage, offlineKeyRef.current, localForm);
-    }, 300);
+    offlinePendingFormRef.current = localForm;
+    const timer = window.setTimeout(flushOfflineDraft, 300);
     return () => window.clearTimeout(timer);
-  }, [bodyEditorOpen, editorBody, form, loading, offlineRecovery]);
+  }, [bodyEditorOpen, editorBody, flushOfflineDraft, form, loading, offlineRecovery]);
 
   const saveDraftSnapshot = useCallback((snapshot, { automatic = false } = {}) => {
     const fingerprint = draftFingerprint(snapshot);
@@ -432,10 +460,15 @@ export function WritePage() {
           message: "",
           savedAt: currentMatches ? new Date() : null,
         });
-        if (currentMatches) removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+        // Saving new typing must not consume a copy the writer has not answered for yet.
+        const recoveryPending = offlineRecoveryPendingRef.current;
+        if (currentMatches && !recoveryPending) {
+          offlinePendingFormRef.current = null;
+          removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+        }
         if (!currentPost) {
           createdRouteRef.current = saved.id;
-          if (!currentMatches) {
+          if (!currentMatches && !recoveryPending) {
             const nextKey = offlineDraftKey(user?.id, saved.id);
             if (writeOfflineDraft(window.localStorage, nextKey, offlineFormRef.current)) {
               removeOfflineDraft(window.localStorage, offlineKeyRef.current);
@@ -506,11 +539,13 @@ export function WritePage() {
     payloadRef.current = draftPayloadFromForm(restored);
     setAutosave({ status: "dirty", message: "已恢复浏览器本地副本，尚未保存到服务器。", savedAt: null });
     setMessage("已恢复浏览器本地副本，请确认内容后保存。 ");
+    offlineRecoveryPendingRef.current = false;
     setOfflineRecovery(null);
   };
 
   const discardOfflineCopy = () => {
     removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+    offlineRecoveryPendingRef.current = false;
     setOfflineRecovery(null);
   };
 

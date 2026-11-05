@@ -12,7 +12,7 @@
   align-items: center;
   gap: 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
   padding: 9px 11px 9px 12px;
@@ -78,7 +78,7 @@
   overscroll-behavior: contain;
   padding: 6px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-overlay);
   background: var(--surface);
   box-shadow:
     0 0 0 1px rgba(20, 20, 19, 0.02),
@@ -95,7 +95,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: var(--text-2);
   font-size: 13px;
   line-height: 1.4;
@@ -168,10 +168,6 @@
 }
 
 @media (max-width: 767px) {
-  .custom-select-panel {
-    border-radius: 9px;
-  }
-
   .custom-select-option {
     min-height: 46px;
     font-size: 14px;

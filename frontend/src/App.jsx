@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { ProtectedRoute, PublicOnlyRoute, AdminRoute } from "./components/RouteGuards";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { AppShell } from "./components/AppShell";
 import { PageLoader } from "./components/States";
 import { PwaUpdatePrompt } from "./components/PwaUpdatePrompt";
@@ -66,8 +67,9 @@ const PaperMotionPreview = import.meta.env.DEV
   ? lazyNamed(() => import("./pages/PaperMotionPreview"), "PaperMotionPreview") : null;
 
 export function App() {
+  const { pathname } = useLocation();
   return (
-    <>
+    <AppErrorBoundary resetKey={pathname}>
       <PwaUpdatePrompt />
       <Suspense fallback={<PageLoader label="正在读取页面" />}>
         <Routes>
@@ -134,6 +136,6 @@ export function App() {
       <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
-    </>
+    </AppErrorBoundary>
   );
 }

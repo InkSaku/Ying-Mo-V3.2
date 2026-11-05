@@ -3,12 +3,12 @@ import { useTheme } from "../contexts/ThemeContext";
 const modes = ["system", "light", "dark"];
 const labels = { system: "跟随系统", light: "浅色", dark: "深色" };
 
-export function ThemeControl() {
+export function ThemeControl({ showLabel = false }) {
   const { mode, setMode } = useTheme();
   const next = modes[(modes.indexOf(mode) + 1) % modes.length];
   const label = `当前主题：${labels[mode]}，点击切换为${labels[next]}`;
   return (
-    <button className="theme-toggle" type="button" onClick={(event) => {
+    <button className={`theme-toggle${showLabel ? " has-label" : ""}`} type="button" onClick={(event) => {
       const box = event.currentTarget.getBoundingClientRect();
       setMode(next, { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
     }} aria-label={label} title={label}>
@@ -17,6 +17,7 @@ export function ThemeControl() {
         {mode === "dark" ? <path d="M20.5 14A8.7 8.7 0 0 1 10 3.5 8.7 8.7 0 1 0 20.5 14Z" /> : null}
         {mode === "system" ? <><rect x="3" y="4" width="18" height="13" rx="1.5" /><path d="M8 21h8m-4-4v4" /><path d="M12 7a3.5 3.5 0 0 0 0 7Z" fill="currentColor" stroke="none" /><path d="M12 7a3.5 3.5 0 0 1 0 7" /></> : null}
       </svg>
+      {showLabel ? <span>主题：{labels[mode]}</span> : null}
     </button>
   );
 }

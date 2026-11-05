@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
-import { createProtectedMediaUrl, revokeProtectedMediaUrl } from "../lib/protectedMedia";
+import { createProtectedMediaUrl, peekProtectedMediaUrl, revokeProtectedMediaUrl } from "../lib/protectedMedia";
 
-export function useProtectedMedia(path) {
-  const [state, setState] = useState({ src: null, loading: Boolean(path), error: null });
+function initialState(path) {
+  const src = path ? peekProtectedMediaUrl(path) : null;
+  return { src, loading: Boolean(path) && !src, error: null };
+}
+
+export function useProtectedMedia(path, { defer = false } = {}) {
+  const [state, setState] = useState(() => initialState(path));
 
   useEffect(() => {
     const controller = new AbortController();
     let currentUrl = null;
     let active = true;
 
-    if (!path) {
-      setState({ src: null, loading: false, error: null });
-      return () => controller.abort();
-    }
+    setState(initialState(path));
+    if (!path || defer) return () => controller.abort();
 
-    setState({ src: null, loading: true, error: null });
     createProtectedMediaUrl(path, { signal: controller.signal })
       .then((url) => {
         currentUrl = url;
@@ -32,7 +34,7 @@ export function useProtectedMedia(path) {
       controller.abort();
       revokeProtectedMediaUrl(currentUrl);
     };
-  }, [path]);
+  }, [path, defer]);
 
   return state;
 }

@@ -321,16 +321,32 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 
 @media (max-width: 767px) {
   .collection-memory-page { width: calc(100% - 32px); padding: 24px 0 72px; }
-  .collection-memory-page .collection-volume-hero { grid-template-columns: 1fr; gap: 42px; padding: 12px 0 42px; }
-  .collection-memory-page .collection-volume-cover-frame { width: min(76vw, 280px); aspect-ratio: 4 / 5; justify-self: center; }
-  .collection-memory-page .collection-volume-copy h1 { font-size: 38px; }
-  .collection-memory-page .collection-volume-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  /* A small cover sits beside the title so the actions and timeline stay near the top. */
+  .collection-memory-page .collection-volume-hero { grid-template-columns: 84px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: 0 16px; padding: 4px 0 24px; align-items: start; }
+  .collection-memory-page .collection-volume-cover-frame { grid-column: 1; grid-row: 1 / 3; width: 84px; aspect-ratio: 4 / 5; box-shadow: 4px 4px 0 var(--page), 5px 5px 0 var(--border); }
+  .collection-memory-page .collection-volume-cover-frame::before { left: 8px; }
+  .collection-volume-fallback { padding: 10px 6px 6px 14px; grid-template-rows: 1fr; align-items: center; }
+  .collection-volume-fallback > span:first-child,
+  .collection-volume-fallback > strong,
+  .collection-volume-fallback > small,
+  .collection-memory-page .collection-volume-kicker { display: none; }
+  .collection-memory-page .collection-volume-copy { display: contents; }
+  .collection-memory-page .collection-volume-back { grid-column: 2; grid-row: 1; min-height: 32px; margin: 0; display: inline-flex; align-items: center; justify-self: start; font-size: 12px; }
+  .collection-memory-page .collection-volume-copy h1 { grid-column: 2; grid-row: 2; margin: 0; font-size: 26px; line-height: 1.35; letter-spacing: .02em; overflow-wrap: anywhere; }
+  .collection-memory-page .collection-volume-copy > p:not(.hero-kicker) { grid-column: 1 / -1; margin: 14px 0 0; line-height: 1.7; }
+  .collection-memory-page .collection-volume-copy > p:empty { display: none; }
+  .collection-memory-page .collection-volume-facts { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
   .collection-memory-page .collection-volume-facts > div { padding: 0; }
   .collection-memory-page .collection-volume-facts > div + div { border: 0; }
-  .collection-memory-page .collection-volume-copy .collection-hero-actions { grid-template-columns: 1fr; }
-  .collection-memory-page .collection-volume-nav { top: 60px; gap: 24px; margin-right: -16px; margin-bottom: 40px; overflow-x: auto; scrollbar-width: none; }
+  .collection-memory-page .collection-share { grid-column: 1 / -1; width: 100%; margin-top: 12px; }
+  .collection-memory-page .collection-volume-copy .collection-hero-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .collection-memory-page .collection-volume-copy .collection-hero-actions .btn { flex: 1 1 0; min-height: 44px; }
+  .collection-memory-page .collection-volume-nav { top: 60px; gap: 24px; margin-right: -16px; margin-bottom: 16px; overflow-x: auto; scrollbar-width: none; }
   .collection-memory-page .collection-volume-nav::-webkit-scrollbar { display: none; }
-  .collection-memory-page .collection-memory-heading { align-items: start; flex-direction: column; }
+  .collection-memory-page .collection-memory-heading { align-items: start; flex-direction: column; margin-bottom: 4px; }
+  /* The active view tab already names this section on phones. */
+  .collection-memory-page .collection-memory-heading h2 { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .collection-memory-page .collection-memory-heading h2 + p { display: none; }
   .collection-memory-filter-drawer > summary { gap: 12px; }
   .collection-memory-filter-drawer > summary > span { display: none; }
   .collection-memory-filter-drawer > summary small { font-size: 10px; }

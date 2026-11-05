@@ -117,3 +117,23 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
   .browse-page-note .note-journal-entries .post-card-journal .note-card-text { font-size: 16px; }
   .browse-page-note .note-journal-entries .note-card-date strong { font-size: 30px; }
 }
+/* Phones reach the first note right after a one-line page title. */
+@media (max-width: 767px) {
+  .browse-page-note { padding-top: 8px; }
+  .browse-page-note .browse-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; padding: 8px 0 12px; }
+  .browse-page-note .browse-hero-copy { width: 100%; }
+  .browse-page-note .browse-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+  .browse-page-note .browse-hero-copy > p,
+  .notes-opening-sketch,
+  .browse-page-note .browse-hero-jump,
+  .browse-page-note .post-filters-heading > small { display: none; }
+  .browse-page-note .browse-hero-index { width: 100%; display: flex; align-items: center; gap: 4px; padding: 0; border: 0; }
+  .browse-page-note .browse-hero-index > .tabular { display: inline; margin: 0; font: inherit; font-size: 13px; color: var(--text-2); }
+  .browse-page-note .browse-hero-index > div { display: block; }
+  .browse-page-note .browse-hero-index strong { color: var(--text-2); font-size: 13px; }
+  .browse-page-note .browse-hero-index nav { margin: 0 0 0 auto; }
+  .browse-page-note .browse-hero-index nav a { min-height: 44px; display: inline-flex; align-items: center; padding: 0; }
+  .browse-page-note .post-filters-toggle { margin-left: auto; }
+  .browse-page-note .browse-section-heading { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .browse-page-note .browse-editorial-section { margin-top: 12px; }
+}

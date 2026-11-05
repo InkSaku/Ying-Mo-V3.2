@@ -14,6 +14,8 @@
   --radius-sm: 2px;
   --radius-md: 3px;
   --radius-lg: 4px;
+  --radius-control: 2px;
+  --radius-overlay: 6px;
 }
 :root[data-theme="dark"] {
   --page: #20231f;
@@ -37,19 +39,19 @@
 .app-frame .header-menu-panel, .app-frame .mobile-menu-panel { border-radius: 3px; background: var(--surface); box-shadow: 0 10px 24px color-mix(in srgb, var(--text) 8%, transparent); }
 .app-frame .site-footer .footer-inner { align-items: center; }
 
-/* Buttons, dialogs and input sheets share one quiet edge treatment. */
-.app-frame .btn, .public-main .btn, .auth-page .btn { border-radius: 2px; box-shadow: none; font-weight: 400; }
-.app-frame .btn-primary, .public-main .btn-primary, .auth-page .btn-primary {
-  background: var(--text); border-color: var(--text); color: var(--page); -webkit-text-fill-color: var(--page);
+/* Shared controls also live in body portals; do not depend on page ancestry. */
+:root .btn { border-radius: var(--radius-control); box-shadow: none; font-weight: 400; }
+:root .btn-primary, :root a.btn-primary, :root a.btn-primary:visited {
+  background: var(--text); border-color: var(--text); color: var(--page) !important; -webkit-text-fill-color: var(--page);
 }
-.app-frame .btn-primary:hover { background: color-mix(in srgb, var(--text) 86%, var(--page)); }
-.app-frame .btn-secondary { background: transparent; border: 1px solid var(--border-strong); }
+:root .btn-primary:hover { background: color-mix(in srgb, var(--text) 86%, var(--page)); }
+:root .btn-secondary { background: transparent; border: 1px solid var(--border-strong); }
 .app-frame :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
   border-radius: 2px;
   box-shadow: none;
 }
 .app-frame :is(input, textarea, select):focus-visible { outline-color: var(--brand-link); }
-.app-frame :is(.confirm-dialog, .custom-select-menu, .quick-note-composer, .settings-form, .data-export-panel) { border-radius: 3px; box-shadow: none; }
+.app-frame :is(.quick-note-composer, .settings-form, .data-export-panel) { border-radius: 3px; box-shadow: none; }
 .app-frame .section-header h2, .app-frame .admin-section-heading h2 { font-weight: 400; }
 
 /* Task-specific drawings live in the heading, with room for actions alongside. */

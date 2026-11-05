@@ -14,7 +14,7 @@ from app.posts.browsing import serialize_browse_posts
 
 
 FEED_TYPES = {"all", PostType.NOTE.value, PostType.ARTICLE.value}
-FEED_EXCERPT_SOURCE_LIMIT = 2000
+FEED_EXCERPT_SOURCE_LIMIT = 1000
 
 
 def _cursor_serializer():
@@ -115,6 +115,7 @@ def home_feed_data(actor_id, *, feed_type="all", cursor=None, size=12):
     items = serialize_browse_posts(visible_rows, actor_id=actor_id)
     for post, item in zip(visible_rows, items, strict=True):
         item["feed_excerpt"] = (post.summary or post.body or "")[:FEED_EXCERPT_SOURCE_LIMIT]
+        del item["content_excerpt"]
     return {
         "items": items,
         "next_cursor": next_cursor,

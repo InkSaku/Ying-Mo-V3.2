@@ -5,12 +5,15 @@ import logging
 import random
 import time
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.extensions import db
 from app.models import SparkAccount, SparkContact, SparkDelivery, SparkJob, User
 from app.models.spark import now_utc
 from .notifications import notify_send_result
 from .context import _execution
 from .credentials import CredentialError, decrypt_state
+from .errors import failure
 from .service import (config_for, enqueue, local_now, reset_schedule, resume_schedule, selected_contacts,
                       sending_plan_fingerprint, validation_fingerprint, validation_ready)
 
@@ -116,7 +119,7 @@ def mark_intent(job_id, delivery_id, limit):
     db.session.commit()
 
 
-def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认", *, cancelled=False, error_code=None):
+def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认", *, cancelled=False, error_code=None, diagnostic=None):
     # The parent may still hold a running-job snapshot after the child committed
     # success. Discard that transaction and lock the current row before deciding
     # to interrupt; committed send intents remain the source of truth.
@@ -135,7 +138,8 @@ def interrupted(job_id, reason="任务中断，发送结果需要到抖音确认
             delivery.status, delivery.reason = "failed", "发送前任务已中断，未发送"
     job.status = "unknown" if unknown else "cancelled" if job.cancel_requested or cancelled else "failed"
     job.result = {**(job.result or {}), "message": reason,
-                  **({"error_code": error_code} if error_code else {})}
+                  **({"error_code": error_code} if error_code else {}),
+                  **({"diagnostic": diagnostic} if diagnostic else {})}
     job.finished_at = now_utc()
     notify_send_result(job)
     db.session.commit()
@@ -212,12 +216,16 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                     reset_schedule(account)
                 job.status = status if status in ("succeeded", "expired", "blocked") else "failed"
                 operation = "联系人同步" if job.kind == "sync" else "抖音号采集"
-                message = {
-                    "succeeded": f"{operation}完成",
-                    "expired": f"{operation}未完成：抖音登录已过期，请重新扫码连接。",
-                    "blocked": f"{operation}未完成：抖音要求验证或限制了操作，请先在手机抖音查看提示，再重新连接。",
-                }.get(status, f"{operation}未完成，请稍后重试。如果多次失败，请联系网站管理员并提供这条记录的时间。")
-                job.result = {"message": message, "count": len(data)}
+                if status == "succeeded":
+                    job.result = {"message": f"{operation}完成", "count": len(data)}
+                else:
+                    fallback = {"expired": "LOGIN_EXPIRED", "blocked": "PLATFORM_VERIFICATION"}.get(status,
+                        "SYNC_FAILED" if job.kind == "sync" else "HARVEST_FAILED")
+                    public = failure(data.get("error_code", fallback) if isinstance(data, dict) else fallback)
+                    job.result = {"message": f"{operation}未完成：{public['error']}", "count": 0,
+                                  "error_code": public["error_code"]}
+                    if isinstance(data, dict) and data.get("diagnostic"):
+                        job.result["diagnostic"] = data["diagnostic"]
             else:
                 targets = selected_contacts(account)
                 checked_fingerprint = validation_fingerprint(account)
@@ -314,11 +322,13 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
         db.session.commit()
     except Cancelled:
         interrupted(job_id, "任务已停止；已尝试发送的结果需要到抖音确认", cancelled=True)
-    except Exception:
+    except Exception as error:
         db.session.rollback()
         operation = {"sync": "联系人同步", "harvest": "抖音号采集", "dry_run": "模拟检查", "send": "消息发送"}[job.kind]
+        public = failure("RESULT_SAVE_FAILED" if isinstance(error, SQLAlchemyError) else "EXECUTION_FAILED")
         guidance = ("请先到抖音私信核对已发送的消息，再查看每位好友的执行结果，避免重复发送。" if job.kind == "send"
                     else "请稍后重试。如果多次失败，请联系网站管理员并提供这条记录的时间。")
-        interrupted(job_id, f"{operation}遇到问题，未能完成。{guidance}", error_code="EXECUTION_FAILED")
+        interrupted(job_id, f"{operation}未完成：{public['error']}{guidance}", error_code=public["error_code"],
+                    diagnostic={"stage": "execution", "exception_type": type(error).__name__})
     finally:
         _execution.reset(token)

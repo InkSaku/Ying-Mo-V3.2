@@ -9,7 +9,7 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import Category, Collection, Post, Tag, User, post_tags
-from app.posts.browsing import first_display_media, serialize_browse_post
+from app.posts.browsing import serialize_browse_posts
 
 bp = Blueprint("archive", __name__)
 
@@ -57,7 +57,6 @@ def _archive_response(actor_id, year=None, month=None):
     rows = db.session.scalars(
         stmt.order_by(time_expr.desc(), Post.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
-    display_media = first_display_media(rows)
 
     facet_base = _scoped_statement(actor_id).with_only_columns(
         extract("year", time_expr).label("year"),
@@ -72,7 +71,7 @@ def _archive_response(actor_id, year=None, month=None):
         if row.year is not None and row.month is not None
     ]
     return success_response(
-        {"items": [serialize_browse_post(post, actor_id=actor_id, display_media=display_media) for post in rows], "month_facets": facets},
+        {"items": serialize_browse_posts(rows, actor_id=actor_id), "month_facets": facets},
         meta=pagination_meta(page, size, total),
     )
 

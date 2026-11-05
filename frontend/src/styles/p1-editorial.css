@@ -261,13 +261,11 @@
   color: var(--brand-link);
 }
 
-.personal-page-shell .management-list,
-.personal-page-shell .notification-list {
+.personal-page-shell .management-list {
   border-top-color: var(--text);
 }
 
-.personal-page-shell .management-list article,
-.personal-page-shell .notification-list article {
+.personal-page-shell .management-list article {
   min-height: 112px;
   padding: 22px 0;
   background: transparent;
@@ -310,22 +308,6 @@
   line-height: 1.75;
 }
 
-.personal-page-shell .notification-list article {
-  padding-inline: 0;
-}
-
-.personal-page-shell .notification-list article.unread {
-  padding-left: 18px;
-  border-left: 2px solid var(--brand-link);
-  background: color-mix(in srgb, var(--brand-link) 5%, transparent);
-}
-
-.personal-page-shell .notification-unread-label {
-  border: 1px solid var(--brand-border);
-  border-radius: var(--radius-xs);
-  background: transparent;
-  color: var(--brand-link);
-}
 
 .personal-page-shell .favorite-list-item {
   position: relative;
@@ -850,8 +832,7 @@
 
   .personal-page-shell .management-search .btn { grid-column: 1 / -1; }
 
-  .personal-page-shell .post-management-actions,
-  .personal-page-shell .notification-actions {
+  .personal-page-shell .post-management-actions {
     justify-content: flex-start;
     margin-top: 16px;
   }
@@ -873,11 +854,6 @@
   .personal-page-shell .media-library-filters { width: 100%; }
   .personal-page-shell .media-library-filters .custom-select { flex: 1; }
   .personal-page-shell .media-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
-
-  .personal-page-shell .notification-list article {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 
   .on-this-day-page .memory-hero-date {
     width: auto;

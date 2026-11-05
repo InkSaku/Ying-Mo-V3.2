@@ -506,7 +506,7 @@ def transfer_collection_creator(collection_id):
             kind="collection_creator_received",
             target_type="collection",
             collection_id=collection.id,
-            message=f"你已成为 Collection「{collection.name}」的新创建者。",
+            message=f"你已成为合集「{collection.name}」的新创建者。",
         ))
         db.session.add(Notification(
             user_id=actor.id,
@@ -514,7 +514,7 @@ def transfer_collection_creator(collection_id):
             kind="collection_creator_transferred",
             target_type="collection",
             collection_id=collection.id,
-            message=f"你已将 Collection「{collection.name}」转让给 {new_creator.nickname}。",
+            message=f"你已将合集「{collection.name}」转让给 {new_creator.nickname}。",
         ))
         record_admin_log(
             actor,
@@ -572,7 +572,7 @@ def remove_post(collection_id):
             user_id=post.author_id, actor_id=actor.id, kind="post_removed_from_collection",
             target_type="post",
             post_id=post.id, collection_id=collection.id,
-            message=f"你的 Post 已从 Collection「{collection.name}」移出。",
+            message=f"你的内容已从合集「{collection.name}」移出。",
         ))
     db.session.commit()
     return success_response({"post_id": post.id, "visibility": post.visibility})

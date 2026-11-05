@@ -52,6 +52,16 @@ def ensure_image_display(media):
     return key
 
 
+def read_image_display(media):
+    storage = get_storage()
+    if media.display_key:
+        payload = storage.read_if_exists(media.display_key)
+        if payload is not None:
+            return payload
+    key = ensure_image_display(media)
+    return storage.read_if_exists(key) if key else None
+
+
 def can_read_media(actor, media):
     if actor is None or media is None or media.status != "active" or media.deleted_at is not None:
         return False

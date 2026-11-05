@@ -53,11 +53,22 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2}"],
+        // CJK fonts ship as 100+ subsets; fetch only those a page needs instead of precaching all.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        sourcemap: false,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api(?:\/|$)/],
-        runtimeCaching: [],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/[^/]+\.woff2?$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "yingmo-fonts",
+              expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 60 * 60 },
+            },
+          },
+        ],
       },
     }),
   ],
@@ -77,7 +88,7 @@ export default defineConfig({
   },
   build: {
     manifest: true,
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         onlyExplicitManualChunks: true,

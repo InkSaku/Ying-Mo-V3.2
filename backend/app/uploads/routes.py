@@ -21,7 +21,7 @@ from app.media_memory import (
     can_read_media,
     display_storage_key,
     encode_image_derivatives,
-    ensure_image_display,
+    read_image_display,
     logical_media_item,
     resolve_logical_media,
 )
@@ -318,12 +318,14 @@ def image(public_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or not can_read_media(actor,media):
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    storage=get_storage()
-    key=(media.display_key or media.storage_key) if media.kind=="live_photo_video" else ensure_image_display(media)
-    if not key or not storage.exists(key):
+    if media.kind=="live_photo_video":
+        payload=get_storage().read_if_exists(media.display_key or media.storage_key)
+    else:
+        payload=read_image_display(media)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
     mime=("video/mp4" if media.kind=="live_photo_video" and media.display_key != media.storage_key else media.mime_type) if media.kind=="live_photo_video" else "image/webp"
-    return send_file(BytesIO(storage.read(key)),mimetype=mime,conditional=False,max_age=0)
+    return send_file(BytesIO(payload),mimetype=mime,conditional=False,max_age=0)
 
 
 @bp.get("/images/<public_id>/thumbnail")
@@ -334,10 +336,10 @@ def thumbnail(public_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or media.kind=="live_photo_video" or not can_read_media(actor,media):
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    storage=get_storage(); key=media.thumbnail_key or ensure_image_display(media)
-    if not storage.exists(key):
+    payload=get_storage().read_if_exists(media.thumbnail_key) if media.thumbnail_key else read_image_display(media)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
-    return send_file(BytesIO(storage.read(key)),mimetype="image/webp",conditional=False,max_age=0)
+    return send_file(BytesIO(payload),mimetype="image/webp",conditional=False,max_age=0)
 
 
 @bp.get("/gallery/<public_id>")
@@ -360,10 +362,10 @@ def owner_image(public_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or media.owner_id != actor.id or media.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    storage=get_storage()
-    if not storage.exists(media.storage_key):
+    payload=get_storage().read_if_exists(media.storage_key)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
-    return send_file(BytesIO(storage.read(media.storage_key)),mimetype=media.mime_type,conditional=False,max_age=0)
+    return send_file(BytesIO(payload),mimetype=media.mime_type,conditional=False,max_age=0)
 
 
 @bp.get("/manage/images/<public_id>/thumbnail")
@@ -374,10 +376,10 @@ def owner_thumbnail(public_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or media.owner_id != actor.id or media.deleted_at is not None or media.kind=="live_photo_video":
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    storage=get_storage(); key=media.thumbnail_key or media.storage_key
-    if not storage.exists(key):
+    payload=get_storage().read_if_exists(media.thumbnail_key or media.storage_key)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
-    return send_file(BytesIO(storage.read(key)),mimetype="image/webp" if media.thumbnail_key else media.mime_type,conditional=False,max_age=0)
+    return send_file(BytesIO(payload),mimetype="image/webp" if media.thumbnail_key else media.mime_type,conditional=False,max_age=0)
 
 
 @bp.get("/manage/images/<public_id>/original")
@@ -388,12 +390,12 @@ def owner_original(public_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if media is None or media.owner_id != actor.id or media.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND","媒体不存在。",404)
-    storage=get_storage()
-    if not storage.exists(media.storage_key):
+    payload=get_storage().read_if_exists(media.storage_key)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
     filename=media.original_filename or f"{media.public_id}{Path(media.storage_key).suffix}"
     return send_file(
-        BytesIO(storage.read(media.storage_key)),mimetype=media.mime_type,
+        BytesIO(payload),mimetype=media.mime_type,
         as_attachment=True,download_name=filename,conditional=False,max_age=0,
     )
 

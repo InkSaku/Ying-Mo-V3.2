@@ -50,7 +50,7 @@
 .ink-install-copy .settings-security-details dd { font-size: 12px; line-height: 1.8; }
 .pwa-install-section .pwa-install-guidance { font-size: 12px; line-height: 1.9; margin: 20px 0 0; }
 
-.ink-inbox-summary, .ink-session-summary {
+.ink-session-summary {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -60,16 +60,8 @@
   color: var(--text-3);
   font-size: 12px;
 }
-.ink-inbox-summary p, .ink-session-summary p { margin: 0; }
-.ink-inbox-summary .tabular, .ink-session-summary .tabular { color: var(--text); font-family: var(--serif); font-size: 24px; margin-right: 5px; }
-.ink-inbox-unread { display: inline-block; margin-left: 20px; color: var(--brand-link); font-size: 11px; }
-.app-frame .ink-inbox-page .notification-list { gap: 0; }
-.app-frame .ink-inbox-page .notification-list article { padding: 26px 0; border-radius: 0; }
-.app-frame .ink-inbox-page .notification-list article.unread { padding-inline: 18px; }
-.ink-inbox-page .notification-message-row { gap: 12px; }
-.ink-inbox-page .notification-copy > time { display: block; margin-top: 10px; font-family: var(--mono); font-size: 10px; }
-.ink-inbox-page .notification-actions { gap: 14px; }
-.ink-inbox-page .notification-actions :is(a, button) { min-height: 36px; display: inline-flex; align-items: center; }
+.ink-session-summary p { margin: 0; }
+.ink-session-summary .tabular { color: var(--text); font-family: var(--serif); font-size: 24px; margin-right: 5px; }
 
 .app-frame .sessions-page .session-list { gap: 0; border-top: 1px solid var(--text); }
 .app-frame .sessions-page .session-card {
@@ -107,8 +99,7 @@
   .ink-install-art > .ink-sketch { width: 110px; flex: 0 0 110px; }
   .ink-install-art figcaption { margin: 0; text-align: left; }
   .app-frame .pwa-install-section > header { flex-direction: row; gap: 16px; }
-  .ink-inbox-summary, .ink-session-summary { font-size: 11px; padding-bottom: 16px; }
-  .ink-inbox-unread { margin-left: 12px; }
+  .ink-session-summary { font-size: 11px; padding-bottom: 16px; }
   .app-frame .sessions-page .session-card { grid-template-columns: minmax(0, 1fr); }
   .sessions-page .session-times { grid-row: auto; }
   .sessions-page .session-card > .btn { width: 100%; }

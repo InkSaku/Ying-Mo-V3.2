@@ -23,6 +23,12 @@ class LocalPrivateStorage:
     def read(self, key):
         return self._path(key).read_bytes()
 
+    def read_if_exists(self, key):
+        try:
+            return self.read(key)
+        except FileNotFoundError:
+            return None
+
     def exists(self, key):
         return self._path(key).is_file()
 
@@ -65,6 +71,16 @@ class S3PrivateStorage:
 
     def read(self, key):
         return self.client.get_object(Bucket=self.bucket, Key=self._key(key))["Body"].read()
+
+    def read_if_exists(self, key):
+        """Read in one round trip; a separate exists() check would add a HEAD per image."""
+        from botocore.exceptions import ClientError
+        try:
+            return self.read(key)
+        except ClientError as error:
+            if error.response.get("ResponseMetadata", {}).get("HTTPStatusCode") == 404:
+                return None
+            raise
 
     def exists(self, key):
         from botocore.exceptions import ClientError

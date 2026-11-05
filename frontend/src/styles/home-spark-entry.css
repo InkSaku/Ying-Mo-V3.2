@@ -1,44 +1,33 @@
-/* The helper stays in its corner while the login paper turns away. */
+/* An open paper entry: title and action at left, a matchbox conversation at right. */
 .home-spark-entry {
-  position: fixed;
-  z-index: 30;
-  left: calc(100vw - 224px);
-  top: calc(var(--home-header-height, 68px) + 16px);
-  width: 200px;
-  min-height: 76px;
-  padding: 9px 12px 9px 6px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px;
+  align-items: start;
+  gap: 8px 16px;
+  margin-top: 32px;
+  padding: 24px 0 16px;
+  border-top: 1px solid var(--border);
   color: var(--text);
-  background: var(--surface, var(--page));
-  border: 1px solid var(--border);
-  border-radius: 18px 3px 18px 3px;
-  box-shadow: 0 8px 30px rgb(25 29 36 / 9%);
   text-decoration: none;
-  transition: box-shadow 160ms ease-out;
 }
-.home-spark-entry:hover { text-decoration: none; box-shadow: 0 12px 34px rgb(25 29 36 / 15%); }
+.home-spark-entry:hover { text-decoration: none; }
+.home-spark-entry:hover strong { color: var(--brand-link); }
 .home-spark-entry:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
-.home-spark-entry-art { display: block; flex: none; width: 58px; color: var(--text); }
-.home-spark-entry-art svg { display: block; width: 100%; height: auto; overflow: visible; }
-.home-spark-entry-copy { min-width: 0; display: grid; gap: 2px; }
-.home-spark-entry-kicker { color: var(--brand-link); font-family: var(--mono); font-size: 8px; letter-spacing: .06em; white-space: nowrap; }
-.home-spark-entry-copy strong { color: var(--text); font-size: 15px; font-weight: 500; white-space: nowrap; }
-.home-spark-entry-hint { display: none; color: var(--text-3); font-size: 11px; white-space: nowrap; }
-.home-spark-runner-flame { transform-origin: 120px 57px; }
-.home-spark-runner-star { opacity: .8; }
-.home-spark-entry:is(:hover, :focus-visible) .home-spark-runner-flame { animation: home-spark-glow 600ms ease-in-out; }
-@keyframes home-spark-glow { 50% { transform: rotate(6deg) scale(1.04); } }
-@media (max-width: 767px) {
-  .home-editorial .home-edition-copy { padding-top: 68px; }
-  .home-spark-entry { left: calc(100vw - 182px); top: calc(var(--home-header-height, 68px) + 12px); width: 166px; min-height: 66px; padding: 6px 8px 6px 3px; gap: 2px; }
-  .home-spark-entry-art { width: 50px; }
-  .home-spark-entry-kicker { font-size: 7px; }
-  .home-spark-entry-copy strong { font-size: 13px; }
+.home-spark-entry-copy { display: grid; gap: 6px; min-width: 0; }
+.home-spark-entry-copy strong { color: var(--text); font-size: 20px; font-weight: 400; line-height: 1.5; letter-spacing: .03em; }
+.home-spark-entry-hint { color: var(--text-3); font-size: 12px; line-height: 1.75; }
+.home-spark-entry-art { grid-column: 2; grid-row: 1 / 3; align-self: center; pointer-events: none; user-select: none; }
+.home-spark-entry-art img { display: block; width: 100%; height: auto; }
+html[data-theme="dark"] .home-spark-entry-art img { filter: invert(.9) hue-rotate(180deg); }
+.home-spark-entry-action { display: inline-flex; align-items: center; justify-self: start; gap: 16px; min-height: 44px; border-bottom: 1px solid var(--brand-link); color: var(--brand-link); font-size: 13px; line-height: 1.5; }
+.home-spark-entry-action svg { width: 24px; height: 16px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.home-spark-entry:hover .home-spark-entry-action { border-color: var(--text); color: var(--text); }
+.home-spark-entry + .home-side-drafts { margin-top: 0; padding-top: 8px; border-top: 0; }
+@media (min-width: 768px) and (max-width: 1100px) {
+  .home-spark-entry { grid-template-columns: minmax(0, 1fr) 88px; column-gap: 12px; }
+  .home-spark-entry-copy strong { font-size: 18px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .home-spark-entry, .home-spark-entry-art, .home-spark-runner-flame, .home-spark-runner-star { transition: none !important; animation: none !important; }
+@media (max-width: 767px) {
+  .home-spark-entry { grid-template-columns: minmax(0, 1fr) 112px; column-gap: 24px; }
 }
 @media print { .home-spark-entry { display: none; } }

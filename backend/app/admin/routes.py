@@ -547,8 +547,8 @@ def media_content(media_id):
     if thumbnail=="1" and media.kind==MediaKind.LIVE_PHOTO_VIDEO:
         return error_response("VALIDATION_ERROR","视频没有缩略图。",422)
     key=(media.thumbnail_key or media.storage_key) if thumbnail=="1" else media.storage_key
-    storage=get_storage()
-    if not storage.exists(key):
+    payload=get_storage().read_if_exists(key)
+    if payload is None:
         return error_response("RESOURCE_NOT_FOUND","媒体文件不存在。",404)
     record_admin_log(
         actor,"media.preview","media",media.id,
@@ -556,7 +556,7 @@ def media_content(media_id):
     )
     db.session.commit()
     mimetype="image/webp" if thumbnail=="1" and media.thumbnail_key else media.mime_type
-    return send_file(BytesIO(storage.read(key)),mimetype=mimetype,conditional=False,max_age=0)
+    return send_file(BytesIO(payload),mimetype=mimetype,conditional=False,max_age=0)
 
 
 def _moderate_media(media_id,status,action):
