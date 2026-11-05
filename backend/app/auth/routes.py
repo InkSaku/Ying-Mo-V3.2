@@ -70,7 +70,9 @@ def _session_response(user, access, refresh, status=200, *, extra=None):
     if extra:
         data.update(extra)
     response, actual = success_response(data, status)
-    set_refresh_cookies(response, refresh)
+    # Persist both refresh and CSRF cookies across browser restarts, up to JWT expiry.
+    max_age = max(1, decode_token(refresh)["exp"] - int(utcnow().timestamp()))
+    set_refresh_cookies(response, refresh, max_age=max_age)
     return response, actual
 
 

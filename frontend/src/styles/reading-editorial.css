@@ -75,6 +75,7 @@
 .article-reading-rail,
 .article-panel-divider { display: none; }
 .article-reading-compact-tools { display: none; }
+.article-reading-settings-panel output { margin-inline-start: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 @media (max-width: 1359px) {
   .article-reading-navigation { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }

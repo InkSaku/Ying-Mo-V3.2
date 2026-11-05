@@ -20,7 +20,10 @@ function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
 
   return (
     <details ref={menuRef} className="article-reading-settings"
-      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}
+      onBlur={(event) => {
+        // Safari blurs the summary without focusing a tapped button; let its click finish.
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+      }}
       onKeyDown={(event) => {
         if (event.key !== "Escape") return;
         event.preventDefault();
@@ -29,7 +32,7 @@ function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
       }}>
       <summary><span aria-hidden="true">Aa</span>阅读设置</summary>
       <div className="article-reading-settings-panel">
-        <div><span>字号</span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => onChangeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => onChangeFontSize(1)}>A＋</button></div>
+        <div><span>字号<output aria-label="当前阅读字号" aria-live="polite">{fontSize === null ? "默认" : `${fontSize}px`}</output></span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => onChangeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => onChangeFontSize(1)}>A＋</button></div>
         <button type="button" onClick={onResetFontSize}>恢复默认字号</button>
         <button type="button" onClick={(event) => {
           const box = event.currentTarget.getBoundingClientRect();

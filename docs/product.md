@@ -2225,6 +2225,12 @@ V3.2 P0/P1 不注册 `/reports` 业务组。
 
 ## 24.1 Auth
 
+登录与会话保持：
+
+- 注册、登录成功及会话刷新时，Refresh Token 与配套 CSRF Cookie 一起持久保存，关闭页面或浏览器后再次访问自动恢复有效会话；默认有效期为30天，由 `JWT_REFRESH_TOKEN_EXPIRES_DAYS` 配置，每次成功刷新后续期。
+- 两个 Cookie 的 `Max-Age` 与 `Expires` 对齐 Refresh Token 的剩余有效期；Refresh Token 保持 HttpOnly，生产环境保持 Secure、SameSite=Lax 和 CSRF 校验。Access Token 仍只保存在前端内存。
+- 主动退出、退出所有设备、撤销会话、密码重置或账号停用后，持久凭证不能继续恢复登录；凭证过期或浏览器清除 Cookie 后需要重新登录。
+
 注册至少接受：
 
 ```text
