@@ -23,7 +23,12 @@
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.custom-select-trigger:hover:not(:disabled) {
+@media (hover: hover) and (pointer: fine) {
+  .custom-select-trigger:hover:not(:disabled) {
+  border-color: var(--text-4);
+}
+}
+.custom-select-trigger:active:not(:disabled) {
   border-color: var(--text-4);
 }
 

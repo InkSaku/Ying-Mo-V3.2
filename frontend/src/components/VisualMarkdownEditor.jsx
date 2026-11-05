@@ -1,3 +1,4 @@
+import { lockPageScroll } from "../lib/dialog";
 import {
   forwardRef,
   lazy,
@@ -23,7 +24,8 @@ function PendingLinkDialog({ onClose }) {
   useEffect(() => {
     const dialog = dialogRef.current;
     dialog.showModal();
-    return () => dialog.close();
+    const unlock = lockPageScroll();
+    return () => { dialog.close(); unlock(); };
   }, []);
   return <dialog ref={dialogRef} className="content-link-dialog" aria-label="插入链接" onCancel={(event) => { event.preventDefault(); onClose(); }} onKeyDown={(event) => event.stopPropagation()}>
     <p role="status">正在准备链接选项…</p>
@@ -139,8 +141,9 @@ export const VisualMarkdownEditor = forwardRef(function VisualMarkdownEditor({
       <div className={toolbar ? "visual-markdown-commandbar" : undefined}>
       {toolbar ? <><div className="visual-rich-tools" ref={setControlsHost} hidden={sourceMode} />{toolbar}</> : null}
       <div className="visual-markdown-mode-switch" role="group" aria-label="正文编辑显示模式">
-        <button type="button" aria-label="可视编辑" aria-pressed={!sourceMode} onClick={() => setSourceMode(false)}>可视编辑</button>
-        <button type="button" aria-label="Markdown 源码" aria-pressed={sourceMode} onClick={() => setSourceMode(true)}>{toolbar ? "源码" : "Markdown 源码"}</button>
+        <button className="visual-markdown-mode-choice" type="button" aria-label="可视编辑" aria-pressed={!sourceMode} onClick={() => setSourceMode(false)}>可视编辑</button>
+        <button className="visual-markdown-mode-choice" type="button" aria-label="Markdown 源码" aria-pressed={sourceMode} onClick={() => setSourceMode(true)}>{toolbar ? "源码" : "Markdown 源码"}</button>
+        {toolbar ? <button className="visual-markdown-mode-toggle" type="button" aria-label={sourceMode ? "切换到可视编辑" : "切换到 Markdown 源码"} aria-pressed={sourceMode} onClick={() => setSourceMode(!sourceMode)}>{sourceMode ? "编辑" : "源码"}</button> : null}
       </div>
       {toolbarEnd}
       </div>

@@ -65,7 +65,9 @@ export function PersonalNav() {
         <PersonalLinks />
       </nav>
       <InkPageSketch className="ink-personal-margin" />
-      <details className="personal-nav-mobile" data-header-menu>
+      <details className="personal-nav-mobile" data-header-menu onBlur={(event) => {
+        if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+      }}>
         <summary><span>个人中心</span><strong>{current?.label || "更多页面"}</strong><i aria-hidden="true">⌄</i></summary>
         <nav aria-label="个人中心移动导航">
           <PersonalLinks onNavigate={closeMobileNav} />

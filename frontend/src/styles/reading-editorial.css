@@ -74,6 +74,22 @@
 .article-reading-page .article-toc-toggle { display: none; }
 .article-reading-rail,
 .article-panel-divider { display: none; }
+.article-reading-compact-tools { display: none; }
+
+@media (max-width: 1359px) {
+  .article-reading-navigation { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+  .article-reading-navigation .article-detail-navigation { margin: 0; min-width: 0; }
+  .article-reading-compact-tools { display: flex; flex: none; }
+  .article-reading-compact-tools summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 0 8px 12px; color: var(--text-3); font-size: 13px; cursor: pointer; list-style: none; }
+  .article-reading-compact-tools summary::-webkit-details-marker { display: none; }
+  .article-reading-compact-tools summary > span { color: var(--brand-link); font: 17px Georgia, serif; }
+  .article-reading-compact-tools .article-reading-settings-panel { position: absolute; z-index: 30; top: 100%; right: 0; width: min(100%, 280px); padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-overlay); background: var(--surface); box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 10%, transparent); }
+  .article-reading-compact-tools .article-reading-settings-panel > div { display: flex; align-items: center; gap: 8px; }
+  .article-reading-compact-tools .article-reading-settings-panel > div > span { margin-right: auto; color: var(--text-3); font-size: 13px; }
+  .article-reading-compact-tools .article-reading-settings-panel button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--brand-link); font: 14px var(--serif); cursor: pointer; }
+  .article-reading-compact-tools .article-reading-settings-panel > button { display: block; width: 100%; text-align: left; }
+  .article-reading-compact-tools .article-reading-settings-panel button:disabled { opacity: .45; cursor: default; }
+}
 
 .article-reading-page .interaction-region { margin-top: 56px; }
 .article-reading-page .interaction-bar { padding: 12px 0; margin-top: 0; border: 0; background: transparent; }
@@ -218,7 +234,7 @@
   .article-reading-cat-runner * { animation: none !important; }
 }
 @media print {
-  .article-detail-navigation, .article-toc, .article-reading-rail, .article-panel-divider { display: none !important; }
+  .article-detail-navigation, .article-toc, .article-reading-rail, .article-panel-divider, .article-reading-compact-tools { display: none !important; }
   .article-reading-page .article-reading-layout.has-toc,
   .article-reading-page .article-reading-layout:not(.has-toc) { display: block; }
 }

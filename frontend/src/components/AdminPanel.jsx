@@ -1,6 +1,6 @@
 import { InkPageSketch } from "./InkPageSketch";
-import { useId } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, useId, useRef } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { adminLabels } from "../lib/admin";
 
@@ -20,8 +20,22 @@ const adminNavItems = [
 ];
 
 export function AdminNav() {
+  const ref = useRef(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const nav = ref.current;
+    const revealCurrent = () => {
+      const active = nav?.querySelector("[aria-current='page']");
+      if (!active || nav.scrollWidth <= nav.clientWidth) return;
+      nav.scrollLeft += active.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - active.offsetWidth) / 2;
+    };
+    revealCurrent();
+    const observer = new ResizeObserver(revealCurrent);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [pathname]);
   return (
-    <nav className="admin-nav" aria-label="后台导航">
+    <nav ref={ref} className="admin-nav" aria-label="后台导航">
       {adminNavItems.map(([to, label, end]) => (
         <NavLink key={to} to={to} end={end} className={({ isActive }) => isActive ? "active" : ""}>
           {label}

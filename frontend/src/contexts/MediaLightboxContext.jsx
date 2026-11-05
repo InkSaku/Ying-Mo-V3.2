@@ -1,3 +1,4 @@
+import { useModalDialog } from "../hooks/useModalDialog";
 import {
   createContext,
   useCallback,
@@ -411,30 +412,17 @@ function Lightbox({ gallery, close, move, download, opener }) {
     return () => controller.abort();
   }, [gallery.index, gallery.items]);
 
-  useLayoutEffect(() => {
-    dialogRef.current?.focus();
-    const handler = (event) => {
-      if (event.key === "Escape") close();
-      if (event.key === "ArrowLeft") void move(-1);
-      if (event.key === "ArrowRight") void move(1);
-      if (event.key === "Tab" && dialogRef.current) {
-        const focusable = [...dialogRef.current.querySelectorAll("button:not([disabled]), a[href]")];
-        if (!focusable.length) return;
-        const firstNode = focusable[0];
-        const lastNode = focusable[focusable.length - 1];
-        if (event.shiftKey && document.activeElement === firstNode) {
-          event.preventDefault(); lastNode.focus();
-        } else if (!event.shiftKey && document.activeElement === lastNode) {
-          event.preventDefault(); firstNode.focus();
-        }
+  const backdropProps = useModalDialog({ open: true, panelRef: dialogRef, onClose: close,
+    initialFocus: () => dialogRef.current, restoreFocus: false,
+    onKeyDown: (event) => {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        void move(event.key === "ArrowLeft" ? -1 : 1);
       }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [close, move]);
+    } });
 
   return createPortal(
-    <div className="media-lightbox-backdrop" ref={backdropRef} onClick={(event) => { if (event.target === event.currentTarget) close(); }}>
+    <div className="media-lightbox-backdrop" ref={backdropRef} {...backdropProps}>
       <section
         ref={dialogRef}
         className="media-lightbox"
@@ -474,6 +462,7 @@ export function MediaLightboxProvider({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [gallery, setGallery] = useState(null);
+  const lightboxOpen = Boolean(gallery);
   const galleryRef = useRef(null);
   const openerRef = useRef(null);
   galleryRef.current = gallery;
@@ -481,7 +470,8 @@ export function MediaLightboxProvider({ children }) {
 
   const restoreFocus = useCallback(() => {
     const target = openerRef.current?.isConnected ? openerRef.current : document.querySelector("h1");
-    window.setTimeout(() => target?.focus?.(), 0);
+    if (target && !target.hasAttribute("tabindex") && target.tagName === "H1") target.tabIndex = -1;
+    target?.focus?.({ preventScroll: true });
     openerRef.current = null;
   }, []);
 
@@ -623,22 +613,19 @@ export function MediaLightboxProvider({ children }) {
     if (location.pathname === openerRef.current?.dataset.galleryPath) animatePhoto(image, thumbnail, true);
     else cancelPhotoContinuity();
     setGallery(null);
-    restoreFocus();
-  }, [location.pathname, restoreFocus, urlMediaId]);
+  }, [location.pathname, urlMediaId]);
 
   useEffect(() => {
-    if (!gallery) return undefined;
+    if (!lightboxOpen) return undefined;
     const root = document.getElementById("root");
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     root?.setAttribute("inert", "");
     root?.setAttribute("aria-hidden", "true");
     return () => {
-      document.body.style.overflow = previousOverflow;
       root?.removeAttribute("inert");
       root?.removeAttribute("aria-hidden");
+      restoreFocus();
     };
-  }, [gallery]);
+  }, [lightboxOpen, restoreFocus]);
 
   useEffect(() => {
     if (status === "authenticated") return;

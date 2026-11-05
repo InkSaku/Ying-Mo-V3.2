@@ -183,6 +183,17 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
   );
 }
 
+function CollectionVolumeInfo({ collection }) {
+  return <>
+        {collection.description ? <p className="collection-volume-description">{collection.description}</p> : <p className="collection-volume-description"></p>}
+        <dl className="collection-volume-facts">
+          <div><dt>创建者</dt><dd><Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname}</Link></dd></div>
+          <div><dt>合集成员</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
+          <div><dt>更新于</dt><dd>{formatDate(collection.updated_at)}</dd></div>
+        </dl>
+  </>;
+}
+
 export function CollectionDetailPage() {
   const { slug } = useParams();
   const coverRef = useRef(null);
@@ -236,12 +247,8 @@ export function CollectionDetailPage() {
         <Link className="collection-volume-back" to="/collections">返回合集目录</Link>
         <span className="collection-volume-kicker"></span>
         <h1>{collection.name}</h1>
-        {collection.description ? <p>{collection.description}</p> : <p></p>}
-        <dl className="collection-volume-facts">
-          <div><dt>创建者</dt><dd><Link to={`/users/${collection.creator.username}`}>{collection.creator.nickname}</Link></dd></div>
-          <div><dt>合集成员</dt><dd>{(collection.members?.length || 0) + 1} 人</dd></div>
-          <div><dt>更新于</dt><dd>{formatDate(collection.updated_at)}</dd></div>
-        </dl>
+        <CollectionVolumeInfo collection={collection} />
+        <details className="collection-volume-info-mobile"><summary>合集信息</summary><CollectionVolumeInfo collection={collection} /></details>
         <CollectionSharePill key={`${collection.id}-${collection.creator.id}-${user.id}`} collection={collection} user={user} onMembersChange={updateMembership} />
         <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>添加记录</Link></div>
       </div>

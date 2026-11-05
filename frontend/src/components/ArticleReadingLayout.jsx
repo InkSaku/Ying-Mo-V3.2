@@ -5,7 +5,42 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useReadingPanels } from "../hooks/useReadingPanels";
 import "../styles/archive-cat.css";
 
-export function ArticleReadingLayout({ outline, children, opening, favorite }) {
+function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
+  const menuRef = useRef(null);
+  const { resolved, setMode } = useTheme();
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      const menu = menuRef.current;
+      if (menu?.open && !menu.contains(event.target)) menu.open = false;
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+
+  return (
+    <details ref={menuRef} className="article-reading-settings"
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector("summary")?.focus();
+      }}>
+      <summary><span aria-hidden="true">Aa</span>阅读设置</summary>
+      <div className="article-reading-settings-panel">
+        <div><span>字号</span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => onChangeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => onChangeFontSize(1)}>A＋</button></div>
+        <button type="button" onClick={onResetFontSize}>恢复默认字号</button>
+        <button type="button" onClick={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
+        }}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
+      </div>
+    </details>
+  );
+}
+
+export function ArticleReadingLayout({ outline, children, opening, navigation, favorite }) {
   const contentRef = useRef(null);
   const columnRef = useRef(null);
   const normalizedOutline = useMemo(() => normalizeArticleOutline(outline), [outline]);
@@ -13,7 +48,6 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
   const outlineGroups = useMemo(() => groupArticleOutline(normalizedOutline), [normalizedOutline]);
   const hasSubheadings = outlineGroups.some((group) => group.children.length);
   const [subheadingsOpen, setSubheadingsOpen] = useState(false);
-  const { resolved, setMode } = useTheme();
   const [fontSize, setFontSize] = useState(() => {
     try {
       const value = Number(localStorage.getItem("yingmo-reading-font-size"));
@@ -112,6 +146,12 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
 
   return (
     <>
+      <div className="article-reading-navigation">
+        {navigation}
+        <div className="article-reading-compact-tools">
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onResetFontSize={() => setFontSize(null)} />
+        </div>
+      </div>
       <div ref={panels.layoutRef} style={{ ...panels.style, ...(fontSize !== null ? { "--reading-font-size": `${fontSize}px` } : {}) }} className={`article-reading-layout ${showToc ? "has-toc" : ""} ${panels.resizable ? "is-resizable" : ""} ${panels.dragging ? "is-resizing" : ""}`}>
         {showToc ? (
           <aside className={`article-toc ${mobileOpen ? "is-open" : ""}`} aria-label="文章目录">
@@ -159,17 +199,7 @@ export function ArticleReadingLayout({ outline, children, opening, favorite }) {
             <strong>{progress}%</strong>
             <span>已读</span>
           </div>
-          <details className="article-reading-settings" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
-            <summary><span aria-hidden="true">Aa</span>阅读设置</summary>
-            <div className="article-reading-settings-panel">
-              <div><span>字号</span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => changeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => changeFontSize(1)}>A＋</button></div>
-              <button type="button" onClick={() => setFontSize(null)}>恢复默认字号</button>
-              <button type="button" onClick={(event) => {
-                const box = event.currentTarget.getBoundingClientRect();
-                setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
-              }}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
-            </div>
-          </details>
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onResetFontSize={() => setFontSize(null)} />
           <button type="button" className="article-reading-favorite" disabled={!favorite?.ready || favorite.busy} aria-pressed={favorite?.favorited || false} onClick={() => { void favorite?.toggleFavorite(); }}><span aria-hidden="true">{favorite?.favorited ? "♥" : "♡"}</span>{favorite?.busy ? "处理中" : favorite?.favorited ? "已收藏" : "收藏文章"}</button>
           {favorite?.error ? <p className="article-reading-tool-error" role="alert">{favorite.error}</p> : null}
           <button type="button" onClick={() => window.scrollTo({

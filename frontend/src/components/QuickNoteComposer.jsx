@@ -43,6 +43,20 @@ function manageableImages(post) {
   ));
 }
 
+function QuickNoteMark() {
+  return <svg viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+    <path fill="currentColor" fillRule="evenodd" d="M7.8 6.6 23.6 5.4c.8-.1 1.3.2 1.9.8l5.2 5.5c.5.5.7 1.1.6 1.8l-1.4 19.2c-.1 1.2-.7 1.8-1.9 1.9L6.9 36c-1.2.1-1.9-.6-1.8-1.8l.8-25.6c0-1.1.6-1.8 1.9-2Zm.4 2.1-.9 25.1 20.3-1.3 1.3-18.7-5.6-6.1L8.2 8.7Z" />
+    <path fill="currentColor" d="m22.5 6.8-.2 7.2 7.6-.5-1.1-1.7-4.6.2.1-4.1-1.8-1.1ZM11 14.2c1.9-.5 4.3-.6 6.4-.6.8 0 1.1.5.5 1.1-1.8.6-4.6.9-6.6.9-.9 0-1.2-.9-.3-1.4Zm-.5 5.2 5.5-.6c.9-.1 1.2.5.5 1.1-1.6.6-4.1.8-5.8.8-.8 0-1.1-1.1-.2-1.3Z" />
+    <path fill="var(--page)" d="m31.2 4.1 6.7 4.5-13.2 19-8.9 5.8 2.4-10.2 13-19.1Z" />
+    <path fill="currentColor" d="M32.5 4.8c.7-.9 1.5-1 2.3-.4l1.2.8c.9.6 1.2 1.4.5 2.4l-11.8 17-4.3-3 12.1-16.8Z" />
+    <path fill="var(--brand-link)" d="m29.3 9.1 4.5 3.1-1.7 2.3-4.4-3.1 1.6-2.3Z" />
+    <path fill="currentColor" d="m20.7 21.2 4.4 3.1-1.3 5.1-6.6 3 1.1-7.1 2.4-4.1Z" />
+    <circle cx="21.8" cy="26" r=".9" fill="var(--page)" />
+    <path d="m21.2 26.8-2.9 3.7" stroke="var(--page)" strokeWidth="1" strokeLinecap="round" />
+    <path fill="var(--brand-link)" d="M8.3 29.6c2.5-.9 4.9-1.3 7.9-.5.6.2.6.8-.1 1-2.5-.2-4.7-.1-7.1.5-.9.2-1.4-.6-.7-1Z" />
+  </svg>;
+}
+
 export function QuickNoteComposer({ onPublished, autoFocus = false, appearance = "default", onCollectionsLoaded }) {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -306,7 +320,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         setPromptOpen(true);
         window.requestAnimationFrame(() => bodyInputRef.current?.focus());
       }}>
-        <span className="home-prompt-symbol" aria-hidden="true">✳</span>
+        <span className="home-prompt-symbol" aria-hidden="true"><QuickNoteMark /></span>
         <span className="home-prompt-label"><strong id="quick-note-title">写随记</strong><small></small></span>
         <span className="home-prompt-placeholder">{hasDraft ? "草稿已暂存，接着写……" : "今天想记住什么？"}</span>
         <span className="home-prompt-action">{hasDraft ? "继续写" : "开始写"} ↗</span>

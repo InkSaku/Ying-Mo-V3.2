@@ -83,7 +83,14 @@
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 100ms ease;
 }
 
-.markdown-shortcut-button:hover {
+@media (hover: hover) and (pointer: fine) {
+  .markdown-shortcut-button:hover {
+  border-color: var(--text-4);
+  background: var(--tag-soft);
+  color: var(--brand-link);
+}
+}
+.markdown-shortcut-button:active {
   border-color: var(--text-4);
   background: var(--tag-soft);
   color: var(--brand-link);
@@ -208,9 +215,12 @@
 
 .markdown-editor-dialog {
   width: min(100%, 1560px);
+  min-width: 0;
+  max-width: 100%;
   height: min(calc(100dvh - 32px), 1000px);
   min-height: 620px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -274,7 +284,13 @@
   cursor: pointer;
 }
 
-.markdown-editor-close:hover {
+@media (hover: hover) and (pointer: fine) {
+  .markdown-editor-close:hover {
+  border-color: var(--text-4);
+  background: var(--surface-2);
+}
+}
+.markdown-editor-close:active {
   border-color: var(--text-4);
   background: var(--surface-2);
 }
@@ -904,6 +920,7 @@
     width: 100%;
     height: 100dvh;
     min-height: 0;
+    padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
     border: 0;
     border-radius: 0;
   }

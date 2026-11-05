@@ -57,3 +57,5 @@
   .content-link-dialog footer .btn { min-height: 44px; padding-inline: 12px; }
 }
 .rich-markdown-content .tableWrapper{overflow-x:auto;max-width:100%;margin:20px 0}.rich-markdown-content .tableWrapper table{margin:0;min-width:260px}
+
+.visual-markdown-mode-toggle { display: none; }

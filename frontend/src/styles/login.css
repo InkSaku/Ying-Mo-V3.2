@@ -8,7 +8,7 @@
   background: #f8f7f3;
   color: #242520;
   font-family: var(--serif);
-  padding: 0 clamp(24px, 5.5vw, 96px);
+  padding: var(--safe-area-top) clamp(24px, 5.5vw, 96px) var(--safe-area-bottom);
   color-scheme: light;
 }
 .login-paper a { color: inherit; text-decoration: none; }
@@ -74,18 +74,27 @@
   transition: color 140ms ease-out, background-color 140ms ease-out;
 }
 .login-password-toggle svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.login-password-toggle:hover { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 7%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .login-password-toggle:hover { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 7%, transparent); }
+}
+.login-password-toggle:active { color: var(--brand-link); background: color-mix(in srgb, var(--brand-link) 7%, transparent); }
 .login-password-toggle:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
 .login-password-toggle:disabled { cursor: wait; opacity: .6; }
 .login-paper .login-field input::-ms-reveal { display: none; }
 .login-submit { margin-top: 12px; min-height: 50px; padding: 12px 20px; width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid #242520; border-radius: 0; color: #f8f7f3; background: #242520; font-family: inherit; font-size: 14px; cursor: pointer; }
-.login-submit:hover { background: #3b403b; }
+@media (hover: hover) and (pointer: fine) {
+  .login-submit:hover { background: #3b403b; }
+}
+.login-submit:active { background: #3b403b; }
 .login-submit:active:not(:disabled) { transform: translateY(1px); }
 .login-submit:disabled { opacity: .6; cursor: wait; }
 .login-submit > span:last-child { font-size: 24px; line-height: 1; }
 .login-join { text-align: center; margin-top: 22px; font-size: 11px; color: var(--login-muted); }
 .login-join a { margin-left: 6px; color: #242520; text-decoration: underline; text-underline-offset: 5px; }
-.login-paper a:hover { color: #334b76; }
+@media (hover: hover) and (pointer: fine) {
+  .login-paper a:hover { color: #334b76; }
+}
+.login-paper a:active { color: #334b76; }
 .login-paper a:focus-visible, .login-submit:focus-visible { outline: 2px solid #334b76; outline-offset: 5px; }
 .login-postscript { max-width: 368px; margin: 54px auto 30px; color: var(--login-muted); font-size: 12px; line-height: 1.9; letter-spacing: .06em; }
 .login-colophon { max-width: 1280px; margin: 22px auto 0; padding: 20px 0 24px; border-top: 1px solid #deded5; display: flex; justify-content: space-between; gap: 20px; color: var(--login-muted); font-size: 10px; letter-spacing: .12em; }

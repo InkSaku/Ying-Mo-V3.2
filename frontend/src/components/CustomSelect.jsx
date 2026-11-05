@@ -136,28 +136,38 @@ export function CustomSelect({
     const rect = trigger.getBoundingClientRect();
     const margin = 8;
     const gap = 6;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const maxHeight = Math.max(80, Math.min(320, viewportHeight - margin * 2));
-    const panelHeight = Math.min(panel.scrollHeight || 180, maxHeight);
-    const availableWidth = Math.max(160, viewportWidth - margin * 2);
+    const rootStyle = getComputedStyle(document.documentElement);
+    const safeArea = (edge) => Number.parseFloat(rootStyle.getPropertyValue(`--safe-area-${edge}`)) || 0;
+    const viewport = window.visualViewport;
+    const viewportLeft = viewport?.offsetLeft || 0;
+    const viewportTop = viewport?.offsetTop || 0;
+    const viewportWidth = viewport?.width || window.innerWidth;
+    const viewportHeight = viewport?.height || window.innerHeight;
+    const leftBound = viewportLeft + Math.max(margin, safeArea("left"));
+    const rightBound = viewportLeft + viewportWidth - Math.max(margin, safeArea("right"));
+    const topBound = viewportTop + Math.max(margin, safeArea("top"));
+    const bottomBound = viewportTop + viewportHeight - Math.max(margin, safeArea("bottom"));
+    const maxHeight = Math.max(0, Math.min(320, bottomBound - topBound));
+    const preferredHeight = Math.min(panel.scrollHeight || 180, maxHeight);
+    const availableWidth = Math.max(0, rightBound - leftBound);
     const width = Math.min(Math.max(rect.width, 220), availableWidth);
     const left = Math.min(
-      Math.max(rect.left, margin),
-      Math.max(margin, viewportWidth - width - margin)
+      Math.max(rect.left, leftBound),
+      Math.max(leftBound, rightBound - width)
     );
-    const below = viewportHeight - rect.bottom - gap - margin;
-    const above = rect.top - gap - margin;
-    const placeAbove = below < Math.min(panelHeight, 180) && above > below;
+    const below = bottomBound - rect.bottom - gap;
+    const above = rect.top - topBound - gap;
+    const placeAbove = below < preferredHeight && above > below;
+    const panelHeight = Math.min(preferredHeight, Math.max(0, placeAbove ? above : below));
     const top = placeAbove
-      ? Math.max(margin, rect.top - gap - panelHeight)
-      : Math.min(rect.bottom + gap, viewportHeight - panelHeight - margin);
+      ? Math.max(topBound, rect.top - gap - panelHeight)
+      : Math.max(topBound, Math.min(rect.bottom + gap, bottomBound - panelHeight));
 
     setPanelStyle({
       left,
       top,
       width,
-      maxHeight,
+      maxHeight: panelHeight,
       visibility: "visible",
       transformOrigin: placeAbove ? "bottom center" : "top center",
     });
@@ -170,10 +180,14 @@ export function CustomSelect({
     const handleViewportChange = () => updatePanelPosition();
     window.addEventListener("resize", handleViewportChange);
     window.addEventListener("scroll", handleViewportChange, true);
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleViewportChange);
 
     return () => {
       window.removeEventListener("resize", handleViewportChange);
       window.removeEventListener("scroll", handleViewportChange, true);
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleViewportChange);
     };
   }, [open, options.length, updatePanelPosition]);
 
@@ -228,6 +242,7 @@ export function CustomSelect({
     if (event.key === "Escape") {
       if (open) {
         event.preventDefault();
+        event.stopPropagation();
         close(true);
       }
       return;
@@ -306,7 +321,7 @@ export function CustomSelect({
           );
         })}
       </div>,
-      document.body
+      triggerRef.current?.closest("dialog[open]") || document.body
     )
     : null;
 

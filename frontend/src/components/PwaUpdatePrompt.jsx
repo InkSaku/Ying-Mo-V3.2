@@ -1,3 +1,4 @@
+import { lockPageScroll } from "../lib/dialog";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePwaUpdate } from "../hooks/usePwaUpdate";
@@ -21,15 +22,14 @@ export function PwaUpdatePrompt() {
     if (!open) return undefined;
     const dialog = dialogRef.current;
     const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
     dialog.showModal();
-    document.body.style.overflow = "hidden";
+    const unlock = lockPageScroll();
     // Do not turn a keystroke in the editor into an accidental refresh.
     titleRef.current?.focus();
     return () => {
       dialog.close();
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+      unlock();
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, [open]);
 

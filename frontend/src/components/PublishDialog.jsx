@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useModalDialog } from "../hooks/useModalDialog";
 import { InkSketch } from "./InkSketch";
 import { TagPicker } from "./TagPicker";
 import "../styles/publish-dialog.css";
@@ -7,36 +8,12 @@ import "../styles/publish-dialog.css";
 export function PublishDialog({ open, form, collections, initialTags, lockedCollection = false, busy, error, unavailable, onChange, onClose, onConfirm }) {
   const titleId = useId();
   const panelRef = useRef(null);
-  const callbacks = useRef({ onClose, busy });
   const [collectionQuery, setCollectionQuery] = useState("");
-  callbacks.current = { onClose, busy };
-  useEffect(() => {
-    if (!open) return undefined;
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const frame = requestAnimationFrame(() => panelRef.current?.focus());
-    const handleKey = (event) => {
-      if (event.key === "Escape" && !callbacks.current.busy) { event.preventDefault(); callbacks.current.onClose(); }
-      if (event.key !== "Tab") return;
-      const elements = [...panelRef.current.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href], [tabindex='0']")];
-      if (!elements.length) { event.preventDefault(); return; }
-      const first = elements[0]; const last = elements.at(-1);
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panelRef.current)) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", handleKey);
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement) previousFocus.focus();
-    };
-  }, [open]);
+  const backdropProps = useModalDialog({ open, panelRef, onClose, busy, initialFocus: () => panelRef.current });
   if (!open) return null;
   const collection = collections.find((item) => String(item.id) === form.collection_id);
   const choices = collections.filter((item) => item.name.toLowerCase().includes(collectionQuery.trim().toLowerCase()));
-  return createPortal(<div className="publish-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onClose(); }}>
+  return createPortal(<div className="publish-backdrop" {...backdropProps}>
     <section ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} className="publish-dialog">
       <header className="publish-dialog-heading"><p></p><button type="button" disabled={busy} aria-label="关闭发布确认" onClick={onClose}>×</button><h2 id={titleId}>确认发布</h2><span>确认阅读范围后发布。</span><div><small>将要发布</small>{form.title.trim() || "一则新的随记"}</div></header>
       <div className="publish-dialog-columns">

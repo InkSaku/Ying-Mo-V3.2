@@ -67,7 +67,9 @@
 .editor-more-formats > summary::-webkit-details-marker { display: none; }
 .editor-more-formats > div { position: absolute; z-index: 28; top: calc(100% + 8px); right: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; width: 200px; padding: 8px; border: 1px solid var(--border); border-radius: 2px; background: var(--surface); box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 10%, transparent); }
 .editor-more-formats > div > button { min-height: 40px; padding: 8px; border: 0; border-radius: 2px; background: transparent; color: var(--text-2); font: 12px var(--serif); cursor: pointer; text-align: left; }
-.editor-more-formats > div > button:hover { background: var(--surface-2); }
+@media (hover: hover) and (pointer: fine) { .editor-more-formats > div > button:hover { background: var(--surface-2); } }
+.editor-more-formats > div > button:active { background: var(--surface-2); }
+.editor-more-formats > div > .editor-mobile-format, .markdown-editor-more-formats { display: none; }
 .editor-page .editor-body-visual .visual-markdown-mode-switch { display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 0; padding: 0 4px; border: 0; border-left: 1px solid var(--border); background: transparent; }
 .editor-page .editor-body-visual .visual-markdown-mode-switch button { min-height: 32px; padding: 4px 8px; border: 0; border-radius: 2px; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 400; }
 .editor-page .editor-body-visual .visual-markdown-mode-switch button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); }
@@ -99,7 +101,10 @@
 .editor-page .editor-preview-document { padding: 32px 0 48px; }
 .editor-page .editor-preview-document > h1 { font-size: 36px; font-weight: 400; line-height: 1.5; letter-spacing: .015em; }
 .editor-page .editor-preview-prose { max-width: none; font-size: 18px; line-height: 1.95; }
-.editor-page .visual-markdown-commandbar button:hover:not(:disabled), .editor-page .visual-markdown-commandbar summary:hover { background: var(--surface-2); color: var(--text); }
+@media (hover: hover) and (pointer: fine) {
+  .editor-page .visual-markdown-commandbar button:hover:not(:disabled), .editor-page .visual-markdown-commandbar summary:hover { background: var(--surface-2); color: var(--text); }
+}
+.editor-page .visual-markdown-commandbar button:active:not(:disabled), .editor-page .visual-markdown-commandbar summary:active { background: var(--surface-2); color: var(--text); }
 .editor-page .visual-markdown-commandbar button:disabled { opacity: .4; cursor: default; }
 
 .editor-page .editor-sidebar {
@@ -109,7 +114,7 @@
   inset: 0 0 0 auto;
   width: min(440px, 100%);
   max-height: none;
-  padding: 32px 30px 64px;
+  padding: max(32px, var(--safe-area-top)) max(30px, var(--safe-area-right)) max(64px, var(--safe-area-bottom)) max(30px, var(--safe-area-left));
   border: 0;
   background: var(--page);
   box-shadow: -12px 0 40px color-mix(in srgb, var(--text) 12%, transparent);
@@ -149,14 +154,14 @@
   .editor-page .editor-back-link { min-height: 44px; padding-right: 12px; font-size: 11px; }
   .editor-page .editor-document-identity { justify-items: end; }
   .editor-page .editor-document-identity > span { font-size: 12px; }
-  .editor-page .editor-publication-bar .editor-top-actions { position: fixed; z-index: 70; inset: auto 0 0; display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; width: auto; margin: 0; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); gap: 6px; border-top: 1px solid var(--border); background: var(--surface); backdrop-filter: none; }
+  .editor-page .editor-publication-bar .editor-top-actions { position: fixed; z-index: 70; inset: auto 0 var(--mobile-keyboard-inset, 0px); display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; width: auto; margin: 0; padding: 8px max(12px, var(--safe-area-right)) max(8px, var(--safe-area-bottom)) max(12px, var(--safe-area-left)); gap: 6px; border-top: 1px solid var(--border); background: var(--surface); backdrop-filter: none; }
   .editor-page .editor-settings-trigger { min-width: 0; min-height: 44px; padding: 6px; font-size: 11px; }
-  .editor-page .editor-top-actions .editor-view-switch { min-height: 40px; margin: 0; padding: 2px; }
+  .editor-page .editor-top-actions .editor-view-switch { min-height: 44px; margin: 0; padding: 2px; }
   .editor-page .editor-view-switch button { min-width: 40px; padding: 6px; font-size: 11px; }
-  .editor-page .editor-publication-bar .editor-top-actions > .btn, .editor-page .editor-publication-bar .editor-top-actions > .editor-save-action { flex: none; width: auto; min-width: 0; min-height: 40px; padding: 6px 10px; font-size: 11px; }
+  .editor-page .editor-publication-bar .editor-top-actions > .btn, .editor-page .editor-publication-bar .editor-top-actions > .editor-save-action { flex: none; width: auto; min-width: 0; min-height: 44px; padding: 6px 10px; font-size: 11px; }
   .editor-page .editor-publication-bar .editor-top-actions .btn-primary { min-width: 52px; }
   .editor-page .editor-paper { padding: 16px 20px 24px; }
-  .editor-page .editor-paper-masthead { min-height: 40px; }
+  .editor-page .editor-paper-masthead { min-height: 44px; }
   .editor-page .editor-type-switch { gap: 16px; }
   .editor-page .editor-type-switch label { min-height: 44px; padding-block: 10px; }
   .editor-page .editor-type-switch > small { flex-basis: 100%; font-size: 9px; white-space: normal; }
@@ -166,26 +171,24 @@
   .editor-page .editor-title-field { margin-top: 16px; }
   .editor-page .editor-paper .editor-title-field input { min-height: 48px; font-size: 28px; }
   .editor-summary-drawer { margin-bottom: 16px; }
-  .editor-summary-drawer > summary { min-height: 36px; }
+  .editor-summary-drawer > summary { min-height: 44px; }
   .editor-page .visual-markdown-commandbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0 4px; padding: 4px; }
   .editor-page .visual-rich-tools { grid-column: 1; grid-row: 1; }
   .editor-page .visual-rich-tools .rich-block-controls { width: fit-content; padding-right: 0; border: 0; }
   .editor-page .visual-rich-tools .custom-select { width: 64px; }
-  .editor-page .visual-rich-tools .custom-select-trigger { min-width: 64px; max-width: 80px; min-height: 40px; padding: 4px 6px; font-size: 11px; }
-  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger) { min-width: 32px; min-height: 40px; }
+  .editor-page .visual-rich-tools .custom-select-trigger { min-width: 64px; max-width: 80px; min-height: 44px; padding: 4px 6px; font-size: 11px; }
+  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger) { min-width: 44px; min-height: 44px; }
   .editor-page .editor-body-visual .visual-markdown-mode-switch { grid-column: 2; grid-row: 1; padding: 0; border: 0; }
-  .editor-page .editor-body-visual .visual-markdown-mode-switch button { min-height: 40px; padding: 4px 6px; font-size: 10px; }
-  .editor-page .editor-body-visual .visual-markdown-mode-switch button:first-child { max-width: 36px; font-size: 0; }
-  .editor-page .editor-body-visual .visual-markdown-mode-switch button:first-child::after { content: "编辑"; font-size: 10px; }
-  .editor-page .editor-immersive-action { grid-column: 3; grid-row: 1; min-height: 40px; min-width: 28px; }
+  .editor-page .editor-body-visual .visual-markdown-mode-switch button { min-height: 44px; padding: 4px 6px; font-size: 10px; }
+  .editor-page .editor-immersive-action { grid-column: 3; grid-row: 1; min-height: 44px; min-width: 44px; }
   .editor-page .editor-paper .editor-body-toolbar { grid-column: 1 / -1; grid-row: 2; padding-top: 4px; border-top: 1px solid var(--border); }
   .editor-page .editor-inline-shortcuts { width: 100%; gap: 0; justify-content: space-between; }
-  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-width: 28px; min-height: 40px; padding-inline: 4px; }
+  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-width: 44px; min-height: 44px; padding-inline: 4px; }
   .editor-page .editor-inline-shortcuts .editor-inline-image-button { margin: 0; padding-inline: 4px; font-size: 11px; gap: 4px; }
   .editor-page .editor-format-glyph { font-size: 14px; }
   .editor-page .editor-format-heading { font-size: 11px; }
   .editor-page .editor-more-formats { position: static; }
-  .editor-page .editor-more-formats > summary { min-height: 40px; padding-inline: 4px; font-size: 11px; }
+  .editor-page .editor-more-formats > summary { min-height: 44px; padding-inline: 4px; font-size: 11px; }
   .editor-page .editor-more-formats > div { top: 100%; right: 0; }
   .editor-page .editor-body-visual { min-height: 400px; }
   .editor-page .editor-body-visual .visual-markdown-blocks { padding-top: 20px; }
@@ -195,17 +198,48 @@
   .editor-page .editor-media-drawer > summary { padding: 12px 20px; }
   .editor-page .editor-media-drawer > div { padding: 16px; }
   .editor-page .editor-preview-document > h1 { font-size: 28px; }
-  .editor-page .editor-sidebar { padding: 24px 20px 70px; }
+  .editor-page .editor-sidebar { padding: max(24px, var(--safe-area-top)) max(20px, var(--safe-area-right)) max(70px, var(--safe-area-bottom)) max(20px, var(--safe-area-left)); }
   .app-frame:has(.editor-page) .mobile-bottom-nav { display: none; }
 }
 @media (max-width: 359px) {
   .editor-page { padding-inline: 12px !important; }
   .editor-page .editor-paper { padding-inline: 16px; }
   .editor-page .editor-format-heading { font-size: 10px; }
-  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-width: 26px; }
-  .editor-page .editor-inline-image-button svg { display: none; }
+  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-width: 44px; }
   .editor-page .visual-rich-tools .custom-select-trigger { min-width: 58px; max-width: 58px; }
   .editor-page .visual-rich-tools .custom-select { width: 58px; }
-  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger) { min-width: 28px; }
+  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger) { min-width: 44px; }
   .editor-page .editor-publication-bar .editor-top-actions > .btn, .editor-page .editor-publication-bar .editor-top-actions > .editor-save-action { padding-inline: 6px; }
+}
+
+/* The compact bar keeps full tap areas instead of shrinking its icons to fit. */
+@media (max-width: 979px) {
+  .editor-page .visual-markdown-commandbar { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0 4px; padding: 4px; }
+  .editor-page .visual-rich-tools { grid-column: 1; grid-row: 1; }
+  .editor-page .visual-rich-tools .rich-block-controls { width: fit-content; gap: 0; padding-right: 0; border: 0; }
+  .editor-page .visual-rich-tools .custom-select { width: 64px; }
+  .editor-page .visual-rich-tools .custom-select-trigger { min-width: 64px; max-width: 64px; padding-inline: 6px; }
+  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger) { min-width: 44px; min-height: 44px; }
+  .editor-page .editor-body-visual .visual-markdown-mode-switch { grid-column: 2; grid-row: 1; padding: 0; border: 0; }
+  .editor-page .editor-body-visual .visual-markdown-mode-switch .visual-markdown-mode-choice { display: none; }
+  .editor-page .editor-body-visual .visual-markdown-mode-switch .visual-markdown-mode-toggle { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 4px; font-size: 11px; }
+  .editor-page .editor-immersive-action { grid-column: 3; grid-row: 1; min-width: 44px; min-height: 44px; }
+  .editor-page .editor-paper .editor-body-toolbar { grid-column: 1 / -1; grid-row: 2; padding-top: 4px; border-top: 1px solid var(--border); }
+  .editor-page .editor-inline-shortcuts { width: 100%; gap: 4px; justify-content: flex-start; }
+  .editor-page .editor-inline-shortcuts .markdown-shortcut-button { min-width: 44px; min-height: 44px; }
+  .editor-page .editor-inline-shortcuts .editor-secondary-format, .markdown-editor-shortcuts .editor-secondary-format { display: none; }
+  .editor-page .editor-more-formats { position: static; margin-left: auto; }
+  .editor-more-formats > summary { min-width: 56px; min-height: 44px; padding: 4px 8px; }
+  .editor-more-formats > div > button { min-height: 44px; }
+  .editor-more-formats > div > .editor-mobile-format { display: block; }
+  .markdown-editor-more-formats { display: block; }
+  .markdown-editor-shortcuts { position: relative; overflow: visible; }
+  .markdown-editor-shortcuts .markdown-shortcut-button { min-width: 44px; min-height: 44px; padding-inline: 8px; }
+  .markdown-editor-shortcuts .markdown-editor-image-picker { position: static; }
+}
+@media (any-pointer: coarse) {
+  .editor-page .visual-markdown-commandbar :is(button, summary) { min-height: 44px; }
+  .editor-page .visual-rich-tools .rich-block-controls button:not(.custom-select-trigger),
+  .editor-page .editor-inline-shortcuts .markdown-shortcut-button,
+  .editor-page .editor-immersive-action { min-width: 44px; }
 }

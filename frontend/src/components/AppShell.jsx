@@ -18,6 +18,7 @@ import { ThemeControl } from "./ThemeControl";
 import { PageLoader } from "./States";
 import { useArticlePageTurn } from "../hooks/useArticlePageTurn";
 import { HeadingNavigation } from "./HeadingNavigation";
+import { useMobileViewport } from "../hooks/useMobileViewport";
 
 function NavLinks({ items, onNavigate }) {
   return items.map(({ to, label }) => (
@@ -43,6 +44,7 @@ function closeOwningMenu(event) {
 
 export function AppShell() {
   useArticlePageTurn();
+  useMobileViewport();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +61,7 @@ export function AppShell() {
       });
     };
     const closeOnEscape = (event) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented || document.querySelector("[aria-modal='true'], dialog[open]")) return;
       const openMenus = [...document.querySelectorAll("details[data-header-menu][open]")];
       const lastMenu = openMenus.at(-1);
       if (!lastMenu) return;

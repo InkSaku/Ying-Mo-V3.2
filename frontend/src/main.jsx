@@ -12,6 +12,8 @@ import "./styles/p1-editorial.css";
 import "./styles/article-transitions.css";
 import "./styles/ink-system.css";
 import "./styles/ink-room.css";
+import "./styles/mobile-platform.css";
+import "./styles/mobile-layout.css";
 
 // Font faces are 25% of the entry CSS; text already renders with fallbacks, so don't block on them.
 void import("@fontsource-variable/noto-serif-sc/wght.css");

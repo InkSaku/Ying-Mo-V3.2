@@ -1,17 +1,12 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useModalDialog } from "../hooks/useModalDialog";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import { UploadProgress } from "./UploadProgress";
+import { DismissibleDetails } from "./DismissibleDetails";
+import { COMPACT_MARKDOWN_ACTIONS, formatActionLabel } from "../lib/markdownToolbar";
 import { VisualMarkdownEditor } from "./VisualMarkdownEditor";
 import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL } from "../lib/imageUpload";
-
-const focusableSelector = [
-  "button:not([disabled])",
-  "[href]",
-  "input:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
 
 function isSaveShortcut(event) {
   return !event.altKey
@@ -51,62 +46,22 @@ export function MarkdownEditorDialog({
   const descriptionId = useId();
   const panelRef = useRef(null);
   const fileInputRef = useRef(null);
-  const callbackRef = useRef({ onRequestClose, onSave });
-  const busyRef = useRef(false);
-  const interactionBlockedRef = useRef(interactionBlocked);
   const [mobileMode, setMobileMode] = useState("write");
   const [split, setSplit] = useState(50);
   const [draggingImage, setDraggingImage] = useState(false);
-  callbackRef.current = { onRequestClose, onSave };
-  busyRef.current = saving || uploading;
-  interactionBlockedRef.current = interactionBlocked;
-
   useEffect(() => {
-    if (!open) return undefined;
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!open) return;
     setMobileMode("write");
     setDraggingImage(false);
-
-    const focusTimer = window.setTimeout(() => textareaRef.current?.focus(), 0);
-    const handleKeyDown = (event) => {
-      if (interactionBlockedRef.current) return;
+  }, [open]);
+  const backdropProps = useModalDialog({ open, panelRef, onClose: onRequestClose, busy: saving || uploading,
+    blocked: interactionBlocked, initialFocus: () => textareaRef.current,
+    onKeyDown: (event) => {
       if (isSaveShortcut(event)) {
         event.preventDefault();
-        if (!busyRef.current) callbackRef.current.onSave();
-        return;
+        if (!saving && !uploading) onSave();
       }
-      if (event.key === "Escape" && !busyRef.current) {
-        event.preventDefault();
-        callbackRef.current.onRequestClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const focusable = [...(panelRef.current?.querySelectorAll(focusableSelector) || [])];
-      if (!focusable.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement) previousFocus.focus();
-    };
-  }, [open, textareaRef]);
+    } });
 
   if (!open) return null;
 
@@ -147,14 +102,22 @@ export function MarkdownEditorDialog({
   };
 
   return createPortal(
-    <div className="markdown-editor-backdrop">
+    <div className="markdown-editor-backdrop" {...backdropProps}>
       <section
         ref={panelRef}
         className="markdown-editor-dialog"
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
+        onKeyDown={(event) => {
+          // ProseMirror consumes Escape for node selection; the modal still owns dismissal.
+          if (event.key !== "Escape" || interactionBlocked || !event.target.closest(".rich-markdown-content")) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (!busy) onRequestClose();
+        }}
       >
         <header className="markdown-editor-dialog-header">
           <div>
@@ -179,7 +142,7 @@ export function MarkdownEditorDialog({
           {shortcuts.map((item) => (
             <button
               key={item.action}
-              className="markdown-shortcut-button"
+              className={`markdown-shortcut-button${COMPACT_MARKDOWN_ACTIONS.has(item.action) ? "" : " editor-secondary-format"}`}
               type="button"
               title={item.hint}
               aria-label={`${item.label}：${item.hint}`}
@@ -203,6 +166,13 @@ export function MarkdownEditorDialog({
           >
             {uploading ? "上传中" : "插入图片"}
           </button>
+          <DismissibleDetails className="editor-more-formats markdown-editor-more-formats">
+            <summary>更多 <span aria-hidden="true">⌄</span></summary>
+            <div>{shortcuts.filter((item) => !COMPACT_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} type="button" disabled={busy} title={item.hint} onMouseDown={(event) => event.preventDefault()} onClick={(event) => {
+              onFormat(item.action);
+              event.currentTarget.closest("details").open = false;
+            }}>{formatActionLabel(item)}</button>)}</div>
+          </DismissibleDetails>
           <input
             ref={fileInputRef}
             className="markdown-editor-file-input"

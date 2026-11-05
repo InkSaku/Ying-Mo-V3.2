@@ -36,6 +36,9 @@ import {
   offlineDraftKey, readOfflineDraft, removeOfflineDraft, writeOfflineDraft,
 } from "../lib/offlineDraft";
 import "../styles/writing-editorial.css";
+import { DismissibleDetails } from "../components/DismissibleDetails";
+import { COMPACT_MARKDOWN_ACTIONS, formatActionLabel } from "../lib/markdownToolbar";
+import { useModalDialog } from "../hooks/useModalDialog";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PREVIEW_DELAY = 220;
@@ -172,30 +175,9 @@ export function WritePage() {
   const bodyEditorRef = useRef(null);
   const inlineBodyRef = useRef(null);
 
-  useEffect(() => {
-    if (!publicationOpen) return undefined;
-    const previousFocus = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const frame = requestAnimationFrame(() => publicationPanelRef.current?.querySelector("button[aria-label='关闭文稿信息']")?.focus());
-    const handleKey = (event) => {
-      if (event.defaultPrevented) return;
-      if (event.key === "Escape") { event.preventDefault(); setPublicationOpen(false); return; }
-      if (event.key !== "Tab") return;
-      const controls = [...(publicationPanelRef.current?.querySelectorAll("button:not(:disabled), input:not(:disabled), a[href], summary, [tabindex='0']") || [])].filter((element) => element.getClientRects().length);
-      if (!controls.length) { event.preventDefault(); return; }
-      const first = controls[0]; const last = controls.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKey);
-      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
-    };
-  }, [publicationOpen]);
+  useModalDialog({ open: publicationOpen, panelRef: publicationPanelRef,
+    onClose: () => setPublicationOpen(false),
+    initialFocus: () => publicationPanelRef.current?.querySelector("button[aria-label='关闭文稿信息']") });
   const inlineImageInputRef = useRef(null);
   const editorUploadAbortRef = useRef(null);
   const editorUploadRetryRef = useRef(null);
@@ -1111,11 +1093,11 @@ export function WritePage() {
                         <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="1" /><circle cx="7" cy="7" r="1.3" /><path d="m3 14 4-4 3 3 3-3 4 4" /></svg>
                         {editorUploading ? "上传中" : "图片"}
                       </button>
-                      {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className="markdown-shortcut-button" type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}><FormatToolGlyph action={item.action} label={item.label} /></button>)}
-                      <details className="editor-more-formats" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}>
+                      {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className={`markdown-shortcut-button${COMPACT_MARKDOWN_ACTIONS.has(item.action) ? "" : " editor-secondary-format"}`} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}><FormatToolGlyph action={item.action} label={item.label} /></button>)}
+                      <DismissibleDetails className="editor-more-formats">
                         <summary>更多 <span aria-hidden="true">⌄</span></summary>
-                        <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{item.label}</button>)}</div>
-                      </details>
+                        <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMPACT_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className={COMMON_MARKDOWN_ACTIONS.has(item.action) ? "editor-mobile-format" : undefined} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{formatActionLabel(item)}</button>)}</div>
+                      </DismissibleDetails>
                       <input
                         ref={inlineImageInputRef}
                         className="editor-inline-file-input"
@@ -1183,7 +1165,7 @@ export function WritePage() {
         </div>
 
         {publicationOpen ? <button className="editor-sidebar-scrim" type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)} /> : null}
-        <aside ref={publicationPanelRef} className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} role="dialog" aria-modal={publicationOpen || undefined} aria-label="文稿信息" aria-hidden={!publicationOpen || undefined}>
+        <aside tabIndex={-1} ref={publicationPanelRef} className={`editor-sidebar ${publicationOpen ? "is-open" : ""}`} role="dialog" aria-modal={publicationOpen || undefined} aria-label="文稿信息" aria-hidden={!publicationOpen || undefined}>
           <header className="editor-sidebar-heading"><div><p><small></small></p><h2>文稿信息</h2><span>合集与阅读范围会随草稿一起保存。</span></div><button type="button" aria-label="关闭文稿信息" onClick={() => setPublicationOpen(false)}>×</button></header>
           {optionsError ? <div className="inline-error" role="alert">{optionsError}</div> : null}
           <section className="editor-publication-status" aria-label="发布状态">

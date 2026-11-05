@@ -282,3 +282,9 @@ export function applyMarkdownShortcut(value, start, end, action) {
 
   throw new TypeError(`Unsupported Markdown shortcut: ${action}`);
 }
+
+export const COMPACT_MARKDOWN_ACTIONS = new Set(["bold", "link"]);
+
+export function formatActionLabel(item) {
+  return { heading: "二级标题", bold: "加粗", italic: "斜体" }[item.action] || item.label;
+}

@@ -180,11 +180,11 @@ export function CollectionSharePill({ collection, user, onMembersChange }) {
           {members.slice(0, 3).map((member) => <span key={member.id} title={`${member.nickname || member.username} · ${member.id === collection.creator.id ? "创建者" : "共同成员"}`}><Avatar member={member} /></span>)}
           {members.length > 3 ? <span className="collection-share-overflow" aria-hidden="true">+{members.length - 3}</span> : null}
         </span>
-        <span className="collection-share-count"><strong>{members.length}</strong> 位共同记录者</span>
+        <span className="collection-share-count"><strong>{members.length}</strong><span className="collection-share-full-label"> 位共同记录者</span><span className="collection-share-compact-label"> 人</span></span>
         <span className="collection-share-tooltip" aria-hidden="true">{members.slice(0, 3).map((member) => `${member.nickname || member.username}（${member.id === collection.creator.id ? "创建者" : "共同成员"}）`).join("、")}{members.length > 3 ? "等" : ""}</span>
       </button>
-      <button type="button" className="collection-share-action" onClick={copyLink} disabled={copying} aria-label="复制合集链接"><ShareIcon /><span>{copying ? "复制中" : "复制链接"}</span></button>
-      {isCreator ? <button ref={inviteTrigger} type="button" className="collection-share-action collection-share-invite" aria-expanded={panel === "invite"} aria-controls={`${id}-invite`} onClick={openInvite}><ShareIcon invite /><span>{saving ? "正在添加" : "邀请成员"}</span></button> : null}
+      <button type="button" className="collection-share-action" onClick={copyLink} disabled={copying} aria-label="复制合集链接"><ShareIcon /><span className="collection-share-full-label">{copying ? "复制中" : "复制链接"}</span><span className="collection-share-compact-label">{copying ? "复制中" : "复制"}</span></button>
+      {isCreator ? <button ref={inviteTrigger} type="button" className="collection-share-action collection-share-invite" aria-label="邀请成员加入合集" aria-expanded={panel === "invite"} aria-controls={`${id}-invite`} onClick={openInvite}><ShareIcon invite /><span className="collection-share-full-label">{saving ? "正在添加" : "邀请成员"}</span><span className="collection-share-compact-label">{saving ? "添加中" : "邀请"}</span></button> : null}
     </div>
     <div className="collection-share-feedback" role="status" aria-live="polite" aria-atomic="true">{feedback.text}</div>
     {feedback.error ? <label className="collection-share-manual-copy">合集地址<input aria-label="手动复制合集地址" readOnly value={canonicalUrl} onFocus={(event) => event.target.select()} /></label> : null}

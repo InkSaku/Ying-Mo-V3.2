@@ -1,3 +1,4 @@
+import { lockPageScroll } from "../lib/dialog";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { internalLinkPath, validLinkHref } from "../lib/contentLinks";
@@ -22,7 +23,8 @@ export function ContentLinkDialog({ draft, excludePostId, onApply, onRemove, onC
   useEffect(() => {
     const dialog = dialogRef.current;
     dialog.showModal();
-    return () => dialog.close();
+    const unlock = lockPageScroll();
+    return () => { dialog.close(); unlock(); };
   }, []);
 
   useEffect(() => { dialogRef.current?.querySelector("[data-link-focus]")?.focus(); }, [mode]);

@@ -67,6 +67,8 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
   const chips = useRef(new Map()), glyphs = useRef([]), animations = useRef(new Map());
   const oldRects = useRef(new Map()), startedFlight = useRef(null), landing = useRef(null);
   const initialSignature = useRef(JSON.stringify(normalizeReactions(initialState)));
+  // Touch has no hover or keyboard cursor, so it skips focus moves and their magnified preview.
+  const touchInput = useRef(false);
   const current = useRef(state);
   const operation = useRef({ active: true, busy: false, controller: null });
 
@@ -139,7 +141,7 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
   const close = (restoreFocus = false) => {
     setOpen(false);
     setHovered(-1);
-    if (restoreFocus) trigger.current?.focus({ preventScroll: true });
+    if (restoreFocus && !touchInput.current) trigger.current?.focus({ preventScroll: true });
   };
 
   const show = () => {
@@ -174,20 +176,28 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
       setHovered(-1);
     };
     document.addEventListener("pointerdown", outside, true);
-    window.addEventListener("scroll", interrupt, true);
-    window.addEventListener("resize", interrupt);
+    // Momentum settling and mobile toolbars fire these without really moving the control.
+    const start = root.current?.getBoundingClientRect();
+    const startWidth = window.innerWidth;
+    const interruptIfMoved = () => {
+      const now = root.current?.getBoundingClientRect();
+      if (!start || !now || window.innerWidth !== startWidth
+        || Math.abs(now.top - start.top) > 12 || Math.abs(now.left - start.left) > 12) interrupt();
+    };
+    window.addEventListener("scroll", interruptIfMoved, true);
+    window.addEventListener("resize", interruptIfMoved);
     window.addEventListener("blur", interrupt);
     window.addEventListener("pagehide", interrupt);
     document.addEventListener("visibilitychange", interrupt);
-    window.visualViewport?.addEventListener("resize", interrupt);
+    window.visualViewport?.addEventListener("resize", interruptIfMoved);
     return () => {
       document.removeEventListener("pointerdown", outside, true);
-      window.removeEventListener("scroll", interrupt, true);
-      window.removeEventListener("resize", interrupt);
+      window.removeEventListener("scroll", interruptIfMoved, true);
+      window.removeEventListener("resize", interruptIfMoved);
       window.removeEventListener("blur", interrupt);
       window.removeEventListener("pagehide", interrupt);
       document.removeEventListener("visibilitychange", interrupt);
-      window.visualViewport?.removeEventListener("resize", interrupt);
+      window.visualViewport?.removeEventListener("resize", interruptIfMoved);
     };
   }, [position, flight]);
 
@@ -254,7 +264,7 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
         transform: `translate(${mix(matrix.e, dx, p)}px, ${mix(matrix.f, dy, p)}px) scale(${mix(matrix.a, .3, p)})`,
       })), open ? 300 : duration, () => { if (!open) button.style.opacity = "0"; });
     });
-    if (open) (element.querySelector('[aria-checked="true"]') || element.querySelector("button"))?.focus({ preventScroll: true });
+    if (open && !touchInput.current) (element.querySelector('[aria-checked="true"]') || element.querySelector("button"))?.focus({ preventScroll: true });
     // Unrelated state updates must not restart the capsule's spring.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, position, reduced]);
@@ -292,7 +302,10 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
       const y = q * q * flight.y + 2 * q * t * controlY + t * t * to.y;
       return { transform: `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${-14 * Math.sin(t * Math.PI)}deg) scale(${1.3 - .3 * t})` };
     });
-    play(flyer.current, frames, 560, () => {
+    const glyphFlyer = flyer.current;
+    play(glyphFlyer, frames, 560, () => {
+      // Without its animated transform the fixed glyph would flash at the page's top-left.
+      Object.assign(glyphFlyer.style, frames.at(-1));
       setFlight(null);
       play(target, spring((p) => ({ transform: `scale(${mix(1.16, 1, p)}, ${mix(.76, 1, p)}) rotate(${mix(-8, 0, p)}deg)` })), 420);
     });
@@ -372,7 +385,10 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
     if (event.key === "Tab") close(true);
   };
 
-  return <div ref={root} className={`reaction-picker${compact ? " reaction-picker-compact" : ""}`} aria-label="表情回应" aria-busy={busy || undefined}>
+  return <div ref={root} className={`reaction-picker${compact ? " reaction-picker-compact" : ""}`} aria-label="表情回应" aria-busy={busy || undefined}
+    onPointerDownCapture={(event) => { touchInput.current = event.pointerType !== "mouse"; }}
+    onKeyDownCapture={() => { touchInput.current = false; }}
+  >
     <div className="reaction-options">
       {state.items.filter((item) => item.count > 0 || item.kind === state.selected).map((item) => <button
         key={item.kind} ref={(element) => { if (element) chips.current.set(item.kind, element); else chips.current.delete(item.kind); }}
@@ -392,7 +408,9 @@ function ReactionControl({ initialState, readPath, writePath, compact = false })
     {position ? createPortal(<div ref={menu} id={menuId} className={`reaction-menu${compact ? " reaction-menu-compact" : ""}`} role="menu" aria-label="选择一种回应" inert={!open}
       style={{ left: position.left, top: position.top, width: position.width }} onKeyDown={menuKeys}
       onPointerMove={(event) => { if (event.pointerType === "mouse") magnify(event.clientX); }} onPointerLeave={() => magnify()}
-      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) close(); }}
+      // Safari clears focus when a button is pressed (relatedTarget is null). Closing there
+      // would make the menu inert and swallow the click; outside presses close it instead.
+      onBlur={(event) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget) && event.relatedTarget !== trigger.current) close(); }}
     ><span ref={surface} className="reaction-menu-surface" aria-hidden="true" /><span ref={returningFace} className="reaction-menu-return" aria-hidden="true"><ReactionFace /></span>
       {state.items.map((item, index) => <button key={item.kind} className="reaction-choice" type="button" role="menuitemradio" aria-checked={state.selected === item.kind} aria-label={item.label}
       onFocus={() => magnify(null, index)} onClick={(event) => { void choose(item.kind, event.currentTarget); }}

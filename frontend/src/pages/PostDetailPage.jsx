@@ -184,8 +184,7 @@ export function PostDetailPage({ type }) {
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
       ) : null}
       <article className="post-detail post-detail-with-tools article-detail">
-        <ArticleBackNavigation onBack={onBackToArticles} />
-        <ArticleReadingLayout outline={post.outline} favorite={articleFavorite?.postId === post.id ? articleFavorite : null} opening={<ArticleHero post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} transitionId={post.id === transitionId ? transitionId : null} />}>
+        <ArticleReadingLayout outline={post.outline} favorite={articleFavorite?.postId === post.id ? articleFavorite : null} navigation={<ArticleBackNavigation onBack={onBackToArticles} />} opening={<ArticleHero post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} transitionId={post.id === transitionId ? transitionId : null} />}>
           {postContent}
         </ArticleReadingLayout>
       </article>
