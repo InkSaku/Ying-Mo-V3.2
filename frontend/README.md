@@ -38,6 +38,7 @@ npm run preview
 - `/` 与 `/about` 是无成员动态数据的公开页面。
 - `/forgot-password`、`/verify-email`、`/reset-password` 是公开账户恢复路由；邮箱未验证不会阻断正常成员登录或内容能力。
 - 其余成员内容路由经过前端登录门禁，最终权限仍以后端 ACL 为唯一事实来源。
+- 首页每次进入都会重新校验已加载的 Feed 页面，切回窗口或恢复联网时立即同步，页面可见时每分钟同步一次；保留可用的阅读锚点。我的内容发布、归档、移出合集、删除，以及后台内容隐藏、恢复、删除成功后，立即清除当前成员全部首页筛选缓存和旧阅读位置；顶部最近记录与侧栏回望跟随最新 Feed 快照更新，顶部最近记录只从首屏内容选择，继续加载不会切换推荐。
 - Access Token 仅保存在运行中 JavaScript 模块内存，不写入 `sessionStorage` 或 `localStorage`；Refresh Token 由后端 HttpOnly Cookie 管理，与 CSRF Cookie 一起持久保存。默认保持登录30天，成功刷新后续期；关闭浏览器后重开，由启动时的 `/auth/refresh` 恢复有效会话。主动退出、撤销或过期后仍需重新登录。
 - refresh / logout 会携带 `csrf_refresh_token` 对应的 `X-CSRF-TOKEN`。
 - 邮箱验证和密码重置令牌只从 URL fragment `#token=...` 读取，页面初始化后立即通过 History API 清除；误入 Query 的令牌会被删除而不会被消费，页面使用 `no-referrer`；不得改用 query、路径、Web Storage 或日志持久化。

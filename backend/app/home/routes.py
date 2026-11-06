@@ -14,7 +14,7 @@ from app.models import Collection, FeaturedContent, Post, PostStatus, PostType
 from app.posts.browsing import serialize_browse_posts
 from app.home.on_this_day import on_this_day_data
 from app.home.year_review import year_review_data
-from app.home.feed import FEED_TYPES, decode_feed_cursor, home_feed_data
+from app.home.feed import FEED_TYPES, HomePinsChanged, decode_feed_cursor, home_feed_data
 
 bp=Blueprint("home",__name__)
 
@@ -100,12 +100,11 @@ def home_feed():
     cursor = decode_feed_cursor(raw_cursor, feed_type) if raw_cursor else None
     if raw_cursor and cursor is None:
         return error_response("VALIDATION_ERROR", "cursor 不合法或与当前筛选不匹配。", 422)
-    return success_response(home_feed_data(
-        actor.id,
-        feed_type=feed_type,
-        cursor=cursor,
-        size=size,
-    ))
+    try:
+        data = home_feed_data(actor.id, feed_type=feed_type, cursor=cursor, size=size)
+    except HomePinsChanged:
+        return error_response("HOME_PINS_CHANGED", "首页置顶已更新，请重新读取。", 409)
+    return success_response(data)
 
 
 @bp.get("/on-this-day")

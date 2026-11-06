@@ -176,15 +176,14 @@ function renderNode(node, key, index, management, galleryItems, parentTag = "") 
       child.nodeType !== TEXT_NODE || child.textContent.trim()
     ));
     const onlyChild = meaningfulChildren.length === 1 ? meaningfulChildren[0] : null;
-    if (onlyChild?.nodeType === ELEMENT_NODE && onlyChild.tagName.toLowerCase() === "code") {
-      const className = onlyChild.getAttribute("class") || "";
-      const code = onlyChild.textContent || "";
-      return (
-        <Suspense key={key} fallback={<pre><code className={className}>{code}</code></pre>}>
-          <ProtectedCodeBlock code={code} className={className} />
-        </Suspense>
-      );
-    }
+    const codeNode = onlyChild?.nodeType === ELEMENT_NODE && onlyChild.tagName.toLowerCase() === "code" ? onlyChild : node;
+    const className = codeNode.getAttribute("class") || "";
+    const code = codeNode.textContent || "";
+    return (
+      <Suspense key={key} fallback={<pre><code className={className}>{code}</code></pre>}>
+        <ProtectedCodeBlock code={code} className={className} />
+      </Suspense>
+    );
   }
 
   const props = { key };

@@ -16,6 +16,12 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
 .home-edition-cue svg { width:40px; height:40px; flex:none; }
 .home-edition-cue path { stroke:currentColor; stroke-width:1.2; stroke-linejoin:round; stroke-linecap:round; }
 .home-opening-feature { min-width:0; }
+.home-featured-opening { min-width:0; }
+.home-pinned-more { display:grid; gap:12px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+.home-pinned-more > a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:baseline; gap:12px; min-height:44px; color:var(--text); }
+.home-pinned-more > a > span { color:var(--brand-link); font-size:11px; }
+.home-pinned-more strong { font-size:16px; font-weight:400; line-height:1.6; overflow-wrap:anywhere; }
+.home-pinned-more small { color:var(--text-3); font-size:11px; overflow-wrap:anywhere; max-width:8em; }
 .home-opening-feature-visual { display:block; position:relative; width:100%; aspect-ratio:1.78; overflow:hidden; background:var(--surface); }
 .home-opening-feature-visual > a { display:block; width:100%; height:100%; }
 .home-opening-feature-image, .home-opening-feature-visual .protected-image-placeholder { display:block; width:100%; height:100%; object-fit:cover; }

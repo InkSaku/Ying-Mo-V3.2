@@ -3234,19 +3234,102 @@ input[aria-invalid="true"] {
 
 .prose .highlighted-code-block {
   position: relative;
-  padding-top: 34px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 1em 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
 }
 
-.prose .highlighted-code-block::before {
-  content: attr(data-language);
-  position: absolute;
-  top: 10px;
-  right: 12px;
+.prose .code-block-toolbar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--serif);
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.prose .code-block-language {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--text-4);
-  font-family: var(--western-serif);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 12px/1.5 var(--mono);
+}
+
+.prose .code-block-copy {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: 14px/1.5 var(--serif);
+  cursor: pointer;
+}
+
+.prose .code-block-copy svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) {
+  .prose .code-block-copy:hover { border-color: var(--text); }
+}
+
+.prose .code-block-copy:active { background: var(--surface-2); }
+.prose .code-block-copy:disabled { cursor: wait; }
+.prose .code-block-copy[data-copied] { color: var(--success); }
+
+.prose .code-block-copy:focus-visible,
+.prose .highlighted-code-block pre:focus-visible,
+.prose .code-block-copy-error button:focus-visible {
+  outline: 2px solid var(--brand-link);
+  outline-offset: 2px;
+}
+
+.prose .highlighted-code-block pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.prose .code-block-copy-error {
+  padding: 8px 16px;
+  color: var(--danger);
+  font: 14px/1.7 var(--serif);
+  overflow-wrap: anywhere;
+}
+
+.prose .code-block-copy-error button {
+  display: inline;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--brand-link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .prose .hljs {

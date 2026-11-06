@@ -10,7 +10,8 @@ import { HomeSparkEntry } from "../components/HomeSparkEntry";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { homeFeaturePost } from "../lib/homeComposition";
-import { HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
+import { postHref } from "../lib/format";
+import { HOME_FEED_PAGE_SIZE, HOME_FEED_SAVE_EVENT, normalizeHomeFeedType, readHomeFeedCache } from "../lib/homeFeed";
 import "../styles/home.css";
 import "../styles/home-editorial.css";
 import "../styles/home-spark-entry.css";
@@ -26,11 +27,11 @@ export function HomePage() {
   const [homeSnapshot, setHomeSnapshot] = useState(() => readHomeFeedCache(user.id, type));
   const [collections, setCollections] = useState(null);
   const pageRef = useRef(null);
-  const feature = homeFeaturePost(homeSnapshot?.items);
+  const pins = homeSnapshot?.pins?.items || [];
+  const feature = pins[0] || homeFeaturePost(homeSnapshot?.items?.slice(0, HOME_FEED_PAGE_SIZE));
   const editionDate = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric" }).format(new Date());
-  // Keep the opening composition stable while readers filter or load more.
   const receiveSnapshot = useCallback((snapshot) => {
-    setHomeSnapshot((current) => current?.items?.length ? current : snapshot);
+    setHomeSnapshot(snapshot);
   }, []);
 
   useLayoutEffect(() => {
@@ -72,7 +73,14 @@ export function HomePage() {
           </div>
           <HomeMarginObjects boundaryRef={pageRef} />
         </div>
-        <HomeOpeningFeature post={feature} loading={!homeSnapshot} />
+        <div className="home-featured-opening">
+          <HomeOpeningFeature post={feature} pinned={Boolean(pins.length)} loading={!homeSnapshot} />
+          {pins.length > 1 ? <nav className="home-pinned-more" aria-label="更多置顶文章">
+            {pins.slice(1).map((post) => <Link key={post.id} to={postHref(post)} state={{ fromHomeFeed: true }} onClick={() => window.dispatchEvent(new Event(HOME_FEED_SAVE_EVENT))}>
+              <span>置顶</span><strong>{post.title}</strong><small>{post.author?.nickname || post.author?.username}</small>
+            </Link>)}
+          </nav> : null}
+        </div>
       </section>
       <div id="home-writing" className="home-compose-layout">
         <QuickNoteComposer appearance="homePrompt" autoFocus={params.get("compose") === "note"} onPublished={(post) => {

@@ -8,6 +8,7 @@ import {
   homeFeedAnchorScrollTarget,
   homeFeedPath,
   HOME_FEED_SAVE_EVENT,
+  HOME_PINS_CHANGED_EVENT,
   captureHomeFeedAnchor,
   mergeHomeFeedItems,
   readHomeFeedAnchor,
@@ -21,8 +22,10 @@ import {
 import { FeedPost } from "./FeedPost";
 import { FeedMemoryInterlude } from "./FeedMemoryInterlude";
 
+const REFRESH_INTERVAL_MS = 60_000;
+
 function emptyFeed() {
-  return { items: [], nextCursor: "", hasMore: true, memoryInterlude: null };
+  return { items: [], nextCursor: "", hasMore: true, memoryInterlude: null, pins: null };
 }
 
 function FeedEntry({ post, showDay }) {
@@ -55,16 +58,21 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const mountedRef = useRef(true);
-  const requestRef = useRef(false);
+  const requestRef = useRef(null);
   const departureRef = useRef(null);
   const preserveFramesRef = useRef({ first: 0, second: 0 });
   const sectionRef = useRef(null);
   const sentinelRef = useRef(null);
   const celebratedRef = useRef(null);
+  const newPostRef = useRef(newPost);
   const restoreRef = useRef(cachedRef.current && typeof window !== "undefined" ? {
     anchor: readHomeFeedAnchor(userId, type),
     fallback: readHomeFeedScroll(window.sessionStorage, userId, type),
   } : null);
+
+  useEffect(() => {
+    newPostRef.current = newPost;
+  }, [newPost]);
 
   useEffect(() => {
     if (!loading && !error) onSnapshot?.(feed);
@@ -136,34 +144,92 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
 
   const load = useCallback(async ({ cursor = "", append = false } = {}) => {
     if (requestRef.current) return;
-    requestRef.current = true;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const previousFeed = feedRef.current;
+    const publicationAtStart = newPostRef.current;
     if (append) setLoadingMore(true);
     else setLoading(true);
     setError("");
     try {
-      const result = await api.get(homeFeedPath(type, cursor));
-      const data = result.data || {};
-      commit({
-        items: append ? mergeHomeFeedItems(feedRef.current.items, data.items || []) : (data.items || []),
-        nextCursor: data.next_cursor || "",
-        hasMore: Boolean(data.has_more),
-        memoryInterlude: append ? (feedRef.current.memoryInterlude || null) : (data.memory_interlude || null),
-      });
+      let next = emptyFeed();
+      let appending = append;
+      // Revalidate the pages already read so deleted records cannot survive in
+      // older cached pages, while keeping the reader's place in a long feed.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        next = emptyFeed();
+        let pageCursor = appending ? cursor : "";
+        try {
+          do {
+            const result = await api.get(homeFeedPath(type, pageCursor), { signal: controller.signal, cache: "no-store" });
+            if (controller.signal.aborted || !mountedRef.current) return;
+            const data = result.data || {};
+            next = {
+              items: mergeHomeFeedItems(next.items, data.items || []),
+              nextCursor: data.next_cursor || "",
+              hasMore: Boolean(data.has_more),
+              memoryInterlude: pageCursor ? next.memoryInterlude : (data.memory_interlude || null),
+              pins: data.pins || null,
+            };
+            pageCursor = next.nextCursor;
+          } while (!appending && next.hasMore && pageCursor && next.items.length < previousFeed.items.length);
+          break;
+        } catch (requestError) {
+          if (attempt || requestError.code !== "HOME_PINS_CHANGED") throw requestError;
+          // Start a fresh signed sequence when curation changes between pages.
+          appending = false;
+        }
+      }
+
+      const anchor = !appending && !restoreRef.current && window.scrollY > 200 ? capturePosition() : null;
+      if (appending) {
+        next.items = mergeHomeFeedItems(feedRef.current.items, next.items);
+        next.memoryInterlude = feedRef.current.memoryInterlude || null;
+      } else {
+        // A note published during this request must keep its immediate echo.
+        const fresh = newPostRef.current !== publicationAtStart
+          ? feedRef.current.items.filter((post) => post._feedFresh && post.id === newPostRef.current?.id)
+          : [];
+        next.items = mergeHomeFeedItems(next.items, fresh, { prepend: true });
+      }
+      const pinIds = new Set((next.pins?.items || []).map((post) => post.id));
+      next.items = next.items.filter((post) => !pinIds.has(post.id));
+      commit(next);
+      if (anchor) preserveAnchorAfterRender(anchor);
     } catch (loadError) {
-      if (mountedRef.current) setError(loadError.message);
+      if (!controller.signal.aborted && mountedRef.current) setError(loadError.message);
     } finally {
-      requestRef.current = false;
-      if (mountedRef.current) {
-        setLoading(false);
-        setLoadingMore(false);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        if (mountedRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     }
-  }, [commit, type]);
+  }, [capturePosition, commit, preserveAnchorAfterRender, type]);
 
   useEffect(() => {
     mountedRef.current = true;
-    if (!cachedRef.current) void load();
-    return () => { mountedRef.current = false; };
+    void load();
+    const refresh = () => {
+      if (document.visibilityState === "visible" && navigator.onLine !== false) void load();
+    };
+    const interval = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("online", refresh);
+    window.addEventListener(HOME_PINS_CHANGED_EVENT, refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      mountedRef.current = false;
+      requestRef.current?.abort();
+      requestRef.current = null;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("online", refresh);
+      window.removeEventListener(HOME_PINS_CHANGED_EVENT, refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [load]);
 
   useEffect(() => () => {
@@ -273,8 +339,8 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
 
       {!feed.items.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
 
-      {!loading && !feed.items.length && !error ? <div className="home-feed-empty"><h3>暂无记录</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
-      {error ? <div className="home-feed-error" role="alert"><p>{error}</p><button className="btn btn-secondary" type="button" onClick={() => void load({ cursor: feed.items.length ? feed.nextCursor : "", append: Boolean(feed.items.length) })}>重新读取</button></div> : null}
+      {!loading && !feed.items.length && !error ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
+      {error ? <div className="home-feed-error" role="alert"><p>{error}</p><button className="btn btn-secondary" type="button" onClick={() => void load()}>重新读取</button></div> : null}
 
       <div ref={sentinelRef} className="home-feed-sentinel" aria-hidden="true" />
       {loadingMore ? <p className="home-feed-more" role="status">正在加载更早的记录…...</p> : null}

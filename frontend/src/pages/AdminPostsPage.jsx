@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { AdminActionDialog, AdminPageFrame, AdminStatus } from "../components/AdminPanel";
 import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
+import { useAuth } from "../contexts/AuthContext";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
 import { adminPostSearchParams, adminPostsApiPath, readAdminPostFilters } from "../lib/admin";
 import { formatDate } from "../lib/format";
+import { announceHomePinsChanged, invalidateHomeFeedCache } from "../lib/homeFeed";
 import { clampPageToTotal } from "../lib/pagination";
 
 const PAGE_SIZE = 20;
@@ -41,6 +43,10 @@ function PostFilters({ filters, searchValue, loading, onSearchValue, onChange, o
 
 export function AdminPostsPage() {
   usePageMeta("内容管理");
+  const { user } = useAuth();
+  const pinInFlight = useRef(false);
+  const [pinBusy, setPinBusy] = useState(null);
+  const [pinError, setPinError] = useState(null);
   const [params, setParams] = useSearchParams();
   const filters = readAdminPostFilters(params);
   const [searchValue, setSearchValue] = useState(filters.q);
@@ -85,6 +91,7 @@ export function AdminPostsPage() {
       const path = `/admin/posts/${action.item.id}${action.type === "delete" ? "" : `/${action.type}`}`;
       if (action.type === "delete") await api.delete(path, { body: { reason: reason.trim() } });
       else await api.post(path, { reason: reason.trim() });
+      invalidateHomeFeedCache(user.id, window.sessionStorage);
       const verb = action.type === "hide" ? "隐藏" : action.type === "restore" ? "恢复" : "删除";
       setMessage(`已${verb}「${action.item.title || `内容 #${action.item.id}`}」。`);
       setAction(null); setPreview({ id: null, data: null, loading: false, error: null });
@@ -93,10 +100,29 @@ export function AdminPostsPage() {
     finally { setActionBusy(false); }
   };
 
+  const toggleHomePin = async (post) => {
+    if (pinInFlight.current || actionBusy) return;
+    pinInFlight.current = true;
+    setPinBusy(post.id); setPinError(null); setMessage("");
+    const pinned = !post.home_pin?.is_active;
+    try {
+      await api.put(`/admin/posts/${post.id}/home-pin`, { pinned, reason: pinned ? "在后台内容列表置顶到首页" : "在后台内容列表取消首页置顶" });
+      announceHomePinsChanged(user.id);
+      setMessage(`已${pinned ? "置顶到首页" : "取消置顶"}「${post.title}」。`);
+      await state.reload();
+    } catch (error) {
+      setPinError(error);
+    } finally {
+      pinInFlight.current = false;
+      setPinBusy(null);
+    }
+  };
+
   return (
-    <AdminPageFrame title="内容" description="查找文章与随记，查看发布状态和访问范围；预览与管理操作会留下记录。" busy={state.loading || actionBusy || pageNeedsClamp} actions={<span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>}>
+    <AdminPageFrame title="内容" description="查找文章与随记，查看发布状态和访问范围；预览与管理操作会留下记录。" busy={state.loading || actionBusy || pinBusy !== null || pageNeedsClamp} actions={<><Link className="btn btn-secondary" to="/admin/featured">管理首页置顶</Link><span className="personal-page-total tabular">共 {pagination.total || 0} 条</span></>}>
       <PostFilters filters={filters} searchValue={searchValue} loading={state.loading} onSearchValue={setSearchValue} onChange={(updates) => updateFilters({ ...updates, page: 1 })} onSubmit={submitSearch} />
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
+      {pinError ? <div className="inline-error admin-feedback" role="alert">{pinError.message} <Link to="/admin/featured">管理首页置顶</Link></div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取内容列表</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
       {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新内容列表…</div> : null}
@@ -108,15 +134,17 @@ export function AdminPostsPage() {
               <div className="admin-content-main">
                 <div className="admin-content-title"><h2>{post.title || `内容 #${post.id}`}</h2><span className="tabular">#{post.id}</span></div>
                 <div className="admin-user-badges"><AdminStatus value={post.post_type} /><AdminStatus value={post.status} /><AdminStatus value={post.visibility} /><AdminStatus value={post.deleted_at ? "deleted" : post.moderation_status} /></div>
+                {post.home_pin?.is_active ? <small className="home-pin-status">{post.status === "published" && post.moderation_status === "active" && !post.deleted_at ? "首页置顶" : "置顶配置保留，当前不展示"}</small> : null}
                 <p>{post.summary || "无摘要"}</p>
                 <small>作者 @{post.author?.username || "未知"}{post.collection_id ? ` · 合集 #${post.collection_id}` : ""}</small>
                 <small>{post.category ? `分类：${post.category.name}` : "未分类"}{post.tags?.length ? ` · 标签：${post.tags.map((tag) => tag.name).join("、")}` : ""}</small>
               </div>
               <dl className="admin-content-meta"><div><dt>更新</dt><dd><time dateTime={post.updated_at}>{formatDate(post.updated_at, true)}</time></dd></div><div><dt>发布时间</dt><dd>{post.published_at ? <time dateTime={post.published_at}>{formatDate(post.published_at, true)}</time> : "尚未发布"}</dd></div></dl>
               <div className="admin-content-actions">
+                {post.post_type === "article" && (post.home_pin?.is_active || (post.status === "published" && post.moderation_status === "active" && !post.deleted_at)) ? <button className="btn btn-secondary btn-small" type="button" disabled={actionBusy || pinBusy !== null || state.loading} aria-pressed={Boolean(post.home_pin?.is_active)} onClick={() => { void toggleHomePin(post); }}>{pinBusy === post.id ? "正在保存…" : post.home_pin?.is_active ? "取消置顶" : "置顶到首页"}</button> : null}
                 <button className="btn btn-secondary btn-small" type="button" aria-expanded={preview.id === post.id} disabled={preview.loading && preview.id === post.id} onClick={() => { void openPreview(post.id); }}>{preview.loading && preview.id === post.id ? "读取中…" : preview.id === post.id ? "收起预览" : "审计预览"}</button>
-                {!post.deleted_at ? <button className="btn btn-secondary btn-small" type="button" disabled={actionBusy} onClick={() => openAction(post.moderation_status === "hidden" ? "restore" : "hide", post)}>{post.moderation_status === "hidden" ? "恢复" : "隐藏"}</button> : null}
-                {!post.deleted_at ? <button className="btn btn-danger btn-small" type="button" disabled={actionBusy} onClick={() => openAction("delete", post)}>删除</button> : null}
+                {!post.deleted_at ? <button className="btn btn-secondary btn-small" type="button" disabled={actionBusy || pinBusy !== null} onClick={() => openAction(post.moderation_status === "hidden" ? "restore" : "hide", post)}>{post.moderation_status === "hidden" ? "恢复" : "隐藏"}</button> : null}
+                {!post.deleted_at ? <button className="btn btn-danger btn-small" type="button" disabled={actionBusy || pinBusy !== null} onClick={() => openAction("delete", post)}>删除</button> : null}
               </div>
               {preview.id === post.id ? <div className="admin-post-preview" aria-live="polite">
                 {preview.error ? <ErrorState error={preview.error} onRetry={() => { void openPreview(post.id); }} /> : null}
@@ -126,7 +154,7 @@ export function AdminPostsPage() {
           ))}
         </div>
       ) : <EmptyState title="没有匹配的内容" description="调整搜索词或筛选条件后重试。" /> : null}
-      <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || actionBusy || pageNeedsClamp} onChange={(page) => updateFilters({ page })} />
+      <Pagination page={pagination.page || filters.page} totalPages={pagination.total_pages || 0} disabled={state.loading || actionBusy || pinBusy !== null || pageNeedsClamp} onChange={(page) => updateFilters({ page })} />
       <AdminActionDialog open={Boolean(action)} title={action ? actionCopy[action.type][0] : ""} description={action ? actionCopy[action.type][1] : ""} confirmLabel={action ? actionCopy[action.type][2] : "确认"} reason={reason} busy={actionBusy} error={actionError?.message} onReasonChange={setReason} onConfirm={() => { void confirmAction(); }} onClose={closeAction} />
     </AdminPageFrame>
   );

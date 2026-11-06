@@ -4,7 +4,7 @@ import { formatDate, postHref, postTypeLabel } from "../lib/format";
 import { ProtectedImage } from "./ProtectedImage";
 import { HomeInkLandscape } from "./HomeSketches";
 
-export function HomeOpeningFeature({ post, loading = false }) {
+export function HomeOpeningFeature({ post, loading = false, pinned = false }) {
   const media = post?.post_type === "article"
     ? post.cover_media || post.display_media
     : post?.display_media || post?.cover_media;
@@ -23,7 +23,7 @@ export function HomeOpeningFeature({ post, loading = false }) {
       </Link> : <HomeInkLandscape />}
     </div>
     {post ? <>
-      <div className="home-opening-feature-meta"><span>最近记录</span><span>{author} · {postTypeLabel(post.post_type)}</span></div>
+      <div className="home-opening-feature-meta"><span>{pinned ? "置顶推荐" : "最近记录"}</span><span>{author} · {postTypeLabel(post.post_type)}</span></div>
       <h2><Link to={href} state={{ fromHomeFeed: true }} onClick={rememberDeparture}>{title}</Link></h2>
       <div className="home-opening-feature-footer">
         <span>{summary || formatDate(post.semantic_time || post.published_at)}</span>

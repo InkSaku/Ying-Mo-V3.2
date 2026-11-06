@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AdminActionDialog, AdminPageFrame } from "../components/AdminPanel";
+import { useAuth } from "../contexts/AuthContext";
+import { announceHomePinsChanged } from "../lib/homeFeed";
 import { CustomSelect } from "../components/CustomSelect";
 import { EmptyState, ErrorState } from "../components/States";
 import { Pagination } from "../components/Pagination";
@@ -31,7 +33,10 @@ function candidateTitle(item) {
 }
 
 export function AdminFeaturedPage() {
-  usePageMeta("首页精选");
+  usePageMeta("首页置顶与精选");
+  const { user } = useAuth();
+  const movingRef = useRef(false);
+  const [moveError, setMoveError] = useState(null);
   const state = useAsyncData(() => api.get("/admin/featured"), []);
   const [action, setAction] = useState(null);
   const [draft, setDraft] = useState({ content_type: "article", target_id: "", sort_order: "0" });
@@ -85,9 +90,7 @@ export function AdminFeaturedPage() {
           reason: reason.trim(),
         });
         setMessage("精选项已添加，每位成员只会看到自己可阅读的内容。");
-      } else if (action.type === "order") {
-        await api.patch(`/admin/featured/${action.item.id}`, { sort_order: sortOrder, reason: reason.trim() });
-        setMessage(`精选项 #${action.item.id} 的排序已保存。`);
+
       } else if (action.type === "toggle") {
         await api.patch(`/admin/featured/${action.item.id}`, { is_active: !action.item.is_active, reason: reason.trim() });
         setMessage(`精选项 #${action.item.id} 已${action.item.is_active ? "停用" : "启用"}。`);
@@ -95,6 +98,7 @@ export function AdminFeaturedPage() {
         await api.delete(`/admin/featured/${action.item.id}`, { body: { reason: reason.trim() } });
         setMessage(`精选项 #${action.item.id} 已删除。`);
       }
+      announceHomePinsChanged(user.id);
       setAction(null);
       await state.reload();
     } catch (error) {
@@ -105,11 +109,10 @@ export function AdminFeaturedPage() {
   };
 
   const titles = {
-    create: "添加首页精选", order: "调整精选排序", toggle: action?.item?.is_active ? "停用精选项" : "启用精选项", delete: "删除精选项",
+    create: "添加首页精选", toggle: action?.item?.is_active ? "停用精选项" : "启用精选项", delete: "删除精选项",
   };
   const descriptions = {
-    create: "搜索并星标内容即可，不需要查找数据库 ID。这里只会列出当前可加入精选的内容。",
-    order: "数值越小越靠前；文章与合集分别在各自首页区块中排序。",
+    create: "选择文章后加入首页置顶，最多启用3篇；每位成员只会看到自己有权阅读的内容。合集保留独立的精选配置。",
     toggle: action?.item?.is_active ? "停用后立即退出首页精选结果，但保留配置记录。" : "重新启用前会检查内容是否仍可用。",
     delete: "删除只移除精选配置，不会删除文章或合集。",
   };
@@ -125,14 +128,40 @@ export function AdminFeaturedPage() {
     setCandidateSearch(""); setCandidateQuery(""); setCandidatePage(1);
   };
 
+  const orderedItems = [
+    ...(state.data || []).filter((item) => item.content_type === "article"),
+    ...(state.data || []).filter((item) => item.content_type === "collection"),
+  ];
+  const activeItems = (contentType) => (state.data || []).filter((item) => item.content_type === contentType && item.is_active && item.eligible);
+  const moveFeatured = async (item, direction) => {
+    if (busy || movingRef.current) return;
+    movingRef.current = true;
+    setBusy(true); setMoveError(null); setMessage("");
+    try {
+      await api.post(`/admin/featured/${item.id}/move`, {
+        direction, expected_ids: activeItems(item.content_type).map((row) => row.id), reason: "调整首页精选展示顺序",
+      });
+      announceHomePinsChanged(user.id);
+      setMessage("展示顺序已更新。");
+      await state.reload();
+    } catch (error) {
+      setMoveError(error);
+      if (error.code === "FEATURED_ORDER_CHANGED") await state.reload();
+    } finally {
+      movingRef.current = false;
+      setBusy(false);
+    }
+  };
+
   return (
-    <AdminPageFrame title="首页精选" description="为首页挑选文章与合集，调整展示顺序。每位成员只会看到自己可阅读的内容。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
+    <AdminPageFrame title="首页置顶与精选" description="最多置顶3篇文章，第一篇作为首页主推。通过上移、下移调整顺序；每位成员只会看到自己可阅读的内容。" busy={state.loading || busy} actions={<button className="btn btn-primary" type="button" disabled={state.loading || busy} onClick={() => openAction("create")}>添加精选</button>}>
+      {moveError ? <div className="inline-error admin-feedback" role="alert">{moveError.message}</div> : null}
       {message ? <div className="inline-success admin-feedback" role="status">{message}</div> : null}
       {state.loading && !state.data ? <div className="skeleton-stack" role="status"><span className="sr-only">正在读取首页精选</span><div className="skeleton-block" /></div> : null}
       {state.error ? <ErrorState error={state.error} onRetry={state.reload} /> : null}
       {state.loading && state.data ? <div className="profile-refresh" role="status">正在更新精选列表…</div> : null}
       {state.data ? state.data.length ? <div className="admin-content-list">
-        {state.data.map((item) => (
+        {orderedItems.map((item) => (
           <article className="admin-content-row admin-featured-row" key={item.id}>
             <div className="admin-content-main">
               <div className="admin-content-title"><h2>{targetLabel(item)}</h2><span className={`admin-status admin-status-${item.is_active ? "active" : "inactive"}`}>{item.is_active ? "已启用" : "已停用"}</span>{!item.eligible ? <span className="admin-status admin-status-hidden">目标不可用</span> : null}</div>
@@ -140,9 +169,10 @@ export function AdminFeaturedPage() {
               {item.content_type === "article" ? <small>作者 @{item.target?.author?.username || "未知"} · {item.target?.status || "不存在"} · {item.target?.moderation_status || "未知治理状态"} · {item.target?.visibility === "private" ? "仅作者" : "成员可见"}</small> : <small>创建者 @{item.target?.creator?.username || "未知"} · {item.target?.status || "不存在"}</small>}
               <small>配置人 @{item.created_by?.username || "未知"}</small>
             </div>
-            <dl className="admin-content-meta"><div><dt>排序</dt><dd className="admin-content-count tabular">{item.sort_order}</dd></div><div><dt>更新</dt><dd><time dateTime={item.updated_at}>{formatDate(item.updated_at, true)}</time></dd></div></dl>
+            <dl className="admin-content-meta"><div><dt>{item.content_type === "article" ? "置顶顺序" : "精选顺序"}</dt><dd className="admin-content-count tabular">{item.is_active && item.eligible ? activeItems(item.content_type).findIndex((row) => row.id === item.id) + 1 : "—"}</dd></div><div><dt>更新</dt><dd><time dateTime={item.updated_at}>{formatDate(item.updated_at, true)}</time></dd></div></dl>
             <div className="admin-content-actions">
-              <button className="btn btn-secondary btn-small" type="button" disabled={busy} onClick={() => openAction("order", item)}>调整排序</button>
+              <button className="btn btn-secondary btn-small" type="button" aria-label={`上移：${targetLabel(item)}`} disabled={busy || state.loading || !item.is_active || !item.eligible || activeItems(item.content_type)[0]?.id === item.id} onClick={() => { void moveFeatured(item, "up"); }}>上移</button>
+              <button className="btn btn-secondary btn-small" type="button" aria-label={`下移：${targetLabel(item)}`} disabled={busy || state.loading || !item.is_active || !item.eligible || activeItems(item.content_type).at(-1)?.id === item.id} onClick={() => { void moveFeatured(item, "down"); }}>下移</button>
               <button className="btn btn-secondary btn-small" type="button" disabled={busy || (!item.is_active && !item.eligible)} title={!item.is_active && !item.eligible ? "目标当前不可用，不能启用" : undefined} onClick={() => openAction("toggle", item)}>{item.is_active ? "停用" : "启用"}</button>
               <button className="btn btn-danger btn-small" type="button" disabled={busy} onClick={() => openAction("delete", item)}>删除</button>
             </div>
@@ -182,12 +212,8 @@ export function AdminFeaturedPage() {
             </div> : null}
           </div>
           <Pagination page={candidatePagination.page || candidatePage} totalPages={candidatePagination.total_pages || 0} disabled={busy || candidateState.loading} onChange={setCandidatePage} />
-          <details className="admin-featured-order">
-            <summary>调整排序位置</summary>
-            <label><span>排序值</span><input type="number" step="1" required value={draft.sort_order} disabled={busy} onChange={(event) => setDraft({ ...draft, sort_order: event.target.value })} /><small>已自动给出建议值。需要置顶时可填写更小的整数。</small></label>
-          </details>
         </div> : null}
-        {action?.type === "order" ? <label><span>排序值</span><input type="number" step="1" required value={draft.sort_order} disabled={busy} onChange={(event) => setDraft({ ...draft, sort_order: event.target.value })} /><small>整数；数值越小越靠前。</small></label> : null}
+
       </AdminActionDialog>
     </AdminPageFrame>
   );

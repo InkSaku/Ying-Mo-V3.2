@@ -14,6 +14,9 @@ from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.time import isoformat_utc
 from app.extensions import db
+from app.home.featured import (
+    HOME_PIN_LIMIT, active_featured_rows, bump_featured_revision, lock_featured_configuration,
+)
 from app.models import (
     AdminLog, Category, Collection, CollectionStatus, Comment, FeaturedContent, Media, MediaKind, Notification,
     Post, PostModerationStatus, PostStatus, PostType, PostVisibility, SiteSetting, Tag, User, UserRole, UserStatus,
@@ -193,10 +196,59 @@ def posts():
     if result is None:
         return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
     rows, meta = result
+    post_ids = [post.id for post in rows]
+    home_pins = {item.post_id: item for item in db.session.scalars(
+        db.select(FeaturedContent).where(FeaturedContent.post_id.in_(post_ids))
+    ).all()} if post_ids else {}
     return success_response([{
         **post.to_dict(include_body=False, include_inactive_taxonomy=True),
         "deleted_at": isoformat_utc(post.deleted_at),
+        "home_pin": ({"id": home_pins[post.id].id, "is_active": home_pins[post.id].is_active}
+                     if post.id in home_pins else None),
     } for post in rows], meta=meta)
+
+
+@bp.put("/posts/<int:post_id>/home-pin")
+@jwt_required(locations=["headers"])
+def set_home_pin(post_id):
+    actor = _admin()
+    if actor is None:
+        return error_response("PERMISSION_DENIED", "仅系统管理员可访问。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) - {"pinned", "reason"} or not isinstance(data.get("pinned"), bool):
+        return error_response("VALIDATION_ERROR", "pinned 必须是布尔值。", 422)
+    reason, error = _reason(data)
+    if error:
+        return error
+    configuration = lock_featured_configuration(actor.id)
+    post = db.session.scalar(db.select(Post).where(Post.id == post_id).with_for_update().execution_options(populate_existing=True))
+    if post is None or post.post_type != "article":
+        return error_response("RESOURCE_NOT_FOUND", "文章不存在。", 404)
+    if data["pinned"] and not (post.status == "published" and post.moderation_status == "active" and post.deleted_at is None):
+        return error_response("VALIDATION_ERROR", "只能置顶正常发布且未隐藏、删除的文章。", 422)
+    item = db.session.scalar(db.select(FeaturedContent).where(FeaturedContent.post_id == post.id).with_for_update())
+    before = bool(item and item.is_active)
+    if before == data["pinned"]:
+        db.session.commit()
+        return success_response({"pinned": before})
+    if data["pinned"]:
+        active = active_featured_rows("article", lock=True)
+        if len(active) >= HOME_PIN_LIMIT:
+            return error_response("HOME_PIN_LIMIT", "首页最多置顶3篇文章，请先取消一篇。", 409)
+        for index, row in enumerate(active):
+            row.sort_order = index * 10
+        if item is None:
+            item = FeaturedContent(content_type="article", post_id=post.id, created_by_id=actor.id)
+            db.session.add(item)
+        item.sort_order = len(active) * 10
+        item.is_active = True
+    elif item:
+        item.is_active = False
+    bump_featured_revision(configuration)
+    record_admin_log(actor, "featured.pin" if data["pinned"] else "featured.unpin", "post", post.id,
+                     before={"pinned": before}, after={"pinned": data["pinned"]}, reason=reason)
+    db.session.commit()
+    return success_response({"pinned": data["pinned"]})
 
 
 @bp.get("/posts/<int:post_id>")
@@ -771,9 +823,13 @@ def create_featured():
     sort_order=data.get("sort_order",0)
     if isinstance(sort_order,bool) or not isinstance(sort_order,int):
         return error_response("VALIDATION_ERROR","sort_order 不合法。",422)
+    configuration = lock_featured_configuration(actor.id)
+    if content_type == "article" and len(active_featured_rows("article", lock=True)) >= HOME_PIN_LIMIT:
+        return error_response("HOME_PIN_LIMIT", "首页最多置顶3篇文章，请先取消一篇。", 409)
     item=FeaturedContent(content_type=content_type,post_id=post_id,collection_id=collection_id,sort_order=sort_order,created_by_id=actor.id)
     db.session.add(item)
     try:
+        bump_featured_revision(configuration)
         db.session.flush(); record_admin_log(actor,"featured.create","featured",item.id,after={"content_type":content_type,"post_id":post_id,"collection_id":collection_id,"sort_order":sort_order,"is_active":True},reason=reason); db.session.commit()
     except IntegrityError:
         db.session.rollback(); return error_response("DUPLICATE_RESOURCE","该内容已经精选。",409)
@@ -790,9 +846,12 @@ def update_featured(item_id):
         return error_response("VALIDATION_ERROR","精选更新字段不合法。",422)
     reason,error=_reason(data)
     if error: return error
+    configuration = lock_featured_configuration(actor.id)
     item=db.session.get(FeaturedContent,item_id)
     if item is None: return error_response("RESOURCE_NOT_FOUND","精选项不存在。",404)
     before={"sort_order":item.sort_order,"is_active":item.is_active}
+    if data.get("is_active") is True and not item.is_active and item.content_type == "article" and len(active_featured_rows("article", lock=True)) >= HOME_PIN_LIMIT:
+        return error_response("HOME_PIN_LIMIT", "首页最多置顶3篇文章，请先取消一篇。", 409)
     if "sort_order" in data:
         if isinstance(data["sort_order"],bool) or not isinstance(data["sort_order"],int):
             return error_response("VALIDATION_ERROR","sort_order 不合法。",422)
@@ -802,6 +861,7 @@ def update_featured(item_id):
         if data["is_active"] and not _featured_is_eligible(item):
             return error_response("VALIDATION_ERROR","精选目标当前不可启用。",422)
         item.is_active=data["is_active"]
+    bump_featured_revision(configuration)
     record_admin_log(actor,"featured.update","featured",item.id,before=before,after={"sort_order":item.sort_order,"is_active":item.is_active},reason=reason)
     db.session.commit(); return success_response(_featured_dict(item))
 
@@ -813,10 +873,50 @@ def delete_featured(item_id):
     if actor is None: return error_response("PERMISSION_DENIED","仅系统管理员可访问。",403)
     reason,error=_reason(data)
     if error: return error
+    configuration = lock_featured_configuration(actor.id)
     item=db.session.get(FeaturedContent,item_id)
     if item is None: return error_response("RESOURCE_NOT_FOUND","精选项不存在。",404)
     record_admin_log(actor,"featured.delete","featured",item.id,before={"content_type":item.content_type,"post_id":item.post_id,"collection_id":item.collection_id,"sort_order":item.sort_order,"is_active":item.is_active},reason=reason)
+    bump_featured_revision(configuration)
     db.session.delete(item); db.session.commit(); return success_response({"deleted":True})
+
+
+@bp.post("/featured/<int:item_id>/move")
+@jwt_required(locations=["headers"])
+def move_featured(item_id):
+    actor = _admin()
+    if actor is None:
+        return error_response("PERMISSION_DENIED", "仅系统管理员可访问。", 403)
+    data = request.get_json(silent=True)
+    if (not isinstance(data, dict) or set(data) - {"direction", "expected_ids", "reason"}
+            or not isinstance(data.get("direction"), str) or data["direction"] not in {"up", "down"}):
+        return error_response("VALIDATION_ERROR", "移动参数不合法。", 422)
+    expected = data.get("expected_ids")
+    if not isinstance(expected, list) or any(isinstance(value, bool) or not isinstance(value, int) for value in expected):
+        return error_response("VALIDATION_ERROR", "expected_ids 必须是当前有序列表。", 422)
+    reason, error = _reason(data)
+    if error:
+        return error
+    configuration = lock_featured_configuration(actor.id)
+    item = db.session.get(FeaturedContent, item_id)
+    if item is None:
+        return error_response("RESOURCE_NOT_FOUND", "精选项不存在。", 404)
+    rows = active_featured_rows(item.content_type, lock=True)
+    before = [row.id for row in rows]
+    if before != expected or item.id not in before:
+        return error_response("FEATURED_ORDER_CHANGED", "精选顺序已变化，请刷新后重试。", 409)
+    index = before.index(item.id)
+    target = index + (-1 if data["direction"] == "up" else 1)
+    if target < 0 or target >= len(rows):
+        return error_response("VALIDATION_ERROR", "已经到达列表边界。", 422)
+    rows[index], rows[target] = rows[target], rows[index]
+    for rank, row in enumerate(rows):
+        row.sort_order = rank * 10
+    bump_featured_revision(configuration)
+    record_admin_log(actor, "featured.reorder", "featured", item.id,
+                     before={"ids": before}, after={"ids": [row.id for row in rows]}, reason=reason)
+    db.session.commit()
+    return success_response({"ids": [row.id for row in rows]})
 
 
 @bp.get("/settings")
@@ -827,7 +927,9 @@ def settings():
 
 
 def _site_settings_payload():
-    rows=list(db.session.scalars(db.select(SiteSetting).order_by(SiteSetting.key)).all())
+    rows=list(db.session.scalars(db.select(SiteSetting).where(
+        SiteSetting.key.in_([item["key"] for item in SITE_SETTING_SCHEMA])
+    ).order_by(SiteSetting.key)).all())
     stored={row.key:row.value for row in rows}
     values={item["key"]:stored.get(item["key"],item["default"]) for item in SITE_SETTING_SCHEMA}
     updated=max((row.updated_at for row in rows),default=None)

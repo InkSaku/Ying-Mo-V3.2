@@ -3,6 +3,7 @@ import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { CustomSelect } from "../components/CustomSelect";
@@ -12,6 +13,7 @@ import { Pagination } from "../components/Pagination";
 import { formatDate, postTypeLabel, visibilityLabel } from "../lib/format";
 import { PersonalNav } from "../components/PersonalNav";
 import { clampPageToTotal } from "../lib/pagination";
+import { invalidateHomeFeedCache } from "../lib/homeFeed";
 
 const PAGE_SIZE = 20;
 
@@ -35,6 +37,7 @@ function positivePage(value) {
 
 export function MyPostsPage() {
   usePageMeta("我的内容");
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const status = params.get("status") || "";
@@ -109,6 +112,7 @@ export function MyPostsPage() {
         await api.delete(`/posts/${post.id}`);
         setFeedback(post.published_at ? "已删除发布内容。" : "已删除草稿。");
       }
+      invalidateHomeFeedCache(user.id, window.sessionStorage);
       setAction(null);
       if (type === "delete" && state.data?.length === 1 && page > 1) {
         updateParams({ page: page - 1 });

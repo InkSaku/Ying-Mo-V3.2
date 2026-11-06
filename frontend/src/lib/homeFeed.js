@@ -3,13 +3,20 @@ const feedCache = new Map();
 const feedAnchorCache = new Map();
 
 export const HOME_FEED_TYPES = new Set(["all", "note", "article"]);
+export const HOME_FEED_PAGE_SIZE = 12;
 export const HOME_FEED_SAVE_EVENT = "yingmo:home-feed-save";
+export const HOME_PINS_CHANGED_EVENT = "yingmo:home-pins-changed";
+
+export function announceHomePinsChanged(userId) {
+  invalidateHomeFeedCache(userId, window.sessionStorage);
+  window.dispatchEvent(new Event(HOME_PINS_CHANGED_EVENT));
+}
 
 export function normalizeHomeFeedType(value) {
   return HOME_FEED_TYPES.has(value) ? value : "all";
 }
 
-export function homeFeedPath(type, cursor = "", pageSize = 12) {
+export function homeFeedPath(type, cursor = "", pageSize = HOME_FEED_PAGE_SIZE) {
   const params = new URLSearchParams({ type: normalizeHomeFeedType(type), page_size: String(pageSize) });
   if (cursor) params.set("cursor", cursor);
   return `/home/feed?${params.toString()}`;
@@ -55,8 +62,8 @@ export function readHomeFeedCache(userId, type, now = Date.now()) {
   return cached.value;
 }
 
-// A successful publication changes every filter, not only the visible stream.
-// Drop the old reading position too so returning home reveals the new record.
+// Content mutations affect every filter, including the opening feature.
+// Drop the old reading position too so returning home starts from current data.
 export function invalidateHomeFeedCache(userId, storage) {
   for (const type of HOME_FEED_TYPES) {
     const key = homeFeedCacheKey(userId, type);
