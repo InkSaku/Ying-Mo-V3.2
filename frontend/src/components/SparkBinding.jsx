@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { SparkVerification } from "./SparkVerification";
 import { api } from "../lib/api";
+import { SparkIcon } from "./SparkIcon";
 
 const live = ["queued", "preparing", "waiting_scan", "verifying", "awaiting_confirmation"];
 const labels = {
@@ -38,7 +39,7 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
     <div className={`spark-account-card${data.bound ? " is-bound" : ""}`}>
       {data.bound ? <><span className="spark-account-avatar" aria-hidden="true">{Array.from(data.account_profile.nickname || "抖音")[0]}</span>
         <div className="spark-account-identity"><strong>{data.account_profile.nickname || "抖音账号"}</strong><span>{data.account_profile.short_id ? `抖音号 ${data.account_profile.short_id}` : data.contacts_updated_at ? `已同步 ${data.contacts.length} 位联系人` : "账号已连接，等待同步好友"}</span></div></> : null}
-      {!active ? <button className={`btn ${data.bound ? "btn-secondary" : "btn-primary"}`} disabled={Boolean(busy) || !data.credential_storage_ready || !data.worker.online} onClick={onStart}>{data.bound ? "重新扫码连接" : "扫码连接抖音"}</button> : null}
+      {!active ? <button className={`btn ${data.bound ? "btn-secondary" : "btn-primary"}`} disabled={Boolean(busy) || !data.credential_storage_ready || !data.worker.online} onClick={onStart}><SparkIcon name="scan" />{data.bound ? "重新扫码连接" : "扫码连接抖音"}</button> : null}
     </div>
     {showSession ? <div className="spark-login-session" aria-live="polite">
       <p>{session.reason || labels[session.status] || "本次连接尚未完成。"}</p>
@@ -53,7 +54,7 @@ export function SparkBinding({ data, busy, onStart, onCancel, onConfirm }) {
         {detected.short_id ? <p>抖音号：{detected.short_id}</p> : null}
         <p>{detected.same_account ? "识别为原账号，将保留好友选择、时间与模板。同步并检查后，再恢复每日计划。" : data.bound ? "将更换账号，取消旧任务并清空旧好友选择；每日发送保持关闭。" : "确认后会读取联系人；每日发送保持关闭，选好朋友并检查后再开启。"}</p>
         {!session.identity_known ? <p className="spark-meta">尚未读取到可靠身份标识，请核对手机上实际登录的账号。好友名单将按新账号重新获取。</p> : null}
-        <button className="btn btn-primary" disabled={Boolean(busy)} onClick={onConfirm}>确认连接此账号</button>
+        <button className="btn btn-primary" disabled={Boolean(busy)} onClick={onConfirm}><SparkIcon name="check" />确认连接此账号</button>
       </div> : null}
       {active ? <button className="text-button danger-text" disabled={Boolean(busy)} onClick={onCancel}>取消连接</button> : null}
     </div> : null}

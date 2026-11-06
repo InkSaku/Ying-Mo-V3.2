@@ -3646,10 +3646,6 @@ input[aria-invalid="true"] {
   .reaction-menu-surface { transition: none; }
 }
 
-.interaction-favorite-row {
-  margin-top: 14px !important;
-}
-
 .interaction-feedback {
   min-height: 20px;
   margin-top: 12px;

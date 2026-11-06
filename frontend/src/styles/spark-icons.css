@@ -1,0 +1,15 @@
+.spark-icon {
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}
+
+.spark-art { display: block; pointer-events: none; }
+.spark-art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+:root[data-theme="dark"] .spark-art img { filter: invert(.9) hue-rotate(180deg); }
+.spark-letter-art, .spark-notice-art { display: block; width: 100%; height: auto; color: var(--text); }
+.spark-art-accent { fill: var(--brand-link); }
+.spark-art-paper { fill: var(--page); }
+.spark-art-cutout { fill: var(--surface); }

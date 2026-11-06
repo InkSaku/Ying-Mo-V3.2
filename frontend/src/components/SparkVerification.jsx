@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { SparkIcon } from "./SparkIcon";
 import { api } from "../lib/api";
 
 export function SparkVerification({ sessionId }) {
@@ -79,7 +80,7 @@ export function SparkVerification({ sessionId }) {
   return <section className="spark-verification" aria-label="继续完成抖音登录">
     <div className="spark-verification-heading"><strong>继续完成登录</strong><span>抖音官方页面 · 自动更新</span></div>
     <p className="spark-meta">点击下方画面中的提示继续。若出现新的二维码，请用抖音扫描；按官方页面要求完成后，这里会自动进入账号确认。</p>
-    <button type="button" className="text-button" onClick={() => setEnlarged(!enlarged)}>{enlarged ? "缩小画面" : "放大画面"}</button>
+    <button type="button" className="text-button" onClick={() => setEnlarged(!enlarged)}><SparkIcon name={enlarged ? "collapse" : "expand"} />{enlarged ? "缩小画面" : "放大画面"}</button>
     <div className={`spark-verification-screen${enlarged ? " is-enlarged" : ""}`} aria-label="抖音官方登录画面">
       {screen ? <img src={screen.url} alt="抖音官方登录页面实时画面" width="1366" height="800" draggable="false" onPointerDown={begin} onPointerUp={end}
         onPointerCancel={() => { pointer.current = null; }} /> : <p>正在读取官方登录页面…</p>}

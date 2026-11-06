@@ -1,14 +1,16 @@
-import { InkSketch } from "./InkSketch";
+import { SparkIcon } from "./SparkIcon";
 import { sparkJobDuration, sparkJobPhase, sparkKindLabels, sparkTime } from "../lib/spark";
+
+const statusIcons = {
+  queued: "clock", scheduled: "clock", running: "flame", succeeded: "check",
+  failed: "alert", partial: "alert", unknown: "alert", expired: "alert", blocked: "alert",
+  offline: "server", stopping: "pause", cancelled: "stopped", skipped: "arrow",
+};
 
 export function SparkRunBadge({ phase }) {
   return <span className={`spark-run-status is-${phase.key}`} key={phase.key}>
     <span className="spark-status-motion" aria-hidden="true">
-      {phase.key === "queued" ? <span className="spark-queue-dots"><i /><i /><i /></span>
-        : phase.key === "running" ? <svg className="spark-moving-flame" viewBox="0 0 20 24"><path d="M10 2c2 6-4 7-3 12l3-4c6 5 7 9 3 12-4 3-10 0-10-5 0-4 3-7 4-9 0 4 2 5 3 5-2-5 0-7 0-11Z" /></svg>
-        : phase.key === "succeeded" ? <svg className="spark-finished-check" viewBox="0 0 20 20"><path d="m4 10 4 4 8-9" /></svg>
-        : phase.key === "scheduled" ? <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 2" /></svg>
-        : <span className="spark-static-dot" />}
+      <SparkIcon name={statusIcons[phase.key] || "alert"} className={phase.key === "running" ? "spark-moving-flame" : phase.key === "succeeded" ? "spark-finished-check" : ""} />
     </span>{phase.label}
   </span>;
 }
@@ -27,7 +29,7 @@ export function SparkQueue({ data, now, busy, onCancel }) {
       : "定时任务到点后才进入执行队列，现在还没有开始执行。";
 
   return <section id="spark-queue" className={`spark-queue-panel${running && online ? " is-running" : ""}`} aria-labelledby="spark-queue-heading">
-    <div className="spark-queue-intro"><InkSketch variant="spark" className="spark-queue-companion" />
+    <div className="spark-queue-intro">
       <div><p className="hero-kicker">任务队列 · 依次执行</p><h2 id="spark-queue-heading">{headline}</h2><p className="spark-queue-explanation" aria-live="polite">{explanation}</p>
         {online && ready.length && data.queue?.ready_count > 1 ? <small>后台共有 {data.queue.ready_count} 项就绪任务，按调度顺序逐项处理。</small> : null}
       </div>

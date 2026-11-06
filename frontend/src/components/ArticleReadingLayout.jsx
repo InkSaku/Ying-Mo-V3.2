@@ -3,6 +3,7 @@ import { calculateReadingProgress, groupArticleOutline, hasArticleToc, normalize
 import ArchiveCatDrawing from "./ArchiveCatDrawing";
 import { useTheme } from "../contexts/ThemeContext";
 import { useReadingPanels } from "../hooks/useReadingPanels";
+import { FavoriteButton, FavoriteLink } from "./FavoriteControl";
 import "../styles/archive-cat.css";
 
 function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
@@ -203,7 +204,8 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
             <span>已读</span>
           </div>
           <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onResetFontSize={() => setFontSize(null)} />
-          <button type="button" className="article-reading-favorite" disabled={!favorite?.ready || favorite.busy} aria-pressed={favorite?.favorited || false} onClick={() => { void favorite?.toggleFavorite(); }}><span aria-hidden="true">{favorite?.favorited ? "♥" : "♡"}</span>{favorite?.busy ? "处理中" : favorite?.favorited ? "已收藏" : "收藏文章"}</button>
+          <FavoriteButton key={favorite?.postId ?? "pending"} rail favorited={favorite?.favorited} ready={favorite?.ready} busy={favorite?.busy} celebration={favorite?.celebration} onToggle={favorite?.toggleFavorite} />
+          {favorite?.ready && favorite.favorited ? <FavoriteLink rail /> : null}
           {favorite?.error ? <p className="article-reading-tool-error" role="alert">{favorite.error}</p> : null}
           <button type="button" onClick={() => window.scrollTo({
             top: 0,
