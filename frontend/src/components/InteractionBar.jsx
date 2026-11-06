@@ -1,3 +1,4 @@
+import { UndoNotice } from "./UndoNotice";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { ReactionPicker } from "./ReactionPicker";
@@ -10,6 +11,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [canUndo, setCanUndo] = useState(false);
   const [celebration, setCelebration] = useState(0);
 
   useEffect(() => {
@@ -21,6 +23,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
     setMessage("");
     setError("");
     setCelebration(0);
+    setCanUndo(false);
     void api.get(`/interactions/posts/${postId}`, { signal: session.controller.signal }).then((result) => {
       if (!session.active) return;
       setFavorited(Boolean(result.data?.favorited));
@@ -31,7 +34,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
     return () => { session.active = false; session.controller.abort(); };
   }, [initialState?.favorited, postId]);
 
-  const toggleFavorite = useCallback(async (event) => {
+  const toggleFavorite = useCallback(async (event, desired = !favorited) => {
     const session = operation.current;
     if (!favoriteReady || !session?.active || session.busy) return;
     session.busy = true;
@@ -40,9 +43,10 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
     setMessage("");
     setError("");
     try {
-      const result = await api.post(`/interactions/posts/${postId}/favorite`, {}, { signal: session.controller.signal });
+      const result = await api.post(`/interactions/posts/${postId}/favorite`, { favorited: desired }, { signal: session.controller.signal });
       if (!session.active) return;
       setFavorited(Boolean(result.data?.favorited));
+      setCanUndo(result.data?.favorited === false);
       setMessage(result.data?.favorited ? "已收藏。" : "已取消收藏。");
       if (result.data?.favorited && animateSuccess) setCelebration((value) => value + 1);
     } catch (actionError) {
@@ -51,7 +55,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
       session.busy = false;
       if (session.active) setBusy(false);
     }
-  }, [favoriteReady, postId]);
+  }, [favoriteReady, favorited, postId]);
 
   useEffect(() => {
     onFavoriteState?.({ postId, favorited, ready: favoriteReady, busy, message, error, celebration, toggleFavorite });
@@ -70,6 +74,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
           {favoriteReady && favorited ? <FavoriteLink /> : null}
         </div>
       </div>
+      <UndoNotice message={canUndo ? "已取消收藏" : ""} busy={busy} error={error} onUndo={(event) => toggleFavorite(event, true)} onClose={() => setCanUndo(false)} />
       <div className="interaction-feedback" aria-live="polite" aria-atomic="true">
         {error ? <div className="inline-error" role="alert">{error}</div> : null}
         {message ? <p className="sr-only">{message}</p> : null}

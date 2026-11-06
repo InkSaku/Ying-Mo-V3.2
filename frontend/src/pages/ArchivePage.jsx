@@ -89,7 +89,7 @@ export function ArchivePage() {
 
       <details className="archive-filter-shelf">
         <summary><span></span><strong>筛选</strong><small>{activeFilterCount ? `${activeFilterCount} 项条件已启用` : "作者、分类、标签与合集"}</small><i aria-hidden="true" /></summary>
-        <PostFilters filters={{ ...selection, sort: "newest" }} options={optionState.data || {}} loading={optionState.loading} showSort={false} onChange={changeFilter} onClear={() => setParams(archiveSearchParams({ year, month, page: 1 }))} />
+        <PostFilters filters={{ ...selection, sort: "newest" }} options={optionState.data || {}} loading={optionState.loading} showSort={false} onChange={changeFilter} onApply={(next) => setParams(archiveSearchParams({ ...selection, ...next, page: 1 }))} onClear={() => setParams(archiveSearchParams({ year, month, page: 1 }))} />
       </details>
 
       <div className="archive-layout">

@@ -11,6 +11,25 @@
 }
 :where(a, [role="option"]) { touch-action: manipulation; }
 
+/* Color feedback keeps labels and hit areas still; release/cancel restores it. */
+:where(.text-button, .mobile-sheet-trigger, .mobile-sheet button:not(.btn), .comment-actions button,
+  .pagination button, .post-filters-active button, .search-result-tabs button,
+  .collection-memory-nav button, .article-toc-toggle, .article-toc-subheadings-toggle,
+  .mobile-header-icon, .mobile-notification-button, .mobile-menu > summary, .theme-toggle) {
+  -webkit-tap-highlight-color: transparent;
+}
+:root :is(.text-button, .mobile-sheet-trigger, .mobile-sheet button:not(.btn), .comment-actions button,
+  .pagination button, .post-filters-active button, .search-result-tabs button,
+  .collection-memory-nav button, .article-toc-toggle, .article-toc-subheadings-toggle,
+  .mobile-header-icon, .mobile-notification-button, .mobile-menu > summary, .theme-toggle):active:not(:disabled, .btn) {
+  background-color: color-mix(in srgb, var(--text) 9%, var(--surface));
+}
+
+.undo-notice { position: fixed; z-index: 90; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-overlay); background: var(--surface); color: var(--text); box-shadow: 0 4px 24px #0002; }
+.undo-notice > div { flex: 1; min-width: 0; }
+.undo-notice p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.undo-notice button { min-height: 44px; min-width: 44px; flex: none; }
+
 /* Scroll stays in the open surface when it reaches either edge. */
 :is(.dialog-panel, .markdown-editor-dialog, .editor-sidebar, .custom-select-panel,
   .content-link-dialog, .editor-more-formats > div) {
@@ -95,6 +114,20 @@
 }
 
 @media (max-width: 767px) {
+  .undo-notice { bottom: calc(80px + var(--safe-area-bottom)); }
+  :root[data-mobile-keyboard="open"] .undo-notice { bottom: calc(var(--mobile-keyboard-inset) + 80px); }
+  .comment-form { scroll-margin-bottom: 100px; }
+  .comment-compose textarea { scroll-margin-bottom: 100px; }
+  :root[data-mobile-keyboard="open"] .comment-form:focus-within .comment-compose-footer {
+    position: fixed; z-index: 80; left: var(--safe-area-left); right: var(--safe-area-right);
+    top: calc(var(--mobile-viewport-top) + var(--mobile-viewport-height) - 72px);
+    height: 72px; margin: 0; padding: 8px 16px; background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 12px;
+  }
+  :root[data-mobile-keyboard="open"] .comment-form:focus-within { padding-bottom: 80px; }
+  :root[data-mobile-keyboard="open"] .comment-compose-context { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  :root[data-mobile-keyboard="open"] .comment-compose-footer > div { flex: none; width: auto; gap: 8px; }
+  :root[data-mobile-keyboard="open"] .comment-compose textarea { min-height: 88px; max-height: max(88px, calc(var(--mobile-viewport-height) - 180px)); }
   :root .tag-picker-options { grid-template-columns: minmax(0, 1fr); }
   :root .publish-backdrop {
     padding: max(12px, var(--safe-area-top)) max(10px, var(--safe-area-right)) max(12px, var(--safe-area-bottom)) max(10px, var(--safe-area-left));

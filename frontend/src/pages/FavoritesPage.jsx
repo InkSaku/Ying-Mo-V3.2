@@ -1,5 +1,7 @@
+import { UndoNotice } from "../components/UndoNotice";
+import { useBrowseReturn } from "../hooks/useBrowseReturn";
 import { InkPageSketch } from "../components/InkPageSketch";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -22,9 +24,12 @@ export function FavoritesPage() {
   const [params, setParams] = useSearchParams();
   const page = cleanPage(params.get("page"));
   const state = useAsyncData(() => api.get(`/interactions/favorites?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  const operation = useRef(false);
+  const [undoPost, setUndoPost] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [message, setMessage] = useState("");
   const [actionError, setActionError] = useState("");
+  useBrowseReturn(!state.loading && !state.error);
   const pagination = state.meta?.pagination || {};
 
   const goToPage = (nextPage, { preserveFeedback = false } = {}) => {
@@ -43,16 +48,19 @@ export function FavoritesPage() {
   }, [page, pagination.page_size, pagination.total, state.error, state.loading, state.meta]);
 
   const removeFavorite = async (post) => {
+    if (operation.current) return;
+    operation.current = true;
     setBusyId(post.id);
     setMessage("");
     setActionError("");
     try {
-      const result = await api.post(`/interactions/posts/${post.id}/favorite`, {});
+      const result = await api.post(`/interactions/posts/${post.id}/favorite`, { favorited: false });
       if (result.data?.favorited !== false) {
         setActionError("收藏状态已经变化，请刷新后重试。");
         await state.reload();
         return;
       }
+      setUndoPost(post);
       setMessage(`已取消收藏“${post.title || (post.post_type === "note" ? "未命名随记" : "未命名文章")}”。`);
       const nextPage = pageAfterRemovingItem({
         page,
@@ -64,15 +72,37 @@ export function FavoritesPage() {
     } catch (error) {
       setActionError(`取消收藏失败：${error.message}`);
     } finally {
+      operation.current = false;
       setBusyId(null);
     }
   };
 
-  if (state.loading && !state.data) return <PageLoader label="正在读取收藏" />;
-  if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
+  const undoRemoval = async () => {
+    if (!undoPost || operation.current) return;
+    operation.current = true;
+    setBusyId(undoPost.id);
+    setActionError("");
+    try {
+      const result = await api.post(`/interactions/posts/${undoPost.id}/favorite`, { favorited: true });
+      if (result.data?.favorited !== true) throw new Error("收藏状态未恢复，请重试。");
+      setUndoPost(null);
+      setMessage("已恢复收藏。");
+      await state.reload();
+    } catch (error) {
+      setActionError(`恢复收藏失败：${error.message}`);
+    } finally {
+      operation.current = false;
+      setBusyId(null);
+    }
+  };
+
+  const undoNotice = <UndoNotice message={undoPost ? "已取消收藏，可撤销最近一次操作" : ""} busy={busyId !== null || state.loading} error={actionError} onUndo={undoRemoval} onClose={() => setUndoPost(null)} />;
+  if (state.loading && !state.data) return <>{undoNotice}<PageLoader label="正在读取收藏" /></>;
+  if (state.error) return <main className="page-shell">{undoNotice}<ErrorState error={state.error} onRetry={state.reload} /></main>;
   return (
     <main className="page-shell personal-page-shell" aria-busy={state.loading || Boolean(busyId) || undefined}>
       <PersonalNav />
+      {undoNotice}
       <header className="page-heading">
         <InkPageSketch />
         <div><p className="section-kicker"></p><h1>收藏</h1><p></p></div>
@@ -107,6 +137,7 @@ export function FavoritesPage() {
       <Pagination
         page={pagination.page || page}
         totalPages={pagination.total_pages || 0}
+        disabled={busyId !== null || state.loading}
         onChange={goToPage}
       />
     </main>

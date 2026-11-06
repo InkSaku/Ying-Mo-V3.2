@@ -1,3 +1,4 @@
+import { useBrowseReturn } from "../hooks/useBrowseReturn";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
@@ -18,6 +19,7 @@ export function CollectionsPage() {
   const parsedPage = Number.parseInt(params.get("page") || "1", 10);
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const state = useAsyncData(() => api.get(`/collections?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  useBrowseReturn(!state.loading && !state.error);
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
   const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;

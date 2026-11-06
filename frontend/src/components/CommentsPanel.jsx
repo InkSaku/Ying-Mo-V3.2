@@ -1,5 +1,6 @@
+import { commentDrafts, commentSends, rememberSessionValue, trackCommentSend } from "../lib/mobileSession";
 import { DefaultAvatar } from "./DefaultAvatar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
@@ -82,22 +83,55 @@ export function CommentsPanel({ postId }) {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const focusCommentParam = searchParams.get("comment");
+  const draftKey = `${user?.id}:${postId}`;
+  const initialSend = useRef(commentSends.get(draftKey));
+  const initialDraft = useRef(initialSend.current ? null : commentDrafts.get(draftKey));
+  const pendingSend = useRef(Boolean(initialSend.current));
   const textareaRef = useRef(null);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState([]);
-  const [body, setBody] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
-  const [selectedMentions, setSelectedMentions] = useState([]);
+  const [body, setBody] = useState(initialDraft.current?.body || "");
+  const [replyTo, setReplyTo] = useState(initialDraft.current?.replyTo || null);
+  const [selectedMentions, setSelectedMentions] = useState(initialDraft.current?.mentions || []);
   const [mentionCandidates, setMentionCandidates] = useState([]);
   const [state, setState] = useState({ loading: true, error: null, pagination: null });
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(Boolean(initialSend.current));
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialSend.current ? "评论正在发送…" : "");
   const [focusTarget, setFocusTarget] = useState(null);
   const [focusedComment, setFocusedComment] = useState(null);
+  useLayoutEffect(() => {
+    if (submitting) return;
+    if (body || replyTo) rememberSessionValue(commentDrafts, draftKey, { body, replyTo, mentions: selectedMentions });
+    else commentDrafts.delete(draftKey);
+  }, [body, replyTo, selectedMentions, submitting, draftKey]);
+
   const activeMentionQuery = mentionQuery(body);
+
+  useEffect(() => {
+    let frame;
+    let previousHeight = "";
+    const root = document.documentElement;
+    const keepInputVisible = () => {
+      const height = root.dataset.mobileKeyboard === "open" ? root.style.getPropertyValue("--mobile-viewport-height") : "";
+      if (height === previousHeight) return;
+      previousHeight = height;
+      if (!height || !window.matchMedia("(max-width: 767px)").matches) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const input = textareaRef.current;
+        if (document.activeElement !== input) return;
+        const footer = input.closest("form").querySelector(".comment-compose-footer");
+        const overflow = input.getBoundingClientRect().bottom - footer.getBoundingClientRect().top + 12;
+        if (overflow > 0) window.scrollBy({ top: overflow, behavior: "instant" });
+      });
+    };
+    const observer = new MutationObserver(keepInputVisible);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-mobile-keyboard", "style"] });
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, []);
 
   const load = useCallback(async (targetPage = page) => {
     setState((current) => ({ ...current, loading: true, error: null }));
@@ -114,6 +148,29 @@ export function CommentsPanel({ postId }) {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  useEffect(() => {
+    const send = initialSend.current;
+    if (!send) return undefined;
+    let active = true;
+    void send.promise.then(({ result, error, cancelled }) => {
+      if (!active || cancelled) return;
+      initialSend.current = null;
+      if (error) {
+        setBody(send.draft.body);
+        setReplyTo(send.draft.replyTo);
+        setSelectedMentions(send.draft.mentions);
+        setMessage("");
+        setActionError(`发送失败：${error.message} 草稿已恢复。`);
+      } else if (result) {
+        setMessage(send.draft.replyTo ? "回复已发布。" : "评论已发布。");
+        void load();
+      }
+      pendingSend.current = false;
+      setSubmitting(false);
+    });
+    return () => { active = false; };
   }, [load]);
 
   useEffect(() => {
@@ -180,7 +237,8 @@ export function CommentsPanel({ postId }) {
   const submit = async (event) => {
     event.preventDefault();
     const content = body.trim();
-    if (!content) return;
+    if (!content || pendingSend.current || commentSends.has(draftKey) || deleting || state.loading) return;
+    pendingSend.current = true;
     const idempotencyKey = requestId();
     const parentId = replyTo ? (replyTo.parent_id || replyTo.id) : null;
     const temporaryId = `temp-${idempotencyKey}`;
@@ -224,13 +282,16 @@ export function CommentsPanel({ postId }) {
     setActionError("");
     setMessage(wasReply ? "回复正在发送…" : "评论正在发送…");
     try {
-      const result = await api.post("/comments", {
+      const outcome = await trackCommentSend(draftKey, draft, api.post("/comments", {
         post_id: postId,
         body: content,
         client_request_id: idempotencyKey,
         mention_user_ids: selectedMentions.map((item) => item.id),
         ...(replyTo ? { reply_to_comment_id: replyTo.id } : {}),
-      });
+      }));
+      if (outcome.cancelled) return;
+      if (outcome.error) throw outcome.error;
+      const result = outcome.result;
       const saved = result.data;
       if (wasReply) {
         setItems((current) => replaceOptimisticComment(current, temporaryId, saved));
@@ -261,6 +322,7 @@ export function CommentsPanel({ postId }) {
       setMessage("");
       setActionError(`发送失败：${error.message} 草稿已恢复。`);
     } finally {
+      pendingSend.current = false;
       setSubmitting(false);
     }
   };
@@ -290,8 +352,6 @@ export function CommentsPanel({ postId }) {
 
   const changePage = (nextPage) => {
     setPage(nextPage);
-    setReplyTo(null);
-    setSelectedMentions([]);
     setActionError("");
     setMessage("");
     window.requestAnimationFrame(() => {
@@ -399,6 +459,7 @@ export function CommentsPanel({ postId }) {
             id={`comment-body-${postId}`}
             value={body}
             disabled={submitting}
+            enterKeyHint="enter"
             aria-describedby={`comment-count-${postId}`}
             placeholder={replyTo ? "写下你的回复…" : "写下你想继续讨论的内容…"}
             onChange={(event) => {
@@ -420,10 +481,10 @@ export function CommentsPanel({ postId }) {
           ) : null}
         </div>
         <div className="comment-compose-footer">
-          <span className="meta-text">输入 @ 提及成员</span>
+          <span className="meta-text comment-compose-context">{replyTo ? `回复 ${replyTo.author?.nickname || "成员"}` : "输入 @ 提及成员"}</span>
           <div>
             <span className="meta-text tabular" id={`comment-count-${postId}`}>{characterCount} / 500</span>
-            <button className="btn btn-primary" type="submit" disabled={submitting || deleting || state.loading || !body.trim()}>
+            <button className="btn btn-primary" type="submit" onPointerDown={(event) => { if (document.activeElement === textareaRef.current) event.preventDefault(); }} disabled={submitting || deleting || state.loading || !body.trim()}>
               {submitting ? "发送中" : replyTo ? "发表回复" : "发表评论"}
             </button>
           </div>

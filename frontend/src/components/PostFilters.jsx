@@ -1,3 +1,5 @@
+import { MobileSheet } from "./MobileSheet";
+import { useNarrowScreen } from "../hooks/useNarrowScreen";
 import { useState } from "react";
 import { CustomSelect } from "./CustomSelect";
 
@@ -15,7 +17,12 @@ function FilterSelect({ label, value, options, valueKey, onChange, allLabel }) {
   );
 }
 
-export function PostFilters({ type = "", filters, options = {}, loading = false, onChange, onClear, showSort = true, editorial = false }) {
+export function PostFilters({ type = "", filters: appliedFilters, options = {}, loading = false, onChange: onFilterChange, onClear: onClearFilters, onApply, showSort = true, editorial = false }) {
+  const narrow = useNarrowScreen();
+  const [draft, setDraft] = useState(null);
+  const filters = narrow && draft ? draft : appliedFilters;
+  const onChange = (key, value) => narrow ? setDraft((current) => ({ ...(current || appliedFilters), [key]: value })) : onFilterChange(key, value);
+  const onClear = () => narrow ? setDraft({ ...appliedFilters, author: "", category: "", tag: "", collection: "", sort: "newest" }) : onClearFilters();
   const isNote = type === "note";
   const activeCount = [filters.author, filters.category, filters.tag, filters.collection, filters.sort !== "newest" ? filters.sort : ""].filter(Boolean).length;
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -48,6 +55,12 @@ export function PostFilters({ type = "", filters, options = {}, loading = false,
     ) : null}
     <button className="text-button post-filters-clear" type="button" onClick={onClear} disabled={!activeCount}>清除筛选</button>
   </>;
+
+  if (narrow) return <section className="post-filters-mobile" aria-label="内容筛选">
+    <button className="text-button mobile-sheet-trigger" type="button" aria-haspopup="dialog" aria-expanded={filtersOpen} onClick={() => { setDraft(appliedFilters); setFiltersOpen(true); }}>筛选{activeCount ? ` · ${activeCount} 项` : ""}</button>
+    {activeFilters.length ? <p className="meta-text">{activeFilters.map((item) => item.label).join(" / ")}</p> : null}
+    <MobileSheet open={filtersOpen} title="筛选目录" closeLabel="取消" onClose={() => { setDraft(null); setFiltersOpen(false); }}><div className="mobile-sheet-filters" aria-busy={loading || undefined}>{controls}<button className="btn btn-primary" type="button" onClick={() => { onApply?.(filters); setDraft(null); setFiltersOpen(false); }}>查看结果</button></div></MobileSheet>
+  </section>;
 
   if (!editorial) {
     return <section className="post-filters" aria-label="内容筛选" aria-busy={loading || undefined}>{controls}</section>;

@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { calculateReadingProgress, groupArticleOutline, hasArticleToc, normalizeArticleOutline } from "../lib/articleReading";
 import ArchiveCatDrawing from "./ArchiveCatDrawing";
 import { useTheme } from "../contexts/ThemeContext";
 import { useReadingPanels } from "../hooks/useReadingPanels";
 import { FavoriteButton, FavoriteLink } from "./FavoriteControl";
 import "../styles/archive-cat.css";
+import { MobileSheet } from "./MobileSheet";
+import { useNarrowScreen } from "../hooks/useNarrowScreen";
 
-function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
+function ReadingSettings({ fontSize, onChangeFontSize, onSetFontSize, onResetFontSize }) {
   const menuRef = useRef(null);
+  const narrow = useNarrowScreen();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const inputId = useId();
+  const hintId = useId();
+  const [fontDraft, setFontDraft] = useState(null);
   const { resolved, setMode } = useTheme();
+
+  const commitFontSize = (value) => {
+    if (!value.trim()) onResetFontSize();
+    else if (Number.isFinite(Number(value))) onSetFontSize(Number(value));
+    setFontDraft(null);
+  };
 
   useEffect(() => {
     const closeOutside = (event) => {
@@ -18,6 +31,33 @@ function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, []);
+
+  const controls = (
+      <div className="article-reading-settings-panel">
+        <div className="article-reading-font-size">
+          <label htmlFor={inputId}>字号（px）</label>
+          <div className="article-reading-font-size-controls">
+            <input id={inputId} type="number" inputMode="numeric" min="16" max="24" step="1" placeholder="默认"
+              aria-label="阅读字号" aria-describedby={hintId} value={fontDraft ?? (fontSize === null ? "" : String(fontSize))}
+              onChange={(event) => setFontDraft(event.target.value)}
+              onBlur={(event) => commitFontSize(event.target.value)}
+              onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} />
+            <button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => { setFontDraft(null); onChangeFontSize(-1); }}>A−</button>
+            <button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => { setFontDraft(null); onChangeFontSize(1); }}>A＋</button>
+          </div>
+          <p id={hintId}>16–24px，留空用默认</p>
+        </div>
+        <button type="button" onClick={() => { setFontDraft(null); onResetFontSize(); }}>恢复默认字号</button>
+        <button type="button" onClick={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
+        }}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
+      </div>
+  );
+  if (narrow) return <>
+    <button className="text-button mobile-sheet-trigger" type="button" aria-haspopup="dialog" aria-expanded={sheetOpen} onClick={() => setSheetOpen(true)}>Aa 阅读设置</button>
+    <MobileSheet open={sheetOpen} title="阅读设置" onClose={() => { if (fontDraft !== null) commitFontSize(fontDraft); setSheetOpen(false); }}>{controls}</MobileSheet>
+  </>;
 
   return (
     <details ref={menuRef} className="article-reading-settings"
@@ -32,14 +72,7 @@ function ReadingSettings({ fontSize, onChangeFontSize, onResetFontSize }) {
         event.currentTarget.querySelector("summary")?.focus();
       }}>
       <summary><span aria-hidden="true">Aa</span>阅读设置</summary>
-      <div className="article-reading-settings-panel">
-        <div><span>字号<output aria-label="当前阅读字号" aria-live="polite">{fontSize === null ? "默认" : `${fontSize}px`}</output></span><button type="button" aria-label="减小阅读字号" disabled={fontSize === 16} onClick={() => onChangeFontSize(-1)}>A−</button><button type="button" aria-label="增大阅读字号" disabled={fontSize === 24} onClick={() => onChangeFontSize(1)}>A＋</button></div>
-        <button type="button" onClick={onResetFontSize}>恢复默认字号</button>
-        <button type="button" onClick={(event) => {
-          const box = event.currentTarget.getBoundingClientRect();
-          setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
-        }}>{resolved === "dark" ? "换成浅色纸" : "换成深色纸"}</button>
-      </div>
+      {controls}
     </details>
   );
 }
@@ -79,10 +112,14 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
     } catch { /* Font controls work without storage. */ }
   }, [fontSize]);
 
+  const applyFontSize = (value) => {
+    setFontSize(Math.min(24, Math.max(16, Math.round(value))));
+  };
+
   const changeFontSize = (delta) => {
     const prose = contentRef.current?.querySelector(".prose");
     const current = fontSize ?? (prose ? Number.parseFloat(getComputedStyle(prose).fontSize) : 19);
-    setFontSize(Math.min(24, Math.max(16, Math.round(current) + delta)));
+    applyFontSize(current + delta);
   };
 
   useEffect(() => {
@@ -153,7 +190,7 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
       <div className="article-reading-navigation">
         {navigation}
         <div className="article-reading-compact-tools">
-          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onResetFontSize={() => setFontSize(null)} />
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} />
         </div>
       </div>
       <div ref={panels.layoutRef} style={{ ...panels.style, ...(fontSize !== null ? { "--reading-font-size": `${fontSize}px` } : {}) }} className={`article-reading-layout ${showToc ? "has-toc" : ""} ${panels.resizable ? "is-resizable" : ""} ${panels.dragging ? "is-resizing" : ""}`}>
@@ -203,7 +240,7 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
             <strong>{progress}%</strong>
             <span>已读</span>
           </div>
-          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onResetFontSize={() => setFontSize(null)} />
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} />
           <FavoriteButton key={favorite?.postId ?? "pending"} rail favorited={favorite?.favorited} ready={favorite?.ready} busy={favorite?.busy} celebration={favorite?.celebration} onToggle={favorite?.toggleFavorite} />
           {favorite?.ready && favorite.favorited ? <FavoriteLink rail /> : null}
           {favorite?.error ? <p className="article-reading-tool-error" role="alert">{favorite.error}</p> : null}

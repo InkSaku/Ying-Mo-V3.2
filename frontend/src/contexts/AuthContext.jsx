@@ -1,3 +1,4 @@
+import { clearMobileSession } from "../lib/mobileSession";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   api,
@@ -23,6 +24,7 @@ export function AuthProvider({ children }) {
       if (!active) return;
       revokeAllProtectedMedia();
       clearArticleBrowseSnapshots();
+      clearMobileSession();
       setUser(null);
       setStatus("anonymous");
     };
@@ -63,6 +65,7 @@ export function AuthProvider({ children }) {
   const login = async ({ identifier, password }) => {
     const result = await api.authPost("/auth/login", { identifier, password });
     clearArticleBrowseSnapshots();
+    clearMobileSession();
     setAccessToken(result.data.access_token);
     setUser(result.data.user);
     setStatus("authenticated");
@@ -72,6 +75,7 @@ export function AuthProvider({ children }) {
   const register = async (payload) => {
     const result = await api.authPost("/auth/register", payload);
     clearArticleBrowseSnapshots();
+    clearMobileSession();
     setAccessToken(result.data.access_token);
     setUser(result.data.user);
     setStatus("authenticated");
@@ -82,6 +86,7 @@ export function AuthProvider({ children }) {
     await logoutRequest();
     revokeAllProtectedMedia();
     clearArticleBrowseSnapshots();
+    clearMobileSession();
     setUser(null);
     setStatus("anonymous");
   };
@@ -91,6 +96,7 @@ export function AuthProvider({ children }) {
     clearLocalAccess("LOGOUT_ALL");
     revokeAllProtectedMedia();
     clearArticleBrowseSnapshots();
+    clearMobileSession();
     setUser(null);
     setStatus("anonymous");
     return result.data;
@@ -100,6 +106,7 @@ export function AuthProvider({ children }) {
     clearLocalAccess("SESSION_REVOKED");
     revokeAllProtectedMedia();
     clearArticleBrowseSnapshots();
+    clearMobileSession();
     setUser(null);
     setStatus("anonymous");
   };

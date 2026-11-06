@@ -1,3 +1,4 @@
+import { useBrowseReturn } from "../hooks/useBrowseReturn";
 import { DefaultAvatar } from "../components/DefaultAvatar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -61,6 +62,8 @@ export function SearchPage() {
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
   }, []);
+
+  useBrowseReturn(!state.loading && !state.error);
 
   const suggestionTerm = inputValue.trim();
   useEffect(() => {

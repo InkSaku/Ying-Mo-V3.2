@@ -15,14 +15,13 @@ from app.posts.browsing import serialize_browse_posts
 bp=Blueprint("interactions",__name__)
 
 
-def _toggle(model,actor_id,post_id):
+def _toggle(model,actor_id,post_id,desired=None):
     existing=db.session.scalar(db.select(model).where(model.user_id==actor_id,model.post_id==post_id))
-    if existing:
+    active = not bool(existing) if desired is None else desired
+    if existing and not active:
         db.session.delete(existing)
-        active=False
-    else:
+    elif not existing and active:
         db.session.add(model(user_id=actor_id,post_id=post_id))
-        active=True
     try:
         db.session.commit()
     except IntegrityError:
@@ -63,7 +62,11 @@ def toggle_favorite(post_id):
         return error_response("ACCOUNT_RESTRICTED","当前账号无法继续使用。",403)
     if not can_read_post(actor.id,post):
         return error_response("RESOURCE_NOT_FOUND","Post 不存在。",404)
-    active=_toggle(ContentFavorite,actor.id,post.id)
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict) or set(data)-{"favorited"} or ("favorited" in data and not isinstance(data["favorited"],bool)):
+        return error_response("VALIDATION_ERROR","favorited 必须是布尔值。",422)
+    # Empty payload keeps the legacy toggle. Explicit state makes undo/retries idempotent.
+    active=_toggle(ContentFavorite,actor.id,post.id,data.get("favorited"))
     return success_response({"favorited":active})
 
 

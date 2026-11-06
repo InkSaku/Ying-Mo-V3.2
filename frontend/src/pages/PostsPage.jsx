@@ -215,7 +215,7 @@ export function PostsPage({ type }) {
     <main className={`page-shell browse-page browse-page-${isArticle ? "article" : "note"}`} aria-busy={state.loading || pageNeedsClamp || undefined}>
       <BrowseHero isArticle={isArticle} total={pagination.total || 0} latestPost={displayData?.[0]} sort={filters.sort} />
 
-      <PostFilters editorial type={type} filters={filters} options={optionState.data || {}} loading={optionState.loading} onChange={changeFilter} onClear={() => setParams("")} />
+      <PostFilters editorial type={type} filters={filters} options={optionState.data || {}} loading={optionState.loading} onChange={changeFilter} onApply={(next) => setParams(postFilterSearchParams({ ...next, page: 1 }))} onClear={() => setParams("")} />
 
       {pageNeedsClamp ? (
         <div className="profile-refresh" role="status">正在返回有效页码…</div>

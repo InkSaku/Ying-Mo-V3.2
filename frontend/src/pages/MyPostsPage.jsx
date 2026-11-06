@@ -1,3 +1,4 @@
+import { MobileActions } from "../components/MobileSheet";
 import { InkPageSketch } from "../components/InkPageSketch";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -203,6 +204,7 @@ export function MyPostsPage() {
                   </p>
                 ) : null}
               </div>
+              <MobileActions title={post.title || "帖子操作"}>
               <div className="post-management-actions" aria-label={`${post.title || "未命名内容"}的操作`}>
                 {(post.status === "published" || post.status === "archived") ? (
                   <button className="btn btn-secondary" type="button" disabled={openingId === post.id} onClick={() => openReadingPage(post)}>
@@ -216,6 +218,7 @@ export function MyPostsPage() {
                 {post.collection_id ? <button className="text-button" type="button" onClick={() => beginAction("detach", post)}>移出合集</button> : null}
                 <button className="text-button danger-text" type="button" onClick={() => beginAction("delete", post)}>删除</button>
               </div>
+              </MobileActions>
             </article>
           ))}
         </div>

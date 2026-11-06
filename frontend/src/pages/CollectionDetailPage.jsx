@@ -1,3 +1,6 @@
+import { useBrowseReturn } from "../hooks/useBrowseReturn";
+import { MobileSheet } from "../components/MobileSheet";
+import { useNarrowScreen } from "../hooks/useNarrowScreen";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { revealCollection } from "../lib/collectionOpening";
@@ -23,12 +26,14 @@ import { CollectionSketch } from "../components/CollectionSketch";
 import { CollectionSharePill } from "../components/CollectionSharePill";
 import "../styles/collection-detail-editorial.css";
 
-function MemoryFilters({ data, memory, onChange, media = false }) {
-  const patch = (next) => onChange({ ...memory, ...next, page: 1 });
+function MemoryFilters({ data, memory: appliedMemory, onChange, media = false }) {
+  const narrow = useNarrowScreen();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const memory = narrow && draft ? draft : appliedMemory;
+  const patch = (next) => narrow ? setDraft({ ...memory, ...next, page: 1 }) : onChange({ ...memory, ...next, page: 1 });
   const activeCount = [memory.year, memory.author, memory.type, media ? memory.mediaKind : ""].filter(Boolean).length;
-  return (
-    <details className={`collection-memory-filter-drawer ${media ? "is-media" : ""}`}>
-      <summary><span></span><strong>筛选</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "年份、作者与内容类型"}</small><i aria-hidden="true" /></summary>
+  const controls = (
     <div className={`collection-memory-filters ${media ? "is-media" : ""}`} aria-label="共同回忆筛选">
       <label><span>年份</span><CustomSelect value={memory.year} onChange={(event) => patch({ year: event.target.value })}>
         <option value="">全部年份</option>
@@ -44,6 +49,15 @@ function MemoryFilters({ data, memory, onChange, media = false }) {
       {media ? <label><span>媒体</span><CustomSelect value={memory.mediaKind} onChange={(event) => patch({ mediaKind: event.target.value })}><option value="">图片与 Live Photo</option><option value="image">图片</option><option value="live_photo">Live Photo</option></CustomSelect></label> : null}
       {(memory.year || memory.author || memory.type || memory.mediaKind) ? <button className="text-button" type="button" onClick={() => patch({ year: "", author: "", type: "", mediaKind: "" })}>清除筛选</button> : null}
     </div>
+  );
+  if (narrow) return <>
+    <button className="text-button mobile-sheet-trigger" type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => { setDraft(appliedMemory); setOpen(true); }}>筛选{activeCount ? ` · ${activeCount} 项` : ""}</button>
+    <MobileSheet open={open} title="筛选共同回忆" closeLabel="取消" onClose={() => { setDraft(null); setOpen(false); }}><div className="mobile-sheet-filters">{controls}<button className="btn btn-primary" type="button" onClick={() => { onChange(memory); setDraft(null); setOpen(false); }}>查看结果</button></div></MobileSheet>
+  </>;
+  return (
+    <details className={`collection-memory-filter-drawer ${media ? "is-media" : ""}`}>
+      <summary><span></span><strong>筛选</strong><small>{activeCount ? `${activeCount} 项条件已启用` : "年份、作者与内容类型"}</small><i aria-hidden="true" /></summary>
+    {controls}
     </details>
   );
 }
@@ -228,6 +242,8 @@ export function CollectionDetailPage() {
   useLayoutEffect(() => {
     if (state.data && !state.loading && !state.error) revealCollection(slug, coverRef.current);
   }, [slug, state.data, state.loading, state.error]);
+
+  useBrowseReturn(!state.loading && !state.error, memory.view === "overview" ? null : ".collection-memory-view");
 
   const changeMemory = (next) => setSearchParams(collectionMemorySearchParams(next));
   const changeView = (view) => changeMemory({ ...memory, view, page: 1 });
