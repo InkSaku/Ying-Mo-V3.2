@@ -1,0 +1,34 @@
+Generated with the built-in image_gen tool.
+Final concept: three sequential states for the Spark entry — waiting, opening the door, walking inside.
+Stable character source: frontend/src/assets/ink/welcome-door.svg (rendered to PNG for the reference input).
+Style references: yingmo-ink-wit/references/style-anchor.png and yingmo-ink-wit/references/revisit-day.png.
+This is an art-direction sheet; it is not a finished animation sprite sheet.
+
+Exact generation prompt:
+
+Use case: illustration-story.
+Asset type: a finished art-direction sheet for Ying-Mo's "续火花" tool entry, showing one icon in three interaction states.
+
+Generate ONE landscape image with THREE equally sized, generously spaced, left-to-right sequential vignettes of THE SAME doorway and THE SAME little ink-blob mascot. This is a single coherent three-state concept sheet, not three alternative designs, not an interface or a poster. No labels, captions, headings, letters, numbers, arrows, panels, divider lines, branding or watermark. All three scenes sit on one uninterrupted opaque warm-paper background #f8f7f3. Leave clean margins around each complete silhouette. Use a wide composition with matching scale, fixed camera, matching doorframe placement and the same ground baseline in all three vignettes.
+
+Reference roles:
+Image 1, style-anchor.png: PRIMARY STYLE REFERENCE for physical ink weight, rough edges, pressure variation, quiet paper interiors, near-black ink and sparse meaningful indigo. Do not copy its book, people or typography.
+Image 2, welcome-door.svg.png: CHARACTER IDENTITY AND EXISTING DOORWAY REFERENCE. Preserve the recognizable Ying-Mo mascot: a small, near-round, slightly irregular solid near-black ink blob, two tiny upright warm-white eyes, a small warm-white curved smile, very simple thin ink arms and short walking legs ending in understated elongated feet. Preserve this unadorned silhouette and proportions. Do not add hair, leaves, hats, clothes, bags, gloves, ears, a human face, a second character, or a new mascot species. The new drawing uses more tactile, pressure-varied brushwork than the reference SVG. Remove the reference envelope, plant, stars and decorative marks.
+Image 3, revisit-day.png: AUXILIARY CONCEPT EXAMPLE of a familiar object's own part serving two meanings, and the same paper/ink/indigo restraint. Do not copy the calendar, slide, person, date or wording.
+
+Subject and structural idea:
+A plain freestanding tall rectangular door with a subtly irregular double ink doorframe, a single door leaf and one tiny clear sill. No surrounding building, arch, wall or scenery. Its functional DOOR HANDLE IS ITSELF ONE SHORT MATCHSTICK: a short near-black shaft with one rounded deep-indigo #334b76 match head at the end. It is visibly attached to the moving door leaf where a handle belongs, physically graspable, and follows the same point on the door in every frame. This single handle is the visual connection to keeping a friendly daily spark alive. It is the ONLY blue element. No literal fire, glow, orange, red, light rays, scattered sparks, messages or unrelated props.
+
+State 1, left:
+The door is shut. The ink-blob mascot stands to the left of the doorway, body turned slightly toward it, smiling quietly toward the visitor, with its nearer hand resting beside the matchstick handle. A welcoming, calm, readable compact silhouette, not a waving performance.
+
+State 2, middle:
+The SAME door opens inward to roughly 60 degrees around a hinge along the RIGHT vertical jamb. Keep that fixed right hinge physically consistent. The moving door leaf is now a narrow oblique plane on the right side of the light open portal, leaving a generous unobstructed opening. The mascot leans naturally forward and operates the same matchstick handle with one simple arm. Its two small feet are planted. The door's opening is completely legible without movement arrows. The portal interior remains warm paper, not a black rectangle that would swallow the mascot.
+
+State 3, right:
+The SAME door stands open at the same angle and hinge as state 2. The SAME mascot has moved rightward across the threshold INTO THE DOORWAY. Show a clear three-quarter back walking pose: leading foot already inside, trailing little foot just outside, body partway into the opening and partially overlapped by the stationary jamb so depth and entry read immediately. It remains the same single ink body, with no human torso. One arm lightly holds the door behind it. The doorway is large enough for the character to enter comfortably. The matchstick handle stays attached to the door leaf, never floats or changes into another object.
+
+Style and craft:
+Finished flat editorial brush-ink illustration, mature quiet warmth, deadpan simplicity. Use near-black #242520 and paper, with ONLY that one tiny handle-head in indigo #334b76 per vignette. HEAVY physical felt-tip / brush-ink contours for the door, deliberate black masses in the mascot, real thick-to-thin pen pressure, natural taper, rough bristle edges, a few dry gaps and restrained pooled ink at joins. Open unshaded paper interiors. Keep coarse handmade character without becoming messy. Simplify details for an eventual small 90–120px website entry image; the silhouette, face, handle and open-door gesture carry the design.
+
+Avoid uniform vector strokes, generic UI icons, stick-figure human redesigns, children's cartoon styling, glossy mascots, dense crosshatching, patterned fills, gradients, 3D rendering, shadows, a photorealistic mockup, furniture, brown wood, beige wash, pink skin, yellowed distressed paper, grain overlay, speech bubbles, stars, musical notes or extra visual jokes. The background stays flat, clean, opaque #f8f7f3 all the way to the corners.

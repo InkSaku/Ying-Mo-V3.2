@@ -1,33 +1,68 @@
-/* An open paper entry: title and action at left, a matchbox conversation at right. */
+/* One visible doorway, before the homepage's reading and writing sections. */
 .home-spark-entry {
+  --spark-ease-in-out: cubic-bezier(.77, 0, .175, 1);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px;
-  align-items: start;
-  gap: 8px 16px;
-  margin-top: 32px;
-  padding: 24px 0 16px;
-  border-top: 1px solid var(--border);
+  grid-template-columns: 112px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin: 0 0 32px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--border);
   color: var(--text);
   text-decoration: none;
 }
-.home-spark-entry:hover { text-decoration: none; }
-.home-spark-entry:hover strong { color: var(--brand-link); }
 .home-spark-entry:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 4px; }
-.home-spark-entry-copy { display: grid; gap: 6px; min-width: 0; }
-.home-spark-entry-copy strong { color: var(--text); font-size: 20px; font-weight: 400; line-height: 1.5; letter-spacing: .03em; }
-.home-spark-entry-hint { color: var(--text-3); font-size: 12px; line-height: 1.75; }
-.home-spark-entry-art { grid-column: 2; grid-row: 1 / 3; align-self: center; pointer-events: none; user-select: none; }
-.home-spark-entry-art img { display: block; width: 100%; height: auto; }
-html[data-theme="dark"] .home-spark-entry-art img { filter: invert(.9) hue-rotate(180deg); }
-.home-spark-entry-action { display: inline-flex; align-items: center; justify-self: start; gap: 16px; min-height: 44px; border-bottom: 1px solid var(--brand-link); color: var(--brand-link); font-size: 13px; line-height: 1.5; }
+.home-spark-entry-copy { display: grid; gap: 8px; min-width: 0; }
+.home-spark-entry-copy strong { color: var(--text); font-size: 24px; font-weight: 400; line-height: 1.4; letter-spacing: .04em; }
+.home-spark-entry-hint { color: var(--text-3); font-size: 13px; line-height: 1.75; }
+.home-spark-entry-action { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; color: var(--brand-link); font-size: 14px; white-space: nowrap; }
 .home-spark-entry-action svg { width: 24px; height: 16px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.home-spark-entry:hover .home-spark-entry-action { border-color: var(--text); color: var(--text); }
-.home-spark-entry + .home-side-drafts { margin-top: 0; padding-top: 8px; border-top: 0; }
-@media (min-width: 768px) and (max-width: 1100px) {
-  .home-spark-entry { grid-template-columns: minmax(0, 1fr) 88px; column-gap: 12px; }
-  .home-spark-entry-copy strong { font-size: 18px; }
+
+.spark-door { position: relative; display: block; width: 100%; aspect-ratio: 220 / 230; color: var(--text); pointer-events: none; user-select: none; }
+.spark-door > svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }
+.spark-door-frame { z-index: 0; }
+.spark-door-mascot { z-index: 1; transform-origin: 30% 84%; transition: transform 180ms var(--spark-ease-out), opacity 100ms linear; }
+.spark-door-leaf { position: absolute; z-index: 2; left: 45%; top: 13.04%; width: 40.91%; height: 80%; transform: perspective(300px) rotateY(0); transform-origin: right center; transition: transform 180ms var(--spark-ease-out); }
+.spark-door-leaf > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.spark-door-arm { z-index: 3; transition: transform 180ms var(--spark-ease-out), opacity 100ms linear; }
+.spark-door-reach { transform-origin: 92px 166px; transition: transform 180ms var(--spark-ease-out); }
+.spark-door-face { transition: opacity 100ms linear; }
+.spark-door-leg-left { transform-origin: 49px 187px; }
+.spark-door-leg-right { transform-origin: 79px 187px; }
+
+.home-spark-entry:is(.is-opening, .is-walking) .spark-door-leaf { transform: perspective(300px) rotateY(-64deg); }
+.home-spark-entry.is-opening .spark-door-mascot { transform: translateX(1.82%) rotate(-4deg); }
+.home-spark-entry.is-opening .spark-door-reach { transform: scaleX(2.4); }
+.home-spark-entry.is-walking .spark-door-mascot { transform: translate(31.82%, -1.74%) scale(.82); opacity: 0; transition: transform 280ms var(--spark-ease-in-out), opacity 80ms linear 200ms; }
+.home-spark-entry.is-walking .spark-door-face { opacity: 0; }
+.home-spark-entry.is-walking .spark-door-arm { transform: translateX(23.64%) scaleX(.8); opacity: 0; }
+.home-spark-entry.is-walking .spark-door-leg-left { animation: spark-step-left 280ms var(--spark-ease-in-out); }
+.home-spark-entry.is-walking .spark-door-leg-right { animation: spark-step-right 280ms var(--spark-ease-in-out); }
+
+@keyframes spark-step-left { 40% { transform: rotate(24deg); } 80% { transform: rotate(-12deg); } }
+@keyframes spark-step-right { 40% { transform: rotate(-26deg); } 80% { transform: rotate(16deg); } }
+
+@media (hover: hover) and (pointer: fine) {
+  .home-spark-entry:hover { text-decoration: none; }
+  .home-spark-entry:hover strong { color: var(--brand-link); }
+  .home-spark-entry:hover .home-spark-entry-action { text-decoration: underline; text-underline-offset: 6px; }
+  .home-spark-entry:hover .spark-door-leaf { transform: perspective(300px) rotateY(-64deg); }
+  .home-spark-entry:hover:not(.is-walking) .spark-door-mascot { transform: translateX(1.82%) rotate(-4deg); }
+  .home-spark-entry:hover:not(.is-walking) .spark-door-reach { transform: scaleX(2.4); }
 }
 @media (max-width: 767px) {
-  .home-spark-entry { grid-template-columns: minmax(0, 1fr) 112px; column-gap: 24px; }
+  .home-spark-entry { grid-template-columns: 80px minmax(0, 1fr) auto; gap: 16px; margin-bottom: 24px; padding-bottom: 12px; }
+  .home-spark-entry-copy { gap: 4px; }
+  .home-spark-entry-copy strong { font-size: 21px; }
+  .home-spark-entry-hint { font-size: 12px; }
+  .home-spark-entry-action { flex-direction: column; justify-content: center; gap: 4px; min-width: 44px; font-size: 12px; }
+}
+@media (max-width: 360px) {
+  .home-spark-entry { grid-template-columns: 72px minmax(0, 1fr) 44px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-door *, .spark-door > svg { animation: none !important; transition: none !important; }
+  .home-spark-entry .spark-door-leaf, .home-spark-entry .spark-door-mascot, .home-spark-entry .spark-door-reach, .home-spark-entry .spark-door-arm { transform: none !important; opacity: 1 !important; }
+  .home-spark-entry .spark-door-face { opacity: 1; }
 }
 @media print { .home-spark-entry { display: none; } }

@@ -61,6 +61,7 @@ export function HomePage() {
 
   return (
     <main ref={pageRef} className="page-shell home-page home-feed-page home-journal home-editorial">
+      <HomeSparkEntry />
       <section className="home-edition-heading" aria-label="朋友的近况">
         <div className="home-edition-copy">
           <p className="home-edition-eyebrow">映墨 · {editionDate} </p>
@@ -94,7 +95,6 @@ export function HomePage() {
         <aside className="home-side-rail" aria-label="回望与共同记录">
           <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
           <span className="home-margin-pocket" data-home-margin-pocket="aside" aria-hidden="true" />
-          <HomeSparkEntry />
           <Link className="home-side-drafts" to="/me/posts">我的内容 ↗</Link>
         </aside>
       </div>
