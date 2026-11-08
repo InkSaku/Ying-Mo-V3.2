@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload, earliestCaptureTime } from "../lib/imageUpload";
 import {
   localDateTimeValue, memoryContributionPayload, memoryDraftKey,
   readMemoryDraft, removeMemoryDraft, writeMemoryDraft,
@@ -26,6 +26,8 @@ export function MemoryContributionComposer({ rootPost, collection, defaults, onP
     occurredAt: restored?.occurredAt || localDateTimeValue(defaults?.occurred_at),
     location: restored?.location || defaults?.location || "",
   });
+  const formRef = useRef(form);
+  formRef.current = form;
   const requestIdRef = useRef(restored?.requestId || crypto.randomUUID());
   const postRef = useRef(null);
   const [post, setPost] = useState(null);
@@ -178,6 +180,7 @@ export function MemoryContributionComposer({ rootPost, collection, defaults, onP
     const controller = new AbortController();
     abortRef.current = controller;
     let draft;
+    const captureTimes = [];
     try {
       draft = await save();
       for (let index = 0; index < files.length; index += 1) {
@@ -194,10 +197,14 @@ export function MemoryContributionComposer({ rootPost, collection, defaults, onP
           onProgress: ({ percent }) => setUploadState((current) => ({ ...current, status: "uploading", stage: "正在上传", percent })),
         });
         await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: draft.id });
+        captureTimes.push(uploaded.data.captured_at || prepared.capturedAt);
       }
       await refresh(draft.id);
       setUploadState(null);
-      setMessage(files.length > 1 ? `已加入 ${files.length} 张图片。` : "图片已加入补充。 ");
+      // 补充视角的发生时间默认沿用原记录；只有还空着时才用照片拍摄时间。
+      const capturedAt = formRef.current.occurredAt ? null : earliestCaptureTime(captureTimes);
+      if (capturedAt) setForm((current) => (current.occurredAt ? current : { ...current, occurredAt: capturedAt }));
+      setMessage(`${files.length > 1 ? `已加入 ${files.length} 张图片。` : "图片已加入补充。"}${capturedAt ? "已按照片拍摄时间填写发生时间，可以修改。" : ""}`);
     } catch (uploadError) {
       const cancelled = controller.signal.aborted || uploadError.code === "REQUEST_ABORTED";
       setUploadState((current) => ({ ...(current || {}), status: cancelled ? "cancelled" : "error" }));

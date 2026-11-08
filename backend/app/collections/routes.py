@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.access import collection_member_predicate, is_collection_member, semantic_time_expression
 from app.admin.service import record_admin_log
-from app.collections.service import delete_collection, replace_members, resolve_member_ids, transfer_creator
+from app.collections.service import add_member, delete_collection, replace_members, resolve_member_ids, transfer_creator
 from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
@@ -440,6 +440,28 @@ def put_members(collection_id):
         db.session.rollback()
         return _handle(error)
     return success_response({"changes": changes, "collection": collection.to_dict(include_members=True)})
+
+
+@bp.post("/<int:collection_id>/members/<int:user_id>")
+@jwt_required(locations=["headers"])
+def post_member(collection_id, user_id):
+    """把一位成员加进合集（仅 creator）；重复请求或并发请求都只保留一条成员关系。"""
+    actor = current_user()
+    collection = db.session.get(Collection, collection_id)
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    if collection is None or collection.creator_id != actor.id or collection.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+    try:
+        added = add_member(collection, actor.id, user_id)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        added = False
+    except DomainError as error:
+        db.session.rollback()
+        return _handle(error)
+    return success_response({"collection_id": collection.id, "user_id": user_id, "added": added, "is_member": True})
 
 
 @bp.get("/<int:collection_id>/notification-preference")

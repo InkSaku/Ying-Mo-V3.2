@@ -28,6 +28,7 @@ export function notificationSentence(item) {
       comment_reply: "回复了你的评论",
       comment_mention: "在评论中提到了你",
       memory_contribution_added: "补充了你们的共同回忆",
+      site_member_joined: "加入了映墨，可以把 TA 加进你的合集",
     }[item.kind];
     if (verb) return { actor, text: verb, summary: item.summary };
   }

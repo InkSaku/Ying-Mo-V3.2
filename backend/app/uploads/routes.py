@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta
 from io import BytesIO
 import hashlib
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -50,6 +52,30 @@ def _video_path(public_id,ext):
 
 def _video_display_path(public_id):
     return f"live-photo-displays/{public_id}.mp4"
+
+
+def _captured_at(raw):
+    """读取照片 EXIF 里的拍摄时间（DateTimeOriginal），返回当地时间 'YYYY-MM-DDTHH:MM'。
+    只在上传响应里返回给上传者，用来建议随记的“发生时间”；不保存，也不读取或返回 GPS。"""
+    try:
+        exif = Image.open(BytesIO(raw)).getexif()
+        detail = exif.get_ifd(0x8769)
+        value = detail.get(36867) or detail.get(36868) or exif.get(306)
+    except Exception:
+        return None
+    if isinstance(value, bytes):
+        value = value.decode("ascii", "ignore")
+    match = re.match(r"^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})", str(value or "").strip())
+    if not match:
+        return None
+    year, month, day, hour, minute = (int(part) for part in match.groups())
+    try:
+        captured = datetime(year, month, day, hour, minute)
+    except ValueError:
+        return None
+    if captured.year < 1990 or captured > datetime.now() + timedelta(days=2):
+        return None
+    return captured.strftime("%Y-%m-%dT%H:%M")
 
 
 def _read_image(file):
@@ -152,6 +178,7 @@ def upload_image():
     db.session.add(media); db.session.commit()
     data=media.to_dict(include_manage_paths=True)
     data["duplicate_of_id"]=duplicate.id if duplicate else None
+    data["captured_at"]=_captured_at(raw)
     return success_response(data,201)
 
 
@@ -196,8 +223,10 @@ def upload_live_photo():
         original_filename=Path(video_file.filename or "live-photo-video").name[:255],
     )
     db.session.add_all([image_media,video_media]); db.session.commit()
+    image_data=image_media.to_dict()
+    image_data["captured_at"]=_captured_at(image_raw)
     return success_response({
-        "pair_id":pair_id,"image":image_media.to_dict(),"video":video_media.to_dict(),
+        "pair_id":pair_id,"image":image_data,"video":video_media.to_dict(),
     },201)
 
 

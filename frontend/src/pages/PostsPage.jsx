@@ -168,7 +168,10 @@ export function PostsPage({ type }) {
   const [params, setParams] = useSearchParams();
   const filters = readPostFilters(params, type);
   const { page } = filters;
-  const canonicalParams = postFilterSearchParams(filters).toString();
+  // 地址只保留筛选参数，但大图打开时的 ?media= 属于灯箱，不能被当成多余参数清掉。
+  const canonicalSearch = postFilterSearchParams(filters);
+  if (params.get("media")) canonicalSearch.set("media", params.get("media"));
+  const canonicalParams = canonicalSearch.toString();
   const path = postsApiPath(type, filters, PAGE_SIZE);
   const state = useAsyncData(
     () => api.get(path),

@@ -465,6 +465,7 @@ export function MediaLightboxProvider({ children }) {
   const lightboxOpen = Boolean(gallery);
   const galleryRef = useRef(null);
   const openerRef = useRef(null);
+  const resolvedRef = useRef(new Set());
   galleryRef.current = gallery;
   const urlMediaId = useMemo(() => new URLSearchParams(location.search).get("media"), [location.search]);
 
@@ -483,6 +484,22 @@ export function MediaLightboxProvider({ children }) {
     if (location.state?.mediaLightbox) navigate(-1);
     else removeMediaParam(true);
   }, [location.state, navigate, removeMediaParam]);
+
+  // 列表或正文给的是简版条目；翻到哪一张，再向 /uploads/gallery 取它的完整信息（原件下载、Live Photo 视频），每张只取一次。
+  const resolveItem = useCallback((mediaId) => {
+    if (!mediaId || resolvedRef.current.has(mediaId)) return;
+    resolvedRef.current.add(mediaId);
+    api.get(`/uploads/gallery/${encodeURIComponent(mediaId)}`).then((result) => {
+      setGallery((current) => {
+        if (!current) return current;
+        const target = current.items.findIndex((item) => item.id === result.data.id);
+        if (target < 0) return current;
+        const nextItems = [...current.items];
+        nextItems[target] = result.data;
+        return { ...current, items: nextItems };
+      });
+    }).catch(() => { resolvedRef.current.delete(mediaId); });
+  }, []);
 
   const openGallery = useCallback((options) => {
     const items = mergeMediaItems([], options.items || []);
@@ -505,17 +522,9 @@ export function MediaLightboxProvider({ children }) {
       error: null,
     });
     navigate({ pathname: location.pathname, search: withMediaParam(location.search, items[index].id), hash: location.hash }, { state: { ...(location.state || {}), mediaLightbox: true } });
-    api.get(`/uploads/gallery/${encodeURIComponent(items[index].id)}`).then((result) => {
-      setGallery((current) => {
-        if (!current) return current;
-        const target = current.items.findIndex((item) => item.id === result.data.id);
-        if (target < 0) return current;
-        const nextItems = [...current.items];
-        nextItems[target] = result.data;
-        return { ...current, items: nextItems };
-      });
-    }).catch(() => undefined);
-  }, [location.hash, location.pathname, location.search, location.state, navigate]);
+    resolvedRef.current = new Set();
+    resolveItem(items[index].id);
+  }, [location.hash, location.pathname, location.search, location.state, navigate, resolveItem]);
 
   const hydrateGallery = useCallback((options) => {
     if (!urlMediaId) return;
@@ -549,6 +558,7 @@ export function MediaLightboxProvider({ children }) {
       const item = current.items[target];
       setGallery({ ...current, index: target });
       navigate({ pathname: location.pathname, search: withMediaParam(location.search, item.id), hash: location.hash }, { replace: true, state: location.state });
+      resolveItem(item.id);
       return;
     }
     const nextPage = delta > 0 ? current.maxPage + 1 : current.minPage - 1;
@@ -577,7 +587,7 @@ export function MediaLightboxProvider({ children }) {
     } catch {
       setGallery({ ...current, loadingEdge: false });
     }
-  }, [location.hash, location.pathname, location.search, location.state, navigate]);
+  }, [location.hash, location.pathname, location.search, location.state, navigate, resolveItem]);
 
   const download = useCallback(async (item) => {
     const target = item.downloads?.[0] || (item.image?.original_download_path ? { path: item.image.original_download_path } : null);

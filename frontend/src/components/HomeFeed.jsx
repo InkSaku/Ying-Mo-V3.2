@@ -49,7 +49,7 @@ function MemoryInterludeRow({ memory }) {
   );
 }
 
-export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null }) {
+export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null, hideEmptyState = false }) {
   const cachedRef = useRef(readHomeFeedCache(userId, type));
   const initialRef = useRef(cachedRef.current || emptyFeed());
   const [feed, setFeed] = useState(initialRef.current);
@@ -341,7 +341,8 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null 
 
       {!streamItems.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
 
-      {!loading && !streamItems.length && !error ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length || feed.items.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
+      {/* 新成员的“第一封信”已经说明下一步，这里不再重复一条空状态。 */}
+      {!loading && !streamItems.length && !error && !hideEmptyState ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length || feed.items.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
       {error ? <div className="home-feed-error" role="alert"><p>{error}</p><button className="btn btn-secondary" type="button" onClick={() => void load()}>重新读取</button></div> : null}
 
       <div ref={sentinelRef} className="home-feed-sentinel" aria-hidden="true" />

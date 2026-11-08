@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.access import collection_member_predicate, readable_post_predicate
+from app.collections.service import creator_join_options
 from app.extensions import db
 from app.home.on_this_day import on_this_day_data
 from app.models import (
@@ -107,7 +108,8 @@ def _recent_members(actor_id, limit=6):
             User.id != actor_id,
         ).order_by(User.created_at.desc(), User.id.desc()).limit(limit)
     ).all()
-    return [user.public_dict() for user in users]
+    # 当前成员如果创建过合集，顺带给出“可以把这位新朋友加进哪些合集”；没有创建过合集时为空列表。
+    return [{**user.public_dict(), "join_options": creator_join_options(actor_id, user)} for user in users]
 
 
 def explore_data(actor_id, seed):

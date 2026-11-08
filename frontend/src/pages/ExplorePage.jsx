@@ -8,6 +8,7 @@ import { memoryDayLabel } from "../lib/onThisDay";
 import { CollectionCard } from "../components/CollectionCard";
 import { MemoryCard } from "../components/MemoryCard";
 import { MemberCard } from "../components/MemberCard";
+import { JoinCollectionActions } from "../components/JoinCollectionActions";
 import { PostCard } from "../components/PostCard";
 import { ProtectedImage } from "../components/ProtectedImage";
 import { ErrorState } from "../components/States";
@@ -30,7 +31,7 @@ function ExploreOpening({ article, note }) {
       {article ? (
         <article className={`explore-opening-story${media ? " has-media" : " without-media"}`}>
           {media ? <Link className="explore-opening-visual" to={postHref(article)} aria-label={`从这里开始：${article.title || "未命名文章"}`}>
-            <ProtectedImage media={media} alt={media.alt_text ?? ""} fallback={<span className="explore-opening-media-error" role="status">影像暂时无法读取</span>} />
+            <ProtectedImage media={media} adaptive alt={media.alt_text ?? ""} fallback={<span className="explore-opening-media-error" role="status">影像暂时无法读取</span>} />
           </Link> : null}
           <div className="explore-opening-caption">
             <span>本次开篇 · {article.author?.nickname || "朋友"} · {formatDate(article.published_at)}</span>
@@ -138,7 +139,12 @@ export function ExplorePage() {
 
           {members.length ? <section className="explore-section explore-member-section">
             <ExploreSectionHeading title="新朋友" description="最近加入映墨的成员。" />
-            <div className="explore-member-grid">{members.map((member) => <MemberCard key={member.id} member={member} />)}</div>
+            <div className="explore-member-grid">{members.map((member) => (
+              <MemberCard key={member.id} member={member}>
+                {/* 当前成员是合集创建者时，可以直接把新朋友加进自己的合集。 */}
+                <JoinCollectionActions member={member} options={member.join_options} className="explore-member-join" />
+              </MemberCard>
+            ))}</div>
           </section> : null}
         </>
       )}

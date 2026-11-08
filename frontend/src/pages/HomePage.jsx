@@ -7,6 +7,8 @@ import { QuickNoteComposer } from "../components/QuickNoteComposer";
 import { HomeClosing } from "../components/HomeClosing";
 import { HomeOpeningFeature } from "../components/HomeOpeningFeature";
 import { HomeSparkEntry } from "../components/HomeSparkEntry";
+import { WelcomeLetter } from "../components/WelcomeLetter";
+import { useNewMemberWelcome } from "../hooks/useNewMemberWelcome";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { homeFeaturePost } from "../lib/homeComposition";
@@ -28,7 +30,12 @@ export function HomePage() {
   const [collections, setCollections] = useState(null);
   const pageRef = useRef(null);
   const pins = homeSnapshot?.pins?.items || [];
-  const feature = pins[0] || homeFeaturePost(homeSnapshot?.items?.slice(0, HOME_FEED_PAGE_SIZE));
+  const welcome = useNewMemberWelcome(user);
+  const [composeRequest, setComposeRequest] = useState(0);
+  // 新成员（还没写过内容）在开篇位置看到“第一封信”；此时不主推任何一条，朋友的记录全部留在下方时间流里。
+  const feature = welcome.show ? null : pins[0] || homeFeaturePost(homeSnapshot?.items?.slice(0, HOME_FEED_PAGE_SIZE));
+  // 新成员且还读不到任何记录时，“最近记录”只剩一个空标题，先隐藏；时间流组件照常挂载以便有内容时立即出现。
+  const newcomerWithoutFeed = welcome.show && Boolean(homeSnapshot) && !homeSnapshot.items?.length && !pins.length;
   const editionDate = new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric" }).format(new Date());
   const receiveSnapshot = useCallback((snapshot) => {
     setHomeSnapshot(snapshot);
@@ -74,7 +81,12 @@ export function HomePage() {
           <HomeMarginObjects boundaryRef={pageRef} />
         </div>
         <div className="home-featured-opening">
-          <HomeOpeningFeature post={feature} pinned={Boolean(pins.length)} loading={!homeSnapshot} />
+          {welcome.show ? <WelcomeLetter
+            user={user}
+            counts={welcome.counts}
+            onDismiss={welcome.dismiss}
+            onStartWriting={() => setComposeRequest((value) => value + 1)}
+          /> : <HomeOpeningFeature post={feature} pinned={Boolean(pins.length)} loading={!homeSnapshot} />}
           {pins.length > 1 ? <nav className="home-pinned-more" aria-label="更多置顶文章">
             {pins.slice(1).map((post) => <Link key={post.id} to={postHref(post)} state={{ fromHomeFeed: true }} onClick={() => window.dispatchEvent(new Event(HOME_FEED_SAVE_EVENT))}>
               <span>置顶</span><strong>{post.title}</strong><small>{post.author?.nickname || post.author?.username}</small>
@@ -83,14 +95,15 @@ export function HomePage() {
         </div>
       </section>
       <div id="home-writing" className="home-compose-layout">
-        <QuickNoteComposer appearance="homePrompt" autoFocus={params.get("compose") === "note"} onPublished={(post) => {
+        <QuickNoteComposer appearance="homePrompt" autoFocus={params.get("compose") === "note"} openRequest={composeRequest} onPublished={(post) => {
+          welcome.markWritten();
           setPublishedPost(post);
           setHomeSnapshot((current) => current ? { ...current, items: [post, ...(current.items || [])] } : { items: [post], memoryInterlude: null });
         }} onCollectionsLoaded={setCollections} />
       </div>
       <div className="home-editorial-columns">
         <section className="home-reading-column" aria-label="朋友的记录">
-          <div className="home-feed-toolbar">
+          <div className="home-feed-toolbar" hidden={newcomerWithoutFeed || undefined}>
             <div className="home-feed-toolbar-heading"><h2 id="home-feed-title">最近记录</h2></div>
             <div className="home-feed-filters" aria-label="筛选时间流">
               {feedFilters.map(([value, label]) => (
@@ -98,13 +111,14 @@ export function HomePage() {
               ))}
             </div>
           </div>
-          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} featuredId={pins.length ? null : feature?.id} />
+          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} featuredId={pins.length ? null : feature?.id} hideEmptyState={welcome.show} />
         </section>
-        <aside className="home-side-rail" aria-label="回望与共同记录">
+        {/* 新成员还没有往年记录和合集，侧栏只会是两段空状态，先不显示。 */}
+        {welcome.show ? null : <aside className="home-side-rail" aria-label="回望与共同记录">
           <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />
           <span className="home-margin-pocket" data-home-margin-pocket="aside" aria-hidden="true" />
           <Link className="home-side-drafts" to="/me/posts">我的内容 ↗</Link>
-        </aside>
+        </aside>}
       </div>
     </main>
   );

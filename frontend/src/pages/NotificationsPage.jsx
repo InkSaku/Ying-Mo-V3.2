@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { JoinCollectionActions } from "../components/JoinCollectionActions";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -121,6 +122,7 @@ export function NotificationsPage() {
                           {item.target_url ? <Link className="inbox-link" to={item.target_url} onClick={() => markReadOnOpen(item)}>{label}</Link> : label}
                         </p>
                         {sentence.summary ? <p className="inbox-summary">{sentence.summary}</p> : null}
+                        {item.kind === "site_member_joined" ? <JoinCollectionActions member={item.actor} options={item.join_options} className="inbox-join" /> : null}
                       </div>
                       <div className="inbox-meta">
                         <time className="tabular" dateTime={item.created_at}>{notificationClock(item.created_at)}</time>

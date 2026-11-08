@@ -2,7 +2,7 @@ import { DefaultAvatar } from "./DefaultAvatar";
 import { Link } from "react-router-dom";
 import { ProtectedImage } from "./ProtectedImage";
 
-export function MemberCard({ member }) {
+export function MemberCard({ member, children = null }) {
   return (
     <article className="explore-member-card">
       <ProtectedImage
@@ -16,6 +16,7 @@ export function MemberCard({ member }) {
         <p className="profile-handle">@{member.username}</p>
         {member.bio ? <p>{member.bio}</p> : <p className="muted">刚来到映墨，尚未填写简介。</p>}
         {member.region ? <span>所在地：{member.region}</span> : null}
+        {children}
       </div>
     </article>
   );

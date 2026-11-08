@@ -185,6 +185,28 @@ def register():
                 collection_id=collection.id,
                 message=f"你已自动加入合集「{collection.name}」，现在可以阅读并投稿。",
             ))
+        # 新人引导第二期：合集只能由创建者添加成员。通知仍需手动添加的合集创建者“有新朋友来了”，
+        # 每位创建者一条；已开启“未来成员自动加入”的合集已经自动加入，不再打扰。
+        waiting_creator_ids = db.session.scalars(
+            db.select(Collection.creator_id)
+            .join(User, User.id == Collection.creator_id)
+            .where(
+                Collection.auto_add_future_members.is_(False),
+                Collection.status == CollectionStatus.ACTIVE.value,
+                Collection.deleted_at.is_(None),
+                User.status == UserStatus.ACTIVE.value,
+                Collection.creator_id != user.id,
+            )
+            .distinct()
+        ).all()
+        for creator_id in sorted(set(waiting_creator_ids)):
+            db.session.add(Notification(
+                user_id=creator_id,
+                actor_id=user.id,
+                kind="site_member_joined",
+                target_type="user",
+                message=f"新朋友「{user.nickname}」加入了映墨，可以把 TA 加进你的合集。",
+            ))
         access, refresh = _issue_session(user)
         _verification_token, raw_verification_token = issue_account_token(
             user, AccountTokenPurpose.EMAIL_VERIFICATION

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Collection, CollectionMember, Notification, PostVisibility, User, UserStatus
+from app.models import Collection, CollectionMember, CollectionStatus, Notification, PostVisibility, User, UserStatus
 from app.posts.service import DomainError
 
 
@@ -46,6 +46,51 @@ def resolve_member_ids(creator_id, payload):
             ).order_by(User.id.asc())
         ).all())
     return validate_member_ids(creator_id, payload.get("member_ids", []))
+
+
+def add_member(collection, creator_id, user_id):
+    """只加入一位成员，不改动其他成员。已是成员时不重复写入，也不再发通知。"""
+    if collection.creator_id != creator_id or collection.deleted_at is not None:
+        raise DomainError("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+    if collection.status != CollectionStatus.ACTIVE.value:
+        raise DomainError("VALIDATION_ERROR", "这个合集当前不能添加成员。", 422)
+    validate_member_ids(creator_id, [user_id])
+    exists = db.session.scalar(db.select(CollectionMember.id).where(
+        CollectionMember.collection_id == collection.id,
+        CollectionMember.user_id == user_id,
+    ))
+    if exists:
+        return False
+    db.session.add(CollectionMember(collection_id=collection.id, user_id=user_id))
+    db.session.add(Notification(
+        user_id=user_id, actor_id=creator_id, kind="collection_member_added",
+        target_type="collection",
+        collection_id=collection.id, message=f"你已加入合集「{collection.name}」。"
+    ))
+    return True
+
+
+def creator_join_options(creator_id, member, limit=8):
+    """当前成员作为创建者管理的合集，以及 member 是否已在其中；供“加进合集”入口使用。"""
+    if member is None or member.status != UserStatus.ACTIVE.value or member.id == creator_id:
+        return []
+    collections = db.session.scalars(
+        db.select(Collection).where(
+            Collection.creator_id == creator_id,
+            Collection.deleted_at.is_(None),
+            Collection.status == CollectionStatus.ACTIVE.value,
+        ).order_by(Collection.updated_at.desc(), Collection.id.desc()).limit(limit)
+    ).all()
+    if not collections:
+        return []
+    joined = set(db.session.scalars(db.select(CollectionMember.collection_id).where(
+        CollectionMember.user_id == member.id,
+        CollectionMember.collection_id.in_([collection.id for collection in collections]),
+    )).all())
+    return [
+        {"id": collection.id, "name": collection.name, "slug": collection.slug, "is_member": collection.id in joined}
+        for collection in collections
+    ]
 
 
 def replace_members(collection, creator_id, member_ids, actor_id):

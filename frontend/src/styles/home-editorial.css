@@ -145,3 +145,32 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
   .home-editorial .home-feed-toolbar h2 { font-size:17px; }
 }
 @media print { .home-editorial .home-feed-toolbar { position:static; } }
+
+/* 新成员“第一封信”：占开篇位置，信纸式排版，一条墨线分开问候与三件小事，不做卡片和阴影。 */
+.welcome-letter { position: relative; display: grid; gap: 10px; padding: 4px 0 8px; }
+.welcome-letter-art { position: absolute; top: 0; right: 0; width: 88px; color: var(--text); pointer-events: none; }
+.welcome-letter-art svg { display: block; width: 100%; height: auto; }
+.welcome-letter-kicker { margin: 0; color: var(--brand-link); font-size: 11px; letter-spacing: .14em; }
+.welcome-letter h2 { margin: 0; padding-right: 100px; font-size: 24px; font-weight: 400; line-height: 1.45; letter-spacing: .02em; overflow-wrap: anywhere; }
+.welcome-letter-lead { margin: 0; padding-right: 100px; color: var(--text-3); font-size: 14px; line-height: 1.8; }
+.welcome-letter-steps { margin: 10px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--border); }
+.welcome-letter-steps li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 0 12px; align-items: start; padding: 14px 0 10px; }
+.welcome-letter-steps li + li { border-top: 1px solid var(--border-soft); }
+.welcome-letter-index { padding-top: 3px; color: var(--brand-link); font-family: var(--mono); font-size: 12px; }
+.welcome-letter-steps strong { display: block; font-size: 16px; font-weight: 500; line-height: 1.5; }
+.welcome-letter-steps p { margin: 4px 0 0; color: var(--text-3); font-size: 14px; line-height: 1.75; }
+.welcome-letter-handle { color: var(--text); font-family: var(--mono); font-size: 13px; }
+.welcome-letter-action { display: inline-flex; align-items: center; min-height: 44px; margin-top: -10px; padding: 0; border: 0; background: transparent; color: var(--brand-link); font: inherit; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.welcome-letter-done { display: inline-flex; align-items: center; min-height: 44px; margin-top: -10px; color: var(--text-4); font-size: 13px; white-space: nowrap; }
+.welcome-letter-steps .is-done strong { color: var(--text-3); }
+.welcome-letter-status,
+.welcome-letter-note { margin: 0; color: var(--text-3); font-size: 13px; line-height: 1.7; }
+.welcome-letter-note a { margin-left: 6px; color: var(--brand-link); }
+.welcome-letter-dismiss { justify-self: start; min-height: 44px; padding-inline: 0; color: var(--text-4); font-size: 13px; }
+@media (max-width: 767px) {
+  .welcome-letter-art { width: 72px; }
+  .welcome-letter h2 { padding-right: 80px; font-size: 22px; }
+  .welcome-letter-lead { padding-right: 0; }
+  .welcome-letter-steps li { grid-template-columns: 24px minmax(0, 1fr); }
+  .welcome-letter-steps li > :last-child { grid-column: 2; margin-top: 0; justify-self: start; }
+}

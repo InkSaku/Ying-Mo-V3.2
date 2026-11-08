@@ -99,7 +99,7 @@ function MediaAccordionRow({ row, offset, items, pagination }) {
         onPointerDownCapture={(event) => {
           if (event.target.closest(".media-lightbox-trigger")) { setAnchored(true); setActive(index); }
         }}>
-        <MediaOpenButton item={item} items={items} context="collection" pagination={pagination} label={`在灯箱中查看${author}的${kind}：${title}`}><ProtectedImage media={item.image} alt={`来自${author}的共同影像：${title}`} /></MediaOpenButton>
+        <MediaOpenButton item={item} items={items} context="collection" pagination={pagination} label={`在灯箱中查看${author}的${kind}：${title}`}><ProtectedImage media={item.image} adaptive alt={`来自${author}的共同影像：${title}`} /></MediaOpenButton>
         <Link to={postHref(item.post)} className="collection-media-caption"><strong>{title}</strong><small><span>{author}</span><time dateTime={item.occurred_at || undefined}>{formatDate(item.occurred_at)}</time></small><span className="collection-media-kind">{kind} / {postTypeLabel(item.post.post_type)}</span></Link>
       </article>;
     })}

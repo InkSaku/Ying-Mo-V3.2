@@ -19,7 +19,7 @@ export function HomeOpeningFeature({ post, loading = false, pinned = false }) {
   return <article className={`home-opening-feature${media ? " has-image" : " is-illustrated"}`} aria-busy={loading || undefined}>
     <div className="home-opening-feature-visual">
       {media ? <Link to={href} state={{ fromHomeFeed: true }} onClick={rememberDeparture} aria-label={`阅读${author}的${postTypeLabel(post.post_type)}：${title}`}>
-        <ProtectedImage media={media} useOriginal alt="" className="home-opening-feature-image" fallback={<HomeInkLandscape />} />
+        <ProtectedImage media={media} adaptive alt="" className="home-opening-feature-image" fallback={<HomeInkLandscape />} />
       </Link> : <HomeInkLandscape />}
     </div>
     {post ? <>

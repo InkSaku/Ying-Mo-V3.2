@@ -1,6 +1,6 @@
 import { mediaIdsInMarkdown } from "../lib/internalMedia";
 import { ProtectedImage } from "./ProtectedImage";
-import { ProtectedVideo } from "./ProtectedVideo";
+import { LivePhotoFrame } from "./LivePhotoFrame";
 import { MediaOpenButton } from "./MediaOpenButton";
 
 function mediaGroups(media, coverMediaId, inlineMediaIds) {
@@ -29,9 +29,15 @@ export function PostMediaGallery({ media, coverMediaId, body = "", galleryItems 
     <section className="post-media-gallery" aria-label="内容媒体">
       {groups.map((group) => group.type === "live" ? (
         <figure className="live-photo-view" key={group.id}>
-          <MediaOpenButton item={galleryItems.find((item) => item.id === group.image?.public_id)} items={galleryItems} context="post"><ProtectedImage eager path={group.image?.read_path} alt={group.image?.alt_text || ""} className="post-media-image" /></MediaOpenButton>
-          <ProtectedVideo path={group.video?.read_path} label="Live Photo 动态片段" className="post-media-video" />
-          <figcaption>{group.image?.caption || "Live Photo"}</figcaption>
+          <LivePhotoFrame
+            imagePath={group.image?.read_path}
+            videoPath={group.video?.read_path}
+            alt={group.image?.alt_text || ""}
+            imageClassName="post-media-image"
+            galleryItem={galleryItems.find((item) => item.id === group.image?.public_id)}
+            galleryItems={galleryItems}
+          />
+          {group.image?.caption ? <figcaption>{group.image.caption}</figcaption> : null}
         </figure>
       ) : (
         <figure className="post-media-view" key={group.id}>

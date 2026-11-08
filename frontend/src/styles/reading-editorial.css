@@ -19,12 +19,12 @@
 .article-reading-page .article-detail-folio .post-facts dd { margin: 0; font-size: 10px; }
 .article-reading-page .article-detail-folio .post-context { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0; }
 .article-reading-page .article-detail-folio .tag { padding: 0; border: 0; background: transparent; color: var(--brand-link); font-size: 10px; }
-.article-reading-page .article-detail-cover-frame { position: relative; width: 100%; margin: 28px 0 0; overflow: visible; aspect-ratio: auto; background: transparent; }
+.article-reading-page .article-detail-cover-frame { position: relative; width: 100%; margin: 28px 0 0; overflow: visible; aspect-ratio: auto; border-radius: 0; background: transparent; }
 .article-reading-page .article-detail-cover-frame::before,
 .article-reading-page .article-detail-cover-frame figcaption::before { display: none; }
-.article-reading-page .article-detail-cover-frame > .media-lightbox-trigger { display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 3px; }
+.article-reading-page .article-detail-cover-frame > .media-lightbox-trigger { display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 0; }
 .article-reading-page .article-detail-cover,
-.article-reading-page .protected-image-placeholder.article-detail-cover { width: 100%; height: 100%; max-height: none; margin: 0; aspect-ratio: auto; object-fit: cover; border: 0; border-radius: 3px; }
+.article-reading-page .protected-image-placeholder.article-detail-cover { width: 100%; height: 100%; max-height: none; margin: 0; aspect-ratio: auto; object-fit: cover; border: 0; border-radius: 0; }
 .article-reading-page .article-detail-cover-frame figcaption { margin: 10px 0 0; color: var(--text-3); font-size: 11px; line-height: 1.9; }
 .article-reading-preview-status { width: min(100%, 800px); margin: 28px auto 0; color: var(--text-3); font-size: 12px; }
 .article-reading-preview .article-detail-hero { width: min(100%, 800px); margin-inline: auto; }
@@ -51,7 +51,7 @@
 .article-reading-page .prose ol { padding-left: 1.5em; }
 .article-reading-page .prose li { margin-block: .45em; }
 .article-reading-page .prose img,
-.article-reading-page .prose .inline-protected-image { border: 0; border-radius: 3px; }
+.article-reading-page .prose .inline-protected-image { border: 0; border-radius: 0; }
 .article-body-title-anchor { display: block; height: 0; scroll-margin-top: calc(var(--header-h) + 24px); }
 .article-reading-page .prose h1,
 .article-reading-page .prose h2,

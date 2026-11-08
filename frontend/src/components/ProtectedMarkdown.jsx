@@ -4,7 +4,7 @@ import { internalLinkPath } from "../lib/contentLinks";
 import { isIgnorableMarkdownWhitespace, sameHeadingText } from "../lib/markdownRender";
 import { mediaPresentation } from "../lib/postMedia";
 import { ProtectedImage } from "./ProtectedImage";
-import { ProtectedVideo } from "./ProtectedVideo";
+import { LivePhotoFrame } from "./LivePhotoFrame";
 import { MediaOpenButton } from "./MediaOpenButton";
 
 const ProtectedMath = lazy(() => import("./ProtectedMath").then((module) => ({
@@ -75,18 +75,15 @@ function InlineProtectedMedia({ mediaId, index, management, galleryItems }) {
     const galleryItem = galleryItems.find((item) => item.id === group.image?.public_id);
     return (
       <figure className={`inline-protected-media inline-live-photo ${presentationClass}`}>
-        <MediaOpenButton item={galleryItem} items={galleryItems} context="post"><ProtectedImage
-          eager
-          path={imagePath(group.image, management)}
+        <LivePhotoFrame
+          imagePath={imagePath(group.image, management)}
+          videoPath={videoPath(group.video, management)}
           alt={group.image.alt_text || ""}
-          className="inline-protected-image"
-        /></MediaOpenButton>
-        <ProtectedVideo
-          path={videoPath(group.video, management)}
-          label="正文中的 Live Photo 动态片段"
-          className="inline-protected-video"
+          imageClassName="inline-protected-image"
+          galleryItem={galleryItem}
+          galleryItems={galleryItems}
         />
-        <figcaption>{group.image.caption || "Live Photo"}</figcaption>
+        {group.image.caption ? <figcaption>{group.image.caption}</figcaption> : null}
       </figure>
     );
   }

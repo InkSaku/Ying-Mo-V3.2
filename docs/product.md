@@ -1222,7 +1222,11 @@ V3.7 在不建设 Feed、聊天、关注或复杂社交图谱的前提下增强�
 - Post 正文、封面、Collection 影像墙、年度回顾、我的媒体和往年今日复用同一灯箱；支持前后切换、键盘、移动端滑动、双击/双指缩放、背景关闭、焦点恢复和无障碍对话框语义；
 - 当前媒体写入 `?media=<public_id>`，保留页面已有筛选参数；刷新或复制地址后由后端重新解析媒体和 ACL，无权、删除或成员已被移除时统一返回 404，界面不泄露标题、作者或 Collection；
 - Collection 影像墙按年份、成员和图片/Live Photo 筛选并分页；灯箱序列只使用当前筛选结果，返回时保留页面、筛选和滚动状态，并可跳回原 Post；
+- 浏览列表接口为 Note 返回 `visual_count`（有效图片数，Live Photo 一组计一张），供列表标出多图；
+- 列表只带首图；在多图 Note 的列表缩略图上点开灯箱时，按原权限读取该 Note 详情，以正文顺序打开它的全部图片，从被点的那张开始；读取失败时只看这一张。灯箱每翻到一张，再读取该条目的完整信息（原件下载权限、Live Photo 动态片段），每张只读一次；
+- 列表页规范地址时保留灯箱的 `media` 参数，不把它当作多余筛选参数清除；
 - Live Photo 的静态图片和配对视频构成一个逻辑条目；默认显示静态图，桌面点击、移动端长按才播放，静音且 `playsInline`，动态片段失败时必须保留静态回退；
+- 上传图片或 Live Photo 时，上传响应只向上传者返回照片 EXIF 拍摄时间 `captured_at`（当地时间，精确到分钟；不保存、不读取或返回 GPS）；浏览器压缩大图前先从原 JPEG 读出同一时间。随记还没有填写发生时间时，用它（多张取最早）填入并提示，作者可以修改；文章和已填写的时间不改；
 - 时间优先使用 Note `occurred_at`，其他内容使用语义发布时间；地点只使用 Post 已确认的 `location`，不直接向成员暴露原图 EXIF GPS；
 - 列表只读取缩略图，灯箱读取去除 EXIF 的授权展示衍生图，并短时预加载相邻静态图片；原文件只通过所有者接口下载，不生成永久公开对象存储 URL；
 - 受保护 Blob 只在当前会话短时缓存，退出、会话失效或切换账号立即释放；后端每次新读取仍重新执行 Post / Collection ACL；
@@ -1561,6 +1565,20 @@ P1 支持：
 - 时间与生活感。
 
 不展示游戏入口、地图、英雄、点位或游戏推荐。
+
+还没有写过任何内容的新成员，首页开篇位置显示“第一封信”，不主推任何一条记录：
+
+- 依次给出三件事：设置头像或简介让朋友认出自己；把用户名发给邀请自己的朋友，由合集创建者把自己加进合集；写下第一则随记，并说明独立随记默认仅自己可见；
+- 每一步按真实状态打勾（有头像或简介、已加入合集），邮箱未验证时附带提醒；
+- 写下第一则内容后不再出现；成员可选择“以后再说”，按账号记在当前设备；
+- 新成员读不到任何记录时，不再重复显示空时间流、往年今日与合集侧栏；
+- 只读取本人概览计数，不新增数据表，不向其他成员暴露任何新状态。
+
+新成员注册成功时，在同一事务内给“仍需手动添加成员”的 Collection creator 各发一条 `site_member_joined` 通知（每位 creator 一条；只有开启“未来成员自动加入”合集的 creator 不再通知，新成员本人不收到）。不改变邀请码规则：
+
+- 通知链接到新成员主页，并在读取时重新计算 `join_options`：当前成员作为 creator 的有效 Collection 及新成员是否已在其中；新成员账号不可用时只显示中性文案；
+- 通知与 Explore“新朋友”中，creator 可直接“加进《合集》”，使用单人加入接口，成功后新成员收到既有的 `collection_member_added` 通知；
+- 非 creator 看不到加入入口，接口统一返回 404。
 
 ## 13.2 推荐结构
 
@@ -2335,6 +2353,7 @@ POST   /collections
 PATCH  /collections/:id
 GET    /collections/:id/members
 PUT    /collections/:id/members
+POST   /collections/:id/members/:user_id
 POST   /collections/:id/remove-post
 POST   /collections/:id/transfer-creator
 DELETE /collections/:id
@@ -2347,6 +2366,7 @@ DELETE /collections/:id
 - `POST /collections` 自动使用当前用户为 creator；
 - 创建时可提交 `member_ids[]`；
 - `PUT /collections/:id/members` 仅 creator；
+- `POST /collections/:id/members/:user_id` 仅 creator，只加入一位有效成员、不改动其他成员；已是成员时返回 `added: false`，依靠成员唯一约束保证重复与并发请求只保留一条关系；
 - `POST /collections/:id/transfer-creator` 仅当前 creator，目标必须是当前 active member；成功后目标成为唯一 creator，旧 creator 转为普通 member；
 - creator 不允许出现在待移除 member 集合；
 - `remove-post` 仅 creator，且只解除关联不删除 Post；

@@ -1,6 +1,7 @@
 import math
 import re
 
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload, load_only, selectinload
 
 from app.access import is_collection_member, member_collection_ids
@@ -71,7 +72,24 @@ def _preload_browse_relations(posts):
     ).all()
 
 
-def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None, member_ids=None):
+def note_visual_counts(posts):
+    """Count each Note's active images and Live Photos (one per pair) for list badges."""
+    note_ids = [post.id for post in posts if post.post_type == PostType.NOTE.value]
+    if not note_ids:
+        return {}
+    rows = db.session.execute(
+        db.select(Media.bound_id, func.count(Media.id)).where(
+            Media.bound_type == "post",
+            Media.bound_id.in_(note_ids),
+            Media.kind.in_((MediaKind.IMAGE, MediaKind.LIVE_PHOTO_IMAGE)),
+            Media.status == "active",
+            Media.deleted_at.is_(None),
+        ).group_by(Media.bound_id)
+    ).all()
+    return {bound_id: count for bound_id, count in rows}
+
+
+def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None, member_ids=None, visual_counts=None):
     data = post.to_dict(include_body=False)
     data["content_excerpt"] = (post.summary or post.body or "")[:BROWSE_EXCERPT_SOURCE_LIMIT]
     if post.post_type == PostType.ARTICLE.value:
@@ -99,6 +117,9 @@ def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None
     )
     selected_media = post.cover_media if _active_media(post.cover_media) else (display_media or {}).get(post.id)
     data["display_media"] = selected_media.to_dict() if selected_media else None
+    # 列表缩略图只显示第一张；随记另给出图片总数（Live Photo 按一组计），前端据此标出“共几张”。
+    if post.post_type == PostType.NOTE.value and visual_counts is not None:
+        data["visual_count"] = visual_counts.get(post.id, 0)
     return data
 
 
@@ -107,12 +128,13 @@ def serialize_browse_posts(posts, *, actor_id=None):
         return []
     _preload_browse_relations(posts)
     media = first_display_media(posts)
+    visual_counts = note_visual_counts(posts)
     slugs = current_article_slugs([post.id for post in posts if post.post_type == PostType.ARTICLE.value])
     member_ids = (
         member_collection_ids(actor_id, {post.collection for post in posts})
         if actor_id is not None else None
     )
     return [
-        serialize_browse_post(post, actor_id=actor_id, display_media=media, slugs=slugs, member_ids=member_ids)
+        serialize_browse_post(post, actor_id=actor_id, display_media=media, slugs=slugs, member_ids=member_ids, visual_counts=visual_counts)
         for post in posts
     ]

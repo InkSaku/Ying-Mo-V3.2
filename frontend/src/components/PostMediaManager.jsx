@@ -14,6 +14,8 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
   onPrepareInsert,
   onInsertMedia,
   onRemoveMedia,
+  // 随记上传照片后回传拍摄时间；返回 true 表示已用它填写了“发生时间”。
+  onCaptureTime,
   inlineMediaIds = new Set(),
 }, ref) {
   const imageInputRef = useRef(null);
@@ -66,9 +68,10 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
       await refreshPost(currentPost.id);
       if (insertIntoBody) await onInsertMedia?.(uploaded.data.id);
-      setMessage(insertIntoBody
+      const filledTime = onCaptureTime?.(uploaded.data.captured_at || prepared.capturedAt) === true;
+      setMessage(`${insertIntoBody
         ? "图片已上传、插入正文并保存。"
-        : "图片已上传到当前内容。");
+        : "图片已上传到当前内容。"}${filledTime ? "已按照片拍摄时间填写发生时间，可以修改。" : ""}`);
       return uploaded.data;
     } catch (uploadError) {
       setError(uploadError.message);
@@ -153,11 +156,12 @@ export const PostMediaManager = forwardRef(function PostMediaManager({
       await api.post(`/uploads/${uploaded.data.image.id}/bind`, { bound_type: "post", bound_id: currentPost.id });
       await refreshPost(currentPost.id);
       await onInsertMedia?.(uploaded.data.image.id);
+      const filledTime = onCaptureTime?.(uploaded.data.image?.captured_at || prepared.capturedAt) === true;
       setLiveImage(null);
       setLiveVideo(null);
       if (liveImageInputRef.current) liveImageInputRef.current.value = "";
       if (liveVideoInputRef.current) liveVideoInputRef.current.value = "";
-      setMessage("Live Photo 已上传、配对、插入正文并保存。");
+      setMessage(`Live Photo 已上传、配对、插入正文并保存。${filledTime ? "已按照片拍摄时间填写发生时间，可以修改。" : ""}`);
       setUploadState(null);
     } catch (uploadError) {
       const cancelled = uploadError.code === "REQUEST_ABORTED" || uploadError.name === "AbortError";

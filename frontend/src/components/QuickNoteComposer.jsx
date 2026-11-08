@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, prepareImageForUpload, earliestCaptureTime } from "../lib/imageUpload";
 import {
   formWithQuickNoteAudience,
   initialQuickNoteForm,
@@ -57,7 +57,13 @@ function QuickNoteMark() {
   </svg>;
 }
 
-export function QuickNoteComposer({ onPublished, autoFocus = false, appearance = "default", onCollectionsLoaded }) {
+function quickNoteAudienceHint(value) {
+  if (value === "login_only") return "所有受邀的映墨朋友都能读到。";
+  if (String(value).startsWith("collection:")) return "只有这个合集的成员能读到。";
+  return "只有你自己能看到。";
+}
+
+export function QuickNoteComposer({ onPublished, autoFocus = false, appearance = "default", onCollectionsLoaded, openRequest = 0 }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const storageKey = quickNoteDraftKey(user?.id);
@@ -65,6 +71,8 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     typeof window === "undefined" ? null : readQuickNoteDraft(window.localStorage, storageKey)
   );
   const [form, setForm] = useState(restoredRef.current?.form || initialQuickNoteForm());
+  const formRef = useRef(form);
+  formRef.current = form;
   const [post, setPost] = useState(null);
   const postRef = useRef(null);
   const [expanded, setExpanded] = useState(Boolean(restoredRef.current));
@@ -112,6 +120,17 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
   useEffect(() => {
     if (autoFocus) bodyInputRef.current?.focus();
   }, [autoFocus]);
+
+  // 首页“第一封信”的“开始写”从外部展开输入框：等展开后再滚到它并聚焦正文，避免展开动画把页面拉回原位。
+  useEffect(() => {
+    if (!openRequest) return;
+    setPromptOpen(true);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      document.getElementById("quick-note-writing")?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+      bodyInputRef.current?.focus({ preventScroll: true });
+    }));
+  }, [openRequest]);
 
   useEffect(() => {
     let active = true;
@@ -234,6 +253,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
     setUploadState({ status: "optimizing", stage: "正在检查图片", percent: 0, currentFile: 1, totalFiles: files.length, fileName: files[0].name });
     let draft = null;
     let completedCount = 0;
+    const captureTimes = [];
     try {
       draft = await persistDraft();
       for (let index = 0; index < files.length; index += 1) {
@@ -250,11 +270,18 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
           onProgress: ({ percent }) => setUploadState((current) => ({ ...current, status: "uploading", stage: "正在上传", percent })),
         });
         await api.post(`/uploads/${uploaded.data.id}/bind`, { bound_type: "post", bound_id: draft.id });
+        captureTimes.push(uploaded.data.captured_at || prepared.capturedAt);
         completedCount = index + 1;
       }
       await refreshPost(draft.id);
       setUploadState(null);
-      setMessage(files.length > 1 ? `已上传 ${files.length} 张图片。` : "图片已上传并加入随记。");
+      // 还没填“发生时间”时，用照片的拍摄时间（多张取最早）；已填写的不覆盖。
+      const capturedAt = formRef.current.occurred_at ? null : earliestCaptureTime(captureTimes);
+      if (capturedAt) {
+        setForm((current) => (current.occurred_at ? current : { ...current, occurred_at: capturedAt }));
+        setExpanded(true);
+      }
+      setMessage(`${files.length > 1 ? `已上传 ${files.length} 张图片。` : "图片已上传并加入随记。"}${capturedAt ? "已按照片拍摄时间填写发生时间，可以修改。" : ""}`);
     } catch (uploadError) {
       if (draft?.id) await refreshPost(draft.id).catch(() => undefined);
       const cancelled = uploadError.code === "REQUEST_ABORTED" || uploadError.name === "AbortError";
@@ -403,6 +430,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
             <span>发布到</span>
             <CustomSelect
               aria-label="快速随记可见范围"
+              aria-describedby="quick-note-audience-hint"
               disabled={Boolean(busy)}
               value={quickNoteAudienceValue(form)}
               onChange={(event) => {
@@ -427,6 +455,9 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         </div>
       </div>
 
+      {/* 发布前说清楚这则随记谁能看到：独立随记默认只有自己可见，新成员最容易误会。 */}
+      <p id="quick-note-audience-hint" className="quick-note-audience-hint">{quickNoteAudienceHint(quickNoteAudienceValue(form))}</p>
+
       <div className="quick-note-status" aria-live="polite">
         <UploadProgress state={uploadState} onCancel={() => uploadAbortRef.current?.abort()} onRetry={retryFiles ? () => { void runUploadImages(retryFiles); } : null} compact />
         {!online ? <p className="quick-note-offline">离线中：文字会保存在这台设备，图片与发布暂不可用。</p> : null}
@@ -435,7 +466,7 @@ export function QuickNoteComposer({ onPublished, autoFocus = false, appearance =
         {error ? <div className="inline-error" role="alert">{error}</div> : null}
         {message ? <div className="inline-success" role="status">{message}</div> : null}
       </div>
-      <p className="quick-note-hint">⌘/Ctrl + Enter 发布。标题、标签、Live Photo 与外部视频可在完整编辑器中补充。</p>
+      <p className="quick-note-hint"><span className="quick-note-shortcut">⌘/Ctrl + Enter 发布。</span>标题、标签、Live Photo 与外部视频可在完整编辑器中补充。</p>
     </section>
   );
 }

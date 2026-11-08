@@ -89,3 +89,12 @@ export function withMediaParam(search, mediaId) {
 export function galleryPosition(firstPosition, index) {
   return Math.max(0, Number(firstPosition) || 0) + Math.max(0, Number(index) || 0) + 1;
 }
+
+// 列表缩略图只显示一张：用角标标出 Live Photo 和随记里的图片总数（visual_count 由列表接口给出）。
+export function postVisualBadge(post) {
+  const live = post?.display_media?.kind === "live_photo_image";
+  const count = Number(post?.visual_count) || 0;
+  const text = [live ? "LIVE" : "", count > 1 ? `${count} 张` : ""].filter(Boolean).join(" · ");
+  const label = [live ? "Live Photo" : "", count > 1 ? `共 ${count} 张` : ""].filter(Boolean).join("，");
+  return { text, label };
+}

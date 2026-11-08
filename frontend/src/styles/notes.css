@@ -74,6 +74,8 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
 .browse-page-note .post-card-journal .post-card-meta { display: none; }
 .browse-page-note .note-journal-entries .post-card-journal .note-card-text { max-width: 48em; margin: 0 0 18px; font-size: 18px; line-height: 1.9; }
 .browse-page-note .note-journal-entries .note-card-date strong { font-size: 36px; font-weight: 400; }
+/* 带图卡片的网格是垂直居中对齐，日期要和正文第一行顶对齐，不随图片高度下沉。 */
+.browse-page-note .note-journal-entries .post-card-journal > :is(.note-card-date, .post-card-content) { align-self: start; }
 .browse-page-note .note-card-date small { font-size: 11px; }
 .browse-page-note .note-card-date i { display: none; }
 .browse-page-note .post-card-journal .post-card-details { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; line-height: 1.8; }
@@ -90,8 +92,17 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
   .browse-page-note .note-journal-period { grid-template-columns: 100px minmax(0, 1fr); gap: 24px; }
   .browse-page-note .note-journal-entries > .post-card-journal.post-card-with-cover { grid-template-columns: 44px minmax(0, 1fr); }
   .browse-page-note .post-card-journal > button { grid-column: 2; grid-row: 2; }
+  /* 大图按原图比例显示（3:4 到 16:9 之间），长图不再被裁成一条横带。 */
   .browse-page-note .note-journal-entries > .post-card-journal > button,
-  .browse-page-note .note-journal-entries .post-card-journal .card-cover { width: min(100%, 320px); height: 200px; }
+  .browse-page-note .note-journal-entries .post-card-journal .card-cover { width: min(100%, 320px); height: auto; aspect-ratio: var(--card-media-ratio, 4 / 3); }
+  /* 带图随记按“正文 → 图片 → 作者与地点 → 标签”排列，图片紧跟它所配的文字。 */
+  .browse-page-note .note-journal-entries > .post-card-journal.post-card-with-cover { row-gap: 0; }
+  .browse-page-note .note-journal-entries > .post-card-journal.post-card-with-cover > .post-card-content { display: contents; }
+  .browse-page-note .post-card-journal.post-card-with-cover > .note-card-date { grid-column: 1; grid-row: 1; }
+  .browse-page-note .post-card-journal.post-card-with-cover .note-card-text { grid-column: 2; grid-row: 1; align-self: start; margin-bottom: 12px; }
+  .browse-page-note .post-card-journal.post-card-with-cover > button { grid-column: 2; grid-row: 2; margin-bottom: 4px; }
+  .browse-page-note .post-card-journal.post-card-with-cover .post-card-details { grid-column: 2; grid-row: 3; }
+  .browse-page-note .post-card-journal.post-card-with-cover .post-card-context { grid-column: 2; grid-row: 4; }
   .browse-page-note .post-filters-controls.is-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {

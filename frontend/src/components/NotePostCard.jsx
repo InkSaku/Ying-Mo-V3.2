@@ -12,8 +12,11 @@ export function NotePostCard({ post, compact = false, variant = "", index = 0, h
   const media = post.display_media || post.cover_media;
   const body = excerpt(post);
   const moment = journalDate(post.semantic_time);
+  // 原图宽高比，限制在 3:4（竖）到 16:9（横）之间，供随记目录按比例显示大图而不是统一裁成横条。
+  const mediaRatio = media?.width && media?.height ? Math.min(16 / 9, Math.max(3 / 4, media.width / media.height)) : null;
   return (
-    <article className={`post-card note-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="note">
+    <article className={`post-card note-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="note"
+      style={mediaRatio ? { "--card-media-ratio": mediaRatio.toFixed(4) } : undefined}>
       {variant === "journal" ? <span className="note-card-date tabular" aria-hidden="true"><strong>{moment.day}</strong><small>{moment.month} 月</small><i>{String(index + 1).padStart(2, "0")}</i></span>
         : variant ? <span className="post-card-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
       <PostCardMedia post={post} media={media} compact={compact} label="查看这则随记的影像" />

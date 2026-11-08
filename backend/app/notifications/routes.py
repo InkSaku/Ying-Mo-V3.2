@@ -7,7 +7,8 @@ from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Collection, Comment, Notification, Post, PostMemoryLink
+from app.collections.service import creator_join_options
+from app.models import Collection, Comment, Notification, Post, PostMemoryLink, UserStatus
 from app.posts.service import current_article_slug
 
 bp=Blueprint("notifications",__name__)
@@ -33,6 +34,15 @@ def _safe_notification(item,actor,posts,collections,comments=None):
     data["summary"]=None
     if item.kind == "spark_send_result":
         data["target_url"] = "/tools/spark"
+        return data
+    if item.kind == "site_member_joined":
+        # 新朋友来了：链接到 TA 的主页，并列出当前成员作为创建者可以把 TA 加进去的合集（每次读取时重新计算）。
+        member = item.actor
+        if member is None or member.status != UserStatus.ACTIVE.value:
+            data.update({"actor": None, "message": "这位新朋友的账号当前不可用。", "join_options": []})
+            return data
+        data["target_url"] = f"/users/{member.username}"
+        data["join_options"] = creator_join_options(actor.id, member)
         return data
     if item.kind == "memory_contribution_added":
         link = db.session.scalar(db.select(PostMemoryLink).where(

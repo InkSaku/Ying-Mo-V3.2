@@ -106,7 +106,9 @@ export async function prepareImageForUpload(file, {
       type: "image/webp",
       lastModified: file.lastModified,
     });
-    return { file: optimized, optimized: true, originalBytes: file.size, uploadBytes: optimized.size };
+    // 浏览器重新编码会丢掉 EXIF；压缩前先从原图读出拍摄时间，供“发生时间”建议使用。
+    const capturedAt = await readJpegCaptureTime(file).catch(() => null);
+    return { file: optimized, optimized: true, originalBytes: file.size, uploadBytes: optimized.size, capturedAt };
   } finally {
     bitmap.close();
   }
@@ -118,3 +120,55 @@ export function uploadProgressLabel(state) {
   const percent = Number.isInteger(state.percent) ? ` ${state.percent}%` : "";
   return `${position}${state.stage || "正在上传"}${percent}`;
 }
+
+// 照片拍摄时间统一成 datetime-local 使用的当地时间 "YYYY-MM-DDTHH:MM"；明显不合理的年份视为没有。
+export function normalizeCaptureTime(value) {
+  const match = /^(\d{4})[:-](\d{2})[:-](\d{2})[ T](\d{2}):(\d{2})/.exec(String(value || "").trim());
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  if (Number.isNaN(date.getTime()) || date.getMonth() !== Number(month) - 1 || Number(year) < 1990 || date.getTime() > Date.now() + 2 * 86400000) return null;
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
+
+// 只读 JPEG 的 EXIF DateTimeOriginal（0x9003），用于浏览器压缩大图的情况；原样上传的照片由后端读取。
+export async function readJpegCaptureTime(file) {
+  if (!/jpe?g/i.test(file?.type || "") && !/\.jpe?g$/i.test(file?.name || "")) return null;
+  const view = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
+  try {
+    if (view.getUint16(0) !== 0xffd8) return null;
+    for (let offset = 2; offset + 10 < view.byteLength;) {
+      const marker = view.getUint16(offset);
+      if ((marker & 0xff00) !== 0xff00) return null;
+      if (marker === 0xffe1 && view.getUint32(offset + 4) === 0x45786966) {
+        const start = offset + 10;
+        const little = view.getUint16(start) === 0x4949;
+        const u16 = (at) => view.getUint16(start + at, little);
+        const u32 = (at) => view.getUint32(start + at, little);
+        const entry = (ifd, tag) => {
+          for (let index = 0, count = u16(ifd); index < count; index += 1) {
+            if (u16(ifd + 2 + index * 12) === tag) return ifd + 2 + index * 12;
+          }
+          return -1;
+        };
+        const pointer = entry(u32(4), 0x8769);
+        const original = pointer < 0 ? -1 : entry(u32(pointer + 8), 0x9003);
+        if (original < 0) return null;
+        const textAt = start + u32(original + 8);
+        let text = "";
+        for (let index = 0; index < 19; index += 1) text += String.fromCharCode(view.getUint8(textAt + index));
+        return normalizeCaptureTime(text);
+      }
+      offset += 2 + view.getUint16(offset + 2);
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+// 一次上传多张时取最早的拍摄时间：一则随记的“发生时间”通常是这组照片的开始。
+export function earliestCaptureTime(values) {
+  return values.map(normalizeCaptureTime).filter(Boolean).sort()[0] || null;
+}
+

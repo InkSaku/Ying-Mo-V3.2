@@ -104,3 +104,6 @@
   .inbox-meta time { order: 1; }
   .inbox-read { order: 2; }
 }
+
+/* 整行链接用 ::after 铺满，“加进合集”按钮要浮在它上面才能点到。 */
+.inbox-join { position: relative; z-index: 1; }

@@ -19,7 +19,7 @@ import { ArticleArchiveCat } from "../components/ArticleSketches";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../contexts/AuthContext";
 import { api } from "../lib/api";
-import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile } from "../lib/imageUpload";
+import { IMAGE_ACCEPT, IMAGE_FORMAT_LABEL, isAcceptedImageFile, normalizeCaptureTime } from "../lib/imageUpload";
 import {
   AUTOSAVE_DELAY,
   autosaveStatusLabel,
@@ -141,6 +141,16 @@ export function WritePage() {
   const requestedType = params.get("type") === "note" ? "note" : "article";
   const requestedCollection = params.get("collection") || "";
   const [form, setForm] = useState(() => initialForm(requestedType, requestedCollection));
+  const formRef = useRef(form);
+  formRef.current = form;
+  // 随记还没填“发生时间”时，用刚上传照片的拍摄时间；文章或已填写的不改。
+  const fillOccurredAtFromPhoto = useCallback((capturedAt) => {
+    const value = normalizeCaptureTime(capturedAt);
+    const current = formRef.current;
+    if (!value || current.post_type !== "note" || current.occurred_at) return false;
+    setForm((latest) => (latest.post_type === "note" && !latest.occurred_at ? { ...latest, occurred_at: value } : latest));
+    return true;
+  }, []);
   const [collections, setCollections] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(Boolean(postId));
@@ -1158,6 +1168,7 @@ export function WritePage() {
                 onPrepareInsert={captureMediaInsertionSelection}
                 onInsertMedia={insertMediaIntoBody}
                 onRemoveMedia={removeMediaFromBody}
+                onCaptureTime={fillOccurredAtFromPhoto}
                 inlineMediaIds={inlineMediaIds}
               />
             </div>

@@ -523,7 +523,7 @@
   width: 100%;
   max-height: 680px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 0; /* DESIGN §6.5：用户图片默认直角 */
   background: var(--surface-2);
   object-fit: contain;
 }
@@ -539,14 +539,11 @@
 }
 
 .inline-live-photo {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
+  display: block;
 }
 
 .inline-live-photo figcaption {
-  grid-column: 1 / -1;
-  margin-top: 2px;
+  margin-top: 8px;
   color: var(--text-4);
   font-size: 11px;
   letter-spacing: 0.6px;
@@ -1093,11 +1090,4 @@
     padding: 14px;
   }
 
-  .inline-live-photo {
-    grid-template-columns: 1fr;
-  }
-
-  .inline-live-photo figcaption {
-    grid-column: auto;
-  }
 }
