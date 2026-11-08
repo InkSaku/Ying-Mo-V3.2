@@ -8,7 +8,7 @@ function journalDate(value) {
   return { month: date.getMonth() + 1, day: date.getDate() };
 }
 
-export function NotePostCard({ post, compact = false, variant = "", index = 0 }) {
+export function NotePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false }) {
   const media = post.display_media || post.cover_media;
   const body = excerpt(post);
   const moment = journalDate(post.semantic_time);
@@ -21,14 +21,15 @@ export function NotePostCard({ post, compact = false, variant = "", index = 0 })
         <div className="post-card-meta"><span>随记</span></div>
         <p className="note-card-text"><Link to={postHref(post)}>{body || "查看这则影像随记"}</Link></p>
         <div className="post-card-details">
-          {post.author ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
-          <span>发生：<time dateTime={post.semantic_time || undefined}>{formatDate(post.semantic_time)}</time></span>
+          {post.author && !hideAuthor ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
+          {/* 目录式随记左侧已有日、月，年份在分组标题里；这里只留给读屏软件，视觉上不再重复一行日期。 */}
+          <span className={variant === "journal" ? "sr-only" : undefined}>发生：<time dateTime={post.semantic_time || undefined}>{formatDate(post.semantic_time)}</time></span>
           {post.location ? <span>地点：{post.location}</span> : null}
           {post.mood ? <span>心情：{post.mood}</span> : null}
         </div>
         <div className="post-card-context">
           {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
-          {post.collection ? <Link className="tag collection-tag" to={`/collections/${post.collection.slug}`}>合集：{post.collection.name}</Link> : null}
+          {post.collection && !hideCollection ? <Link className="tag collection-tag" to={`/collections/${post.collection.slug}`}>合集：{post.collection.name}</Link> : null}
         </div>
         {post.related_reasons?.length ? <p className="post-card-reasons" aria-label="关联原因">{post.related_reasons.join(" · ")}</p> : null}
       </div>

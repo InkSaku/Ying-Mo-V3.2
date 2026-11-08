@@ -17,7 +17,8 @@ const PAGE_SIZE = 20;
 function RevisionPreview({ post, revisionId, onRestored }) {
   const state = useAsyncData(
     () => api.get(`/posts/me/${post.id}/revisions/${revisionId}`),
-    [post.id, revisionId]
+    [post.id, revisionId],
+    { keepPrevious: post.id },
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -39,14 +40,14 @@ function RevisionPreview({ post, revisionId, onRestored }) {
     }
   };
 
-  if (state.loading) return <PageLoader label="正在读取历史版本" />;
+  if (state.loading && !state.data) return <PageLoader label="正在读取历史版本" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
   const revision = state.data;
   const snapshot = revision.snapshot || {};
   const changed = revisionChangedLabels(revision.changed_fields);
 
   return (
-    <section className="revision-preview" aria-labelledby="revision-preview-title">
+    <section className={`revision-preview${state.loading ? " is-refreshing" : ""}`} aria-labelledby="revision-preview-title" aria-busy={state.loading || undefined}>
       <div className="revision-preview-heading">
         <div>
           <p className="hero-kicker">版本 {revision.source_edit_version}</p>

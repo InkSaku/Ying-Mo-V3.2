@@ -66,6 +66,8 @@ html:not([data-theme="dark"]):has(.search-page) {
 .search-page .search-input-icon { left: 4px; font-size: 26px; }
 .search-page .search-submit { min-height: 58px; align-self: end; border-radius: 2px; }
 .search-page .search-form-hint { margin-top: 10px; }
+/* 触屏设备没有实体键盘快捷键，只保留搜索范围说明。 */
+@media (hover: none) and (pointer: coarse) { .search-page .search-form-hint > span { display: none; } }
 .search-page .search-suggestions { top: calc(100% + 2px); border-width: 1px 0; border-radius: 0; background: var(--surface); }
 .search-page .search-suggestion-list button { border-radius: 0; }
 

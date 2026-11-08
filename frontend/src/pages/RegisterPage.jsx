@@ -82,7 +82,7 @@ export function RegisterPage() {
             <div className="register-fields">
               <label className="login-field">
                 <span>用户名</span>
-                <input required minLength={3} maxLength={32} autoComplete="username" placeholder="例如 icesakura" value={form.username} onChange={set("username")} aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "username-error" : "username-help"} />
+                <input required minLength={3} maxLength={32} autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="例如 icesakura" value={form.username} onChange={set("username")} aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "username-error" : "username-help"} />
                 <small id="username-help">用于个人主页网址，注册后不能修改。3–32 位小写字母、数字、- 或 _。</small>
                 {fieldErrors.username ? <small className="field-error" id="username-error">{fieldErrors.username}</small> : null}
               </label>
@@ -109,7 +109,7 @@ export function RegisterPage() {
 
             <label className="login-field">
               <span>邀请码</span>
-              <input required autoComplete="off" placeholder="请输入朋友给你的邀请码" value={form.invite_code} onChange={set("invite_code")} aria-invalid={Boolean(fieldErrors.invite_code)} aria-describedby={fieldErrors.invite_code ? "invite-error" : undefined} />
+              <input required autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="请输入朋友给你的邀请码" value={form.invite_code} onChange={set("invite_code")} aria-invalid={Boolean(fieldErrors.invite_code)} aria-describedby={fieldErrors.invite_code ? "invite-error" : undefined} />
               {fieldErrors.invite_code ? <small className="field-error" id="invite-error">{fieldErrors.invite_code}</small> : null}
             </label>
 

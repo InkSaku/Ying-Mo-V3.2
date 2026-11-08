@@ -26,8 +26,10 @@
   --text-3: #b1b3aa;
   --text-4: #b1b3aa;
   --brand-link: #9cb4db;
-  --border: #42483e;
-  --border-soft: #373d33;
+  /* 分隔线与底色约 1.45:1 / 1.27:1，接近浅色主题的线条重量；描边按钮保持原对比度。 */
+  --border: #393e36;
+  --border-soft: #30352e;
+  --border-strong: color-mix(in srgb, var(--text) 28%, #42483e);
 }
 
 /* A small signature, readable even at navigation size. */
@@ -77,7 +79,7 @@
 
 /* Empty sheets: warm, spacious and easy to return from. */
 .app-frame .empty-state, .app-frame .error-state, .ink-not-found {
-  padding: 32px 24px; border: 0; border-block: 1px solid var(--border);
+  padding: 32px 24px; border: 0;
   border-radius: 0; background: transparent; text-align: center;
 }
 .app-frame .empty-state p, .app-frame .error-state p, .ink-not-found p { margin-inline: auto; line-height: 1.85; }

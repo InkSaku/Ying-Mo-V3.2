@@ -164,7 +164,7 @@
   .editor-page .editor-paper-masthead { min-height: 44px; }
   .editor-page .editor-type-switch { gap: 16px; }
   .editor-page .editor-type-switch label { min-height: 44px; padding-block: 10px; }
-  .editor-page .editor-type-switch > small { flex-basis: 100%; font-size: 9px; white-space: normal; }
+  .editor-page .editor-type-switch > small { flex-basis: 100%; font-size: 10px; white-space: normal; }
   .editor-page .editor-cat-perch { width: 96px; }
   .editor-page .editor-cat-perch .article-archive-cat { height: 44px; }
   .editor-page .editor-cat-perch .article-archive-cat-runner { width: 64px; height: 40px; }

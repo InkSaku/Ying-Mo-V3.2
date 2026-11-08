@@ -170,3 +170,23 @@
   }
   :root .app-frame label:has(> input:is([type="checkbox"], [type="radio"])) { min-width: 44px; min-height: 44px; }
 }
+
+/* 手机字号下限（DESIGN.md §4）：按钮、切换和工具栏文字不小于 13px，列表摘要不小于 14px。
+   各页样式按需加载、可能更晚生效，这里用更高的选择器权重统一兜底，只抬高实测偏小的位置。 */
+@media (max-width: 767px) {
+  html:root .btn,
+  html:root .app-frame :is(.home-feed-filters button, .home-prompt-action, .editor-view-switch button, .editor-save-action,
+    .editor-settings-trigger, .editor-top-actions > .btn, .markdown-shortcut-button,
+    .visual-markdown-mode-toggle, .collection-share-action, .collection-share-members, .collection-year-jumps button) { font-size: 13px; }
+  html:root .app-frame :is(.home-feed-article-excerpt, .home-opening-feature-footer > span, .articles-index-copy > p,
+    .articles-margin-story p, .explore-opening-caption > p, .collection-card-content > p, .home-collection-index p,
+    :is(.profile-post-catalogue, .explore-article-ledger) .article-card .post-card-content > p:not(.post-card-reasons)) { font-size: 14px; }
+}
+
+/* 触屏点按反馈：全站关掉了 iOS 的灰色点按高亮，按住正文里的链接和文字按钮时让它变淡，松手即恢复。
+   不加底色、不加阴影；已有按压效果的控件（.btn、编辑器工具栏、下拉框等）不重复处理。
+   顶栏与底部导航不在 main 里，保持各自原有的按压动效。 */
+@media (hover: none) and (pointer: coarse) {
+  html:root .app-frame main :is(a[href], button:not(:disabled), summary):not(.btn, .markdown-shortcut-button, .custom-select-trigger,
+    .code-block-copy, .visual-markdown-commandbar *, .editor-more-formats *):active { opacity: .55; }
+}

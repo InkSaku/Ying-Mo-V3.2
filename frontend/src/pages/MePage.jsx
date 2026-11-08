@@ -41,10 +41,9 @@ export function MePage() {
           <h1>{user.nickname}</h1>
           <p className="profile-handle">@{user.username}</p>
           {user.bio ? <p>{user.bio}</p> : <p className="muted">还没有填写个人简介。</p>}
+          {/* 只放最常用的两个动作；登录设备、续火花助手在顶部“个人中心”导航里，首页也有续火花入口。 */}
           <div className="profile-actions">
             <Link className="btn btn-secondary" to="/me/settings">编辑资料</Link>
-            <Link className="btn btn-secondary" to="/me/sessions">登录设备</Link>
-            <Link className="btn btn-secondary" to="/tools/spark">续火花助手</Link>
             <Link className="btn btn-primary" to="/write">新建记录</Link>
           </div>
         </div>

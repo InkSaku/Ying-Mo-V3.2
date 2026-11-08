@@ -5,7 +5,7 @@ import uuid
 from time import perf_counter
 
 from dotenv import load_dotenv
-from flask import Flask, abort, g, make_response, request
+from flask import Flask, abort, current_app, g, make_response, request
 from pillow_heif import register_heif_opener
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -180,12 +180,22 @@ def _register_jwt_handlers():
         if not session_jti:
             return False
         session = db.session.scalar(db.select(RefreshSession).where(RefreshSession.jti == session_jti))
-        if session is None or session.revoked_at is not None:
+        if session is None:
             return True
-        expires_at = session.expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=timezone.utc)
-        return expires_at <= datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        if session.revoked_at is None:
+            expires_at = session.expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            return expires_at <= now
+        # 只因刷新轮换而失效的会话：同一次登录仍有效时，其他标签页的访问令牌用到自然过期；
+        # 刚轮换的 Refresh Token 在宽限期内可再换一次。主动退出、撤销与密码重置不受影响。
+        if not session.rotated or session.live_head(now) is None:
+            return True
+        if token_type == "refresh":
+            grace = current_app.config.get("JWT_REFRESH_REUSE_GRACE_SECONDS", 0)
+            return not session.within_rotation_grace(grace, now)
+        return False
 
     @jwt.unauthorized_loader
     def missing_token(_reason):

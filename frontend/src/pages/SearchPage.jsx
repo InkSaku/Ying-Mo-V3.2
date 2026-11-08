@@ -23,6 +23,9 @@ function cleanPage(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
+// 快捷键提示只给有实体键盘的设备看（样式在触屏上隐藏），并按系统写成 ⌘ K 或 Ctrl K。
+const SEARCH_SHORTCUT_LABEL = typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || "") ? "⌘ K" : "Ctrl K";
+
 export function SearchPage() {
   usePageMeta("搜索");
   const [params, setParams] = useSearchParams();
@@ -355,7 +358,7 @@ export function SearchPage() {
           </div>
           <button className="btn btn-primary search-submit" type="submit">搜索 <span aria-hidden="true">→</span></button>
         </div>
-        <p className="search-form-hint"><span>⌘ K</span> 可按标题、正文、合集名称、昵称或用户名搜索。</p>
+        <p className="search-form-hint"><span>{SEARCH_SHORTCUT_LABEL}</span> 可按标题、正文、合集名称、昵称或用户名搜索。</p>
         </form>
       </header>
 
@@ -397,7 +400,7 @@ export function SearchPage() {
           <nav className="search-result-tabs" aria-label="搜索结果类型">
             {resultTabs.map((tab) => (
               <button key={tab.id} type="button" className={resultView === tab.id ? "active" : ""} aria-pressed={resultView === tab.id} onClick={() => setResultView(tab.id)}>
-                <span>{tab.label}</span><small>{String(tab.count).padStart(2, "0")}</small>
+                <span>{tab.label}</span>{tab.id === "all" ? null : <small>{String(tab.count).padStart(2, "0")}</small>}
               </button>
             ))}
           </nav>
@@ -411,7 +414,7 @@ export function SearchPage() {
               {data?.posts?.length ? (
                 <section className="search-primary-results" aria-labelledby="search-posts-heading">
                   <div className="search-section-heading">
-                    <div><span>{String(resultCounts.posts).padStart(2, "0")} 项</span><h2 id="search-posts-heading">文章与随记</h2></div>
+                    <div><h2 id="search-posts-heading">文章与随记</h2></div>
                     <p></p>
                   </div>
                   <div className="note-stream search-post-stream">{data.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="search" index={index} />)}</div>
@@ -430,13 +433,13 @@ export function SearchPage() {
                 <aside className="search-discovery-rail" aria-label="关联搜索结果">
                   {data?.collections?.length ? (
                     <section aria-labelledby="search-collections-heading">
-                      <div className="search-rail-heading"><span>{String(resultCounts.collections).padStart(2, "0")} 项</span><h2 id="search-collections-heading">相关合集</h2></div>
+                      <div className="search-rail-heading"><h2 id="search-collections-heading">相关合集</h2></div>
                       {renderCollections(true)}
                     </section>
                   ) : null}
                   {data?.users?.length ? (
                     <section aria-labelledby="search-users-heading">
-                      <div className="search-rail-heading"><span>{String(resultCounts.users).padStart(2, "0")} 位</span><h2 id="search-users-heading">相关成员</h2></div>
+                      <div className="search-rail-heading"><h2 id="search-users-heading">相关成员</h2></div>
                       {renderUsers()}
                     </section>
                   ) : null}
@@ -448,14 +451,14 @@ export function SearchPage() {
 
           {hasVisibleResults && resultView === "collections" ? (
             <section className="search-filtered-section" aria-labelledby="search-collections-heading">
-              <div className="search-section-heading"><div><span>{String(resultCounts.collections).padStart(2, "0")} 项</span><h2 id="search-collections-heading">相关合集</h2></div><p></p></div>
+              <div className="search-section-heading"><div><h2 id="search-collections-heading">相关合集</h2></div><p></p></div>
               {renderCollections(false)}
             </section>
           ) : null}
 
           {hasVisibleResults && resultView === "users" ? (
             <section className="search-filtered-section search-filtered-members" aria-labelledby="search-users-heading">
-              <div className="search-section-heading"><div><span>{String(resultCounts.users).padStart(2, "0")} 位</span><h2 id="search-users-heading">相关成员</h2></div><p></p></div>
+              <div className="search-section-heading"><div><h2 id="search-users-heading">相关成员</h2></div><p></p></div>
               {renderUsers()}
             </section>
           ) : null}

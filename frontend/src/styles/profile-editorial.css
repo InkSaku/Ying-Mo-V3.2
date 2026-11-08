@@ -31,7 +31,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
   gap: 34px 56px;
   margin: 0;
   padding: 24px 0 72px;
-  border-top: 1px solid var(--border);
+  border-top: 0;
 }
 
 .profile-hero-kicker {
@@ -42,7 +42,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
   min-height: 32px;
   color: var(--text-3);
   font-family: var(--western-serif);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .18em;
 }
 
@@ -107,7 +107,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
   margin-top: 11px;
   color: var(--text-3);
   font-family: var(--western-serif);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .13em;
   overflow-wrap: anywhere;
 }
@@ -209,7 +209,8 @@ html:not([data-theme="dark"]):has(.profile-page) {
   min-height: 56px;
   align-items: center;
   margin: 0;
-  border-block: 1px solid var(--border);
+  /* 上方由页头底线（吸顶时由顶栏底线）界定，只保留底线。 */
+  border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--page) 94%, transparent);
   backdrop-filter: blur(8px);
 }
@@ -229,7 +230,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
 .profile-local-nav a span {
   color: var(--brand-link);
   font-family: var(--western-serif);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .profile-page .profile-section {
@@ -256,7 +257,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
   margin: 0 0 12px !important;
   color: var(--brand-link) !important;
   font-family: var(--western-serif);
-  font-size: 9px !important;
+  font-size: 10px !important;
   letter-spacing: .18em;
 }
 
@@ -463,7 +464,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
 
 .profile-page .empty-state {
   padding: 48px 0;
-  border-block: 1px solid var(--border);
+  border: 0;
   border-radius: 0;
   background: transparent;
 }
@@ -551,7 +552,7 @@ html:not([data-theme="dark"]):has(.profile-page) {
     padding-top: 2px;
   }
 
-  .profile-copy-label { font-size: 9px; }
+  .profile-copy-label { font-size: 10px; }
 
   .profile-page .profile-copy h1 {
     margin-top: 10px;

@@ -31,7 +31,7 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
 .note-reading-page .note-detail-header {
   position: relative;
   padding: 24px 0 68px;
-  border-top: 1px solid var(--border);
+  border-top: 0;
   border-bottom: 0;
 }
 
@@ -47,7 +47,7 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
   margin: 0;
   color: var(--text-3);
   font-family: var(--western-serif);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .18em;
 }
 
@@ -91,7 +91,7 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
   border-top: 1px solid var(--brand-link);
   color: var(--text-3);
   font-family: var(--western-serif);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .16em;
 }
 
@@ -202,7 +202,6 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
   gap: 12px 30px;
   margin: 30px 0 0;
   padding-top: 18px;
-  border-top: 1px solid var(--border);
   color: var(--text-2);
   font-size: 12px;
 }
@@ -232,7 +231,7 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
   gap: 22px;
   margin-bottom: 38px;
   color: var(--text-3);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .16em;
 }
 
@@ -240,7 +239,6 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
   content: "";
   order: 2;
   flex: 1;
-  border-top: 1px solid var(--border);
 }
 
 .note-detail-body-label span:first-child {
@@ -434,6 +432,9 @@ html:not([data-theme="dark"]):has(.note-reading-page) {
 .note-reading-page > .comments-panel {
   margin-top: 76px;
 }
+
+/* 评论区顶线已是本节边界，标题不再加底线。 */
+.note-reading-page > .comments-panel .comments-heading { border-bottom: 0; }
 
 .note-reading-page a:focus-visible,
 .note-reading-page button:focus-visible {

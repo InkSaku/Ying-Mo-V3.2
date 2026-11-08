@@ -11,7 +11,7 @@ export function FavoriteButton({ favorited = false, ready = false, busy = false,
   const played = useRef(celebration);
 
   useEffect(() => {
-    if (busy || !favorited || !celebration || played.current === celebration) return undefined;
+    if (!favorited || !celebration || played.current === celebration) return undefined;
     played.current = celebration;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const element = star.current;
@@ -42,12 +42,13 @@ export function FavoriteButton({ favorited = false, ready = false, busy = false,
       media.removeEventListener("change", onPreference);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [busy, celebration, favorited]);
+  }, [celebration, favorited]);
 
-  const label = busy ? "处理中" : favorited ? "已收藏" : rail ? "收藏文章" : "收藏";
+  // 收藏是乐观更新：请求进行中按钮保持当前样子（不变灰、不显示“处理中”），重复点按由上层忽略。
+  const label = favorited ? "已收藏" : rail ? "收藏文章" : "收藏";
   return <button className={`favorite-toggle${rail ? " favorite-toggle-rail" : ""}`} type="button"
-    disabled={!ready || busy} aria-pressed={favorited} aria-busy={busy || undefined}
-    aria-label={busy ? "处理中，请稍候" : favorited ? "已收藏，取消收藏" : label}
+    disabled={!ready} aria-pressed={favorited} aria-busy={busy || undefined}
+    aria-label={favorited ? "已收藏，取消收藏" : label}
     title={favorited ? "取消收藏" : label} onClick={onToggle}>
     <span ref={star} className="favorite-star" aria-hidden="true">
       <svg viewBox="0 0 32 32" fill="none" focusable="false">

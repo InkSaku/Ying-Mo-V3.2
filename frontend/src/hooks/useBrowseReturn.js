@@ -9,6 +9,8 @@ export function useBrowseReturn(ready, contentSelector = null) {
   const location = useLocation();
   const navigation = useNavigationType();
   const key = `${user?.id}:${location.key}:${location.pathname}${location.search}`;
+  // 页内切换（例如合集的年份、筛选）用 navigate state 标记 keepScroll，不把页面拉回顶部。
+  const keepScroll = Boolean(location.state?.keepScroll);
   const pending = useRef(null);
   const restored = useRef(false);
   const readyRef = useRef(ready);
@@ -17,7 +19,7 @@ export function useBrowseReturn(ready, contentSelector = null) {
   useLayoutEffect(() => {
     pending.current = navigation === "POP" ? browsePositions.get(key) : null;
     restored.current = false;
-    if (!pending.current && !location.hash) window.scrollTo({ top: 0, behavior: "instant" });
+    if (!pending.current && !location.hash && !keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
     let position = pending.current || { y: 0 };
     const remember = () => {
       if (!readyRef.current || (pending.current && !restored.current)) return;
@@ -38,7 +40,7 @@ export function useBrowseReturn(ready, contentSelector = null) {
       window.removeEventListener("scroll", remember);
       document.removeEventListener("click", captureLink, true);
     };
-  }, [key, navigation, location.hash]);
+  }, [key, navigation, location.hash, keepScroll]);
 
   useEffect(() => {
     if (!ready || restored.current || !pending.current || location.hash) return undefined;

@@ -387,16 +387,29 @@ def refresh():
         db.select(RefreshSession).where(
             RefreshSession.jti == old_jti,
             RefreshSession.user_id == actor.id,
-            RefreshSession.revoked_at.is_(None),
         )
     )
-    if session is None:
+    # 已轮换的令牌只有在宽限期内且登录链仍有效时才会通过 JWT 校验到达这里；其余失效状态一律拒绝。
+    if session is None or (session.revoked_at is not None and not session.rotated):
         return error_response("TOKEN_REVOKED", "当前会话已失效。", 401)
-    session.revoked_at = utcnow()
-    session.last_used_at = utcnow()
+    now = utcnow()
+    if session.revoked_at is None:
+        session.revoked_at = now
+    session.last_used_at = now
     access, refresh_token = _issue_session(actor)
+    session.replaced_by_jti = decode_token(refresh_token)["jti"]
     db.session.commit()
     return _session_response(actor, access, refresh_token)
+
+
+def _current_session_jti():
+    """访问令牌可能来自已轮换的会话，按同一次登录的当前会话标记“本设备”。"""
+    sid = get_jwt().get("sid")
+    if not sid:
+        return None
+    session = db.session.scalar(db.select(RefreshSession).where(RefreshSession.jti == sid))
+    head = session.live_head() if session is not None else None
+    return head.jti if head is not None else sid
 
 
 @bp.post("/logout")
@@ -429,7 +442,7 @@ def sessions():
     actor = current_user()
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
-    current_jti = get_jwt().get("sid")
+    current_jti = _current_session_jti()
     rows = db.session.scalars(
         db.select(RefreshSession).where(
             RefreshSession.user_id == actor.id,
@@ -453,9 +466,10 @@ def revoke_session(session_id):
     ))
     if session is None:
         return error_response("RESOURCE_NOT_FOUND", "会话不存在。", 404)
+    current = session.jti == _current_session_jti()
     session.revoked_at = utcnow()
     db.session.commit()
-    return success_response({"revoked": True, "current": session.jti == get_jwt().get("sid")})
+    return success_response({"revoked": True, "current": current})
 
 
 @bp.post("/logout-all")

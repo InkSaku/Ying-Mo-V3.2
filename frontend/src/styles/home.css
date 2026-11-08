@@ -103,6 +103,7 @@
 .home-journal .home-feed-day-slot { border: 0; }
 .home-journal .home-feed-day { display: block; margin: 26px 0 0; color: var(--text); font-size: 20px; font-weight: 400; line-height: 1.6; overflow-wrap: anywhere; }
 .home-journal .home-feed-stream .home-feed-entry .home-feed-entry-content { width: 100%; padding: 24px 0; margin: 0; border-bottom: 1px solid var(--border); }
+.home-journal .home-feed-stream > .home-feed-entry:last-child .home-feed-entry-content { border-bottom: 0; }
 .home-journal .home-feed-stream .home-feed-post { display: grid; grid-template-columns: minmax(0, 1fr); padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .home-journal .home-feed-post-header { display: flex; align-items: center; min-height: 0; gap: 12px; }
 .home-journal .home-feed-avatar-link { display: none; }
@@ -131,7 +132,7 @@
 .home-journal .home-feed-end,
 .home-journal .home-feed-more { margin: 32px 0 0; padding: 0; font-size: 12px; }
 .home-journal .home-feed-empty,
-.home-journal .home-feed-error { margin: 24px 0 0; padding: 32px 0; border: 0; border-block: 1px solid var(--border); background: transparent; }
+.home-journal .home-feed-error { margin: 24px 0 0; padding: 32px 0; border: 0; background: transparent; }
 
 .home-closing { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .85fr); gap: 48px; margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--border); }
 .home-closing section { min-width: 0; }
@@ -193,7 +194,7 @@
   .home-collage-photo-4 { width: 35%; height: 29%; left: 23%; bottom: 0; }
   .home-collage-caption { width: 36%; bottom: -12px; right: 0; }
   .home-collage-caption p { font-size: 11px; }
-  .home-collage-caption small { font-size: 9px; margin-top: 5px; }
+  .home-collage-caption small { font-size: 10px; margin-top: 5px; }
   .home-collage-caption svg { width: 48px; height: 28px; }
   .home-journal .home-compose-layout { grid-column: 1; grid-row: auto; width: 100%; margin: 48px 0 0; }
   .home-journal .quick-note-heading { gap: 6px; align-items: baseline; flex-direction: row; }

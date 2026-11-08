@@ -34,7 +34,7 @@
   margin: 0;
   color: var(--text-4);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .12em;
 }
 
@@ -108,6 +108,9 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* 和其他个人页页头一致：上方由个人导航底线（桌面为顶栏）界定，不再画顶线。 */
+.personal-page-shell > .collection-library-hero { border-top: 0; }
+
 .personal-page-shell > .page-heading h1,
 .personal-page-shell > .profile-hero h1 {
   margin: 0 0 10px;
@@ -121,7 +124,7 @@
   margin-bottom: 9px;
   color: var(--brand-link);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
@@ -130,7 +133,7 @@
   margin-bottom: 8px;
   color: var(--brand-link);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
@@ -210,9 +213,20 @@
   box-shadow: none;
 }
 
+/* 目录最后一行不画收尾横线；悬停和键盘聚焦仍显示底线。列数与下方断点一致。 */
+@media (min-width: 980px) {
+  .personal-overview-page .personal-entry:nth-last-child(-n + 3):not(:hover):not(:focus-visible) { border-bottom-color: transparent; }
+}
+@media (min-width: 481px) and (max-width: 979px) {
+  .personal-overview-page .personal-entry:nth-last-child(-n + 2):not(:hover):not(:focus-visible) { border-bottom-color: transparent; }
+}
+@media (max-width: 480px) {
+  .personal-overview-page .personal-entry:last-child:not(:hover):not(:focus-visible) { border-bottom-color: transparent; }
+}
+
 .personal-entry:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 6px; }
 .personal-entry-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 10px; line-height: 1.8; color: var(--text-3); }
-.personal-entry-index { font-family: var(--mono); font-size: 9px; }
+.personal-entry-index { font-family: var(--mono); font-size: 10px; }
 .personal-entry-count { color: var(--brand-link); white-space: nowrap; }
 .personal-entry-count .tabular { font-family: var(--mono); font-size: 11px; }
 .personal-entry .personal-entry-art { display: flex; align-items: center; width: 100%; height: 160px; margin: 12px auto 20px; }
@@ -244,7 +258,6 @@
   align-items: center;
   margin-bottom: 28px;
   padding: 14px 0;
-  border-block: 1px solid var(--border);
 }
 
 .personal-page-shell .filter-tabs button {
@@ -514,7 +527,7 @@
 
 .year-review-page .year-review-months small {
   margin-top: 3px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -532,6 +545,14 @@
   border-radius: 0;
   background: transparent;
 }
+
+/* 小标题底线已是本节边界：列表不再叠墨线，末行也不画收尾线。 */
+.year-review-page .content-section > .member-list { border-top: 0; }
+.year-review-page .member-list a:last-child { border-bottom: 0; }
+
+/* 统计表的上墨线就是页头的下边界，页头不再另画一条。 */
+.app-frame .year-review-page > .page-heading:has(> .ink-page-sketch),
+.app-frame .year-review-page > .page-heading { border-bottom: 0; }
 
 .year-review-page .tag-cloud {
   gap: 12px 20px;
@@ -605,7 +626,7 @@
   margin-bottom: 7px;
   color: var(--brand-link);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .12em;
 }
 
@@ -701,7 +722,7 @@
   .personal-nav-mobile {
     position: relative;
     display: block;
-    border-block: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
   }
 
   .personal-nav-mobile > summary {
@@ -745,7 +766,7 @@
     margin: 0 0 7px;
     color: var(--text-4);
     font-family: var(--mono);
-    font-size: 9px;
+    font-size: 10px;
     letter-spacing: .12em;
   }
 

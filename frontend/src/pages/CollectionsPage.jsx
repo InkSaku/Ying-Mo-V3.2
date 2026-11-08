@@ -18,21 +18,21 @@ export function CollectionsPage() {
   const [params, setParams] = useSearchParams();
   const parsedPage = Number.parseInt(params.get("page") || "1", 10);
   const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const state = useAsyncData(() => api.get(`/collections?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  const state = useAsyncData(() => api.get(`/collections?page=${page}&page_size=${PAGE_SIZE}`), [page], { keepPrevious: true });
   useBrowseReturn(!state.loading && !state.error);
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
-  const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const pageNeedsClamp = !state.loading && Boolean(state.meta) && clampedPage !== page;
 
   useEffect(() => {
     if (pageNeedsClamp) setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
   }, [clampedPage, pageNeedsClamp, setParams]);
 
-  if (state.loading) return <PageLoader />;
+  if (state.loading && !state.data) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell collection-library-page collection-library-page-editorial" aria-busy={pageNeedsClamp || undefined}>
+    <main className="page-shell collection-library-page collection-library-page-editorial" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <header className="collection-library-hero collection-library-hero-editorial">
         <div className="collection-library-copy">
           <p className="hero-kicker"></p>
@@ -49,7 +49,7 @@ export function CollectionsPage() {
       {pageNeedsClamp
         ? <div className="profile-refresh" role="status">正在返回有效页码…</div>
         : state.data?.length
-        ? <section className="collection-library-shelf" aria-labelledby="collection-library-title">
+        ? <section className={`collection-library-shelf${state.loading ? " is-refreshing" : ""}`} aria-labelledby="collection-library-title">
             <header><div><p>第 {String(page).padStart(2, "0")} 页</p><h2 id="collection-library-title">合集目录</h2></div><span>按最近更新时间排列</span></header>
             <div className="collection-bookshelf" aria-label="合集书架">
               <div className="collection-bookshelf-track">

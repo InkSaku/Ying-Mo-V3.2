@@ -49,14 +49,16 @@
 }
 .explore-opening.is-single { grid-template-columns: minmax(0, 1fr); }
 .explore-opening-story {
+  /* 规范 §2/§6.3：开篇不做灰底圆角卡片，只用一条墨色顶线和留白标出本次主推。 */
   min-width: 0;
-  padding: 32px;
+  padding: 28px 0 0;
   border: 0;
-  border-radius: 4px;
-  background: var(--surface-2);
+  border-top: 1px solid var(--text);
+  border-radius: 0;
+  background: transparent;
 }
 .explore-opening-story.has-media { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: 28px; }
-.explore-opening-visual { display: block; width: 100%; min-width: 0; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 3px; background: var(--surface); }
+.explore-opening-visual { display: block; width: 100%; min-width: 0; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 0; background: var(--surface); }
 .explore-opening-visual > img,
 .explore-opening-visual > .protected-image-placeholder,
 .explore-opening-media-error { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -172,7 +174,7 @@
   .explore-opening { gap: 28px; }
   .explore-opening-story.has-media { grid-template-columns: minmax(0, 1fr); }
   .explore-opening-visual { aspect-ratio: 16 / 10; }
-  .explore-opening-story { padding: 24px; }
+  .explore-opening-story { padding: 24px 0 0; }
   .explore-opening-caption h2 { font-size: 25px; }
   .explore-article-ledger,
   .explore-note-rail,
@@ -213,5 +215,5 @@
   .explore-frontispiece-copy { grid-template-columns: minmax(0, 1fr) 96px; column-gap: 8px; }
   .explore-manifesto { font-size: 16px; }
   .explore-section-heading { flex-wrap: wrap; }
-  .explore-opening-story { padding: 22px; }
+  .explore-opening-story { padding: 20px 0 0; }
 }

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { MemoryContributionComposer } from "./MemoryContributionComposer";
 import { ProtectedImage } from "./ProtectedImage";
 
 export function SharedMemorySection({ post, onPostChanged }) {
+  const { user } = useAuth();
   const [thread, setThread] = useState(null);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,11 +38,16 @@ export function SharedMemorySection({ post, onPostChanged }) {
   const data = thread || post.memory;
   const count = data.contribution_count || 0;
   const participants = data.participant_count || 1;
+  // 还没有补充时，唯一的一条就是当前这篇原帖：直接说“谁起了头、还没人补充”，不再先报“1 人 1 条”再说“没有记录”。
+  const starter = post.author?.id && post.author.id === user?.id ? "你" : (post.author?.nickname || post.author?.username || "");
+  const summary = count
+    ? `${participants} 人留下了 ${count + 1} 条记录。`
+    : `${starter ? `${starter}记下了这一刻，` : ""}还没有人补充。`;
 
   return (
     <section ref={sectionRef} id="shared-memory" className="shared-memory" aria-labelledby="shared-memory-title">
       <header className="shared-memory-heading">
-        <div><p className="section-kicker"></p><h2 id="shared-memory-title">共同回忆</h2><p>{participants} 人留下了 {count + 1} 条记录。</p></div>
+        <div><p className="section-kicker"></p><h2 id="shared-memory-title">共同回忆</h2><p>{summary}</p></div>
         {data.can_contribute ? <button className="btn btn-primary" type="button" onClick={() => setOpen((value) => !value)}>{open ? "收起补充" : "补充我的视角"}</button> : null}
       </header>
       {open && thread ? <MemoryContributionComposer
@@ -65,7 +72,7 @@ export function SharedMemorySection({ post, onPostChanged }) {
           </div>
           {item.display_media ? <Link to={postHref(item)} className="shared-memory-thumb"><ProtectedImage media={item.display_media} alt="" /></Link> : null}
         </article>
-      ))}</div> : (!loading && thread ? <p className="shared-memory-empty">还没有补充记录。</p> : null)}
+      ))}</div> : null}
       {pagination && pagination.page < pagination.total_pages ? <button className="text-button shared-memory-more" type="button" disabled={loading} onClick={() => void load(pagination.page + 1, true)}>{loading ? "正在读取" : "继续查看补充"}</button> : null}
     </section>
   );

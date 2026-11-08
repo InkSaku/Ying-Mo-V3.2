@@ -42,6 +42,16 @@ function closeOwningMenu(event) {
   event.currentTarget.closest("details")?.removeAttribute("open");
 }
 
+
+// 已在这个入口的页面上、且已向下滚动时，再点一次底部导航平滑回到顶部（与常见手机 App 一致）。
+// 只处理同一路径的普通点按；在顶部时、带修饰键或中键点击仍按原生链接导航。
+function returnToTopOnRetap(event, to, pathname) {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (pathname !== to || window.scrollY < 4) return;
+  event.preventDefault();
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+}
 export function AppShell() {
   useArticlePageTurn();
   useMobileViewport();
@@ -168,7 +178,8 @@ export function AppShell() {
         {mobilePrimaryNavItems.map(({ to, label, icon }) => {
           const active = to === "/me" ? accountActive : pathMatches(location.pathname, to);
           return (
-            <NavLink key={to} to={to} className={active ? "active" : ""} aria-current={active ? "page" : undefined}>
+            <NavLink key={to} to={to} className={active ? "active" : ""} aria-current={active ? "page" : undefined}
+              onClick={(event) => returnToTopOnRetap(event, to, location.pathname)}>
               <span className="mobile-bottom-icon">
                 <span className="mobile-bottom-glyph"><MobileNavIcon name={icon} /></span>
                 {to === "/me" && badgeText ? <span className="mobile-bottom-badge" aria-hidden="true">{badgeText}</span> : null}

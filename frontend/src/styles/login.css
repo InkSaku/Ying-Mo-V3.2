@@ -131,6 +131,6 @@
   .login-intro > p:last-child { margin: 8px 0 28px; }
   .login-paper .login-field input { font-size: 16px; }
   .login-postscript { display: none; }
-  .login-colophon { margin-top: 38px; font-size: 9px; }
+  .login-colophon { margin-top: 38px; font-size: 10px; }
   .login-colophon span:last-child { display: none; }
 }

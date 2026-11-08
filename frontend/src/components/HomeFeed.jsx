@@ -49,7 +49,7 @@ function MemoryInterludeRow({ memory }) {
   );
 }
 
-export function HomeFeed({ userId, type, newPost, onSnapshot }) {
+export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null }) {
   const cachedRef = useRef(readHomeFeedCache(userId, type));
   const initialRef = useRef(cachedRef.current || emptyFeed());
   const [feed, setFeed] = useState(initialRef.current);
@@ -315,7 +315,9 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
     return () => animation.cancel();
   }, [feed.items, newPost]);
 
-  const memoryIndex = homeFeedMemoryInterludeIndex(feed.items.length, feed.memoryInterlude);
+  // 首页开篇已经主推的那条不在下方时间流里再出现一次；数据和分页游标保持不变。
+  const streamItems = featuredId ? feed.items.filter((post) => post.id !== featuredId) : feed.items;
+  const memoryIndex = homeFeedMemoryInterludeIndex(streamItems.length, feed.memoryInterlude);
   let previousStreamDay = "";
   return (
     <section ref={sectionRef} className="home-feed" aria-labelledby="home-feed-title" aria-busy={loading || loadingMore || undefined} onClickCapture={(event) => {
@@ -323,8 +325,8 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
     }}>
       {loading && !feed.items.length ? <div className="home-feed-loading" role="status"><span /><span /><span /><p className="sr-only">正在读取时间流</p></div> : null}
 
-      {feed.items.length ? <div className="home-feed-stream">
-        {feed.items.map((post, index) => {
+      {streamItems.length ? <div className="home-feed-stream">
+        {streamItems.map((post, index) => {
           const dayKey = post._feedFresh ? `fresh-${post.id}` : homeFeedDayKey(post.semantic_time || post.published_at);
           const showDay = dayKey !== previousStreamDay;
           previousStreamDay = dayKey;
@@ -337,15 +339,15 @@ export function HomeFeed({ userId, type, newPost, onSnapshot }) {
         })}
       </div> : null}
 
-      {!feed.items.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
+      {!streamItems.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
 
-      {!loading && !feed.items.length && !error ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
+      {!loading && !streamItems.length && !error ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length || feed.items.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
       {error ? <div className="home-feed-error" role="alert"><p>{error}</p><button className="btn btn-secondary" type="button" onClick={() => void load()}>重新读取</button></div> : null}
 
       <div ref={sentinelRef} className="home-feed-sentinel" aria-hidden="true" />
       {loadingMore ? <p className="home-feed-more" role="status">正在加载更早的记录…...</p> : null}
       {!loading && !loadingMore && feed.hasMore && typeof IntersectionObserver === "undefined" ? <button className="btn btn-secondary home-feed-more-button" type="button" onClick={() => void load({ cursor: feed.nextCursor, append: true })}>继续阅读</button> : null}
-      {!loading && !loadingMore && !feed.hasMore && feed.items.length ? <p className="home-feed-end">已显示全部记录。</p> : null}
+      {!loading && !loadingMore && !feed.hasMore && streamItems.length ? <p className="home-feed-end">已显示全部记录。</p> : null}
     </section>
   );
 }

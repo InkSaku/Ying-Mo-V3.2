@@ -29,7 +29,10 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
 .browse-page-note .browse-hero-index strong { font-size: 15px; font-weight: 400; }
 .browse-page-note .browse-hero-index p { margin-top: 8px; font-size: 12px; line-height: 1.8; }
 .browse-page-note .browse-hero-index nav { display: flex; gap: 24px; margin-top: 20px; border: 0; }
-.browse-page-note .browse-hero-index nav a { padding: 8px 0; font-size: 13px; }
+.browse-page-note .browse-hero-index nav a { padding: 8px 0; border-bottom: 1px solid transparent; font-size: 13px; }
+/* 与文章页的“文章 / 随记”切换一致：选中只用正文色和蓝色短下划线，不加底色与竖线。 */
+.browse-page-note .browse-hero-index nav a + a { border-left: 0; }
+.browse-page-note .browse-hero-index nav a.active { border-bottom-color: var(--brand-link); background: transparent; box-shadow: none; color: var(--text); }
 .browse-page-note .browse-hero-jump { margin-top: 16px; padding-top: 0; border: 0; font-size: 12px; }
 .browse-page-note .browse-hero-jump > span { display: none; }
 .browse-page-note .post-filters-editorial { display: block; margin: 0; padding: 0; border: 0; border-block: 1px solid var(--border); }
@@ -114,7 +117,11 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
   .browse-page-note .note-journal-period > header strong { font-size: 32px; }
   .browse-page-note .note-journal-period > header small { margin: 0 0 0 auto; }
   .browse-page-note .note-journal-entries > .post-card-journal { grid-template-columns: 44px minmax(0, 1fr); gap: 16px; padding: 24px 0; }
-  .browse-page-note .note-journal-entries .post-card-journal .note-card-text { font-size: 16px; }
+  .browse-page-note .note-journal-entries .post-card-journal .note-card-text { margin-bottom: 12px; font-size: 16px; }
+  /* 作者、地点、心情和标签的链接各自撑满 44px 点击高度，行与行之间不再额外加间距，避免信息比正文还高。 */
+  .browse-page-note .note-journal-entries > .post-card-journal { padding: 20px 0; }
+  .browse-page-note .note-journal-entries .post-card-journal .post-card-details { row-gap: 0; }
+  .browse-page-note .note-journal-entries .post-card-journal .post-card-context { margin-top: 0; }
   .browse-page-note .note-journal-entries .note-card-date strong { font-size: 30px; }
 }
 /* Phones reach the first note right after a one-line page title. */

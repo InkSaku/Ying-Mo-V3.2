@@ -8,7 +8,8 @@
   grid-template-columns: minmax(150px, .8fr) minmax(0, 1.8fr);
   gap: 42px;
   padding: 38px 0 32px;
-  border-bottom: 1px solid var(--border);
+  /* 本页最后一节，下方由页脚顶线收尾。 */
+  border-bottom: 0;
 }
 .ink-export-art { margin: 16px 0 0; align-self: start; }
 .ink-export-art > .ink-sketch { max-width: 280px; margin: 0 auto 20px; }
@@ -33,10 +34,10 @@
 .ink-export-copy .settings-security-actions { align-items: center; gap: 14px 20px; }
 .ink-export-format { color: var(--text-4); font-family: var(--mono); font-size: 10px; }
 
+/* 上方是带边框的邮箱验证卡片，下方是页脚顶线，本节不再自带上下线。 */
 .app-frame .pwa-install-section {
   padding: 28px 0;
   border: 0;
-  border-block: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
 }
@@ -73,6 +74,7 @@
   gap: 24px;
   background: transparent;
 }
+.app-frame .sessions-page .session-card:last-child { border-bottom: 0; }
 .sessions-page .session-device, .sessions-page .session-times > div { min-width: 0; }
 .sessions-page .session-device h2 { font-family: var(--serif); font-weight: 400; }
 .sessions-page .session-current { border: 1px solid var(--brand-border); background: transparent; color: var(--brand-link); }

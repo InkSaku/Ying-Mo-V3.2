@@ -39,7 +39,7 @@ export function SessionsPage() {
   usePageMeta("登录设备");
   const navigate = useNavigate();
   const { logoutAll, endLocalSession } = useAuth();
-  const state = useAsyncData(() => api.get("/auth/sessions"), []);
+  const state = useAsyncData(() => api.get("/auth/sessions"), [], { keepPrevious: true });
   const [target, setTarget] = useState(null);
   const [showLogoutAll, setShowLogoutAll] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -84,7 +84,7 @@ export function SessionsPage() {
     }
   };
 
-  if (state.loading) return <PageLoader />;
+  if (state.loading && !state.data) return <PageLoader />;
   if (state.error) return <main className="page-shell narrow-page"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
@@ -105,7 +105,7 @@ export function SessionsPage() {
       {sessions.length ? <div className="ink-session-summary"><p><span className="tabular">{sessions.length}</span> 个有效登录记录</p><span></span></div> : null}
 
       {sessions.length ? (
-        <section className="session-list" aria-label="有效登录设备">
+        <section className={`session-list${state.loading ? " is-refreshing" : ""}`} aria-label="有效登录设备" aria-busy={state.loading || undefined}>
           {sessions.map((session) => (
             <article className={`session-card${session.current ? " session-card-current" : ""}`} key={session.id}>
               <div className="session-device">

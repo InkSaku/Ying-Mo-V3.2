@@ -38,6 +38,8 @@ class BaseConfig:
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES_MINUTES", "15")))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.getenv("JWT_REFRESH_TOKEN_EXPIRES_DAYS", "30")))
+    # 刚被轮换的 Refresh Token 在此秒数内再次出现（多标签页同时刷新、刷新响应因跳转丢失）时仍可换取新会话。
+    JWT_REFRESH_REUSE_GRACE_SECONDS = int(os.getenv("JWT_REFRESH_REUSE_GRACE_SECONDS", "30"))
     JWT_TOKEN_LOCATION = ["headers", "cookies"]
     JWT_REFRESH_COOKIE_NAME = "yingmo_refresh_token"
     JWT_REFRESH_COOKIE_PATH = "/api/v1/auth"

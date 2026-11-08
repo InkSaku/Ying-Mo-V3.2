@@ -125,7 +125,7 @@ export function UserProfilePage() {
           <span className="tabular">共 {data.visible_post_count} 篇</span>
         </div>
         {data.posts?.length
-          ? <div className="profile-post-catalogue">{data.posts.map((post, index) => <PostCard key={post.id} post={post} variant="profile" index={(postsPage - 1) * PAGE_SIZE + index} />)}</div>
+          ? <div className="profile-post-catalogue">{data.posts.map((post, index) => <PostCard key={post.id} post={post} variant="profile" index={(postsPage - 1) * PAGE_SIZE + index} hideAuthor />)}</div>
           : <EmptyState title="暂无可读内容" description="" />}
         <Pagination
           page={postsPagination.page || postsPage}

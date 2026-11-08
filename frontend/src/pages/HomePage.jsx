@@ -98,7 +98,7 @@ export function HomePage() {
               ))}
             </div>
           </div>
-          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} />
+          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} featuredId={pins.length ? null : feature?.id} />
         </section>
         <aside className="home-side-rail" aria-label="回望与共同记录">
           <HomeClosing memory={homeSnapshot?.memoryInterlude} collections={collections || []} collectionsReady={collections !== null} />

@@ -285,6 +285,8 @@
 .articles-credits {
   display: flex;
   flex-wrap: wrap;
+  /* 手机上作者与分类链接撑到 44px 高，日期也要垂直居中，三项才在同一条基线上。 */
+  align-items: center;
   gap: 8px 20px;
   color: var(--text-4);
   font-size: 12px;
@@ -456,7 +458,7 @@
   grid-template-columns: 92px minmax(0, 1fr) auto;
   align-items: center;
   padding: 14px 0;
-  border-bottom: 1px solid var(--articles-rule);
+  border-bottom: 0; /* 上方小猫横线已是档案边界 */
 }
 
 .browse-page-article .article-magazine-index-section > header span {
@@ -513,11 +515,12 @@
   display: block;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--articles-rule);
+  border-top: 0;
   list-style: none;
 }
 
-.article-magazine-index-list > li { border-bottom: 1px solid var(--articles-rule); }
+/* 只在相邻条目之间画线：年份之间靠留白，不出现列表首尾线。 */
+.article-magazine-index-list > li + li { border-top: 1px solid var(--articles-rule); }
 
 .articles-index-row {
   display: grid;
@@ -722,6 +725,8 @@
     border-top: 1px solid var(--articles-rule);
     border-left: 0;
   }
+
+  .browse-page-article .article-magazine-rail > header { border-bottom: 0; }
 
   .articles-margin-story { padding: 24px 0; }
   .browse-page-article .article-magazine-index-section { margin-top: 52px; }

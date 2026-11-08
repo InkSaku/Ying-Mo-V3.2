@@ -58,10 +58,10 @@ export function MyPostsPage() {
   if (status) requestParams.set("status", status);
   if (postType) requestParams.set("post_type", postType);
   if (query) requestParams.set("q", query);
-  const state = useAsyncData(() => api.get(`/posts/me?${requestParams}`), [status, postType, query, page]);
+  const state = useAsyncData(() => api.get(`/posts/me?${requestParams}`), [status, postType, query, page], { keepPrevious: true });
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
-  const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const pageNeedsClamp = !state.loading && Boolean(state.meta) && clampedPage !== page;
 
   const updateParams = (updates) => {
     const next = new URLSearchParams(params);
@@ -148,11 +148,11 @@ export function MyPostsPage() {
     updateParams({ q: searchValue.trim(), page: "" });
   };
 
-  if (state.loading) return <PageLoader />;
+  if (state.loading && !state.data) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell personal-page-shell" aria-busy={pageNeedsClamp || actionBusy || undefined}>
+    <main className="page-shell personal-page-shell" aria-busy={state.loading || pageNeedsClamp || actionBusy || undefined}>
       <PersonalNav />
       <header className="page-heading">
         <InkPageSketch />
@@ -188,7 +188,7 @@ export function MyPostsPage() {
       {actionError && !action ? <div className="inline-error" role="alert">{actionError}</div> : null}
 
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
-        <div className="management-list">
+        <div className={`management-list${state.loading ? " is-refreshing" : ""}`}>
           {state.data.map((post) => (
             <article className="post-management-row" key={post.id}>
               <div className="post-management-summary">
@@ -226,7 +226,13 @@ export function MyPostsPage() {
             </article>
           ))}
         </div>
-      ) : <EmptyState title="这个筛选下没有内容" />}
+      ) : status || postType || query ? <EmptyState title="这个筛选下没有内容" /> : (
+        <EmptyState
+          title="还没有写过内容"
+          description="写下的文章和随记，包括草稿，都会在这里管理。"
+          action={<Link className="btn btn-primary" to="/write">开始写作</Link>}
+        />
+      )}
 
       <Pagination
         page={pagination.page || page}

@@ -20,21 +20,21 @@ export function MyCollectionsPage() {
   usePageMeta("我的合集");
   const [params, setParams] = useSearchParams();
   const page = cleanPage(params.get("page"));
-  const state = useAsyncData(() => api.get(`/users/me/collections?page=${page}&page_size=${PAGE_SIZE}`), [page]);
+  const state = useAsyncData(() => api.get(`/users/me/collections?page=${page}&page_size=${PAGE_SIZE}`), [page], { keepPrevious: true });
   const pagination = state.meta?.pagination || {};
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
-  const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const pageNeedsClamp = !state.loading && Boolean(state.meta) && clampedPage !== page;
   const emptyShelfSlots = Math.max(0, Math.min(3, 4 - (state.data?.length || 0)));
 
   useEffect(() => {
     if (pageNeedsClamp) setParams(clampedPage === 1 ? {} : { page: String(clampedPage) }, { replace: true });
   }, [clampedPage, pageNeedsClamp, setParams]);
 
-  if (state.loading) return <PageLoader label="正在读取我的合集" />;
+  if (state.loading && !state.data) return <PageLoader label="正在读取我的合集" />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
 
   return (
-    <main className="page-shell personal-page-shell collection-library-page collection-library-page-editorial collection-library-personal" aria-busy={pageNeedsClamp || undefined}>
+    <main className="page-shell personal-page-shell collection-library-page collection-library-page-editorial collection-library-personal" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <PersonalNav />
       <header className="collection-library-hero collection-library-hero-compact collection-library-hero-editorial">
         <div className="collection-library-copy">
@@ -45,7 +45,7 @@ export function MyCollectionsPage() {
         <aside className="collection-library-index"><span className="tabular">{pagination.total || 0}</span><div><strong>册合集</strong><p></p></div><Link className="btn btn-primary" to="/collections/new">创建合集</Link></aside>
       </header>
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
-        <section className="collection-library-shelf" aria-labelledby="my-collection-library-title">
+        <section className={`collection-library-shelf${state.loading ? " is-refreshing" : ""}`} aria-labelledby="my-collection-library-title">
           <header>
             <div><p>第 {String(page).padStart(2, "0")} 页</p><h2 id="my-collection-library-title">合集目录</h2></div>
             <span>按最近更新时间排列</span>

@@ -45,7 +45,8 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
 .home-sketch-stones { fill:currentColor; opacity:.84; }
 .home-sketch-blue { fill:none; stroke:var(--brand-link); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
 .home-journal.home-editorial .home-compose-layout { width:100%; margin:22px 0 0; scroll-margin-top:calc(var(--home-header-height,68px) + 16px); }
-.home-editorial .quick-note-composer.is-home-prompt { padding:0; border-top:1px solid var(--text); border-bottom:1px solid var(--border); }
+/* 墨色顶线独自标出写作入口；下方紧接“最近记录”标题栏，靠留白分开。 */
+.home-editorial .quick-note-composer.is-home-prompt { padding:0; border-top:1px solid var(--text); border-bottom:0; }
 .home-prompt-activate { display:grid; grid-template-columns:36px 170px minmax(0,1fr) auto; align-items:center; gap:16px; width:100%; min-height:90px; padding:16px 0; border:0; background:transparent; color:var(--text); text-align:left; cursor:pointer; }
 .home-prompt-symbol { display:block; width:36px; height:36px; color:var(--text); pointer-events:none; }
 .home-prompt-symbol svg { display:block; width:100%; height:100%; }

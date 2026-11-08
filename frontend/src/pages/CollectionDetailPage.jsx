@@ -64,17 +64,17 @@ function MemoryFilters({ data, memory: appliedMemory, onChange, media = false })
 
 function TimelineView({ slug, memory, onChange }) {
   const path = collectionMemoryApiPath(slug, memory, 20);
-  const state = useAsyncData(() => api.get(path), [path]);
-  if (state.loading) return <PageLoader label="正在整理共同时间轴" />;
+  const state = useAsyncData(() => api.get(path), [path], { keepPrevious: slug });
+  if (state.loading && !state.data) return <PageLoader label="正在整理共同时间轴" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
   const groups = groupTimelineItems(state.data?.items || []);
   const pagination = state.meta?.pagination || {};
-  return <section className="collection-memory-view" aria-labelledby="collection-timeline-heading">
+  return <section className={`collection-memory-view${state.loading ? " is-refreshing" : ""}`} aria-labelledby="collection-timeline-heading" aria-busy={state.loading || undefined}>
     <div className="collection-memory-heading"><div><h2 id="collection-timeline-heading">共同时间轴</h2><p>文章按发布时间，随记按发生时间排列。</p></div>
       {state.data?.year_facets?.length ? <div className="collection-year-jumps" aria-label="年份快速定位">{state.data.year_facets.slice(0, 8).map((facet) => <button key={facet.year} type="button" className={memory.year === String(facet.year) ? "active" : ""} onClick={() => onChange({ ...memory, year: String(facet.year), page: 1 })}>{facet.year}<span>{facet.count}</span></button>)}</div> : null}
     </div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} />
-    {groups.length ? <div className="collection-timeline">{groups.map((group) => <section key={`${group.year}-${group.month}`} className="collection-timeline-group"><header><strong className="tabular">{group.year}</strong><span>{String(group.month).padStart(2, "0")} 月</span></header><div>{group.items.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} />)}</div></section>)}</div> : <EmptyState title="这个时间段还没有共同记录" description="可以切换年份、作者或类型，看看其他时刻。" />}
+    {groups.length ? <div className="collection-timeline">{groups.map((group) => <section key={`${group.year}-${group.month}`} className="collection-timeline-group"><header><strong className="tabular">{group.year}</strong><span>{String(group.month).padStart(2, "0")} 月</span></header><div>{group.items.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} hideCollection />)}</div></section>)}</div> : <EmptyState title="这个时间段还没有共同记录" description="可以切换年份、作者或类型，看看其他时刻。" />}
     <Pagination page={pagination.page || 1} totalPages={pagination.total_pages || 0} onChange={(page) => onChange({ ...memory, page })} />
   </section>;
 }
@@ -109,14 +109,15 @@ function MediaAccordionRow({ row, offset, items, pagination }) {
 function MediaWallView({ slug, memory, onChange }) {
   const { hydrateGallery } = useMediaLightbox();
   const path = collectionMemoryApiPath(slug, memory, 24);
-  const state = useAsyncData(() => api.get(path), [path]);
+  const state = useAsyncData(() => api.get(path), [path], { keepPrevious: slug });
   const pagination = state.meta?.pagination || {};
   const loadPage = async (page) => {
     const result = await api.get(collectionMemoryApiPath(slug, { ...memory, page }, 24));
     return { items: result.data?.items || [] };
   };
   useEffect(() => {
-    if (!state.data?.items?.length) return;
+    // 读取新筛选时旧影像仍在显示，等新数据到了再交给灯箱，避免翻页时混入旧条目。
+    if (state.loading || !state.data?.items?.length) return;
     hydrateGallery({
       items: state.data.items,
       context: "collection",
@@ -130,8 +131,8 @@ function MediaWallView({ slug, memory, onChange }) {
     });
   // loadPage deliberately captures the current filters; data identity changes with them.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrateGallery, pagination.page, pagination.page_size, pagination.total, pagination.total_pages, state.data?.items]);
-  if (state.loading) return <PageLoader label="正在整理共同影像" />;
+  }, [hydrateGallery, pagination.page, pagination.page_size, pagination.total, pagination.total_pages, state.data?.items, state.loading]);
+  if (state.loading && !state.data) return <PageLoader label="正在整理共同影像" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
   const items = state.data?.items || [];
   const rowCount = Math.ceil(items.length / 5);
@@ -139,7 +140,7 @@ function MediaWallView({ slug, memory, onChange }) {
     const offset = Math.floor(index * items.length / rowCount);
     return { offset, items: items.slice(offset, Math.floor((index + 1) * items.length / rowCount)) };
   });
-  return <section className="collection-memory-view" aria-labelledby="collection-media-heading">
+  return <section className={`collection-memory-view${state.loading ? " is-refreshing" : ""}`} aria-labelledby="collection-media-heading" aria-busy={state.loading || undefined}>
     <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p></p></div></div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} media />
     {items.length ? <div className={`collection-media-wall${items.length > 2 ? " has-accordion" : ""}`}>{rows.map((row) => <MediaAccordionRow key={`${path}:${row.items.map((item) => item.id).join(",")}`} row={row.items} offset={row.offset} items={items} pagination={{ page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || items.length, totalPages: pagination.total_pages || 1, loadPage }} />)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
@@ -158,7 +159,7 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
               <h2 id="collection-highlights-title">关键记录</h2>
               <p>由创建者挑选的共同片段。</p>
             </header>
-            <div className="collection-highlight-grid">{collection.highlights.map((post) => <PostCard key={post.id} post={post} compact />)}</div>
+            <div className="collection-highlight-grid">{collection.highlights.map((post) => <PostCard key={post.id} post={post} compact hideCollection />)}</div>
           </section>
         ) : null}
 
@@ -168,7 +169,7 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
             <p>当前收录 {collection.posts?.length || 0} 则记录。</p>
           </header>
           {collection.posts?.length
-            ? <div className="collection-post-catalogue">{collection.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} />)}</div>
+            ? <div className="collection-post-catalogue">{collection.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} hideCollection />)}</div>
             : <EmptyState title="这个合集还没有已发布内容" description="创建者与成员都可以在这里发表自己的记录。" />}
         </section>
       </div>
@@ -245,7 +246,11 @@ export function CollectionDetailPage() {
 
   useBrowseReturn(!state.loading && !state.error, memory.view === "overview" ? null : ".collection-memory-view");
 
-  const changeMemory = (next) => setSearchParams(collectionMemorySearchParams(next));
+  // 切换视图、年份或筛选时停在原处继续看；只有单纯翻页才从新一页的顶部开始。
+  const changeMemory = (next) => {
+    const onlyPageChanged = ["view", "year", "author", "type", "mediaKind"].every((field) => (next[field] || "") === (memory[field] || ""));
+    setSearchParams(collectionMemorySearchParams(next), onlyPageChanged ? undefined : { state: { keepScroll: true } });
+  };
   const changeView = (view) => changeMemory({ ...memory, view, page: 1 });
   if (state.loading) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;

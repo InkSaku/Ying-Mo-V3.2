@@ -29,13 +29,14 @@ export function TaxonomyPage({ kind }) {
   const basePath = isCategory ? "/categories" : "/tags";
   const state = useAsyncData(
     () => api.get(`${basePath}/${encodeURIComponent(slug)}?page=${page}&page_size=${PAGE_SIZE}${!isCategory && postType ? `&post_type=${postType}` : ""}`),
-    [basePath, page, slug, isCategory, postType]
+    [basePath, page, slug, isCategory, postType],
+    { keepPrevious: `${kind}:${slug}` },
   );
   const taxonomy = state.data?.[kind] || null;
   const pagination = state.meta?.pagination || {};
   const totalPages = pagination.total_pages || 0;
   const clampedPage = clampPageToTotal(page, pagination.total || 0, pagination.page_size || PAGE_SIZE);
-  const pageNeedsClamp = Boolean(state.meta) && clampedPage !== page;
+  const pageNeedsClamp = !state.loading && Boolean(state.meta) && clampedPage !== page;
   usePageMeta(taxonomy ? `${label}：${taxonomy.name}` : label);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function TaxonomyPage({ kind }) {
     }
   }, [clampedPage, pageNeedsClamp, params, setParams]);
 
-  if (state.loading) return <PageLoader label={`正在读取 ${label}`} />;
+  if (state.loading && !state.data) return <PageLoader label={`正在读取 ${label}`} />;
   if (state.error) {
     return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
   }
@@ -61,7 +62,7 @@ export function TaxonomyPage({ kind }) {
   ].filter(Boolean).join("，") || "暂无内容";
 
   return (
-    <main className={`page-shell taxonomy-page taxonomy-publication-page taxonomy-detail-${kind}`} aria-busy={pageNeedsClamp || undefined}>
+    <main className={`page-shell taxonomy-page taxonomy-publication-page taxonomy-detail-${kind}`} aria-busy={state.loading || pageNeedsClamp || undefined}>
       <TaxonomyNav />
       <header className="taxonomy-detail-hero">
         <p className="taxonomy-back"><Link to={basePath}>返回{isCategory ? "分类" : "标签"}</Link></p>
@@ -99,7 +100,7 @@ export function TaxonomyPage({ kind }) {
               <div><dt>本页</dt><dd>{mixLabel}</dd></div>
             </dl>
           </aside>
-          <div className="taxonomy-reading-results">
+          <div className={`taxonomy-reading-results${state.loading ? " is-refreshing" : ""}`}>
             {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : posts.length ? (
               <div className="taxonomy-reading-list">
                 {posts.map((post, index) => (

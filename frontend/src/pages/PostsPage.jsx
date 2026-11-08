@@ -43,19 +43,27 @@ function groupNotesByYear(posts) {
   });
 }
 
-function articleYear(post) {
-  const match = String(post?.published_at || post?.updated_at || "").match(/^(\d{4})/);
-  return match?.[1] || "日期";
+function articlePeriod(post) {
+  const match = String(post?.published_at || post?.updated_at || "").match(/^(\d{4})-(\d{2})/);
+  return match ? { year: match[1], month: Number(match[2]) } : { year: "日期", month: null };
 }
 
+// 档案区只收本页第 4 篇以后的文章，上方首篇和“接着阅读”可能同年；
+// 年份旁写月份跨度而不是篇数，避免读者把“1 篇”当成这一年的总数。
 function groupArticlesByYear(posts) {
   const groups = new Map();
   posts.forEach((post) => {
-    const year = articleYear(post);
-    if (!groups.has(year)) groups.set(year, []);
-    groups.get(year).push(post);
+    const { year, month } = articlePeriod(post);
+    if (!groups.has(year)) groups.set(year, { year, months: new Set(), items: [] });
+    const group = groups.get(year);
+    if (month) group.months.add(month);
+    group.items.push(post);
   });
-  return [...groups.entries()].map(([year, items]) => ({ year, items }));
+  return [...groups.values()].map(({ months, ...group }) => {
+    const range = [...months].sort((a, b) => a - b);
+    const monthLabel = range.length > 1 ? `${range[0]}—${range.at(-1)} 月` : range.length ? `${range[0]} 月` : "";
+    return { ...group, monthLabel };
+  });
 }
 
 function BrowseHero({ isArticle, total, latestPost, sort = "newest" }) {
@@ -122,7 +130,7 @@ function ArticleMagazine({ posts, page, total, sort, onOpen, fromArticleList, se
           <header><span></span><strong>文章档案</strong><small>依照发布时间继续浏览</small></header>
           <div className="article-year-groups">
             {archiveGroups.map((group) => <section className="article-year-group" key={group.year} aria-labelledby={`article-year-${group.year}`}>
-              <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong><span>{group.items.length} 篇文章</span></header>
+              <header><strong className="tabular" id={`article-year-${group.year}`}>{group.year}</strong>{group.monthLabel ? <span>{group.monthLabel}</span> : null}</header>
               <ol className="article-magazine-index-list">
                 {group.items.map((post) => <ArticleIndexRow key={post.id} post={post} onOpen={onOpen} fromArticleList={fromArticleList} selected={post.id === selectedId} />)}
               </ol>
@@ -220,7 +228,21 @@ export function PostsPage({ type }) {
       {pageNeedsClamp ? (
         <div className="profile-refresh" role="status">正在返回有效页码…</div>
       ) : !displayData?.length ? (
-        <EmptyState illustrated title={hasActivePostFilters(filters) ? "当前筛选下没有内容" : `还没有可见${isArticle ? "文章" : "随记"}`} description={hasActivePostFilters(filters) ? "调整或清除筛选条件后再试。" : ""} />
+        hasActivePostFilters(filters) ? (
+          <EmptyState
+            illustrated
+            title="当前筛选下没有内容"
+            description="调整或清除筛选条件后再试。"
+            action={<button className="btn btn-secondary" type="button" onClick={() => setParams("")}>清除筛选</button>}
+          />
+        ) : (
+          <EmptyState
+            illustrated
+            title={`还没有可见${isArticle ? "文章" : "随记"}`}
+            description={`成员发布给所有人的${isArticle ? "文章" : "随记"}，以及你所在合集里的${isArticle ? "文章" : "随记"}，会出现在这里。`}
+            action={<Link className="btn btn-primary" to={isArticle ? "/write" : "/write?type=note"}>{isArticle ? "写一篇文章" : "写一则随记"}</Link>}
+          />
+        )
       ) : (
         isArticle
           ? <ArticleMagazine posts={displayData} page={pagination.page || page} total={pagination.total || displayData.length} sort={filters.sort} onOpen={onOpenArticle} fromArticleList={fromArticleList} selectedId={snapshot?.postId} />

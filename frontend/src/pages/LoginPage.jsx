@@ -120,7 +120,7 @@ export function LoginPage() {
             {error ? <div id="login-error" className="login-error" role="alert">{error}</div> : null}
             <label className="login-field" htmlFor="login-identifier">
               <span>用户名或邮箱</span>
-              <input id="login-identifier" required autoComplete="username" readOnly={busy}
+              <input id="login-identifier" required autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} readOnly={busy}
                 aria-invalid={invalidCredentials || undefined} aria-describedby={error ? "login-error" : undefined}
                 placeholder="输入用户名或邮箱" value={form.identifier}
                 onFocus={() => setFocusedField("identifier")} onBlur={() => setFocusedField("")}

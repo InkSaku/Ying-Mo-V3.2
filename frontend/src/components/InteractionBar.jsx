@@ -39,6 +39,11 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
     if (!favoriteReady || !session?.active || session.busy) return;
     session.busy = true;
     const animateSuccess = event?.detail > 0;
+    const previous = favorited;
+    // 乐观更新：点下去立刻显示新状态和收藏动画，服务器结果回来后再校准；失败则改回并提示原因。
+    setFavorited(desired);
+    if (desired && animateSuccess) setCelebration((value) => value + 1);
+    setCanUndo(false);
     setBusy(true);
     setMessage("");
     setError("");
@@ -48,9 +53,10 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
       setFavorited(Boolean(result.data?.favorited));
       setCanUndo(result.data?.favorited === false);
       setMessage(result.data?.favorited ? "已收藏。" : "已取消收藏。");
-      if (result.data?.favorited && animateSuccess) setCelebration((value) => value + 1);
     } catch (actionError) {
-      if (session.active) setError(`收藏操作失败：${actionError.message}`);
+      if (!session.active) return;
+      setFavorited(previous);
+      setError(`收藏操作失败：${actionError.message}`);
     } finally {
       session.busy = false;
       if (session.active) setBusy(false);
