@@ -3570,6 +3570,30 @@ input[aria-invalid="true"] {
   margin: 0;
 }
 
+/* 编号放不下时：逐行自动编号要和公式行对齐，排在公式之后。 */
+.prose .math-block.math-tag-clear .katex-html > .katex-tag {
+  position: static;
+  margin-left: 1em;
+}
+
+/* \tag 换到公式下方，横向滚动长公式时贴住可见区右侧。 */
+.prose .math-block.math-tag-clear .katex-html:has(> .katex-tag > .katex-strut) {
+  width: max-content;
+  min-width: 100%;
+}
+
+.prose .math-block.math-tag-clear .katex-html > .katex-tag:has(> .katex-strut) {
+  position: sticky;
+  right: 0;
+  display: block;
+  width: fit-content;
+  margin: 0.5em 0 0 auto;
+}
+
+.prose .math-block.math-tag-clear .katex-tag > .katex-strut {
+  display: none;
+}
+
 .prose .math-render-error {
   display: inline;
   padding: 0.08em 0.3em;

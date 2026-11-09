@@ -5,6 +5,8 @@ from flask import current_app
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased
+from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.access import can_read_post, is_collection_member
 from app.common.pagination import pagination_meta
@@ -253,7 +255,7 @@ def validate_memory_contribution_publish(post, actor_id, expected_version):
         or root.collection_id != link.collection_id
         or post.collection_id != link.collection_id
         or not _valid_root(root, actor_id)
-        or not is_collection_member(actor_id, root.collection)
+        or not is_collection_member(actor_id, root.collection, current_read=True)
     ):
         raise DomainError("MEMORY_CONTEXT_UNAVAILABLE", "原记录或参与范围已不可用，补充草稿仍已保留。", 409)
     if expected_version != post.edit_version:
@@ -297,15 +299,105 @@ def detach_memory_link(post, actor_id, *, expected_version, destination):
     return post
 
 
-def invalidate_links_for_post(post_id, reason):
-    now = utcnow()
-    db.session.execute(
-        db.update(PostMemoryLink).where(
-            PostMemoryLink.invalidated_at.is_(None),
+def _locked(statement):
+    """FOR UPDATE 读到最新提交值；populate_existing 让 Session 里已有的对象也换成这份值。"""
+    return statement.with_for_update().execution_options(populate_existing=True)
+
+
+def lock_collection(collection_id):
+    return db.session.scalar(_locked(db.select(Collection).where(Collection.id == collection_id)))
+
+
+def _lock_posts(post_ids):
+    return db.session.scalars(_locked(
+        db.select(Post).where(Post.id.in_(sorted(post_ids))).order_by(Post.id.asc())
+    )).all()
+
+
+def _lock_attached_links(post_id):
+    """root 和补充两侧分开查询：FOR UPDATE 写成 OR 可能退化成全表扫描，锁住无关关系。"""
+    links = []
+    for column in (PostMemoryLink.root_post_id, PostMemoryLink.contribution_post_id):
+        links += db.session.scalars(_locked(
+            db.select(PostMemoryLink)
+            .where(column == post_id, PostMemoryLink.detached_at.is_(None))
+            .order_by(PostMemoryLink.id.asc())
+        )).all()
+    return links
+
+
+def lock_post_scope(post_id, target_collection_id=None):
+    """按行锁协议锁定 Post 移动、删除或发布涉及的行，返回取锁后的 Post。
+
+    顺序见 docs/backend/SHARED_MEMORY.md：Collection ID 升序（跨合集移动锁两边）
+    → Post ID 升序 → 关系行。取锁前的读取只决定要锁哪些行，归属和状态必须用返回值判断。
+    """
+    source_collection_id = db.session.scalar(db.select(Post.collection_id).where(Post.id == post_id))
+    related = db.session.execute(
+        db.select(
+            PostMemoryLink.collection_id,
+            PostMemoryLink.root_post_id,
+            PostMemoryLink.contribution_post_id,
+        ).where(
             PostMemoryLink.detached_at.is_(None),
             db.or_(
                 PostMemoryLink.root_post_id == post_id,
                 PostMemoryLink.contribution_post_id == post_id,
             ),
-        ).values(invalidated_at=now, invalidation_reason=reason)
+        )
+    ).all()
+
+    collection_ids = {source_collection_id, *(row.collection_id for row in related)}
+    if isinstance(target_collection_id, int) and not isinstance(target_collection_id, bool):
+        collection_ids.add(target_collection_id)
+    for collection_id in sorted(collection_ids - {None}):
+        lock_collection(collection_id)
+
+    post_ids = {post_id}
+    for row in related:
+        post_ids.update((row.root_post_id, row.contribution_post_id))
+    post = next((item for item in _lock_posts(post_ids) if item.id == post_id), None)
+    if post is not None and post.collection_id != source_collection_id:
+        # 读取和取锁之间 Post 换了合集，它现在所在的合集没有锁住；全局处理器会返回 409。
+        raise StaleDataError(f"Post {post_id} changed collection while acquiring locks.")
+    _lock_attached_links(post_id)
+    return post
+
+
+def lock_collection_posts(collection_id):
+    """合集删除用：调用方已持有 Collection 锁，这里按 ID 升序锁定其下全部 Post。"""
+    return db.session.scalars(_locked(
+        db.select(Post).where(Post.collection_id == collection_id).order_by(Post.id.asc())
+    )).all()
+
+
+def _invalidate_links(links, reason):
+    """写入永久失效状态并推进补充 Post 的版本；root 的版本不因别人的关系变化而前进。"""
+    active = [link for link in links if link.active]
+    if not active:
+        return
+    now = utcnow()
+    for link in active:
+        link.invalidated_at = now
+        link.invalidation_reason = reason
+    for contribution in _lock_posts({link.contribution_post_id for link in active}):
+        # updated_at 原值写回即可触发 version_id_col，作者看到的更新时间不变。
+        flag_modified(contribution, "updated_at")
+
+
+def invalidate_links_for_post(post_id, reason):
+    _invalidate_links(_lock_attached_links(post_id), reason)
+
+
+def invalidate_links_for_collection(collection_id, reason):
+    _invalidate_links(
+        db.session.scalars(_locked(
+            db.select(PostMemoryLink)
+            .where(
+                PostMemoryLink.collection_id == collection_id,
+                PostMemoryLink.detached_at.is_(None),
+            )
+            .order_by(PostMemoryLink.id.asc())
+        )).all(),
+        reason,
     )

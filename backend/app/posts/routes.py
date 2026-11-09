@@ -33,8 +33,8 @@ from app.posts.related import related_articles
 from app.posts.note_experience import note_experience
 from app.posts.memory_contributions import (
     create_contribution_draft, detach_memory_link, ensure_memory_scope_update,
-    invalidate_links_for_post, memory_management, memory_summary, memory_thread,
-    validate_memory_contribution_publish,
+    invalidate_links_for_post, lock_post_scope, memory_management, memory_summary,
+    memory_thread, validate_memory_contribution_publish,
 )
 
 bp = Blueprint("posts", __name__)
@@ -168,6 +168,16 @@ def _extract_expected_version(data, *, required=False):
     return payload, expected_version
 
 
+def _post_for_patch(post_id, data):
+    """真要换合集时走行锁协议；普通保存继续靠 edit_version 乐观并发。"""
+    post = db.session.get(Post, post_id)
+    if post is None or not isinstance(data, dict):
+        return post
+    if data.get("collection_id", post.collection_id) == post.collection_id:
+        return post
+    return lock_post_scope(post_id, data["collection_id"])
+
+
 def _apply_versioned_patch(post, actor, data, *, require_version=False):
     payload, expected_version = _extract_expected_version(data, required=require_version)
     if expected_version is not None and expected_version != post.edit_version:
@@ -180,6 +190,7 @@ def _apply_versioned_patch(post, actor, data, *, require_version=False):
                 "原 Collection 已不可用。请改为独立草稿或选择其他 Collection。",
                 409,
             )
+    post_id = post.id  # flush 失败后 post 已过期，rollback 之前不能再读它的属性。
     source_edit_version = post.edit_version
     before = snapshot_post(post) if post.was_published else None
     try:
@@ -194,7 +205,6 @@ def _apply_versioned_patch(post, actor, data, *, require_version=False):
         post.updated_at = utcnow()
         db.session.commit()
     except StaleDataError:
-        post_id = post.id
         db.session.rollback()
         current = db.session.get(Post, post_id)
         if current is None:
@@ -563,7 +573,8 @@ def create_memory_contribution(post_id):
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or set(data) != {"client_request_id"}:
         return error_response("VALIDATION_ERROR", "请求仅接受 client_request_id。", 422)
-    source = db.session.get(Post, post_id)
+    # 和 root 的移动、删除互斥，否则新关系可能逃过失效。
+    source = lock_post_scope(post_id)
     try:
         contribution, created = create_contribution_draft(
             source, actor, data.get("client_request_id")
@@ -588,7 +599,7 @@ def detach_memory_contribution(post_id):
     data = request.get_json(silent=True)
     if not isinstance(data, dict) or set(data) != {"expected_version", "destination"}:
         return error_response("VALIDATION_ERROR", "请求字段不合法。", 422)
-    post = db.session.get(Post, post_id)
+    post = lock_post_scope(post_id)
     if post is None or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "共同回忆补充不存在。", 404)
     try:
@@ -709,12 +720,12 @@ def create_post():
 @jwt_required(locations=["headers"])
 def update_post(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
+    data = request.get_json(silent=True)
+    post = _post_for_patch(post_id, data)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-    data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
     try:
@@ -730,14 +741,14 @@ def update_post(post_id):
 @jwt_required(locations=["headers"])
 def autosave_post(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
+    data = request.get_json(silent=True)
+    post = _post_for_patch(post_id, data)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     if post.status != PostStatus.DRAFT.value:
         return error_response("AUTOSAVE_NOT_ALLOWED", "自动保存仅适用于草稿；已发布内容请手动保存。", 409)
-    data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
     try:
@@ -753,9 +764,7 @@ def autosave_post(post_id):
 @jwt_required(locations=["headers"])
 def publish(post_id):
     actor = current_user()
-    post = db.session.scalar(
-        db.select(Post).where(Post.id == post_id).with_for_update()
-    )
+    post = lock_post_scope(post_id)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
@@ -804,8 +813,8 @@ def archive(post_id):
 @jwt_required(locations=["headers"])
 def move_collection(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
     data = request.get_json(silent=True) or {}
+    post = lock_post_scope(post_id, data.get("collection_id"))
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
@@ -838,7 +847,7 @@ def move_collection(post_id):
 @jwt_required(locations=["headers"])
 def remove_from_collection(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
+    post = lock_post_scope(post_id)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
@@ -869,7 +878,7 @@ def remove_from_collection(post_id):
 @jwt_required(locations=["headers"])
 def delete_post(post_id):
     actor = current_user()
-    post = db.session.get(Post, post_id)
+    post = lock_post_scope(post_id)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
@@ -995,6 +1004,9 @@ def restore_post_revision(post_id, revision_id):
         return error_response("RESOURCE_NOT_FOUND", "历史版本不存在。", 404)
     if not isinstance(data, dict):
         return error_response("VALIDATION_ERROR", "请求体必须是 JSON 对象。", 422)
+    post = _post_for_patch(post_id, {"collection_id": (revision.snapshot or {}).get("collection_id")})
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     try:
         payload, expected_version = _extract_expected_version(data, required=True)
         if payload:

@@ -27,9 +27,9 @@
 
 ## 事务与通知
 
-创建、首次发布、成员撤销、Post 移动/删除、合集删除与 Revision 恢复遵循共同的行锁协议：Collection ID 升序 → Post ID 升序 → 关系行。跨合集移动锁两边，取锁后重新读取成员资格、状态和归属。
+创建、首次发布、成员撤销、Post 移动/删除、合集删除与 Revision 恢复遵循共同的行锁协议：Collection ID 升序 → Post ID 升序 → 关系行。跨合集移动锁两边，取锁后重新读取成员资格、状态和归属。实现入口是 `memory_contributions.py` 的 `lock_post_scope`、`lock_collection`；MySQL 可重复读下普通 SELECT 仍是事务快照，持锁复核成员资格要用 `is_collection_member(..., current_read=True)`。
 
-关系失效或解除同步推进补充 Post 版本；增加别人的补充不推进 root 的编辑版本。唯一请求约束防重复建稿，首次发布的行锁防重复通知。
+关系失效或解除同步推进补充 Post 版本，失效统一走 `invalidate_links_for_post` / `invalidate_links_for_collection`，不改补充的 `updated_at`；增加别人的补充不推进 root 的编辑版本。唯一请求约束防重复建稿，首次发布的行锁防重复通知。
 
 原作者仍有权限且不是补充者时接收 `memory_contribution_added`；其他成员沿用合集投稿通知，去重收件人。遵守 all / important / muted 偏好；草稿、重试和重复发布不重复通知。通知读取重新校验权限并生成摘要。
 

@@ -304,10 +304,10 @@ def delete_post(post_id):
         return error_response("PERMISSION_DENIED", "仅系统管理员可访问。", 403)
     reason, error = _reason(data)
     if error: return error
-    post = db.session.get(Post, post_id)
+    from app.posts.memory_contributions import invalidate_links_for_post, lock_post_scope
+    post = lock_post_scope(post_id)
     if post is None or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-    from app.posts.memory_contributions import invalidate_links_for_post
     invalidate_links_for_post(post.id, "post_deleted")
     post.deleted_at = utcnow()
     record_admin_log(actor, "post.soft_delete", "post", post.id, before={"deleted_at": None}, after={"deleted_at": isoformat_utc(post.deleted_at)}, reason=reason)
@@ -374,7 +374,8 @@ def admin_delete_collection(collection_id):
     if actor is None: return error_response("PERMISSION_DENIED","仅系统管理员可访问。",403)
     reason,error=_reason(data)
     if error: return error
-    collection=db.session.get(Collection,collection_id)
+    from app.posts.memory_contributions import lock_collection
+    collection=lock_collection(collection_id)
     if collection is None or collection.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND","Collection 不存在。",404)
     mode=delete_collection(collection)
