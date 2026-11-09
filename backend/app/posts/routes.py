@@ -308,7 +308,8 @@ def _apply_patch(post, actor, data):
     previous_collection_id = post.collection_id
     if "collection_id" in data:
         apply_collection(post, actor.id, data["collection_id"])
-        if post.collection_id != previous_collection_id:
+        # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
+        if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
 
     if "category_id" in data:
@@ -809,7 +810,8 @@ def move_collection(post_id):
         previous_collection_id = post.collection_id
         ensure_memory_scope_update(post, data)
         apply_collection(post, actor.id, data["collection_id"])
-        if post.collection_id != previous_collection_id:
+        # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
+        if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
         if before is not None:
             create_revision(
