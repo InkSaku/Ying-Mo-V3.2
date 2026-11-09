@@ -13,7 +13,7 @@ import { InteractionBar } from "../components/InteractionBar";
 import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
 import { PostCard } from "../components/PostCard";
 import { installVisibleReadTracker } from "../lib/readingStats";
-import { logicalMediaFromRaw } from "../lib/mediaGallery";
+import { logicalMediaFromRaw, readingOrderGallery } from "../lib/mediaGallery";
 import { MediaOpenButton } from "../components/MediaOpenButton";
 import { useMediaLightbox } from "../contexts/MediaLightboxContext";
 import { NoteDetail } from "../components/NoteDetail";
@@ -89,7 +89,7 @@ export function PostDetailPage({ type }) {
     ) : null;
   const state = useAsyncData(() => api.get(path), [path]);
   const post = state.data?.redirect ? null : state.data;
-  const galleryItems = useMemo(() => logicalMediaFromRaw(post?.bound_media, post), [post]);
+  const galleryItems = useMemo(() => readingOrderGallery(logicalMediaFromRaw(post?.bound_media, post), post), [post]);
   const { hydrateGallery } = useMediaLightbox();
   const postId = post?.id;
   const [articleFavorite, setArticleFavorite] = useState(null);

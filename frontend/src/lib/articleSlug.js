@@ -1,9 +1,35 @@
-import { pinyin } from "pinyin-pro";
+// 拼音词典约 136 KiB（gzip），只有文章网址需要它：写随记或标题还没有汉字时不加载。
+let pinyinEngine = null;
+let pinyinLoading = null;
+const HAN_CHARACTER = /\p{Script=Han}/u;
 
+// 只有含汉字的标题才需要拼音词典。
+export function titleNeedsSlugEngine(title) {
+  return HAN_CHARACTER.test(String(title || ""));
+}
+
+export function loadArticleSlugEngine() {
+  if (pinyinEngine) return Promise.resolve(pinyinEngine);
+  pinyinLoading ||= import("pinyin-pro")
+    .then((module) => {
+      pinyinEngine = module.pinyin;
+      return pinyinEngine;
+    })
+    .catch((error) => {
+      pinyinLoading = null;
+      throw error;
+    });
+  return pinyinLoading;
+}
+
+// 词典还没到时，含汉字的标题先不生成网址（留空，发布按钮保持不可用），等词典到了再补上；
+// 不含汉字的标题不需要词典，结果与有词典时一致。
 export function articleSlugFromTitle(value) {
   const title = String(value || "").trim();
   if (!title) return "";
-  const slug = pinyin(title, { toneType: "none", type: "array", nonZh: "consecutive" })
+  if (!pinyinEngine && HAN_CHARACTER.test(title)) return "";
+  const parts = pinyinEngine ? pinyinEngine(title, { toneType: "none", type: "array", nonZh: "consecutive" }) : [title];
+  const slug = parts
     .join("-")
     .replace(/ü/g, "v")
     .normalize("NFKD")

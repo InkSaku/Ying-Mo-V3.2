@@ -1,6 +1,6 @@
 import { invalidateHomeFeedCache } from "../lib/homeFeed";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { articleSlugFromTitle, articleSlugWithSuffix, updateTitleAndSlug, usesAutomaticArticleSlug } from "../lib/articleSlug";
+import { articleSlugFromTitle, articleSlugWithSuffix, loadArticleSlugEngine, titleNeedsSlugEngine, updateTitleAndSlug, usesAutomaticArticleSlug } from "../lib/articleSlug";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { CustomSelect } from "../components/CustomSelect";
 import { PublishDialog } from "../components/PublishDialog";
@@ -199,6 +199,21 @@ export function WritePage() {
   const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
   const payloadRef = useRef(initialPayload);
   const savedPostRef = useRef(null);
+  const slugNeedsPinyin = form.post_type === "article" && titleNeedsSlugEngine(form.title);
+  // 写文章且标题出现汉字时才取拼音词典；取到后，若网址仍是自动生成的，就按当前标题补上。
+  useEffect(() => {
+    if (!slugNeedsPinyin) return undefined;
+    let active = true;
+    loadArticleSlugEngine().then(() => {
+      if (!active) return;
+      setForm((current) => {
+        if (current.post_type !== "article" || savedPostRef.current?.published_at || !usesAutomaticArticleSlug(current)) return current;
+        const slug = articleSlugFromTitle(current.title);
+        return slug === current.slug ? current : { ...current, slug };
+      });
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [slugNeedsPinyin]);
   const createdRouteRef = useRef(null);
   const lastSavedFingerprintRef = useRef(draftFingerprint(initialPayload));
   const autosaveBlockedRef = useRef(false);
@@ -290,7 +305,9 @@ export function WritePage() {
       setLoading(true);
       setLoadError(null);
       api.get(`/posts/me/${postId}`)
-        .then((result) => {
+        .then(async (result) => {
+          if (!active) return;
+          if (result.data.post_type === "article" && titleNeedsSlugEngine(result.data.title)) await loadArticleSlugEngine().catch(() => undefined);
           if (!active) return;
           const loadedForm = formFromPost(result.data);
           const loadedFingerprint = draftFingerprint(draftPayloadFromForm({ ...loadedForm, slug: result.data.slug || result.data.slug_candidate || "" }));
@@ -641,6 +658,7 @@ export function WritePage() {
     setError("");
     try {
       const result = await api.get(`/posts/me/${currentPost.id}`);
+      if (result.data.post_type === "article" && titleNeedsSlugEngine(result.data.title)) await loadArticleSlugEngine().catch(() => undefined);
       const loadedForm = formFromPost(result.data);
       savedPostRef.current = result.data;
       lastSavedFingerprintRef.current = draftFingerprint(draftPayloadFromForm(loadedForm));

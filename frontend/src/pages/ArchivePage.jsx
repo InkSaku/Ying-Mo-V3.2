@@ -36,7 +36,10 @@ export function ArchivePage() {
   const [params, setParams] = useSearchParams();
   const selection = readArchiveSelection(params);
   const { year, month, page } = selection;
-  const canonicalParams = archiveSearchParams(selection).toString();
+  // 地址只保留归档筛选参数，但大图打开时的 ?media= 属于灯箱，不能被清掉。
+  const canonicalSearch = archiveSearchParams(selection);
+  if (params.get("media")) canonicalSearch.set("media", params.get("media"));
+  const canonicalParams = canonicalSearch.toString();
   const path = archiveApiPath(selection, PAGE_SIZE);
   const state = useAsyncData(() => api.get(path), [path]);
   const optionState = useAsyncData(() => api.get("/posts/filter-options"), []);

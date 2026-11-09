@@ -1,3 +1,23 @@
+// 灯箱顺序与阅读顺序一致：封面在前，正文图片按 [[ym-media:编号]] 出现的先后，其余按原顺序排在最后。
+export function readingOrderGallery(items, post) {
+  if (!post || items.length < 2) return items;
+  const coverId = post.cover_media?.public_id || null;
+  const positions = new Map();
+  for (const match of String(post.body || "").matchAll(/\[\[ym-media:(\d+)\]\]/g)) {
+    const mediaId = Number(match[1]);
+    if (!positions.has(mediaId)) positions.set(mediaId, match.index);
+  }
+  const rank = (item) => {
+    if (coverId && item.id === coverId) return -1;
+    const found = [item.image, item.video].filter(Boolean).map((part) => positions.get(part.id)).filter((value) => value !== undefined);
+    return found.length ? Math.min(...found) : Number.MAX_SAFE_INTEGER;
+  };
+  return items
+    .map((item, order) => ({ item, order, rank: rank(item) }))
+    .sort((a, b) => a.rank - b.rank || a.order - b.order)
+    .map(({ item }) => item);
+}
+
 export function logicalMediaFromRaw(media = [], post = null) {
   const items = [];
   const handledPairs = new Set();
