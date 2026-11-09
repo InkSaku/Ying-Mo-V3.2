@@ -1,7 +1,7 @@
 import { useBrowseReturn } from "../hooks/useBrowseReturn";
 import { MobileSheet } from "../components/MobileSheet";
 import { useNarrowScreen } from "../hooks/useNarrowScreen";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { revealCollection } from "../lib/collectionOpening";
 import { CustomSelect } from "../components/CustomSelect";
@@ -24,6 +24,8 @@ import {
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 import { CollectionSketch } from "../components/CollectionSketch";
 import { CollectionSharePill } from "../components/CollectionSharePill";
+import { CollectionFolderContents, CollectionFolderTree } from "../components/CollectionFolderView";
+import { buildFolderIndex } from "../lib/collectionFolders";
 import "../styles/collection-detail-editorial.css";
 
 function MemoryFilters({ data, memory: appliedMemory, onChange, media = false }) {
@@ -148,12 +150,15 @@ function MediaWallView({ slug, memory, onChange }) {
   </section>;
 }
 
-function CollectionOverview({ collection, notificationPreference, onSaveNotificationPreference }) {
+function CollectionOverview({ collection, folderId, user, onStructureChange, notificationPreference, onSaveNotificationPreference }) {
   const members = [collection.creator, ...(collection.members || [])];
+  const folderIndex = useMemo(() => buildFolderIndex(collection.folders), [collection.folders]);
   return (
     <div className="collection-overview-layout">
       <div className="collection-overview-main">
-        {collection.highlights?.length ? (
+        <CollectionFolderContents collection={collection} index={folderIndex} folderId={folderId} user={user} onChanged={onStructureChange} />
+
+        {!folderId && collection.highlights?.length ? (
           <section className="collection-overview-section collection-highlights" aria-labelledby="collection-highlights-title">
             <header className="collection-spread-heading">
               <h2 id="collection-highlights-title">关键记录</h2>
@@ -162,19 +167,10 @@ function CollectionOverview({ collection, notificationPreference, onSaveNotifica
             <div className="collection-highlight-grid">{collection.highlights.map((post) => <PostCard key={post.id} post={post} compact hideCollection />)}</div>
           </section>
         ) : null}
-
-        <section className="collection-overview-section collection-posts-section" aria-labelledby="collection-posts-title">
-          <header className="collection-spread-heading">
-            <h2 id="collection-posts-title">合集内容</h2>
-            <p>当前收录 {collection.posts?.length || 0} 则记录。</p>
-          </header>
-          {collection.posts?.length
-            ? <div className="collection-post-catalogue">{collection.posts.map((post, index) => <PostCard key={post.id} post={post} compact variant="collection" index={index} hideCollection />)}</div>
-            : <EmptyState title="这个合集还没有已发布内容" description="创建者与成员都可以在这里发表自己的记录。" />}
-        </section>
       </div>
 
       <aside className="collection-overview-index" aria-label="合集卷内索引">
+        <CollectionFolderTree slug={collection.slug} index={folderIndex} folderId={folderId} />
         <section className="collection-index-section" aria-labelledby="collection-members-title">
           <header><h2 id="collection-members-title">合集成员</h2><p>{members.length} 位合集成员。</p></header>
           <div className="collection-member-index">
@@ -217,6 +213,12 @@ export function CollectionDetailPage() {
   const memory = readCollectionMemoryState(searchParams);
   const state = useAsyncData(() => api.get(`/collections/${encodeURIComponent(slug)}`), [slug]);
   const [membership, setMembership] = useState(null);
+  // 目录操作后静默刷新结构，不走整页加载，避免闪白和滚动跳回封面。
+  const [structure, setStructure] = useState(null);
+  const refreshStructure = useCallback(async () => {
+    const result = await api.get(`/collections/${encodeURIComponent(slug)}`);
+    setStructure({ id: result.data.id, folders: result.data.folders, posts: result.data.posts, highlights: result.data.highlights });
+  }, [slug]);
   const [notificationPreference, setNotificationPreference] = useState({ level: "all", loading: true, saving: false, message: "", error: "" });
   usePageMeta(state.data?.name || "合集");
   useEffect(() => {
@@ -248,13 +250,18 @@ export function CollectionDetailPage() {
 
   // 切换视图、年份或筛选时停在原处继续看；只有单纯翻页才从新一页的顶部开始。
   const changeMemory = (next) => {
-    const onlyPageChanged = ["view", "year", "author", "type", "mediaKind"].every((field) => (next[field] || "") === (memory[field] || ""));
+    const onlyPageChanged = ["view", "folder", "year", "author", "type", "mediaKind"].every((field) => (next[field] || "") === (memory[field] || ""));
     setSearchParams(collectionMemorySearchParams(next), onlyPageChanged ? undefined : { state: { keepScroll: true } });
   };
   const changeView = (view) => changeMemory({ ...memory, view, page: 1 });
   if (state.loading) return <PageLoader />;
   if (state.error) return <main className="page-shell"><ErrorState error={state.error} onRetry={state.reload} /></main>;
-  const collection = membership?.id === state.data.id ? { ...state.data, ...membership } : state.data;
+  const collection = {
+    ...state.data,
+    ...(structure?.id === state.data.id ? structure : {}),
+    ...(membership?.id === state.data.id ? membership : {}),
+  };
+  const activeFolderId = memory.view === "overview" && collection.folders?.some((folder) => folder.id === memory.folder) ? memory.folder : null;
   const updateMembership = (next) => setMembership({
     id: collection.id,
     creator: next.creator,
@@ -271,16 +278,16 @@ export function CollectionDetailPage() {
         <CollectionVolumeInfo collection={collection} />
         <details className="collection-volume-info-mobile"><summary>合集信息</summary><CollectionVolumeInfo collection={collection} /></details>
         <CollectionSharePill key={`${collection.id}-${collection.creator.id}-${user.id}`} collection={collection} user={user} onMembersChange={updateMembership} />
-        <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}`}>添加记录</Link></div>
+        <div className="collection-hero-actions">{collection.creator.id === user.id ? <Link className="btn btn-secondary" to={`/collections/${collection.slug}/manage`}>管理合集</Link> : null}<Link className="btn btn-primary" to={`/write?collection=${collection.id}${activeFolderId ? `&folder=${activeFolderId}` : ""}`}>添加记录</Link></div>
       </div>
     </header>
     <nav className="collection-memory-nav collection-volume-nav" aria-label="合集阅读视图">
-      <button type="button" aria-pressed={memory.view === "timeline"} className={memory.view === "timeline" ? "active" : ""} onClick={() => changeView("timeline")}><strong>共同时间轴</strong></button>
       <button type="button" aria-pressed={memory.view === "overview"} className={memory.view === "overview" ? "active" : ""} onClick={() => changeView("overview")}><strong>合集内容</strong></button>
+      <button type="button" aria-pressed={memory.view === "timeline"} className={memory.view === "timeline" ? "active" : ""} onClick={() => changeView("timeline")}><strong>共同时间轴</strong></button>
       <button type="button" aria-pressed={memory.view === "media"} className={memory.view === "media" ? "active" : ""} onClick={() => changeView("media")}><strong>共同影像</strong></button>
     </nav>
     {memory.view === "timeline" ? <TimelineView slug={slug} memory={memory} onChange={changeMemory} /> : null}
     {memory.view === "media" ? <MediaWallView slug={slug} memory={memory} onChange={changeMemory} /> : null}
-    {memory.view === "overview" ? <CollectionOverview collection={collection} notificationPreference={notificationPreference} onSaveNotificationPreference={saveNotificationPreference} /> : null}
+    {memory.view === "overview" ? <CollectionOverview collection={collection} folderId={activeFolderId} user={user} onStructureChange={refreshStructure} notificationPreference={notificationPreference} onSaveNotificationPreference={saveNotificationPreference} /> : null}
   </main>;
 }

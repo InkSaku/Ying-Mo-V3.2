@@ -10,6 +10,10 @@ export function draftPayloadFromForm(form) {
     body: form.body || null,
     visibility: inCollection ? "private" : form.visibility,
     collection_id: form.collection_id ? Number(form.collection_id) : null,
+    // 只在作者这次动过位置时发送：别人挪动内容不增加编辑版本，旧表单不能把它挪回去。
+    ...(form.collection_folder_changed
+      ? { collection_folder_id: inCollection && form.collection_folder_id ? Number(form.collection_folder_id) : null }
+      : {}),
     tag_names: tagNames,
   };
   if (form.post_type === "article") {
@@ -34,6 +38,30 @@ export function draftPayloadFromForm(form) {
 
 export function draftFingerprint(payload) {
   return JSON.stringify(payload);
+}
+
+// 位置写入后后续保存不再带目录字段，指纹也要去掉它，否则会多触发一次自动保存。
+export function savedDraftFingerprint(snapshot) {
+  const settled = { ...snapshot };
+  delete settled.collection_folder_id;
+  return draftFingerprint(settled);
+}
+
+// 除了位置什么都没改：按移动处理，不算编辑，不推进版本也不刷新更新时间。
+export function isFolderOnlySave(snapshot, lastSavedFingerprint) {
+  return Boolean(snapshot.collection_id)
+    && "collection_folder_id" in snapshot
+    && savedDraftFingerprint(snapshot) === lastSavedFingerprint;
+}
+
+// 保存成功后清掉“位置已修改”标记并跟上服务端位置，别人后来的移动才不会被旧表单改回去。
+export function settleSavedFolder(form, snapshot, saved) {
+  if (form.collection_id !== (saved.collection_id ? String(saved.collection_id) : "")) return form;
+  // 保存途中作者又改了位置：这次改动还没发出去，留给下一次保存。
+  if (form.collection_folder_changed && draftPayloadFromForm(form).collection_folder_id !== snapshot.collection_folder_id) return form;
+  const folderId = saved.collection_folder_id ? String(saved.collection_folder_id) : "";
+  if (!form.collection_folder_changed && form.collection_folder_id === folderId) return form;
+  return { ...form, collection_folder_id: folderId, collection_folder_changed: false };
 }
 
 export function autosaveStatusLabel(state, canAutosave = true) {

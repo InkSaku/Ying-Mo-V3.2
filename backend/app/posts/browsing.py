@@ -115,6 +115,7 @@ def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None
         {"id": post.collection.id, "name": post.collection.name, "slug": post.collection.slug}
         if collection_visible else None
     )
+    data["collection_folder_id"] = post.collection_folder_id if collection_visible else None
     selected_media = post.cover_media if _active_media(post.cover_media) else (display_media or {}).get(post.id)
     data["display_media"] = selected_media.to_dict() if selected_media else None
     # 列表缩略图只显示第一张；随记另给出图片总数（Live Photo 按一组计），前端据此标出“共几张”。

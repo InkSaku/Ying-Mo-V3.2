@@ -15,6 +15,7 @@ from app.models import (
     Collection, CollectionMember, Comment, CommentMention, CommentReaction,
     ContentFavorite, Media, Notification, Post, PostMemoryLink, PostReaction,
 )
+from app.collections.folders import folder_name_paths
 from app.posts.service import current_article_slug
 from app.storage import get_storage
 
@@ -149,6 +150,8 @@ def export_my_data():
                 "created_at": item.created_at,
             } for item in memory_links],
         }))
+        # 只解析当前仍是成员的合集：被移出后不能通过导出拿到目录名。
+        folder_paths = folder_name_paths([item.id for item in collections])
         for post in posts:
             slug = current_article_slug(post.id) if post.post_type == "article" else None
             title = post.title or f"note-{post.id}"
@@ -160,6 +163,7 @@ def export_my_data():
                 "status": post.status,
                 "visibility": post.visibility,
                 "collection_id": post.collection_id,
+                "collection_path": folder_paths.get(post.collection_folder_id, []),
                 "published_at": post.published_at,
                 "occurred_at": post.occurred_at,
                 "location": post.location,

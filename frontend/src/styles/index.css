@@ -2753,6 +2753,17 @@ input[aria-invalid="true"] {
   border-top: 1px solid var(--border);
 }
 
+.collection-order-list + .collection-order-list { border-top: 0; }
+
+.collection-order-level {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+  margin-bottom: 16px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
 .collection-order-list article {
   min-height: 88px;
   padding: 14px 0;

@@ -19,6 +19,7 @@ import { useMediaLightbox } from "../contexts/MediaLightboxContext";
 import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
+import { CollectionPathTags } from "../components/CollectionPathTags";
 import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
 import "../styles/reading-editorial.css";
@@ -48,7 +49,7 @@ function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryIte
             <div><dt>更新</dt><dd><time dateTime={post.updated_at} title={formatDate(post.updated_at, true)}>{formatDate(post.updated_at)}</time></dd></div>
           </dl>
           <div className="post-context">
-            {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
+            <CollectionPathTags post={post} />
             {post.category ? <Link className="tag" to={`/categories/${post.category.slug}`}>{post.category.name}</Link> : null}
             {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
           </div>

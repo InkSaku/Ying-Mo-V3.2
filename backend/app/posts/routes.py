@@ -13,6 +13,7 @@ from app.common.markdown import render_safe_markdown_document
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import parse_iso_datetime, validate_external_url
+from app.collections.folders import folder_path
 from app.extensions import db
 from app.interactions.service import reaction_summary
 from app.models import (
@@ -20,8 +21,8 @@ from app.models import (
     Media, Post, PostReaction, PostReadEvent, PostRevision, PostStatus, PostType, PostVisibility, Tag, User, post_tags,
 )
 from app.posts.service import (
-    DomainError, apply_category, apply_collection, apply_tags, current_article_slug,
-    publish_post, update_article_slug,
+    DomainError, apply_category, apply_collection, apply_collection_folder, apply_tags,
+    current_article_slug, publish_post, update_article_slug,
 )
 from app.posts.browsing import estimate_reading_minutes, serialize_browse_posts
 from app.posts.revisions import (
@@ -106,8 +107,12 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
             "name": post.collection.name,
             "slug": post.collection.slug,
         }
+        data["collection_folder_id"] = post.collection_folder_id
+        data["collection_path"] = folder_path(post.collection_id, post.collection_folder_id) if include_body else []
     else:
         data["collection"] = None
+        data["collection_folder_id"] = None
+        data["collection_path"] = []
     if management:
         data["memory_link"] = memory_management(post)
     if include_body:
@@ -243,7 +248,7 @@ def _detail(post,actor):
 def _apply_patch(post, actor, data):
     allowed = {
         "post_type", "title", "summary", "body", "content_format", "cover_media_id",
-        "category_id", "tag_names", "collection_id", "visibility", "occurred_at",
+        "category_id", "tag_names", "collection_id", "collection_folder_id", "visibility", "occurred_at",
         "location", "mood", "external_video_url", "slug",
     }
     unknown = sorted(set(data) - allowed)
@@ -308,8 +313,12 @@ def _apply_patch(post, actor, data):
     previous_collection_id = post.collection_id
     if "collection_id" in data:
         apply_collection(post, actor.id, data["collection_id"])
-        if post.collection_id != previous_collection_id:
+        # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
+        if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
+
+    if "collection_folder_id" in data:
+        apply_collection_folder(post, actor.id, data["collection_folder_id"])
 
     if "category_id" in data:
         apply_category(post, data["category_id"])
@@ -809,7 +818,8 @@ def move_collection(post_id):
         previous_collection_id = post.collection_id
         ensure_memory_scope_update(post, data)
         apply_collection(post, actor.id, data["collection_id"])
-        if post.collection_id != previous_collection_id:
+        # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
+        if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
         if before is not None:
             create_revision(
@@ -840,6 +850,7 @@ def remove_from_collection(post_id):
     source_edit_version = post.edit_version
     before = snapshot_post(post) if post.was_published else None
     post.collection_id = None
+    post.collection_folder_id = None
     post.collection_sort_order = None
     post.collection_highlight_order = None
     post.visibility = PostVisibility.PRIVATE.value

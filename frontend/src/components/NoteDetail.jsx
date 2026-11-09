@@ -7,6 +7,7 @@ import { PostMediaGallery } from "./PostMediaGallery";
 import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import { NoteSketch } from "./NoteSketch";
+import { CollectionPathTags } from "./CollectionPathTags";
 
 function noteDateParts(value) {
   const date = new Date(value || "");
@@ -75,7 +76,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
 
       <footer className="note-detail-context">
         <div className="post-context">
-          {post.collection ? <Link className="tag" to={`/collections/${post.collection.slug}`}>{post.collection.name}</Link> : null}
+          <CollectionPathTags post={post} />
           {post.tags?.map((tag) => <Link className="tag" key={tag.id} to={`/tags/${tag.slug}`}>#{tag.name}</Link>)}
         </div>
         <dl className="post-facts">

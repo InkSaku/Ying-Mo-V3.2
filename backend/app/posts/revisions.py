@@ -126,6 +126,7 @@ def restore_revision_snapshot(post, revision, actor):
     if previous_collection_id != (collection.id if collection is not None else None):
         from app.posts.memory_contributions import invalidate_links_for_post
         invalidate_links_for_post(post.id, "revision_collection_changed")
+        post.collection_folder_id = None
         post.collection_sort_order = None
         post.collection_highlight_order = None
     if collection is not None:

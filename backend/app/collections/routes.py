@@ -8,6 +8,10 @@ from sqlalchemy.orm import selectinload
 
 from app.access import collection_member_predicate, is_collection_member, semantic_time_expression
 from app.admin.service import record_admin_log
+from app.collections.folders import (
+    create_folder, delete_folder, load_folders, locked_member_collection, move_post,
+    reorder_folders, resolve_folder_id, serialize_folder, set_post_order, update_folder,
+)
 from app.collections.service import add_member, delete_collection, replace_members, resolve_member_ids, transfer_creator
 from app.common.auth import current_user
 from app.common.pagination import pagination_meta, parse_pagination
@@ -108,6 +112,7 @@ def get_collection(slug):
         )
     ).all()
     data = collection.to_dict(include_members=True)
+    data["folders"] = [serialize_folder(item, actor.id, collection) for item in load_folders(collection.id)]
     data["posts"] = serialize_browse_posts(posts, actor_id=actor.id)
     data["highlights"] = [
         item for item in data["posts"] if item.get("collection_highlight_order") is not None
@@ -586,6 +591,7 @@ def remove_post(collection_id):
     from app.posts.memory_contributions import invalidate_links_for_post
     invalidate_links_for_post(post.id, "post_removed_from_collection")
     post.collection_id = None
+    post.collection_folder_id = None
     post.collection_sort_order = None
     post.collection_highlight_order = None
     post.visibility = PostVisibility.PRIVATE.value
@@ -611,22 +617,134 @@ def reorder(collection_id):
     if collection is None or collection.creator_id != actor.id or collection.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
     post_ids = data.get("post_ids")
-    if not isinstance(post_ids, list) or len(post_ids) != len(set(post_ids)):
+    if (
+        not isinstance(post_ids, list)
+        or any(isinstance(item, bool) or not isinstance(item, int) for item in post_ids)
+        or len(post_ids) != len(set(post_ids))
+    ):
         return error_response("VALIDATION_ERROR", "post_ids 必须是无重复数组。", 422)
+    # 顺序按目录分层保存；不传 folder_id 表示合集根目录这一层。
+    try:
+        folder_id = resolve_folder_id(collection, data.get("folder_id"))
+    except DomainError as error:
+        return _handle(error)
     posts = db.session.scalars(db.select(Post).where(
         Post.collection_id == collection.id,
+        Post.collection_folder_id.is_(None) if folder_id is None else Post.collection_folder_id == folder_id,
         Post.deleted_at.is_(None),
         Post.moderation_status == "active",
         Post.status.in_(("published","archived")),
     )).all()
     actual = {p.id for p in posts}
     if set(post_ids) != actual:
-        return error_response("VALIDATION_ERROR", "post_ids 必须完整覆盖 Collection 当前 Post。", 422)
-    order = {pid: index for index, pid in enumerate(post_ids)}
-    for post in posts:
-        post.collection_sort_order = order[post.id]
+        return error_response("VALIDATION_ERROR", "post_ids 必须完整覆盖这一层的 Post。", 422)
+    set_post_order(post_ids)
     db.session.commit()
-    return success_response({"post_ids": post_ids})
+    return success_response({"post_ids": post_ids, "folder_id": folder_id})
+
+
+def _json_object():
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
+
+
+def _change_tree(collection_id, change, status=200):
+    """目录结构变更的统一入口：校验成员、锁定 Collection、提交，失败时回滚。"""
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    try:
+        collection = locked_member_collection(collection_id, actor.id)
+        result = change(collection, actor)
+        db.session.commit()
+    except DomainError as error:
+        db.session.rollback()
+        return _handle(error)
+    return success_response(result, status)
+
+
+@bp.get("/<int:collection_id>/folders")
+@jwt_required(locations=["headers"])
+def list_collection_folders(collection_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    collection = db.session.get(Collection, collection_id)
+    if not is_collection_member(actor.id, collection):
+        return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
+    return success_response([serialize_folder(item, actor.id, collection) for item in load_folders(collection.id)])
+
+
+@bp.post("/<int:collection_id>/folders")
+@jwt_required(locations=["headers"])
+def create_collection_folder(collection_id):
+    data = _json_object()
+    return _change_tree(
+        collection_id,
+        lambda collection, actor: serialize_folder(
+            create_folder(collection, actor.id, data.get("name"), data.get("parent_id")),
+            actor.id, collection,
+        ),
+        201,
+    )
+
+
+@bp.post("/<int:collection_id>/folders/reorder")
+@jwt_required(locations=["headers"])
+def reorder_collection_folders(collection_id):
+    data = _json_object()
+
+    def change(collection, actor):
+        if collection.creator_id != actor.id:
+            raise DomainError("PERMISSION_DENIED", "只有合集创建者可以调整目录顺序。", 403)
+        reorder_folders(collection, data.get("parent_id"), data.get("folder_ids"))
+        return {"parent_id": data.get("parent_id"), "folder_ids": data.get("folder_ids")}
+
+    return _change_tree(collection_id, change)
+
+
+@bp.patch("/<int:collection_id>/folders/<int:folder_id>")
+@jwt_required(locations=["headers"])
+def update_collection_folder(collection_id, folder_id):
+    data = _json_object()
+    return _change_tree(
+        collection_id,
+        lambda collection, actor: serialize_folder(
+            update_folder(collection, actor.id, folder_id, data),
+            actor.id, collection,
+        ),
+    )
+
+
+@bp.delete("/<int:collection_id>/folders/<int:folder_id>")
+@jwt_required(locations=["headers"])
+def delete_collection_folder(collection_id, folder_id):
+    return _change_tree(
+        collection_id,
+        lambda collection, actor: delete_folder(collection, actor.id, folder_id),
+    )
+
+
+@bp.put("/<int:collection_id>/posts/<int:post_id>/folder")
+@jwt_required(locations=["headers"])
+def move_post_to_folder(collection_id, post_id):
+    data = _json_object()
+
+    def change(collection, actor):
+        post = db.session.get(Post, post_id)
+        if post is None or post.collection_id != collection.id or post.deleted_at is not None:
+            raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+        if post.author_id != actor.id:
+            # 别人的草稿和已隐藏内容对其他成员不存在；已发布内容只有 creator 能挪动。
+            if post.moderation_status != "active" or post.status not in {"published", "archived"}:
+                raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+            if collection.creator_id != actor.id:
+                raise DomainError("PERMISSION_DENIED", "只能移动自己写的内容。", 403)
+        if "folder_id" not in data:
+            raise DomainError("VALIDATION_ERROR", "folder_id 为必填项。", 422)
+        return {"post_id": post.id, "folder_id": move_post(collection, post, data["folder_id"])}
+
+    return _change_tree(collection_id, change)
 
 
 @bp.put("/<int:collection_id>/highlights")

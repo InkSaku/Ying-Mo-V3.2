@@ -8,7 +8,7 @@ function journalDate(value) {
   return { month: date.getMonth() + 1, day: date.getDate() };
 }
 
-export function NotePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false }) {
+export function NotePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false, footer = null }) {
   const media = post.display_media || post.cover_media;
   const body = excerpt(post);
   const moment = journalDate(post.semantic_time);
@@ -35,6 +35,7 @@ export function NotePostCard({ post, compact = false, variant = "", index = 0, h
           {post.collection && !hideCollection ? <Link className="tag collection-tag" to={`/collections/${post.collection.slug}`}>合集：{post.collection.name}</Link> : null}
         </div>
         {post.related_reasons?.length ? <p className="post-card-reasons" aria-label="关联原因">{post.related_reasons.join(" · ")}</p> : null}
+        {footer}
       </div>
     </article>
   );

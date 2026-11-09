@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Collection, CollectionMember, CollectionStatus, Notification, PostVisibility, User, UserStatus
+from app.models import (
+    Collection, CollectionFolder, CollectionMember, CollectionStatus, Notification,
+    PostVisibility, User, UserStatus,
+)
 from app.posts.service import DomainError
 
 
@@ -178,9 +181,12 @@ def delete_collection(collection):
     posts = list(collection.posts)
     for post in posts:
         post.collection_id = None
+        post.collection_folder_id = None
         post.collection_sort_order = None
         post.collection_highlight_order = None
         post.visibility = PostVisibility.PRIVATE.value
+    db.session.flush()
+    db.session.execute(db.delete(CollectionFolder).where(CollectionFolder.collection_id == collection.id))
 
     if not posts and collection.first_shared_at is None:
         db.session.delete(collection)

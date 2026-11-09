@@ -8,11 +8,12 @@ function positiveInteger(value, fallback = 1) {
 }
 
 export function readCollectionMemoryState(params) {
-  const rawView = params.get("view") || "timeline";
+  const rawView = params.get("view") || "overview";
   const rawYear = params.get("year") || "";
   const rawType = params.get("type") || "";
   return {
-    view: VIEWS.has(rawView) ? rawView : "timeline",
+    view: VIEWS.has(rawView) ? rawView : "overview",
+    folder: positiveInteger(params.get("folder"), null),
     year: /^\d{4}$/.test(rawYear) ? rawYear : "",
     author: (params.get("author") || "").trim().toLowerCase(),
     type: TYPES.has(rawType) ? rawType : "",
@@ -23,7 +24,8 @@ export function readCollectionMemoryState(params) {
 
 export function collectionMemorySearchParams(state) {
   const params = new URLSearchParams();
-  if (state.view && state.view !== "timeline") params.set("view", state.view);
+  if (state.view && state.view !== "overview") params.set("view", state.view);
+  if (state.view === "overview" && state.folder) params.set("folder", String(state.folder));
   if (state.year) params.set("year", state.year);
   if (state.author) params.set("author", state.author);
   if (state.type) params.set("type", state.type);

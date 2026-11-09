@@ -6,6 +6,7 @@ import { CustomSelect } from "../components/CustomSelect";
 import { PublishDialog } from "../components/PublishDialog";
 import { TagPicker } from "../components/TagPicker";
 import { selectedTagNames } from "../lib/tagSelection";
+import { buildFolderIndex, flattenFolders, folderPathLabel } from "../lib/collectionFolders";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
 import { ProtectedImage } from "../components/ProtectedImage";
@@ -25,6 +26,9 @@ import {
   autosaveStatusLabel,
   draftFingerprint,
   draftPayloadFromForm,
+  isFolderOnlySave,
+  savedDraftFingerprint,
+  settleSavedFolder,
 } from "../lib/draftAutosave";
 import {
   insertMediaPlaceholder,
@@ -76,7 +80,13 @@ function toLocalDatetime(value) {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
-function initialForm(type = "article", collectionId = "") {
+// 换合集后后端会把内容放回新合集的根目录，表单同步清空目录。
+function withCollection(form, collectionId) {
+  if (form.collection_id === collectionId) return form;
+  return { ...form, collection_id: collectionId, collection_folder_id: "", collection_folder_changed: false };
+}
+
+function initialForm(type = "article", collectionId = "", folderId = "") {
   return {
     post_type: type,
     title: "",
@@ -90,6 +100,8 @@ function initialForm(type = "article", collectionId = "") {
     slug: "",
     slug_auto: true,
     collection_id: collectionId,
+    collection_folder_id: collectionId ? folderId : "",
+    collection_folder_changed: Boolean(collectionId && folderId),
     category_id: "",
     tag_names: [],
   };
@@ -111,6 +123,8 @@ function formFromPost(post) {
     slug: savedSlug || (post.post_type === "article" && !post.published_at ? generatedSlug : ""),
     slug_auto: !post.published_at && (!savedSlug || savedSlug === generatedSlug),
     collection_id: post.collection_id ? String(post.collection_id) : "",
+    collection_folder_id: post.collection_folder_id ? String(post.collection_folder_id) : "",
+    collection_folder_changed: false,
     category_id: post.category?.id ? String(post.category.id) : "",
     tag_names: (post.tags || []).map((tag) => tag.name),
   };
@@ -140,7 +154,8 @@ export function WritePage() {
   const navigate = useNavigate();
   const requestedType = params.get("type") === "note" ? "note" : "article";
   const requestedCollection = params.get("collection") || "";
-  const [form, setForm] = useState(() => initialForm(requestedType, requestedCollection));
+  const requestedFolder = params.get("folder") || "";
+  const [form, setForm] = useState(() => initialForm(requestedType, requestedCollection, requestedFolder));
   const formRef = useRef(form);
   formRef.current = form;
   // 随记还没填“发生时间”时，用刚上传照片的拍摄时间；文章或已填写的不改。
@@ -152,6 +167,8 @@ export function WritePage() {
     return true;
   }, []);
   const [collections, setCollections] = useState([]);
+  const [collectionFolders, setCollectionFolders] = useState([]);
+  const [folderReloadKey, setFolderReloadKey] = useState(0);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(Boolean(postId));
   const [loadError, setLoadError] = useState(null);
@@ -196,7 +213,7 @@ export function WritePage() {
   const pendingMediaInsertionRef = useRef(null);
   const mediaManagerRef = useRef(null);
   const mediaDrawerRef = useRef(null);
-  const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection));
+  const initialPayload = draftPayloadFromForm(initialForm(requestedType, requestedCollection, requestedFolder));
   const payloadRef = useRef(initialPayload);
   const savedPostRef = useRef(null);
   const slugNeedsPinyin = form.post_type === "article" && titleNeedsSlugEngine(form.title);
@@ -275,7 +292,8 @@ export function WritePage() {
     routeReadyRef.current = false;
     // A newly created draft keeps the same form; its pending copy follows it to the new key.
     if (createdRouteRef.current !== Number(postId)) flushOfflineDraft();
-    const storageKey = offlineDraftKey(user?.id, postId, requestedType, requestedCollection);
+    // 不同目录下开始的新稿各有一份本地副本，恢复时不会落到别的目录。
+    const storageKey = offlineDraftKey(user?.id, postId, requestedType, requestedFolder ? `${requestedCollection}/${requestedFolder}` : requestedCollection);
     offlineKeyRef.current = storageKey;
     offlineRecoveryPendingRef.current = false;
     setOfflineRecovery(null);
@@ -340,7 +358,7 @@ export function WritePage() {
           setLoading(false);
         });
     } else {
-      const freshForm = initialForm(requestedType, requestedCollection);
+      const freshForm = initialForm(requestedType, requestedCollection, requestedFolder);
       const freshFingerprint = draftFingerprint(draftPayloadFromForm(freshForm));
       savedPostRef.current = null;
       lastSavedFingerprintRef.current = freshFingerprint;
@@ -357,7 +375,7 @@ export function WritePage() {
       setLoading(false);
     }
     return () => { active = false; };
-  }, [flushOfflineDraft, postId, reloadKey, requestedCollection, requestedType, user?.id]);
+  }, [flushOfflineDraft, postId, reloadKey, requestedCollection, requestedFolder, requestedType, user?.id]);
 
   useEffect(() => {
     if (!bodyEditorOpen && workspaceMode !== "preview") return undefined;
@@ -396,6 +414,34 @@ export function WritePage() {
     form.category_id && !categories.some((category) => String(category.id) === form.category_id)
   );
   const selectedCollection = collections.find((collection) => String(collection.id) === form.collection_id);
+  const folderChoices = useMemo(() => {
+    const index = buildFolderIndex(collectionFolders);
+    return flattenFolders(index).map(({ folder }) => ({ id: folder.id, label: folderPathLabel(index, folder.id) }));
+  }, [collectionFolders]);
+  const selectedFolderLabel = folderChoices.find((item) => String(item.id) === form.collection_folder_id)?.label || "";
+
+  useEffect(() => {
+    const collectionId = form.collection_id;
+    if (!collectionId) {
+      setCollectionFolders([]);
+      return undefined;
+    }
+    let active = true;
+    // 新目录返回前不能留着旧合集的选项，否则可能选到并提交别的合集的目录。
+    setCollectionFolders([]);
+    api.get(`/collections/${collectionId}/folders`).then((result) => {
+      if (!active) return;
+      const folders = result.data || [];
+      setCollectionFolders(folders);
+      // 目录可能已被别人删除：放回根目录，避免保存时一直失败。
+      setForm((current) => (
+        current.collection_id === collectionId && current.collection_folder_id && !folders.some((folder) => String(folder.id) === current.collection_folder_id)
+          ? { ...current, collection_folder_id: "" }
+          : current
+      ));
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [form.collection_id, folderReloadKey]);
 
   const payload = useMemo(() => {
     return draftPayloadFromForm(form);
@@ -451,18 +497,29 @@ export function WritePage() {
         setAutosave((current) => ({ ...current, status: "saving", message: "" }));
       }
 
+      const folderOnly = Boolean(currentPost) && isFolderOnlySave(snapshot, lastSavedFingerprintRef.current);
       try {
-        const result = currentPost
-          ? await api.patch(
-            automatic ? `/posts/${currentPost.id}/autosave` : `/posts/${currentPost.id}`,
-            { ...snapshot, expected_version: currentPost.edit_version },
-          )
-          : await api.post("/posts", snapshot);
-        const saved = result.data;
+        let saved;
+        if (folderOnly) {
+          const moved = await api.put(
+            `/collections/${snapshot.collection_id}/posts/${currentPost.id}/folder`,
+            { folder_id: snapshot.collection_folder_id },
+          );
+          saved = { ...currentPost, collection_folder_id: moved.data.folder_id };
+        } else {
+          const result = currentPost
+            ? await api.patch(
+              automatic ? `/posts/${currentPost.id}/autosave` : `/posts/${currentPost.id}`,
+              { ...snapshot, expected_version: currentPost.edit_version },
+            )
+            : await api.post("/posts", snapshot);
+          saved = result.data;
+        }
         if (generation !== editorGenerationRef.current) return saved;
         savedPostRef.current = saved;
-        lastSavedFingerprintRef.current = fingerprint;
+        lastSavedFingerprintRef.current = savedDraftFingerprint(snapshot);
         setSavedPost(saved);
+        setForm((current) => settleSavedFolder(current, snapshot, saved));
         const currentMatches = draftFingerprint(payloadRef.current) === fingerprint;
         setAutosave({
           status: currentMatches ? "saved" : "dirty",
@@ -490,6 +547,7 @@ export function WritePage() {
         if (generation !== editorGenerationRef.current) throw saveError;
         const conflict = saveError.code === "EDIT_CONFLICT";
         if (conflict) autosaveBlockedRef.current = true;
+        if (folderOnly || saveError.code === "COLLECTION_FOLDER_UNAVAILABLE") setFolderReloadKey((value) => value + 1);
         if (automatic || conflict) {
           const collectionFailure = saveError.code === "COLLECTION_UNAVAILABLE";
           setAutosave({
@@ -749,7 +807,7 @@ export function WritePage() {
       });
       savedPostRef.current = result.data;
       setSavedPost(result.data);
-      setForm((current) => ({ ...current, collection_id: "", visibility: "private" }));
+      setForm((current) => ({ ...withCollection(current, ""), visibility: "private" }));
       setMessage("已转为独立私密草稿，可以继续编辑和发布。");
     } catch (detachError) {
       setError(detachError.message);
@@ -1231,7 +1289,7 @@ export function WritePage() {
           <header><span></span><strong>合集与阅读范围</strong></header>
           <label>
             <span>合集</span>
-            <CustomSelect disabled={Boolean(memoryLink)} value={form.collection_id} onChange={set("collection_id")}>
+            <CustomSelect disabled={Boolean(memoryLink)} value={form.collection_id} onChange={(event) => { const value = event.target.value; setError(""); setMessage(""); setForm((current) => withCollection(current, value)); }}>
               <option value="">不加入合集</option>
               {collectionUnavailable ? <option value={form.collection_id}>原合集（当前不可访问）</option> : null}
               {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
@@ -1242,6 +1300,15 @@ export function WritePage() {
               ? <small className="field-error">你已不在原合集中。仍可编辑，但发布前必须先移出。</small>
               : <small>可选择你创建或加入的合集。</small>}
           </label>
+
+          {inCollection && !collectionUnavailable && folderChoices.length ? <label>
+            <span>目录</span>
+            <CustomSelect value={form.collection_folder_id || ""} onChange={(event) => { const value = event.target.value; setForm((current) => ({ ...current, collection_folder_id: value, collection_folder_changed: true })); }}>
+              <option value="">合集根目录</option>
+              {folderChoices.map((item) => <option key={item.id} value={String(item.id)}>{item.label}</option>)}
+            </CustomSelect>
+            <small>放在合集的哪一层。</small>
+          </label> : null}
 
           <label>
             <span>阅读范围</span>
@@ -1268,7 +1335,7 @@ export function WritePage() {
           <footer className="editor-publish-readiness">
             <span>发布准备</span>
             <strong>{publishReadiness.completed} / {publishReadiness.total} 已完成</strong>
-            {selectedCollection ? <small>将发布至 {selectedCollection.name}</small> : <small>当前为独立内容</small>}
+            {selectedCollection ? <small>将发布至 {[selectedCollection.name, selectedFolderLabel].filter(Boolean).join(" / ")}</small> : <small>当前为独立内容</small>}
           </footer>
         </aside>
       </form>
@@ -1277,12 +1344,13 @@ export function WritePage() {
         open={publishDialogOpen}
         form={form}
         collections={collections}
+        folderChoices={folderChoices}
         initialTags={savedPost?.tags || []}
         lockedCollection={Boolean(memoryLink)}
         busy={busy}
         error={error}
         unavailable={collectionUnavailable}
-        onChange={(patch) => { setForm((current) => ({ ...current, ...patch })); setError(""); }}
+        onChange={(patch) => { setForm((current) => ({ ...("collection_id" in patch ? withCollection(current, patch.collection_id) : current), ...patch })); setError(""); }}
         onClose={() => { if (!busy) { setPublishDialogOpen(false); setError(""); } }}
         onConfirm={publish}
       />

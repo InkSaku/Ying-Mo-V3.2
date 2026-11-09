@@ -10,10 +10,19 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { api } from "../lib/api";
 import { collectionMemberSettingsPayload } from "../lib/collectionMembership";
 import { activeCreatorTransferCandidates, creatorTransferPayload } from "../lib/collectionOwnership";
+import { buildFolderIndex, flattenFolders, folderPathLabel } from "../lib/collectionFolders";
 import { formatDate, postHref, postTypeLabel } from "../lib/format";
 
 function memberIds(members) {
   return (members || []).map((member) => member.id);
+}
+
+// 只交换同一层里的两项，其他层的相对位置不动。
+function swapWithinLevel(list, level, index, direction) {
+  const first = level[index];
+  const second = level[index + direction];
+  if (!first || !second) return list;
+  return list.map((item) => (item === first ? second : item === second ? first : item));
 }
 
 export function CollectionManagePage() {
@@ -28,6 +37,8 @@ export function CollectionManagePage() {
   const [autoAddFutureMembers, setAutoAddFutureMembers] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState("");
   const [orderedPosts, setOrderedPosts] = useState([]);
+  const [orderedFolders, setOrderedFolders] = useState([]);
+  const [orderLevel, setOrderLevel] = useState("");
   const [highlightIds, setHighlightIds] = useState([]);
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
   const [loading, setLoading] = useState(true);
@@ -49,6 +60,7 @@ export function CollectionManagePage() {
         const current = result.data;
         setCollection(current);
         setOrderedPosts(current.posts || []);
+        setOrderedFolders(current.folders || []);
         setHighlightIds((current.highlights || []).map((post) => post.id));
         setForm({ name: current.name || "", slug: current.slug || "", description: current.description || "" });
         setAutoAddFutureMembers(Boolean(current.auto_add_future_members));
@@ -85,6 +97,10 @@ export function CollectionManagePage() {
   }, [members, options]);
 
   const activeOptionIds = useMemo(() => options.map((member) => member.id), [options]);
+  const orderFolderOptions = useMemo(() => {
+    const index = buildFolderIndex(orderedFolders);
+    return flattenFolders(index).map(({ folder }) => ({ id: folder.id, label: folderPathLabel(index, folder.id) }));
+  }, [orderedFolders]);
   const transferCandidates = useMemo(
     () => activeCreatorTransferCandidates(members, options),
     [members, options],
@@ -156,14 +172,17 @@ export function CollectionManagePage() {
     }
   };
 
+  const levelFolderId = orderLevel ? Number(orderLevel) : null;
+  const levelFolders = orderedFolders.filter((folder) => (folder.parent_id ?? null) === levelFolderId);
+  const levelPosts = orderedPosts.filter((post) => (post.collection_folder_id ?? null) === levelFolderId);
+
   const movePost = (index, direction) => {
-    const target = index + direction;
-    if (target < 0 || target >= orderedPosts.length) return;
-    setOrderedPosts((current) => {
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
+    setOrderedPosts((current) => swapWithinLevel(current, levelPosts, index, direction));
+    setMessage("");
+  };
+
+  const moveFolder = (index, direction) => {
+    setOrderedFolders((current) => swapWithinLevel(current, levelFolders, index, direction));
     setMessage("");
   };
 
@@ -172,7 +191,8 @@ export function CollectionManagePage() {
     setMessage("");
     setError("");
     try {
-      await api.post(`/collections/${collection.id}/reorder`, { post_ids: orderedPosts.map((post) => post.id) });
+      if (levelFolders.length > 1) await api.post(`/collections/${collection.id}/folders/reorder`, { parent_id: levelFolderId, folder_ids: levelFolders.map((folder) => folder.id) });
+      if (levelPosts.length) await api.post(`/collections/${collection.id}/reorder`, { post_ids: levelPosts.map((post) => post.id), folder_id: levelFolderId });
       setCollection((current) => ({ ...current, posts: orderedPosts }));
       setMessage("合集内容顺序已保存。");
     } catch (orderError) {
@@ -371,12 +391,36 @@ export function CollectionManagePage() {
 
           <section className="collection-manage-section" id="collection-order">
             <div className="section-header">
-              <div><h2>内容顺序</h2><p>调整后点击“保存顺序”。</p></div>
-              {orderedPosts.length ? <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveOrder}>{busy === "order" ? "正在保存" : "保存顺序"}</button> : null}
+              <div><h2>内容顺序</h2><p>每一层单独排序，目录排在内容前面。调整后点击“保存顺序”。</p></div>
+              {levelPosts.length || levelFolders.length > 1 ? <button className="btn btn-primary" type="button" disabled={Boolean(busy)} onClick={saveOrder}>{busy === "order" ? "正在保存" : "保存顺序"}</button> : null}
             </div>
-            {orderedPosts.length ? (
+            {orderedFolders.length ? <label className="collection-order-level">
+              <span>调整哪一层</span>
+              <CustomSelect value={orderLevel} disabled={Boolean(busy)} onChange={(event) => { setOrderLevel(event.target.value); setMessage(""); }}>
+                <option value="">合集根目录</option>
+                {orderFolderOptions.map((option) => <option key={option.id} value={String(option.id)}>{option.label}</option>)}
+              </CustomSelect>
+            </label> : null}
+            {levelFolders.length ? (
               <div className="collection-order-list">
-                {orderedPosts.map((post, index) => (
+                {levelFolders.map((folder, index) => (
+                  <article key={folder.id}>
+                    <span className="collection-order-number tabular">{String(index + 1).padStart(2, "0")}</span>
+                    <div>
+                      <span className="meta-text">目录</span>
+                      <h3>{folder.name}</h3>
+                    </div>
+                    <div className="collection-order-actions">
+                      <button className="btn btn-secondary" type="button" disabled={index === 0 || Boolean(busy)} onClick={() => moveFolder(index, -1)}>上移</button>
+                      <button className="btn btn-secondary" type="button" disabled={index === levelFolders.length - 1 || Boolean(busy)} onClick={() => moveFolder(index, 1)}>下移</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {levelPosts.length ? (
+              <div className="collection-order-list">
+                {levelPosts.map((post, index) => (
                   <article key={post.id}>
                     <span className="collection-order-number tabular">{String(index + 1).padStart(2, "0")}</span>
                     <div>
@@ -385,14 +429,14 @@ export function CollectionManagePage() {
                     </div>
                     <div className="collection-order-actions">
                       <button className="btn btn-secondary" type="button" disabled={index === 0 || Boolean(busy)} onClick={() => movePost(index, -1)}>上移</button>
-                      <button className="btn btn-secondary" type="button" disabled={index === orderedPosts.length - 1 || Boolean(busy)} onClick={() => movePost(index, 1)}>下移</button>
+                      <button className="btn btn-secondary" type="button" disabled={index === levelPosts.length - 1 || Boolean(busy)} onClick={() => movePost(index, 1)}>下移</button>
                       {post.author?.id === user.id ? <Link className="btn btn-secondary" to={`/write/${post.id}`}>编辑</Link> : null}
                       <button className="text-button danger-text" type="button" disabled={Boolean(busy)} onClick={() => setConfirm({ type: "post", post })}>移出</button>
                     </div>
                   </article>
                 ))}
               </div>
-            ) : <div className="collection-manage-empty">当前没有可排序的已发布或已归档内容。</div>}
+            ) : levelFolders.length ? null : <div className="collection-manage-empty">这一层没有可排序的已发布或已归档内容。</div>}
           </section>
         </div>
 

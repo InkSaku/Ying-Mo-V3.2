@@ -87,6 +87,24 @@ class CollectionMember(db.Model):
     user = db.relationship("User")
 
 
+class CollectionFolder(db.Model):
+    """合集内的目录节点。目录只决定内容放在哪一层，不改变 Collection ACL。"""
+
+    __tablename__ = "collection_folders"
+    __table_args__ = (
+        db.Index("ix_collection_folders_tree", "collection_id", "parent_id", "sort_order"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    collection_id = db.Column(db.Integer, db.ForeignKey("collections.id", ondelete="CASCADE"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("collection_folders.id", ondelete="SET NULL"), nullable=True)
+    name = db.Column(db.String(80), nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
 class CollectionNotificationPreference(db.Model):
     __tablename__ = "collection_notification_preferences"
     __table_args__ = (

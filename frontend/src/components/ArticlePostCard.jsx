@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
 
-export function ArticlePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false }) {
+export function ArticlePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false, footer = null }) {
   const media = post.cover_media || post.display_media;
   return (
     <article className={`post-card article-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="article">
@@ -26,6 +26,7 @@ export function ArticlePostCard({ post, compact = false, variant = "", index = 0
           {post.collection && !hideCollection ? <Link className="tag collection-tag" to={`/collections/${post.collection.slug}`}>合集：{post.collection.name}</Link> : null}
         </div>
         {post.related_reasons?.length ? <p className="post-card-reasons" aria-label="关联原因">{post.related_reasons.join(" · ")}</p> : null}
+        {footer}
       </div>
     </article>
   );

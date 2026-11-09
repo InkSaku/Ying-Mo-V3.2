@@ -256,6 +256,69 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-memory-page .collection-media-memory img { filter: none; }
 .collection-memory-page .collection-media-accordion-row { display: contents; }
 
+/* 合集目录：沿用连续目录行，目录排在记录前面，图形列与记录编号对齐。 */
+.collection-folder-view { scroll-margin-top: calc(var(--header-h) + 72px); }
+.collection-folder-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin-bottom: 10px; color: var(--text-3); font-size: 13px; }
+.collection-folder-breadcrumb a { display: inline-flex; align-items: center; min-height: 32px; color: var(--brand-link); }
+.collection-folder-breadcrumb span { display: inline-flex; align-items: center; gap: 6px; }
+.collection-folder-breadcrumb i { font-style: normal; color: var(--text-4); }
+.collection-folder-breadcrumb b { font-weight: 400; color: var(--text-2); }
+.collection-memory-page .collection-folder-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.collection-folder-actions { display: flex; flex: none; flex-wrap: wrap; gap: 8px; }
+.collection-folder-hint { margin: -8px 0 14px; color: var(--text-3); font-size: 13px; }
+.collection-folder-view > .inline-error,
+.collection-folder-view > .inline-success { margin-bottom: 14px; }
+.collection-folder-list + .collection-post-catalogue { border-top: 1px solid var(--border); }
+.collection-folder-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; column-gap: 20px; align-items: center; min-height: 64px; }
+.collection-folder-row + .collection-folder-row { border-top: 1px solid var(--border); }
+.collection-folder-glyph { display: inline-flex; color: var(--brand-link); }
+.collection-folder-link { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; min-width: 0; padding: 18px 0; color: var(--text); }
+.collection-folder-link strong { overflow: hidden; font-size: 18px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.collection-folder-link small { flex: none; color: var(--text-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.collection-folder-link:hover strong { color: var(--brand-link); }
+.collection-folder-row-actions { display: flex; align-items: center; gap: 12px; }
+.collection-folder-row-actions .text-button { font-size: 13px; }
+.collection-folder-row.is-editing { padding: 10px 0; }
+.collection-folder-name-form { display: flex; grid-column: 2 / -1; flex-wrap: wrap; align-items: center; gap: 10px; }
+.collection-folder-name-form input { flex: 1 1 200px; min-width: 0; min-height: 44px; }
+.collection-folder-view .collection-entry-move { margin-top: 6px; padding-inline: 0; color: var(--text-3); font-size: 13px; }
+.collection-entry-move:hover { color: var(--brand-link); }
+
+.collection-folder-picker { display: grid; max-height: min(46vh, 360px); margin-top: 4px; overflow-y: auto; border-block: 1px solid var(--border); }
+.collection-folder-picker label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 8px 6px calc(8px + var(--folder-depth, 0) * 18px); color: var(--text-2); cursor: pointer; }
+.collection-folder-picker label + label { border-top: 1px solid var(--border-soft); }
+.collection-folder-picker label:has(input:disabled) { color: var(--text-4); cursor: not-allowed; }
+.collection-folder-picker label.is-selected { color: var(--brand-link); }
+.collection-folder-picker input { flex: none; width: 16px; height: 16px; min-height: 0; margin: 0; padding: 0; border: 0; box-shadow: none; accent-color: var(--brand-link); }
+.collection-folder-picker svg { flex: none; }
+.collection-folder-picker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-folder-picker small { flex: none; margin-left: auto; color: var(--text-3); font-size: 12px; }
+
+.collection-folder-tree ul { margin: 0; padding: 0 0 0 14px; list-style: none; }
+.collection-folder-tree > ul { padding-left: 0; }
+.collection-tree-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; min-height: 34px; }
+.collection-tree-row button { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 28px; padding: 0; border: 0; background: none; color: var(--text-3); cursor: pointer; }
+.collection-tree-row button svg { transition: transform .16s ease; }
+.collection-tree-row button.is-expanded svg { transform: rotate(90deg); }
+.collection-tree-row a { overflow: hidden; padding: 5px 0 5px 8px; border-left: 2px solid transparent; color: var(--text-2); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.collection-tree-row a:hover { color: var(--brand-link); }
+.collection-tree-row a[aria-current="page"] { border-left-color: var(--brand-link); color: var(--brand-link); }
+@media (prefers-reduced-motion: reduce) {
+  .collection-tree-row button svg { transition: none; }
+}
+@media (max-width: 767px) {
+  .collection-folder-tree { display: none; }
+  .collection-folder-breadcrumb a { min-height: 44px; }
+  .collection-memory-page .collection-folder-heading { align-items: stretch; flex-direction: column; gap: 12px; }
+  .collection-folder-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .collection-folder-actions .btn { min-height: 44px; padding-inline: 6px; }
+  .collection-folder-row { grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 12px; }
+  .collection-folder-link { flex-direction: column; gap: 2px; padding: 14px 0; }
+  .collection-folder-link strong { max-width: 100%; font-size: 17px; }
+  .collection-folder-name-form .btn { min-height: 44px; }
+  .collection-folder-view .collection-entry-move { min-height: 44px; margin-top: 0; }
+}
+
 /* Bencho Image Accordion's fixed-width negotiation, adapted without its springs.
    Source and MIT notice: /licenses/bencho-MIT.txt. */
 @media (min-width: 980px) {

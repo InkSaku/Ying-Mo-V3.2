@@ -197,6 +197,7 @@ def create_contribution_draft(source, actor, client_request_id):
         status=PostStatus.DRAFT.value,
         visibility=PostVisibility.PRIVATE.value,
         collection_id=root.collection_id,
+        collection_folder_id=root.collection_folder_id,
         occurred_at=root.occurred_at if root.post_type == PostType.NOTE.value else None,
         location=root.location if root.post_type == PostType.NOTE.value else None,
     )

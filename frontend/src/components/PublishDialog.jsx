@@ -1,11 +1,12 @@
 import { useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useModalDialog } from "../hooks/useModalDialog";
+import { CustomSelect } from "./CustomSelect";
 import { InkSketch } from "./InkSketch";
 import { TagPicker } from "./TagPicker";
 import "../styles/publish-dialog.css";
 
-export function PublishDialog({ open, form, collections, initialTags, lockedCollection = false, busy, error, unavailable, onChange, onClose, onConfirm }) {
+export function PublishDialog({ open, form, collections, folderChoices = [], initialTags, lockedCollection = false, busy, error, unavailable, onChange, onClose, onConfirm }) {
   const titleId = useId();
   const panelRef = useRef(null);
   const [collectionQuery, setCollectionQuery] = useState("");
@@ -23,6 +24,7 @@ export function PublishDialog({ open, form, collections, initialTags, lockedColl
           {!choices.length ? <p className="publish-choice-empty">{collectionQuery ? "没有找到这册合集。" : "当前没有可加入的合集。"}</p> : null}
           <button className={`publish-no-collection ${!form.collection_id ? "is-selected" : ""}`} type="button" aria-pressed={!form.collection_id} disabled={busy || lockedCollection} onClick={() => onChange({ collection_id: "" })}>不加入合集，单独发布 {!form.collection_id ? "✓" : ""}</button>
           {form.collection_id ? <p className="publish-scope">{unavailable ? "原合集当前不可投稿，请重新选择。" : `加入「${collection?.name || "原合集"}」· 仅合集成员可见`}</p> : <fieldset className="publish-visibility" disabled={busy}><legend>谁可以阅读？</legend><label><input type="radio" name="publish-visibility" checked={form.visibility === "private"} onChange={() => onChange({ visibility: "private" })} />仅自己</label><label><input type="radio" name="publish-visibility" checked={form.visibility === "login_only"} onChange={() => onChange({ visibility: "login_only" })} />所有映墨成员</label></fieldset>}
+          {form.collection_id && !unavailable && folderChoices.length ? <label className="publish-folder"><span>放在目录</span><CustomSelect disabled={busy} value={form.collection_folder_id || ""} onChange={(event) => onChange({ collection_folder_id: event.target.value, collection_folder_changed: true })}><option value="">合集根目录</option>{folderChoices.map((item) => <option key={item.id} value={String(item.id)}>{item.label}</option>)}</CustomSelect></label> : null}
         </section>
         <section className="publish-dialog-pane"><header><div><p></p><h3>标签（选填）</h3><span>选择已有标签，或输入名称新建。</span></div><InkSketch variant="labels" /></header><TagPicker value={form.tag_names} initialTags={initialTags} disabled={busy} onChange={(names) => onChange({ tag_names: names })} /></section>
       </div>

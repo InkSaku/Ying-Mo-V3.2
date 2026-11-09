@@ -1107,6 +1107,8 @@ Collection creator 可以手动拖拽调整展示顺序。
 
 一旦某 Post 有明确手动排序值，则手动排序优先；未手动排序对象继续按默认时间线稳定排序。
 
+手动顺序按目录分层保存（见 9.21）：每一层独立排序，内容移到另一层后回到该层的默认时间线顺序。
+
 建议使用独立的 Collection-Post 排序字段或关系层排序值，避免把 Collection 自身 `sort_order` 与内部 Post 顺序混为一谈。
 
 ## 9.12 V3.3 Collection 时间轴
@@ -1234,6 +1236,26 @@ V3.7 在不建设 Feed、聊天、关注或复杂社交图谱的前提下增强�
 - 图片上传生成限定尺寸的 WebP 展示图和缩略图；Live Photo 动态片段优先转换为适合浏览器播放的无元数据 H.264 MP4，转换不可用或播放失败时不影响静态照片。
 
 验收必须覆盖多入口复用、深链接刷新、筛选序列和分页边界、Live Photo 单条计数与静态回退、桌面/移动端手势、焦点恢复、会话缓存清理、展示图元数据移除、原件所有权，以及成员移除后解析、列表和文件读取统一 404。
+
+## 9.21 合集目录树
+
+合集本身是根目录，每一层都可以新建目录、文章和随记，目录可继续嵌套，最多 5 层。Post 仍然只属于一个 Collection，所在目录只是合集内部的位置信息：
+
+- 目录不单独设权限，阅读与投稿继续由 Collection ACL 决定；目录名称、层级和路径只返回给当前成员，非成员和已被移出的作者都看不到；
+- 所有成员都可以建目录；改名、移动和删除限目录创建人与 Collection creator；调整同层顺序仅 creator；
+- 作者可以移动自己的内容（含草稿），creator 可以移动任意已发布或已归档的内容；移动不算编辑，不生成 Revision，不增加 `edit_version`，不刷新 `updated_at`，也不发通知；
+- 同一层目录名称不可重复（忽略大小写），单个 Collection 最多 500 个目录；
+- 删除目录只删除目录本身，子目录和内容整体上移一级，任何 Post 都不会因此删除；上移时重名的子目录自动追加序号；
+- 同一层目录在前、内容在后，各自排序；目录默认按创建顺序，内容沿用 9.11 的规则；
+- 未放进目录的内容留在根目录，历史内容无需迁移；
+- Post 移出合集、换到其他合集或恢复到其他合集的历史版本时，所在目录清空；恢复同一合集的历史版本不改变位置；删除 Collection 时同时删除其目录；
+- 共同回忆补充在创建时沿用原记录所在目录，之后由补充作者自行调整，原记录移动时补充不跟随；
+- 共同时间轴、共同影像和关键记录不分层，继续面向整个合集；
+- 进入合集默认显示目录视图，当前目录写入 `?folder=<id>`；目录已不存在时按根目录显示；
+- 从某一层新建内容时写作页自动带上该位置，作者发布前可以修改；目录在编辑期间被删除时提示并退回根目录；
+- 数据导出的 Markdown 元数据增加 `collection_path`，只解析导出者当前仍是成员的合集。
+
+验收必须覆盖非成员与被移出成员不可见、目录环路与层级上限、同层重名、跨合集目录、删除上移不丢内容、按层排序、移动不产生编辑冲突，以及移出合集和删除合集后的位置清理。
 
 ---
 
@@ -2357,6 +2379,13 @@ PUT    /collections/:id/members
 POST   /collections/:id/members/:user_id
 POST   /collections/:id/remove-post
 POST   /collections/:id/transfer-creator
+POST   /collections/:id/reorder
+GET    /collections/:id/folders
+POST   /collections/:id/folders
+PATCH  /collections/:id/folders/:folder_id
+DELETE /collections/:id/folders/:folder_id
+POST   /collections/:id/folders/reorder
+PUT    /collections/:id/posts/:post_id/folder
 DELETE /collections/:id
 ```
 
@@ -2371,6 +2400,8 @@ DELETE /collections/:id
 - `POST /collections/:id/transfer-creator` 仅当前 creator，目标必须是当前 active member；成功后目标成为唯一 creator，旧 creator 转为普通 member；
 - creator 不允许出现在待移除 member 集合；
 - `remove-post` 仅 creator，且只解除关联不删除 Post；
+- `reorder` 仅 creator，用可选的 `folder_id` 指定层级（缺省为根目录），`post_ids` 必须完整覆盖这一层；
+- 目录与移动接口的权限见 9.21，结构变更先锁定 Collection；
 - 删除 Collection 时所有 Post 原子脱离并变为 `private`；
 - 不存在 `submit-review`；
 - 不校验 `can_publish`、`review_status` 或 `contribution_policy`。
@@ -2648,6 +2679,8 @@ collection_members
 - creator 不重复写入。
 
 Post 仍使用 `collection_id` 表示最多属于一个 Collection。
+
+`collection_folders` 保存合集内的目录：`collection_id`、自关联 `parent_id`（空值为第一层）、`name`、`sort_order`、`created_by_id`。`posts.collection_folder_id` 记录所在目录，空值表示根目录。
 
 ## 27.4 用户 Schema
 

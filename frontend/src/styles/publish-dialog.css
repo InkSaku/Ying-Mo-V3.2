@@ -37,3 +37,4 @@
 @media(max-width:640px){.publish-dialog-columns .publish-dialog-pane header>.ink-sketch{width:96px}}
 .publish-visibility label{min-height:40px}
 .publish-dialog-pane>header>.ink-sketch{color:var(--text)}
+.publish-folder{display:grid;gap:6px;margin-top:14px;font-size:12px;color:var(--text-3)}

@@ -53,12 +53,15 @@ class Post(db.Model):
         db.Index("ix_posts_type_status_visibility_published", "post_type", "status", "visibility", "published_at"),
         db.Index("ix_posts_collection_published", "collection_id", "published_at"),
         db.Index("ix_posts_collection_highlight", "collection_id", "collection_highlight_order"),
+        db.Index("ix_posts_collection_folder", "collection_folder_id"),
         db.Index("ix_posts_category_published", "category_id", "published_at"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     collection_id = db.Column(db.Integer, db.ForeignKey("collections.id", ondelete="SET NULL"), nullable=True)
+    # 空值表示合集根目录；只在 Post 仍属于同一 Collection 时有意义。
+    collection_folder_id = db.Column(db.Integer, db.ForeignKey("collection_folders.id", ondelete="SET NULL"), nullable=True)
     post_type = db.Column(db.String(20), nullable=False)
     title = db.Column(db.String(240), nullable=True)
     summary = db.Column(db.String(500), nullable=True)

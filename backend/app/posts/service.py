@@ -7,7 +7,7 @@ from app.access import is_collection_member
 from app.common.validation import SLUG_RE, normalize_name, slugify
 from app.extensions import db
 from app.models import (
-    ArticleSlug, Category, Collection, CollectionMember, Media, Post, PostStatus,
+    ArticleSlug, Category, Collection, CollectionFolder, CollectionMember, Media, Post, PostStatus,
     PostType, PostVisibility, Tag,
 )
 from app.notifications.service import add_collection_notification
@@ -102,6 +102,7 @@ def apply_collection(post, actor_id, collection_id):
     if collection_id is None:
         was_in_collection = post.collection_id is not None
         post.collection = None
+        post.collection_folder_id = None
         post.collection_sort_order = None
         post.collection_highlight_order = None
         # 只有真正从 Collection 脱离时才安全回退为 private。
@@ -113,10 +114,35 @@ def apply_collection(post, actor_id, collection_id):
     if collection is None or not is_collection_member(actor_id, collection):
         raise DomainError("RESOURCE_NOT_FOUND", "目标 Collection 不存在或不可访问。", 404)
     if post.collection_id != collection.id:
+        post.collection_folder_id = None
         post.collection_sort_order = None
         post.collection_highlight_order = None
     post.collection = collection
     post.visibility = PostVisibility.PRIVATE.value
+
+
+def apply_collection_folder(post, actor_id, folder_id):
+    """作者在编辑时选择所在目录；必须在 apply_collection 之后调用。"""
+    if folder_id is not None and (isinstance(folder_id, bool) or not isinstance(folder_id, int)):
+        raise DomainError("VALIDATION_ERROR", "collection_folder_id 不合法。", 422)
+    collection = post.collection
+    if collection is None:
+        if folder_id is not None:
+            raise DomainError("VALIDATION_ERROR", "未加入合集的内容不能放进目录。", 422)
+        post.collection_folder_id = None
+        return
+    # 被移出合集的作者仍可编辑历史内容，但不能感知或改动目录。
+    if not is_collection_member(actor_id, collection):
+        raise DomainError("RESOURCE_NOT_FOUND", "目录不存在。", 404)
+    if folder_id is not None:
+        folder = db.session.get(CollectionFolder, folder_id)
+        if folder is None:
+            raise DomainError("COLLECTION_FOLDER_UNAVAILABLE", "这个目录已经不存在，请重新选择位置。", 409)
+        if folder.collection_id != collection.id:
+            raise DomainError("RESOURCE_NOT_FOUND", "目录不存在。", 404)
+    if post.collection_folder_id != folder_id:
+        post.collection_folder_id = folder_id
+        post.collection_sort_order = None
 
 
 def validate_publish(post, requested_slug=None):
