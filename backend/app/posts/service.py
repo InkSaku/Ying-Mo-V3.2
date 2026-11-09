@@ -110,7 +110,7 @@ def apply_collection(post, actor_id, collection_id):
             post.visibility = PostVisibility.PRIVATE.value
         return
     collection = db.session.get(Collection, collection_id)
-    if collection is None or not is_collection_member(actor_id, collection):
+    if collection is None or not is_collection_member(actor_id, collection, current_read=True):
         raise DomainError("RESOURCE_NOT_FOUND", "目标 Collection 不存在或不可访问。", 404)
     if post.collection_id != collection.id:
         post.collection_sort_order = None
@@ -173,7 +173,7 @@ def reserve_article_slug(post, slug):
 def publish_post(post, actor_id, slug=None, *, memory_root=None):
     if post.author_id != actor_id:
         raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-    if post.collection_id is not None and not is_collection_member(actor_id, post.collection):
+    if post.collection_id is not None and not is_collection_member(actor_id, post.collection, current_read=True):
         raise DomainError("PERMISSION_DENIED", "你已不再属于目标 Collection，不能发布到该 Collection。", 403)
     actual_slug = validate_publish(post, slug)
     if post.post_type == PostType.ARTICLE.value:

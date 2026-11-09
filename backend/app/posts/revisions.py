@@ -119,7 +119,7 @@ def restore_revision_snapshot(post, revision, actor):
     previous_collection_id = post.collection_id
     collection_id = snapshot.get("collection_id")
     collection = db.session.get(Collection, collection_id) if collection_id else None
-    if collection_id and (collection is None or not is_collection_member(actor.id, collection)):
+    if collection_id and (collection is None or not is_collection_member(actor.id, collection, current_read=True)):
         warnings.append("原 Collection 已不可访问，恢复后内容保持独立且仅自己可见。")
         collection = None
     post.collection = collection

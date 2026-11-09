@@ -162,20 +162,12 @@ def transfer_creator(collection_id, actor_id, new_creator_id):
 
 
 def delete_collection(collection):
-    from app.models import PostMemoryLink
+    """调用方须先用 lock_collection 取得合集行锁，这里继续锁 Post 和关系行。"""
+    from app.posts.memory_contributions import invalidate_links_for_collection, lock_collection_posts
 
     now = utcnow()
-    db.session.execute(
-        db.update(PostMemoryLink).where(
-            PostMemoryLink.collection_id == collection.id,
-            PostMemoryLink.invalidated_at.is_(None),
-            PostMemoryLink.detached_at.is_(None),
-        ).values(
-            invalidated_at=now,
-            invalidation_reason="collection_deleted",
-        )
-    )
-    posts = list(collection.posts)
+    posts = lock_collection_posts(collection.id)
+    invalidate_links_for_collection(collection.id, "collection_deleted")
     for post in posts:
         post.collection_id = None
         post.collection_sort_order = None

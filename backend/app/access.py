@@ -12,17 +12,21 @@ from app.models import (
 )
 
 
-def is_collection_member(user_id, collection):
+def is_collection_member(user_id, collection, *, current_read=False):
+    """current_read 供持锁的写路径复核：普通 SELECT 在 InnoDB 可重复读下仍是事务快照。"""
     if collection is None or collection.deleted_at is not None or collection.status != CollectionStatus.ACTIVE.value:
         return False
     if collection.creator_id == user_id:
         return True
-    return db.session.scalar(
-        db.select(exists().where(
-            CollectionMember.collection_id == collection.id,
-            CollectionMember.user_id == user_id,
-        ))
-    ) is True
+    membership = (
+        CollectionMember.collection_id == collection.id,
+        CollectionMember.user_id == user_id,
+    )
+    if current_read:
+        return db.session.scalar(
+            db.select(CollectionMember.id).where(*membership).with_for_update(read=True)
+        ) is not None
+    return db.session.scalar(db.select(exists().where(*membership))) is True
 
 
 def member_collection_ids(user_id, collections):

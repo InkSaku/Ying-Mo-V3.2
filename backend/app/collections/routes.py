@@ -572,18 +572,19 @@ def member_options():
 @bp.post("/<int:collection_id>/remove-post")
 @jwt_required(locations=["headers"])
 def remove_post(collection_id):
+    from app.posts.memory_contributions import invalidate_links_for_post, lock_post_scope
+
     actor = current_user()
-    collection = db.session.get(Collection, collection_id)
     data = request.get_json(silent=True) or {}
+    post_id = data.get("post_id")
+    post = lock_post_scope(post_id, collection_id) if isinstance(post_id, int) else None
+    collection = db.session.get(Collection, collection_id)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if collection is None or collection.creator_id != actor.id or collection.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Collection 不存在。", 404)
-    post_id = data.get("post_id")
-    post = db.session.get(Post, post_id) if isinstance(post_id, int) else None
     if post is None or post.collection_id != collection.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-    from app.posts.memory_contributions import invalidate_links_for_post
     invalidate_links_for_post(post.id, "post_removed_from_collection")
     post.collection_id = None
     post.collection_sort_order = None
@@ -664,8 +665,10 @@ def put_highlights(collection_id):
 @bp.delete("/<int:collection_id>")
 @jwt_required(locations=["headers"])
 def delete(collection_id):
+    from app.posts.memory_contributions import lock_collection
+
     actor = current_user()
-    collection = db.session.get(Collection, collection_id)
+    collection = lock_collection(collection_id)
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if collection is None or collection.creator_id != actor.id or collection.deleted_at is not None:
