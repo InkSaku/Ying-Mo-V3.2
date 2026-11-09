@@ -1,11 +1,26 @@
 import { fitRect, PAPER_EASE, paperMotionAllowed, visualLayer } from "./paperMotion";
 
 let opening = null;
-const DURATION = 1200;
-const HANDOFF = 1020;
+const DURATION = 1260;
+const HANDOFF = 1080;
 const TRAVEL = 280;
 const OPEN_AT = 300;
-const OPEN_TIME = 620;
+const OPEN_TIME = 680;
+const TURN_EASE = "cubic-bezier(.62,.02,.24,1)";
+// 透视按书的宽度换算，手机上的小书也有同样的立体感。
+const PERSPECTIVE_RATIO = 3.2;
+const FULL_TURN = 180;
+const ANGLES = [0, 30, 60, 90, 120, 150, 180];
+
+// 光线从正面来：封面转走时变暗，内页从暗处转回，底页先接住封面的投影再散开。
+function lightAt(angle) {
+  const sine = Math.sin(angle * Math.PI / 180);
+  return {
+    front: angle <= 90 ? sine : 1,
+    lining: angle <= 90 ? 1 : 1 - ((angle - 90) / 90) ** 1.4,
+    pages: angle <= 90 ? sine ** .7 : ((FULL_TURN - angle) / 90) ** 1.3,
+  };
+}
 
 // Freeze only the book's rendered parts. No links, controls or media requests
 // travel with the visual copy; scoped shelf styles survive the route unmount.
@@ -27,6 +42,33 @@ function copyBook(source) {
   Object.assign(copy.querySelector(".collection-shelf-pages").style, { width: "calc(100% - 4px)", height: "calc(100% - 7px)" });
   copy.querySelector(".collection-shelf-spine").style.height = "100%";
   return copy;
+}
+
+function addShade(parent, kind) {
+  const shade = document.createElement("span");
+  shade.className = `paper-opening-shade is-${kind}`;
+  parent.append(shade);
+  return shade;
+}
+
+// 翻开后左页的内容：只取卡片上已经公开显示的文字，不额外请求数据。
+function insidePage(card) {
+  const page = document.createElement("div");
+  page.className = "paper-opening-inside";
+  const volume = document.createElement("small");
+  volume.textContent = card.querySelector(".collection-card-volume")?.textContent.trim() || "";
+  const colophon = document.createElement("div");
+  const description = card.querySelector(".collection-card-content > p")?.textContent.trim();
+  if (description) {
+    const summary = document.createElement("p");
+    summary.textContent = description;
+    colophon.append(summary);
+  }
+  const signature = document.createElement("span");
+  signature.textContent = [...(card.querySelector(".collection-book-meta")?.children || [])].map((item) => item.textContent.trim()).join(" ");
+  colophon.append(signature);
+  page.append(volume, colophon);
+  return page;
 }
 
 function placement(rect, base) {
@@ -76,7 +118,7 @@ export function startCollectionOpening(event, slug) {
   // Resizing its boards every frame forces mobile browsers to repaint them.
   fitRect(stage, centre);
   stage.style.transformOrigin = "0 0";
-  stage.style.perspective = getComputedStyle(source).perspective;
+  stage.style.perspective = `${Math.round(centre.width * PERSPECTIVE_RATIO)}px`;
   stage.style.perspectiveOrigin = "50% 45%";
   const book = copyBook(original);
   book.classList.add("paper-opening-book");
@@ -102,6 +144,8 @@ export function startCollectionOpening(event, slug) {
   if (front.querySelector(".protected-image-placeholder") || (image && !image.naturalWidth)) {
     front.replaceChildren(titlepage.cloneNode(true));
   }
+  lining.append(insidePage(card));
+  const shades = { front: addShade(front, "front"), lining: addShade(lining, "lining"), pages: addShade(pages, "pages") };
   // Pixel transform origins from the snapshot must follow the changing 4:5 size.
   hinge.style.transformOrigin = "left center";
   lining.style.transformOrigin = "center center";
@@ -132,16 +176,23 @@ export function startCollectionOpening(event, slug) {
     { transform: "translateY(-6px) rotateX(0deg) rotateY(0deg)", offset: .65 },
     { transform: "rotateX(0deg) rotateY(0deg)" },
   ], { duration: TRAVEL, easing: PAPER_EASE, fill: "both" });
-  const angles = [0, 35, 70, 90, 115, 140, 158];
-  const turnOptions = { delay: OPEN_AT, duration: OPEN_TIME, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" };
-  scene.animate(hinge, angles.map((angle) => ({
-    transform: `translateZ(14px) rotateY(${-angle}deg)`, offset: angle / 158,
+  const turnOptions = { delay: OPEN_AT, duration: OPEN_TIME, easing: TURN_EASE, fill: "forwards" };
+  scene.animate(hinge, ANGLES.map((angle) => ({
+    transform: `translateZ(14px) rotateY(${-angle}deg)`, offset: angle / FULL_TURN,
   })), turnOptions);
   // As the front board crosses the spine, compensate its newly visible left
   // half. Both tracks share timing, so the whole open spread stays centred.
-  scene.animate(stage, angles.map((angle) => ({
+  scene.animate(stage, ANGLES.map((angle) => ({
     ...placement(angle ? turnRect(centre, angle, Number.parseFloat(stage.style.perspective) || 1000) : centre, centre),
-    offset: angle / 158,
+    offset: angle / FULL_TURN,
+  })), turnOptions);
+  // 光影和翻转共用同一条时间线，只动 opacity，手机上也不用重绘纸面。
+  for (const [kind, shade] of Object.entries(shades)) {
+    scene.animate(shade, ANGLES.map((angle) => ({ opacity: lightAt(angle)[kind], offset: angle / FULL_TURN })), turnOptions);
+  }
+  // 摊平时两页要齐平：书壳的深色边线和投影只留在合着的时候。
+  scene.animate(book.querySelector(".collection-shelf-back"), ANGLES.map((angle) => ({
+    opacity: Math.min(1, (FULL_TURN - angle) / 60), offset: angle / FULL_TURN,
   })), turnOptions);
   // Fading the common ancestor flattens its 3D descendants. Fade the boards
   // only after the turn, with a separate backdrop for the destination page.

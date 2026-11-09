@@ -10,6 +10,20 @@
 .paper-opening-titlepage { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 12%; overflow: hidden; background: var(--surface); color: var(--text); }
 .paper-opening-titlepage small { color: var(--brand-link); font: 10px/1.6 var(--serif); letter-spacing: .15em; }
 .paper-opening-titlepage strong { font: 400 clamp(17px, 2vw, 27px)/1.6 var(--serif); overflow-wrap: anywhere; }
+.paper-opening-inside { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 12%; overflow: hidden; color: var(--text); }
+.paper-opening-inside small { color: var(--brand-link); font: 10px/1.6 var(--serif); letter-spacing: .15em; }
+.paper-opening-inside p { display: -webkit-box; margin: 0 0 12px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 4; font: 400 clamp(12px, 1.3vw, 15px)/1.8 var(--serif); overflow-wrap: anywhere; }
+.paper-opening-inside span { display: block; overflow: hidden; color: var(--text-3); font: 11px/1.6 var(--serif); white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 767px) {
+  .paper-opening-inside { padding: 10%; }
+  .paper-opening-inside p { margin-bottom: 6px; -webkit-line-clamp: 3; font-size: 11px; line-height: 1.7; }
+  .paper-opening-inside span { font-size: 10px; }
+}
+/* 只在翻开的约 0.7 秒里模拟纸面受光，静态页面不使用渐变。 */
+.paper-opening-shade { position: absolute; z-index: 5; inset: 0; opacity: 0; pointer-events: none; will-change: opacity; }
+.paper-opening-shade.is-front { background: linear-gradient(to left, rgb(24 22 16 / .46), rgb(24 22 16 / .1) 62%, rgb(24 22 16 / .02)); }
+.paper-opening-shade.is-lining { background: linear-gradient(to right, rgb(24 22 16 / .66), rgb(24 22 16 / .3) 46%, rgb(24 22 16 / .12)); }
+.paper-opening-shade.is-pages { background: linear-gradient(to right, rgb(24 22 16 / .5), rgb(24 22 16 / .28) 58%, rgb(24 22 16 / .18)); }
 .paper-moving-photo { display: block; max-width: none; max-height: none; object-fit: fill; transform-origin: center; }
 .media-lightbox-backdrop { animation: photo-room-in 200ms ease-out; }
 @keyframes photo-room-in { from { background-color: rgb(9 10 12 / 0); } }

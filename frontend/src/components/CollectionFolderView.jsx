@@ -4,6 +4,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { MobileActions } from "./MobileSheet";
 import { PostCard } from "./PostCard";
 import { CollectionFileIcon } from "./CollectionFileIcon";
+import { CollectionFolderDrawer } from "./CollectionFolderDrawer";
 import { EmptyState } from "./States";
 import { UndoNotice } from "./UndoNotice";
 import { api } from "../lib/api";
@@ -13,6 +14,7 @@ import {
   collectionFolderHref,
   flattenFolders,
   folderPath,
+  folderSummary,
   movingLabel,
   postsInFolder,
   subtreeHeight,
@@ -20,6 +22,8 @@ import {
 } from "../lib/collectionFolders";
 
 const NO_IDS = [];
+// 超过这个层数，抽屉会把下面的记录推得太远，其余目录回到普通目录行。
+const DRAWER_LIMIT = 8;
 const classNames = (...names) => names.filter(Boolean).join(" ");
 
 function ChevronGlyph() {
@@ -33,13 +37,6 @@ function FolderNameForm({ label, initial = "", busy, onSubmit, onCancel }) {
     <button className="btn btn-primary" type="submit" disabled={busy || !name.trim()}>保存</button>
     <button className="text-button" type="button" disabled={busy} onClick={onCancel}>取消</button>
   </form>;
-}
-
-function folderSummary(index, posts, folder) {
-  const folders = childFolders(index, folder.id).length;
-  const records = postsInFolder(posts, index, folder.id).length;
-  if (!folders && !records) return "空目录";
-  return [folders ? `${folders} 个目录` : "", records ? `${records} 则记录` : ""].filter(Boolean).join(" · ");
 }
 
 function MoveDialog({ moving, collection, index, busy, onTarget, onConfirm, onClose }) {
@@ -70,6 +67,13 @@ export function CollectionFolderContents({ collection, index, folderId, user, mo
   const [moving, setMoving] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [selection, setSelection] = useState({ folderId, ids: NO_IDS, anchor: null });
+  // 只有换过目录才播放抽屉升起，打开合集时直接显示。
+  const [seenFolder, setSeenFolder] = useState(folderId);
+  const [changedFolder, setChangedFolder] = useState(false);
+  if (seenFolder !== folderId) {
+    setSeenFolder(folderId);
+    setChangedFolder(true);
+  }
   // 触屏上拖拽会和滚动抢手势，继续用“选择”和“移动到…”。
   const [finePointer] = useState(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
   const { busy, error, notice, run, clearFeedback } = moves;
@@ -131,6 +135,13 @@ export function CollectionFolderContents({ collection, index, folderId, user, mo
 
   const postMove = (items) => ({ kind: "post", from: folderId ?? null, items });
 
+  const renamingFolder = folders.find((folder) => folder.id === renamingId);
+  const folderActions = (folder) => <>
+    <button className="text-button" type="button" disabled={busy} onClick={() => { setRenamingId(folder.id); clearFeedback(); }}>改名</button>
+    <button className="text-button" type="button" disabled={busy} onClick={() => setMoving({ kind: "folder", item: folder, target: folder.parent_id ?? null })}>移动</button>
+    <button className="text-button danger-text" type="button" disabled={busy} onClick={() => setDeleting(folder)}>删除</button>
+  </>;
+
   const cardProps = (post) => {
     const movable = canMovePost(post);
     const isSelected = selectedIds.includes(post.id);
@@ -184,24 +195,24 @@ export function CollectionFolderContents({ collection, index, folderId, user, mo
     {error ? <div className="inline-error" role="alert">{error}</div> : null}
     {notice ? <div className="inline-success" role="status">{notice}</div> : null}
 
-    {creating || folders.length ? <div className="collection-folder-list">
+    {creating || renamingFolder ? <div className="collection-folder-list collection-folder-editing">
       {creating ? <div className="collection-folder-row is-editing"><span className="collection-folder-glyph"><CollectionFileIcon open /></span><FolderNameForm label="新目录名称" busy={busy} onSubmit={createFolder} onCancel={() => setCreating(false)} /></div> : null}
-      {folders.map((folder) => renamingId === folder.id
-        ? <div key={folder.id} className="collection-folder-row is-editing"><span className="collection-folder-glyph"><CollectionFileIcon open /></span><FolderNameForm label={`修改「${folder.name}」的名称`} initial={folder.name} busy={busy} onSubmit={(name) => renameFolder(folder, name)} onCancel={() => setRenamingId(null)} /></div>
-        : <article key={folder.id}
-          className={classNames("collection-folder-row", moves.dropClass(folder.id), moves.dragging?.kind === "folder" && moves.dragging.item.id === folder.id && "is-drag-source")}
-          {...moves.dropProps(folder.id)}
-          {...(finePointer && folder.can_manage ? { draggable: !busy, onDragStart: (event) => moves.startDrag(event, { kind: "folder", item: folder }), onDragEnd: moves.endDrag } : {})}>
-          <span className="collection-folder-glyph"><CollectionFileIcon open={Boolean(moves.dropClass(folder.id))} /></span>
-          <Link className="collection-folder-link" to={collectionFolderHref(collection.slug, folder.id)} state={{ keepScroll: true }}><strong>{folder.name}</strong><small>{folderSummary(index, collection.posts, folder)}</small></Link>
-          {folder.can_manage ? <div className="collection-folder-row-actions">
-            <MobileActions title={`管理「${folder.name}」`} label="管理">
-              <button className="text-button" type="button" disabled={busy} onClick={() => { setRenamingId(folder.id); clearFeedback(); }}>改名</button>
-              <button className="text-button" type="button" disabled={busy} onClick={() => setMoving({ kind: "folder", item: folder, target: folder.parent_id ?? null })}>移动</button>
-              <button className="text-button danger-text" type="button" disabled={busy} onClick={() => setDeleting(folder)}>删除</button>
-            </MobileActions>
-          </div> : null}
-        </article>)}
+      {renamingFolder ? <div key={renamingFolder.id} className="collection-folder-row is-editing"><span className="collection-folder-glyph"><CollectionFileIcon open /></span><FolderNameForm label={`修改「${renamingFolder.name}」的名称`} initial={renamingFolder.name} busy={busy} onSubmit={(name) => renameFolder(renamingFolder, name)} onCancel={() => setRenamingId(null)} /></div> : null}
+    </div> : null}
+
+    {folders.length ? <CollectionFolderDrawer key={folderId ?? "root"} collection={collection} index={index} folders={folders.slice(0, DRAWER_LIMIT)} label={current?.name || "合集内容"} total={folders.length} finePointer={finePointer} animate={changedFolder} moves={moves} renderActions={folderActions} /> : null}
+
+    {folders.length > DRAWER_LIMIT ? <div className="collection-folder-list">
+      {folders.slice(DRAWER_LIMIT).map((folder) => <article key={folder.id}
+        className={classNames("collection-folder-row", moves.dropClass(folder.id), moves.dragging?.kind === "folder" && moves.dragging.item.id === folder.id && "is-drag-source")}
+        {...moves.dropProps(folder.id)}
+        {...(finePointer && folder.can_manage ? { draggable: !busy, onDragStart: (event) => moves.startDrag(event, { kind: "folder", item: folder }), onDragEnd: moves.endDrag } : {})}>
+        <span className="collection-folder-glyph"><CollectionFileIcon open={Boolean(moves.dropClass(folder.id))} /></span>
+        <Link className="collection-folder-link" to={collectionFolderHref(collection.slug, folder.id)} state={{ keepScroll: true }}><strong>{folder.name}</strong><small>{folderSummary(index, collection.posts, folder)}</small></Link>
+        {folder.can_manage ? <div className="collection-folder-row-actions">
+          <MobileActions title={`管理「${folder.name}」`} label="管理">{folderActions(folder)}</MobileActions>
+        </div> : null}
+      </article>)}
     </div> : null}
 
     {hasSelection ? <div className="collection-selection-bar" role="group" aria-label="已选内容的操作">

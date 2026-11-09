@@ -80,6 +80,34 @@ export function postsInFolder(posts, index, folderId) {
   });
 }
 
+export function folderSummary(index, posts, folder) {
+  const folders = childFolders(index, folder.id).length;
+  const records = postsInFolder(posts, index, folder.id).length;
+  if (!folders && !records) return "空目录";
+  return [folders ? `${folders} 个目录` : "", records ? `${records} 则记录` : ""].filter(Boolean).join(" · ");
+}
+
+// 随记按真实发生时间，文章按发布时间，和合集内容的排序口径一致。
+export function recordTime(post) {
+  return post.post_type === "note" ? post.semantic_time || post.occurred_at || post.published_at : post.published_at;
+}
+
+// 目录里只有子目录时，也取子目录里最新的一则。
+export function latestPostInSubtree(posts, index, folderId) {
+  const ids = subtreeIds(index, folderId);
+  let latest = null;
+  let latestTime = -Infinity;
+  for (const post of posts || []) {
+    if (!ids.has(post.collection_folder_id)) continue;
+    const time = Date.parse(recordTime(post)) || 0;
+    if (time > latestTime) {
+      latest = post;
+      latestTime = time;
+    }
+  }
+  return latest;
+}
+
 export function collectionFolderHref(slug, folderId) {
   const path = `/collections/${encodeURIComponent(slug)}`;
   return folderId ? `${path}?folder=${folderId}` : path;
