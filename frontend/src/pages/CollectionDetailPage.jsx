@@ -25,6 +25,7 @@ import { formatDate, postHref, postTypeLabel } from "../lib/format";
 import { CollectionSketch } from "../components/CollectionSketch";
 import { CollectionSharePill } from "../components/CollectionSharePill";
 import { CollectionFolderContents, CollectionFolderTree } from "../components/CollectionFolderView";
+import { useCollectionFolderMoves } from "../hooks/useCollectionFolderMoves";
 import { buildFolderIndex } from "../lib/collectionFolders";
 import "../styles/collection-detail-editorial.css";
 
@@ -153,10 +154,11 @@ function MediaWallView({ slug, memory, onChange }) {
 function CollectionOverview({ collection, folderId, user, onStructureChange, notificationPreference, onSaveNotificationPreference }) {
   const members = [collection.creator, ...(collection.members || [])];
   const folderIndex = useMemo(() => buildFolderIndex(collection.folders), [collection.folders]);
+  const moves = useCollectionFolderMoves({ collection, index: folderIndex, onChanged: onStructureChange });
   return (
     <div className="collection-overview-layout">
       <div className="collection-overview-main">
-        <CollectionFolderContents collection={collection} index={folderIndex} folderId={folderId} user={user} onChanged={onStructureChange} />
+        <CollectionFolderContents collection={collection} index={folderIndex} folderId={folderId} user={user} moves={moves} />
 
         {!folderId && collection.highlights?.length ? (
           <section className="collection-overview-section collection-highlights" aria-labelledby="collection-highlights-title">
@@ -170,7 +172,7 @@ function CollectionOverview({ collection, folderId, user, onStructureChange, not
       </div>
 
       <aside className="collection-overview-index" aria-label="合集卷内索引">
-        <CollectionFolderTree slug={collection.slug} index={folderIndex} folderId={folderId} />
+        <CollectionFolderTree slug={collection.slug} index={folderIndex} folderId={folderId} moves={moves} />
         <section className="collection-index-section" aria-labelledby="collection-members-title">
           <header><h2 id="collection-members-title">合集成员</h2><p>{members.length} 位合集成员。</p></header>
           <div className="collection-member-index">

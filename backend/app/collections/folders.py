@@ -14,6 +14,7 @@ from app.posts.service import DomainError
 MAX_FOLDER_DEPTH = 5
 MAX_FOLDERS_PER_COLLECTION = 500
 MAX_FOLDER_NAME_LENGTH = 80
+MAX_MOVE_BATCH = 200
 
 
 def _not_found():
@@ -287,12 +288,19 @@ def resolve_folder_id(collection, folder_id):
     return folder.id
 
 
-def move_post(collection, post, folder_id):
+def move_posts(collection, posts, folder_id):
+    """目录校验失败时整批不动；和单条移动一样不算编辑。"""
     target = resolve_folder_id(collection, folder_id)
-    if post.collection_folder_id != target:
-        _place_posts(Post.id == post.id, target)
-        db.session.expire(post)
+    changed = [post for post in posts if post.collection_folder_id != target]
+    if changed:
+        _place_posts(Post.id.in_([post.id for post in changed]), target)
+        for post in changed:
+            db.session.expire(post)
     return target
+
+
+def move_post(collection, post, folder_id):
+    return move_posts(collection, [post], folder_id)
 
 
 def set_post_order(post_ids):

@@ -45,6 +45,21 @@ export function subtreeHeight(index, folderId) {
   return 1 + Math.max(0, ...childFolders(index, folderId).map((child) => subtreeHeight(index, child.id)));
 }
 
+export function movingLabel(moving) {
+  if (moving.kind === "folder") return `「${moving.item.name}」`;
+  if (moving.items.length > 1) return ` ${moving.items.length} 则记录`;
+  return `「${moving.items[0].title || "这则随记"}」`;
+}
+
+// 拖拽和“移动到”共用的落点校验：不能放回原处，目录不能放进自己或超出层级。
+export function canMoveTo(index, moving, targetId) {
+  if (!moving) return false;
+  if (moving.kind !== "folder") return moving.from !== targetId;
+  if ((moving.item.parent_id ?? null) === targetId) return false;
+  if (subtreeIds(index, moving.item.id).has(targetId)) return false;
+  return folderPath(index, targetId).length + subtreeHeight(index, moving.item.id) <= MAX_FOLDER_DEPTH;
+}
+
 // 按树的先序展开，供选择目录时使用。
 export function flattenFolders(index, parentId = null, depth = 1) {
   return childFolders(index, parentId).flatMap((folder) => [

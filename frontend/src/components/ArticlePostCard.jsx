@@ -1,12 +1,16 @@
 import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
+import { CollectionFileIcon } from "./CollectionFileIcon";
 
-export function ArticlePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false, footer = null }) {
+export function ArticlePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false, footer = null, cardProps = {} }) {
   const media = post.cover_media || post.display_media;
+  const { className: cardClassName = "", ...cardAttributes } = cardProps;
   return (
-    <article className={`post-card article-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""}`} data-post-type="article">
-      {variant ? <span className="post-card-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
+    <article {...cardAttributes} className={`post-card article-card ${compact ? "post-card-compact" : ""} ${media ? "post-card-with-cover" : ""} ${variant ? `post-card-${variant}` : ""} ${cardClassName}`} data-post-type="article">
+      {variant === "collection"
+        ? <span className="post-card-entry-number collection-entry-glyph" aria-hidden="true"><CollectionFileIcon kind="article" /><small>{String(index + 1).padStart(2, "0")}</small></span>
+        : variant ? <span className="post-card-entry-number tabular" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span> : null}
       <PostCardMedia post={post} media={media} compact={compact} label={`查看${post.title || "这篇文章"}的封面`} />
       <div className="post-card-content">
         <div className="post-card-meta">

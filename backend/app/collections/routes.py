@@ -9,8 +9,8 @@ from sqlalchemy.orm import selectinload
 from app.access import collection_member_predicate, is_collection_member, semantic_time_expression
 from app.admin.service import record_admin_log
 from app.collections.folders import (
-    create_folder, delete_folder, load_folders, locked_member_collection, move_post,
-    reorder_folders, resolve_folder_id, serialize_folder, set_post_order, update_folder,
+    MAX_MOVE_BATCH, create_folder, delete_folder, load_folders, locked_member_collection, move_post,
+    move_posts, reorder_folders, resolve_folder_id, serialize_folder, set_post_order, update_folder,
 )
 from app.collections.service import add_member, delete_collection, replace_members, resolve_member_ids, transfer_creator
 from app.common.auth import current_user
@@ -725,24 +725,53 @@ def delete_collection_folder(collection_id, folder_id):
     )
 
 
+def _movable_post(collection, actor, post_id):
+    post = db.session.get(Post, post_id)
+    if post is None or post.collection_id != collection.id or post.deleted_at is not None:
+        raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if post.author_id != actor.id:
+        # 别人的草稿和已隐藏内容对其他成员不存在；已发布内容只有 creator 能挪动。
+        if post.moderation_status != "active" or post.status not in {"published", "archived"}:
+            raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+        if collection.creator_id != actor.id:
+            raise DomainError("PERMISSION_DENIED", "只能移动自己写的内容。", 403)
+    return post
+
+
 @bp.put("/<int:collection_id>/posts/<int:post_id>/folder")
 @jwt_required(locations=["headers"])
 def move_post_to_folder(collection_id, post_id):
     data = _json_object()
 
     def change(collection, actor):
-        post = db.session.get(Post, post_id)
-        if post is None or post.collection_id != collection.id or post.deleted_at is not None:
-            raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-        if post.author_id != actor.id:
-            # 别人的草稿和已隐藏内容对其他成员不存在；已发布内容只有 creator 能挪动。
-            if post.moderation_status != "active" or post.status not in {"published", "archived"}:
-                raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
-            if collection.creator_id != actor.id:
-                raise DomainError("PERMISSION_DENIED", "只能移动自己写的内容。", 403)
+        post = _movable_post(collection, actor, post_id)
         if "folder_id" not in data:
             raise DomainError("VALIDATION_ERROR", "folder_id 为必填项。", 422)
         return {"post_id": post.id, "folder_id": move_post(collection, post, data["folder_id"])}
+
+    return _change_tree(collection_id, change)
+
+
+@bp.put("/<int:collection_id>/posts/folder")
+@jwt_required(locations=["headers"])
+def move_posts_to_folder(collection_id):
+    data = _json_object()
+
+    def change(collection, actor):
+        post_ids = data.get("post_ids")
+        if (
+            not isinstance(post_ids, list)
+            or not post_ids
+            or len(post_ids) > MAX_MOVE_BATCH
+            or any(isinstance(item, bool) or not isinstance(item, int) for item in post_ids)
+            or len(post_ids) != len(set(post_ids))
+        ):
+            raise DomainError("VALIDATION_ERROR", f"post_ids 必须是 1 到 {MAX_MOVE_BATCH} 个不重复的 id。", 422)
+        if "folder_id" not in data:
+            raise DomainError("VALIDATION_ERROR", "folder_id 为必填项。", 422)
+        # 任何一条不能移动都会抛错回滚，整批要么全部成功，要么都不变。
+        posts = [_movable_post(collection, actor, post_id) for post_id in post_ids]
+        return {"post_ids": post_ids, "folder_id": move_posts(collection, posts, data["folder_id"])}
 
     return _change_tree(collection_id, change)
 

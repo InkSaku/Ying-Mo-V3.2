@@ -1244,6 +1244,7 @@ V3.7 在不建设 Feed、聊天、关注或复杂社交图谱的前提下增强�
 - 目录不单独设权限，阅读与投稿继续由 Collection ACL 决定；目录名称、层级和路径只返回给当前成员，非成员和已被移出的作者都看不到；
 - 所有成员都可以建目录；改名、移动和删除限目录创建人与 Collection creator；调整同层顺序仅 creator；
 - 作者可以移动自己的内容（含草稿），creator 可以移动任意已发布或已归档的内容；移动不算编辑，不生成 Revision，不增加 `edit_version`，不刷新 `updated_at`，也不发通知；
+- 桌面端可把内容或目录直接拖到目录行、面包屑或右侧目录树上；内容可勾选后一起移动，手机通过同一选择入口和“移动到…”完成；批量移动整体成功或整体不变，移动后可撤销最近一次；
 - 同一层目录名称不可重复（忽略大小写），单个 Collection 最多 500 个目录；
 - 删除目录只删除目录本身，子目录和内容整体上移一级，任何 Post 都不会因此删除；上移时重名的子目录自动追加序号；
 - 同一层目录在前、内容在后，各自排序；目录默认按创建顺序，内容沿用 9.11 的规则；
@@ -2401,7 +2402,7 @@ DELETE /collections/:id
 - creator 不允许出现在待移除 member 集合；
 - `remove-post` 仅 creator，且只解除关联不删除 Post；
 - `reorder` 仅 creator，用可选的 `folder_id` 指定层级（缺省为根目录），`post_ids` 必须完整覆盖这一层；
-- 目录与移动接口的权限见 9.21，结构变更先锁定 Collection；
+- 目录与移动接口的权限见 9.21，结构变更先锁定 Collection；`PUT /collections/:id/posts/folder` 批量移动，最多 200 条，任一条无权限或不存在时整批不变；
 - 删除 Collection 时所有 Post 原子脱离并变为 `private`；
 - 不存在 `submit-review`；
 - 不校验 `can_publish`、`review_status` 或 `contribution_policy`。
