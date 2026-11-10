@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
 import { CollectionFileIcon } from "./CollectionFileIcon";
+import { ContinuationCardLine } from "./ContinuationViews";
 
 export function ArticlePostCard({ post, compact = false, variant = "", index = 0, hideAuthor = false, hideCollection = false, footer = null, cardProps = {} }) {
   const media = post.cover_media || post.display_media;
@@ -19,6 +20,7 @@ export function ArticlePostCard({ post, compact = false, variant = "", index = 0
         </div>
         <h3><Link to={postHref(post)}>{post.title || "未命名文章"}</Link></h3>
         {excerpt(post) ? <p>{excerpt(post)}</p> : null}
+        <ContinuationCardLine post={post} />
         <div className="post-card-details">
           {post.author && !hideAuthor ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
           <span>发布：<time dateTime={post.published_at || undefined}>{formatDate(post.published_at)}</time></span>

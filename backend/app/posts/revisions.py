@@ -124,19 +124,27 @@ def restore_revision_snapshot(post, revision, actor):
         collection = None
     post.collection = collection
     if previous_collection_id != (collection.id if collection is not None else None):
+        from app.posts.continuations import break_links_for_post
         from app.posts.memory_contributions import invalidate_links_for_post
         invalidate_links_for_post(post.id, "revision_collection_changed")
+        break_links_for_post(post.id, "revision_collection_changed")
         post.collection_folder_id = None
         post.collection_sort_order = None
         post.collection_highlight_order = None
     if collection is not None:
         post.visibility = PostVisibility.PRIVATE.value
     else:
+        from app.posts.continuations import chain_post_ids
         visibility = snapshot.get("visibility")
-        post.visibility = (
-            visibility if visibility in {PostVisibility.LOGIN_ONLY.value, PostVisibility.PRIVATE.value}
-            else PostVisibility.PRIVATE.value
-        )
+        if len(chain_post_ids(post.id)) > 1:
+            # 一串帖子的读者要一致，历史版本不能把其中一篇单独改回去。
+            if visibility != post.visibility:
+                warnings.append("这篇接在一串记录里，阅读范围保持和这一串一致。")
+        else:
+            post.visibility = (
+                visibility if visibility in {PostVisibility.LOGIN_ONLY.value, PostVisibility.PRIVATE.value}
+                else PostVisibility.PRIVATE.value
+            )
 
     cover_media_id = snapshot.get("cover_media_id")
     cover = db.session.get(Media, cover_media_id) if cover_media_id else None

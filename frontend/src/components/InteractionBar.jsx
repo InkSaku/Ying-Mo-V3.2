@@ -4,7 +4,7 @@ import { api } from "../lib/api";
 import { ReactionPicker } from "./ReactionPicker";
 import { FavoriteButton, FavoriteLink } from "./FavoriteControl";
 
-export function InteractionBar({ postId, initialState, onFavoriteState }) {
+export function InteractionBar({ postId, initialState, onFavoriteState, extraAction = null }) {
   const operation = useRef(null);
   const [favorited, setFavorited] = useState(Boolean(initialState?.favorited));
   const [favoriteReady, setFavoriteReady] = useState(false);
@@ -79,6 +79,7 @@ export function InteractionBar({ postId, initialState, onFavoriteState }) {
           <FavoriteButton favorited={favorited} ready={favoriteReady} busy={busy} celebration={celebration} onToggle={toggleFavorite} />
           {favoriteReady && favorited ? <FavoriteLink /> : null}
         </div>
+        {extraAction}
       </div>
       <UndoNotice message={canUndo ? "已取消收藏" : ""} busy={busy} error={error} onUndo={(event) => toggleFavorite(event, true)} onClose={() => setCanUndo(false)} />
       <div className="interaction-feedback" aria-live="polite" aria-atomic="true">

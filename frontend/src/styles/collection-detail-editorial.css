@@ -344,11 +344,20 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   .collection-memory-page .collection-post-catalogue > .post-card { transition: none; }
 }
 
-/* 目录抽屉：轻隔页、实墨前沿与档案拉手。摘录仍从属于自己的隔页后面升起。 */
+/* 目录抽屉：一只拉开的纸墨档案抽屉。侧壁顶沿、前板顶面和内膛实墨给出箱体，隔页按透视向后收拢、越靠后线条越淡；
+   每层上沿后面的墨缝里露出装着的纸边。摘录仍从属于自己的隔页后面升起。 */
 .collection-folder-drawer {
   --drawer-step: 52px;
   --drawer-tab: 28px;
-  --drawer-taper: 10px;
+  /* 透视：视距按隔页层数计，越小越强；收拢幅度是一侧最多能收进去的宽度比例。 */
+  --drawer-eye: 14;
+  --drawer-spread: 30%;
+  --drawer-rim: 6px;
+  --drawer-clear: 6px;
+  --drawer-board: 6px;
+  --drawer-card-h: 176px;
+  /* 内膛和墨缝是暗处：浅色主题用实墨，深色主题压暗，不让它反成亮面。 */
+  --drawer-shade: var(--text);
   --drawer-rise: cubic-bezier(.2, .8, .2, 1);
   position: relative;
   isolation: isolate;
@@ -356,25 +365,94 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   overflow: clip;
   margin-bottom: 32px;
   padding-top: 12px;
+  /* 抽屉本身不接指针，只有索引签、隔页和管理入口可点，留给摘录的上方空间不挡住别的内容。 */
+  pointer-events: none;
 }
 .collection-drawer-item {
-  --drawer-line: color-mix(in srgb, var(--text) calc(100% - (var(--drawer-depth) - 1) * 11%), var(--page));
+  /* --s 是这层相对前板的透视比例，--wall 是侧壁外沿收进的宽度；next 指下一层，也就是更靠前的一层。 */
+  --s: calc(var(--drawer-eye) / (var(--drawer-eye) + var(--drawer-depth)));
+  --s-next: calc(var(--drawer-eye) / (var(--drawer-eye) + var(--drawer-depth) - 1));
+  --wall: calc((1 - var(--s)) * var(--drawer-spread));
+  --wall-next: calc((1 - var(--s-next)) * var(--drawer-spread));
+  --rim: calc(var(--drawer-rim) * var(--s));
+  --rim-next: calc(var(--drawer-rim) * var(--s-next));
+  --face-inset: calc(var(--wall) + var(--rim) + var(--drawer-clear) * var(--s));
+  --drawer-ink: color-mix(in srgb, var(--text) calc(100% - (var(--drawer-depth) - 1) * 11%), var(--page));
+  --drawer-well-ink: color-mix(in srgb, var(--drawer-shade) calc(100% - (var(--drawer-depth) - 1) * 11%), var(--page));
+  /* 墨缝压在上一层隔页的下沿，和那一层的内膛同一浓度。 */
+  --drawer-seam-ink: color-mix(in srgb, var(--drawer-shade) calc(100% - var(--drawer-depth) * 11%), var(--page));
+  --drawer-line: var(--drawer-ink);
   position: relative;
   height: var(--drawer-step);
   pointer-events: none;
 }
+:root[data-theme="dark"] .collection-folder-drawer { --drawer-shade: color-mix(in srgb, var(--text) 30%, var(--page)); }
 .collection-drawer-item > .collection-file-icon { display: none; }
 .collection-drawer-item.is-active,
 .collection-drawer-item:focus-within { --drawer-line: var(--text); }
 .collection-drawer-item.is-drop-target { --drawer-line: var(--brand-link); }
+/* 侧壁按层切段：每段从这层上沿接到下一层上沿，拼起来是两条向后收拢的侧壁；侧壁和隔页之间露出内膛。 */
+.collection-drawer-rail,
+.collection-drawer-well {
+  position: absolute;
+  top: var(--drawer-tab);
+  right: 0;
+  left: 0;
+  height: var(--drawer-step);
+}
+.collection-drawer-item:last-of-type :is(.collection-drawer-rail, .collection-drawer-well) { height: calc(var(--drawer-step) - var(--drawer-tab)); }
+.collection-drawer-rail {
+  background: var(--drawer-ink);
+  clip-path: polygon(
+    var(--wall) 0, calc(var(--wall) + var(--rim)) 0, calc(var(--wall-next) + var(--rim-next)) 100%, var(--wall-next) 100%, var(--wall) 0,
+    calc(100% - var(--wall) - var(--rim)) 0, calc(100% - var(--wall)) 0, calc(100% - var(--wall-next)) 100%, calc(100% - var(--wall-next) - var(--rim-next)) 100%, calc(100% - var(--wall) - var(--rim)) 0
+  );
+}
+.collection-drawer-rail::before {
+  position: absolute;
+  inset: 0;
+  background: var(--page);
+  clip-path: polygon(
+    calc(var(--wall) + 1.25px) 0, calc(var(--wall) + var(--rim) - 1.25px) 0, calc(var(--wall-next) + var(--rim-next) - 1.25px) 100%, calc(var(--wall-next) + 1.25px) 100%, calc(var(--wall) + 1.25px) 0,
+    calc(100% - var(--wall) - var(--rim) + 1.25px) 0, calc(100% - var(--wall) - 1.25px) 0, calc(100% - var(--wall-next) - 1.25px) 100%, calc(100% - var(--wall-next) - var(--rim-next) + 1.25px) 100%, calc(100% - var(--wall) - var(--rim) + 1.25px) 0
+  );
+  content: "";
+}
+.collection-drawer-item:first-of-type .collection-drawer-rail::before { top: 1.25px; }
+.collection-drawer-well {
+  background: var(--drawer-well-ink);
+  clip-path: polygon(
+    calc(var(--wall) + var(--rim)) 0, calc(var(--face-inset) + 2px) 0, calc(var(--face-inset) + 2px) 100%, calc(var(--wall-next) + var(--rim-next)) 100%, calc(var(--wall) + var(--rim)) 0,
+    calc(100% - var(--face-inset) - 2px) 0, calc(100% - var(--wall) - var(--rim)) 0, calc(100% - var(--wall-next) - var(--rim-next)) 100%, calc(100% - var(--face-inset) - 2px) 100%, calc(100% - var(--face-inset) - 2px) 0
+  );
+  transition: opacity .2s ease;
+}
 .collection-drawer-face {
   position: absolute;
   z-index: calc(var(--drawer-index) * 2 + 2);
-  inset: 0 calc(var(--drawer-depth) * var(--drawer-taper)) auto;
+  inset: 0 var(--face-inset) auto;
   height: 224px;
-  transition: transform .22s var(--drawer-rise), opacity .2s ease;
+  transform-origin: 50% 100%;
+  transition: transform .24s var(--drawer-rise), opacity .2s ease;
 }
-.collection-drawer-item.is-active .collection-drawer-face { transform: translateY(-6px); }
+/* 抽出的隔页轻抬并朝读者微倾，转轴在藏进抽屉的下沿。 */
+.collection-drawer-item.is-active .collection-drawer-face { transform: perspective(900px) translateY(-6px) rotateX(-4deg); }
+.collection-drawer-item.is-peek .collection-drawer-face { transform: perspective(900px) translateY(-10px) rotateX(-6deg); }
+/* 墨缝：隔页上沿后面的暗缝，纸边按记录数露出来，索引签立在缝前。 */
+.collection-drawer-seam {
+  --seam: calc(3px + var(--drawer-papers) * 2px);
+  position: absolute;
+  top: calc(var(--drawer-tab) - 1px - var(--seam));
+  right: 0;
+  left: 0;
+  height: var(--seam);
+  background: var(--drawer-seam-ink);
+  clip-path: polygon(0 55%, 5% 18%, 24% 6%, 47% 0, 70% 12%, 92% 2%, 100% 34%, 100% 100%, 0 100%);
+}
+.collection-drawer-seam i { position: absolute; height: 1px; background: var(--page); }
+.collection-drawer-seam i:nth-child(1) { bottom: 2px; left: calc(5% + var(--drawer-stagger) * 3%); right: calc(12% - var(--drawer-stagger) * 3%); }
+.collection-drawer-seam i:nth-child(2) { bottom: 4px; left: calc(13% - var(--drawer-stagger) * 4%); right: calc(4% + var(--drawer-stagger) * 4%); }
+.collection-drawer-seam i:nth-child(3) { bottom: 6px; left: calc(2% + var(--drawer-stagger) * 6%); right: calc(16% - var(--drawer-stagger) * 5%); }
 .collection-drawer-link { display: block; height: 100%; color: var(--text); pointer-events: none; }
 .collection-drawer-tabline { display: flex; height: var(--drawer-tab); align-items: stretch; }
 .collection-drawer-tabline i { min-width: 14px; border-bottom: 1.5px solid var(--drawer-line); }
@@ -392,7 +470,8 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   padding: 0 9px;
   background: var(--page);
   color: var(--text);
-  font-size: 14px;
+  /* 近大远小：越靠后的目录名略小，最小不低于约 12.6px。 */
+  font-size: calc(14px * (.74 + .26 * var(--s)));
   line-height: 26px;
   font-weight: 400;
   white-space: nowrap;
@@ -400,10 +479,10 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   transition: color .16s ease, background-color .16s ease;
 }
 .collection-drawer-tabline strong::before { position: absolute; inset: 0 0 auto; height: 2px; background: var(--drawer-line); clip-path: polygon(0 25%, 27% 0, 60% 24%, 100% 6%, 100% 82%, 66% 100%, 32% 78%, 0 100%); content: ""; }
-.collection-drawer-tab-number { flex: none; opacity: .72; font: 10px/1 var(--mono); }
+.collection-drawer-tab-number { flex: none; opacity: .72; font: calc(10px * (.8 + .2 * var(--s)))/1 var(--mono); }
 .collection-drawer-tab-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .collection-drawer-item.is-far:not(.is-active) .collection-drawer-tabline strong { color: var(--text-2); }
-.collection-drawer-slope { flex: none; display: block; width: 12px; height: var(--drawer-tab); overflow: visible; }
+.collection-drawer-slope { position: relative; flex: none; display: block; width: 12px; height: var(--drawer-tab); overflow: visible; }
 .collection-drawer-slope.is-right { transform: scaleX(-1); }
 .collection-drawer-slope .slope-fill { fill: var(--page); pointer-events: auto; transition: fill .16s ease; }
 .collection-drawer-slope .slope-line { fill: var(--drawer-line); }
@@ -422,6 +501,10 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-drawer-item.has-children.is-far:not(.is-active) .collection-drawer-tabline strong { color: var(--page); }
 .collection-drawer-item.has-children .slope-fill { fill: var(--brand-link); }
 .collection-drawer-item.has-children .slope-line { fill: var(--brand-link); }
+/* 触屏按住的这层索引签反成墨底；偷看时摘录卡本身是墨底，索引签退回原样才分得开。 */
+.collection-drawer-item.is-pressed:not(.is-peek) .collection-drawer-tabline strong { background: var(--text); color: var(--page); }
+.collection-drawer-item.is-pressed:not(.is-peek) .collection-drawer-tabline strong::before { background: var(--text); }
+.collection-drawer-item.is-pressed:not(.is-peek) :is(.slope-fill, .slope-line) { fill: var(--text); }
 .collection-drawer-item.is-drop-target .collection-drawer-sheet { background: color-mix(in srgb, var(--brand-link) 8%, var(--page)); }
 .collection-drawer-link:focus-visible { outline: 0; }
 .collection-drawer-link:focus-visible strong { outline: 2px solid var(--brand-link); outline-offset: 3px; }
@@ -446,9 +529,9 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   left: 50%;
   display: flex;
   flex-direction: column;
-  width: min(100% - 2 * var(--drawer-depth) * var(--drawer-taper) - 56px, 440px);
-  height: 176px;
-  margin-left: calc(min(100% - 2 * var(--drawer-depth) * var(--drawer-taper) - 56px, 440px) / -2);
+  width: min(100% - 2 * var(--face-inset) - 56px, 440px);
+  height: var(--drawer-card-h);
+  margin-left: calc(min(100% - 2 * var(--face-inset) - 56px, 440px) / -2);
   padding: 12px 22px;
   background: var(--text);
   color: var(--page);
@@ -461,7 +544,7 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-drawer-card-heading time { font-size: 10px; font-variant-numeric: tabular-nums; }
 .collection-drawer-card p { display: -webkit-box; flex: none; height: 66px; margin: 6px 0; overflow: hidden; font-size: 15px; line-height: 22px; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .collection-drawer-card-source { flex: none; overflow: hidden; padding-top: 6px; border-top: 1px solid color-mix(in srgb, var(--page) 22%, transparent); color: color-mix(in srgb, var(--page) 72%, var(--text)); font-size: 11px; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
-.collection-drawer-item.is-active:not(.is-drop-target) .collection-drawer-card { transform: translateY(-172px); }
+.collection-drawer-item.is-peek .collection-drawer-card { transform: translateY(calc(4px - var(--drawer-card-h))); }
 .collection-drawer-front {
   position: relative;
   z-index: calc(var(--drawer-count) * 2 + 3);
@@ -475,6 +558,20 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+/* 前板顶面：前脸上沿再压一条细纸边，读出板的厚度，两端顺着侧壁收进去。 */
+.collection-drawer-front::before,
+.collection-drawer-front::after {
+  --board-in: calc(var(--drawer-spread) / (var(--drawer-eye) + 1) / 4);
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: var(--drawer-board);
+  pointer-events: none;
+  content: "";
+}
+.collection-drawer-front::before { background: var(--text); clip-path: polygon(0 100%, var(--board-in) 0, calc(100% - var(--board-in)) 0, 100% 100%); }
+.collection-drawer-front::after { background: var(--page); clip-path: polygon(2.4px 100%, calc(var(--board-in) + 2.4px) 1.3px, calc(100% - var(--board-in) - 2.4px) 1.3px, calc(100% - 2.4px) 100%); }
 .collection-drawer-front-ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .collection-drawer-front .drawer-paper { fill: var(--page); }
 .collection-drawer-front > .collection-file-icon { position: relative; width: 36px; height: 36px; }
@@ -484,12 +581,17 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
 .collection-drawer-pull { position: relative; width: 84px; height: 28px; }
 .collection-folder-drawer.is-leaving .collection-drawer-item:not(.is-keep) .collection-drawer-face,
 .collection-folder-drawer.is-leaving .collection-drawer-item:not(.is-keep) .collection-drawer-card { opacity: 0; transform: translateY(22px); }
-.collection-folder-drawer.is-leaving .collection-drawer-item.is-keep .collection-drawer-face { transform: translateY(-16px); }
+.collection-folder-drawer.is-leaving .collection-drawer-item:not(.is-keep) .collection-drawer-well { opacity: 0; }
+.collection-folder-drawer.is-leaving .collection-drawer-item.is-keep .collection-drawer-face { transform: perspective(900px) translateY(-16px) rotateX(-6deg); }
 .collection-folder-drawer.is-entering .collection-drawer-face { animation: collection-drawer-rise .32s var(--drawer-rise) backwards; animation-delay: calc(var(--drawer-depth) * 28ms); }
+.collection-folder-drawer.is-entering .collection-drawer-well { animation: collection-drawer-well-in .32s ease backwards; animation-delay: calc(var(--drawer-depth) * 28ms); }
 /* 隔页升起时还是半透明的，摘录卡要等它落定才能在后面待命。 */
 .collection-folder-drawer.is-entering .collection-drawer-card { animation: collection-drawer-card-hold calc(.32s + var(--drawer-depth) * 28ms) linear; }
 @keyframes collection-drawer-rise {
   from { opacity: 0; transform: translateY(18px); }
+}
+@keyframes collection-drawer-well-in {
+  from { opacity: 0; }
 }
 @keyframes collection-drawer-card-hold {
   from, to { visibility: hidden; }
@@ -501,14 +603,16 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   .collection-drawer-actions { opacity: 0; transition: opacity .14s ease; }
   .collection-drawer-item.is-active .collection-drawer-actions,
   .collection-drawer-actions:focus-within { opacity: 1; }
+  .collection-drawer-item.is-active:not(.is-drop-target) .collection-drawer-card { transform: translateY(calc(4px - var(--drawer-card-h))); }
 }
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
   .collection-folder-drawer.has-cards { padding-top: 144px; }
 }
 /* 手机和触屏不靠悬停：索引签都靠左，右侧留给数量和不低于 44px 的操作。 */
 @media (max-width: 767px), (pointer: coarse) {
-  .collection-folder-drawer { --drawer-step: 64px; --drawer-taper: 3.5px; }
-  .collection-drawer-card { display: none; }
+  .collection-folder-drawer { --drawer-step: 64px; --drawer-spread: 32%; --drawer-rim: 5px; --drawer-clear: 5px; --drawer-board: 5px; --drawer-card-h: 150px; }
+  .collection-drawer-card { padding: 10px 16px; }
+  .collection-drawer-card p { height: 63px; font-size: 14px; line-height: 21px; }
   .collection-drawer-tabline .is-before { flex: 0 0 calc(12px + var(--drawer-stagger) * 12px); }
   .collection-drawer-tabline .is-after { flex: 1 1 0; }
   .collection-drawer-tabline strong { max-width: min(68%, calc(100% - 112px)); gap: 6px; padding-inline: 7px; }
@@ -523,16 +627,30 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   .collection-drawer-front-label small { font-size: 11px; }
   .collection-drawer-pull { width: 60px; height: 24px; }
 }
-@media (pointer: coarse) and (min-width: 768px) {
-  .collection-folder-drawer { --drawer-taper: 8px; }
+/* 窄窗口里的鼠标既不悬停出卡，也不能长按，摘录卡不出现。 */
+@media (max-width: 767px) and (hover: hover) and (pointer: fine) {
+  .collection-drawer-card { display: none; }
+}
+/* 触屏：按住约 0.1 秒抽出这层，按满约 0.4 秒从隔页里升起摘录，松手放回。
+   抽屉向上借出摘录的高度，用负外边距抵消，不改变排版。 */
+@media (hover: none), (pointer: coarse) {
+  .collection-folder-drawer { -webkit-user-select: none; user-select: none; }
+  .collection-drawer-item.can-peek .collection-drawer-link { -webkit-touch-callout: none; }
+  .collection-folder-drawer.has-cards {
+    --drawer-peek-room: calc(var(--drawer-card-h) - 28px);
+    margin-top: calc(-1 * var(--drawer-peek-room));
+    padding-top: calc(12px + var(--drawer-peek-room));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .collection-drawer-face,
   .collection-drawer-card,
+  .collection-drawer-well,
   .collection-drawer-tabline strong,
   .collection-drawer-sheet,
   .collection-drawer-slope .slope-fill { transition: none; }
   .collection-folder-drawer.is-entering .collection-drawer-face,
+  .collection-folder-drawer.is-entering .collection-drawer-well,
   .collection-folder-drawer.is-entering .collection-drawer-card { animation: none; }
 }
 

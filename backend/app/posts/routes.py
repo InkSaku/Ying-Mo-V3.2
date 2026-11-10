@@ -31,6 +31,11 @@ from app.posts.revisions import (
 )
 from app.posts.related import related_articles
 from app.posts.note_experience import note_experience
+from app.posts.continuations import (
+    break_links_for_post, chain_post_ids, continuation_detail, continuation_management,
+    create_continuation_draft, discard_draft_link, guard_continuation_patch, posts_in_chains,
+    prepare_continuation_publish, set_chain_visibility,
+)
 from app.posts.memory_contributions import (
     create_contribution_draft, detach_memory_link, ensure_memory_scope_update,
     invalidate_links_for_post, lock_post_scope, memory_management, memory_summary,
@@ -115,6 +120,7 @@ def _serialize(post, include_body=True, *, actor_id=None, management=False):
         data["collection_path"] = []
     if management:
         data["memory_link"] = memory_management(post)
+        data["continuation"] = continuation_management(post)
     if include_body:
         media = db.session.scalars(
             db.select(Media).where(
@@ -231,6 +237,7 @@ def _detail(post,actor):
     }
     data["previous"]=None; data["next"]=None; data["related"]=[]; data["experience"]=None
     data["memory"] = memory_summary(post, actor.id)
+    data["continuation"] = continuation_detail(post, actor.id)
     if post.post_type==PostType.ARTICLE.value and post.published_at is not None:
         base=(
             db.select(Post).where(
@@ -265,6 +272,7 @@ def _apply_patch(post, actor, data):
     if unknown:
         raise DomainError("VALIDATION_ERROR", "包含不支持的字段。", 422, [{"fields": unknown}])
     ensure_memory_scope_update(post, data)
+    guard_continuation_patch(post, data)
 
     if "post_type" in data:
         value = data["post_type"]
@@ -326,6 +334,7 @@ def _apply_patch(post, actor, data):
         # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
         if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
+            break_links_for_post(post.id, "post_collection_changed")
 
     if "collection_folder_id" in data:
         apply_collection_folder(post, actor.id, data["collection_folder_id"])
@@ -615,6 +624,46 @@ def detach_memory_contribution(post_id):
     return success_response(_serialize(detached, actor_id=actor.id, management=True))
 
 
+@bp.post("/<int:post_id>/continuations")
+@jwt_required(locations=["headers"])
+def create_continuation(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    # 和原帖的移动、删除互斥；连点两次也只会得到同一份草稿。
+    source = lock_post_scope(post_id)
+    try:
+        draft, created = create_continuation_draft(source, actor)
+        db.session.commit()
+    except (DomainError, IntegrityError) as error:
+        db.session.rollback()
+        if isinstance(error, IntegrityError):
+            return error_response("DUPLICATE_RESOURCE", "无法创建接着写的草稿。", 409)
+        return _handle_domain(error)
+    return success_response(_serialize(draft, actor_id=actor.id, management=True), 201 if created else 200)
+
+
+@bp.post("/<int:post_id>/continuation-chain/visibility")
+@jwt_required(locations=["headers"])
+def update_continuation_chain_visibility(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or set(data) != {"visibility"}:
+        return error_response("VALIDATION_ERROR", "请求仅接受 visibility。", 422)
+    post = lock_post_scope(post_id, extra_post_ids=chain_post_ids(post_id))
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    try:
+        set_chain_visibility(post, actor.id, data["visibility"])
+        db.session.commit()
+    except DomainError as error:
+        db.session.rollback()
+        return _handle_domain(error)
+    return success_response(_serialize(post, actor_id=actor.id, management=True))
+
+
 @bp.get("/slug/<slug>")
 @jwt_required(locations=["headers"])
 def get_by_slug(slug):
@@ -764,7 +813,7 @@ def autosave_post(post_id):
 @jwt_required(locations=["headers"])
 def publish(post_id):
     actor = current_user()
-    post = lock_post_scope(post_id)
+    post = lock_post_scope(post_id, extra_post_ids=chain_post_ids(post_id))
     if actor is None:
         return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
     if post is None or post.author_id != actor.id or post.deleted_at is not None:
@@ -774,6 +823,7 @@ def publish(post_id):
         memory_root = validate_memory_contribution_publish(
             post, actor.id, data.get("expected_version")
         )
+        prepare_continuation_publish(post, confirm_widen=data.get("confirm_widen_chain"))
         slug = publish_post(post, actor.id, data.get("slug"), memory_root=memory_root)
         db.session.commit()
     except (DomainError, IntegrityError, StaleDataError) as error:
@@ -830,6 +880,7 @@ def move_collection(post_id):
         # apply_collection 写的是关系属性，post.collection_id 要到 flush 才同步。
         if (post.collection.id if post.collection else None) != previous_collection_id:
             invalidate_links_for_post(post.id, "post_collection_changed")
+            break_links_for_post(post.id, "post_collection_changed")
         if before is not None:
             create_revision(
                 post, before, changed_snapshot_fields(before, snapshot_post(post)),
@@ -864,6 +915,7 @@ def remove_from_collection(post_id):
     post.collection_highlight_order = None
     post.visibility = PostVisibility.PRIVATE.value
     invalidate_links_for_post(post.id, "post_removed_from_collection")
+    break_links_for_post(post.id, "post_removed_from_collection")
     if before is not None:
         create_revision(
             post, before, changed_snapshot_fields(before, snapshot_post(post)),
@@ -885,6 +937,7 @@ def delete_post(post_id):
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     invalidate_links_for_post(post.id, "post_deleted")
     if not post.was_published:
+        discard_draft_link(post.id)
         db.session.delete(post)
     else:
         post.deleted_at = utcnow()
@@ -923,6 +976,7 @@ def my_posts():
         stmt.order_by(Post.updated_at.desc(), Post.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
     stats_by_post = _reading_stats_for_posts([p.id for p in rows])
+    chained = posts_in_chains(p.id for p in rows)
     # 作者管理例外：只返回自己的 Post，不展开无权 Collection 的敏感上下文。
     result = []
     for p in rows:
@@ -933,6 +987,7 @@ def my_posts():
             item["cover_media"] = p.cover_media.to_dict(include_manage_paths=True)
         item.pop("collection", None)
         item["reading_stats"] = stats_by_post[p.id]
+        item["in_continuation_chain"] = p.id in chained
         result.append(item)
     return success_response(result, meta=pagination_meta(page, size, total))
 

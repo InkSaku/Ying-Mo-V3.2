@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { excerpt, formatDate, postHref } from "../lib/format";
 import { PostCardMedia } from "./PostCardMedia";
 import { CollectionFileIcon } from "./CollectionFileIcon";
+import { ContinuationCardLine } from "./ContinuationViews";
 
 function journalDate(value) {
   const date = new Date(value || "");
@@ -27,6 +28,7 @@ export function NotePostCard({ post, compact = false, variant = "", index = 0, h
       <div className="post-card-content">
         <div className="post-card-meta"><span>随记</span></div>
         <p className="note-card-text"><Link to={postHref(post)}>{body || "查看这则影像随记"}</Link></p>
+        <ContinuationCardLine post={post} />
         <div className="post-card-details">
           {post.author && !hideAuthor ? <Link to={`/users/${post.author.username}`}>{post.author.nickname}</Link> : null}
           {/* 目录式随记左侧已有日、月，年份在分组标题里；这里只留给读屏软件，视觉上不再重复一行日期。 */}

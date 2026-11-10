@@ -12,6 +12,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Pagination } from "../components/Pagination";
 import { formatDate, postTypeLabel, visibilityLabel } from "../lib/format";
 import { PersonalNav } from "../components/PersonalNav";
+import { ContinueWriteButton } from "../components/ContinuationViews";
 import { clampPageToTotal } from "../lib/pagination";
 import { invalidateHomeFeedCache } from "../lib/homeFeed";
 
@@ -215,6 +216,7 @@ export function MyPostsPage() {
                     {openingId === post.id ? "正在打开" : "阅读"}
                   </button>
                 ) : null}
+                {(post.status === "published" || post.status === "archived") ? <ContinueWriteButton postId={post.id} className="btn btn-secondary" onError={setActionError} /> : null}
                 <Link className="btn btn-secondary" to={`/write/${post.id}`}>编辑</Link>
                 {post.published_at ? <Link className="btn btn-secondary" to={`/me/posts/${post.id}/revisions`}>版本历史</Link> : null}
                 {post.status === "draft" ? <button className="btn btn-primary" type="button" onClick={() => beginAction("publish", post)}>发布</button> : null}
@@ -255,7 +257,7 @@ export function MyPostsPage() {
           : action?.type === "archive"
             ? "归档后内容仍可由有权成员阅读，也可以继续编辑。"
             : action?.type === "detach"
-              ? "内容会脱离原合集，并自动恢复为仅自己可见。"
+              ? `内容会脱离原合集，并自动恢复为仅自己可见。${action?.post?.in_continuation_chain ? "它也会和接着写的这一串断开。" : ""}`
               : action?.post?.published_at
                 ? "发布过的内容将不再显示，删除后无法在本页恢复。"
                 : "未发布草稿会被永久删除，这项操作不能撤销。"}

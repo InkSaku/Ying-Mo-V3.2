@@ -577,6 +577,7 @@ def member_options():
 @bp.post("/<int:collection_id>/remove-post")
 @jwt_required(locations=["headers"])
 def remove_post(collection_id):
+    from app.posts.continuations import break_links_for_post
     from app.posts.memory_contributions import invalidate_links_for_post, lock_post_scope
 
     actor = current_user()
@@ -591,6 +592,7 @@ def remove_post(collection_id):
     if post is None or post.collection_id != collection.id or post.deleted_at is not None:
         return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
     invalidate_links_for_post(post.id, "post_removed_from_collection")
+    break_links_for_post(post.id, "post_removed_from_collection")
     post.collection_id = None
     post.collection_folder_id = None
     post.collection_sort_order = None

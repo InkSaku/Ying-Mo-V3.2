@@ -1,0 +1,57 @@
+/* 接着写：来源是一段书页引文，靛蓝短线代替卡片边框；目录里只多一行小字。 */
+.continuation-kicker { margin: 0 0 10px; color: var(--brand-link); font-size: 13px; line-height: 1.7; }
+.continuation-kicker a { color: inherit; }
+.continuation-kicker a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.continuation-kicker.is-unavailable { color: var(--text-3); }
+
+.continuation-source { margin: 44px 0 0; padding: 1px 0 1px 16px; border-left: 2px solid var(--brand-link); }
+.continuation-source a { display: block; color: var(--text); }
+.continuation-source small { display: block; color: var(--text-3); font-size: 12px; line-height: 1.7; }
+.continuation-source .continuation-source-head { display: flex; justify-content: space-between; gap: 16px; }
+.continuation-source strong { display: block; font-size: 18px; font-weight: 400; line-height: 1.6; }
+.continuation-source a:hover strong { color: var(--brand-link); }
+.continuation-source p { display: -webkit-box; margin: 2px 0 4px; overflow: hidden; color: var(--text-2); font-size: 14px; line-height: 1.75; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.continuation-source.is-unavailable { border-left-color: var(--border); }
+.continuation-source.is-unavailable p { display: block; margin: 0; color: var(--text-3); }
+
+.continuation-later { margin-top: 44px; }
+.continuation-later h2 { margin: 0 0 10px; font-size: 20px; font-weight: 400; line-height: 1.5; }
+.continuation-later ol { margin: 0; padding: 0; list-style: none; }
+.continuation-later li { border-top: 1px solid var(--border); }
+.continuation-later li a { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: baseline; gap: 12px; min-height: 44px; padding: 11px 0; color: var(--text); }
+.continuation-later li a:hover span { color: var(--brand-link); }
+.continuation-later small { color: var(--text-3); font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.continuation-later span { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
+
+.continue-write-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 4px 14px 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-control, 2px); background: transparent; color: var(--brand-link); font: 14px var(--serif); cursor: pointer; touch-action: manipulation; }
+.continue-write-button:hover { border-color: var(--brand-link); }
+.continue-write-button:disabled { opacity: .55; cursor: default; }
+.continue-write-button:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+.continue-write-error { align-self: center; color: var(--danger, #9f3a2f); font-size: 13px; }
+
+.post-card-source { margin: 2px 0 4px; font-size: 12px; line-height: 1.7; }
+.post-card-source a { color: var(--brand-link); }
+.post-card-source a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.continuation-editor-source { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; margin: 0 0 14px; padding: 1px 0 1px 14px; border-left: 2px solid var(--brand-link); color: var(--text-2); font-size: 14px; line-height: 1.7; }
+.continuation-editor-source.is-unavailable { border-left-color: var(--border); color: var(--text-3); }
+.continuation-editor-source .text-button { color: var(--text-3); font-size: 13px; }
+.continuation-chain-action { align-self: flex-start; margin-top: 4px; padding-inline: 0; color: var(--brand-link); font-size: 13px; }
+.publish-chain-notice { margin: 12px 0 0; padding-left: 10px; border-left: 1px solid var(--brand-link); color: var(--brand-link); font-size: 12px; line-height: 1.8; }
+.publish-chain-notice ul { margin: 2px 0 0; padding: 0; list-style: none; color: var(--text); }
+.continuation-chain-list { margin: 10px 0 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.7; }
+.continuation-chain-list li + li { margin-top: 2px; }
+
+.note-reading-page > .continuation-later { width: min(100%, 760px); margin-right: 0; margin-left: auto; }
+@media (max-width: 900px) {
+  .note-reading-page > .continuation-later { width: calc(100% - 184px); }
+}
+@media (max-width: 640px) {
+  .note-reading-page > .continuation-later { width: 100%; }
+}
+
+@media (max-width: 767px) {
+  .continuation-source { margin-top: 32px; }
+  .continuation-later { margin-top: 32px; }
+  .continuation-later li a { grid-template-columns: 64px minmax(0, 1fr) auto; }
+}

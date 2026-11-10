@@ -8,6 +8,8 @@ import { TagPicker } from "../components/TagPicker";
 import { selectedTagNames } from "../lib/tagSelection";
 import { buildFolderIndex, flattenFolders, folderPathLabel } from "../lib/collectionFolders";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { ContinuationEditorSource } from "../components/ContinuationViews";
+import { continuationLabel } from "../lib/continuations";
 import { MarkdownEditorDialog } from "../components/MarkdownEditorDialog";
 import { ProtectedImage } from "../components/ProtectedImage";
 import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
@@ -182,6 +184,8 @@ export function WritePage() {
   const publicationPanelRef = useRef(null);
   const publicationTriggerRef = useRef(null);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [continuationAbandonOpen, setContinuationAbandonOpen] = useState(false);
+  const [chainVisibilityTarget, setChainVisibilityTarget] = useState("");
   const [workspaceMode, setWorkspaceMode] = useState("write");
   const [bodyEditorOpen, setBodyEditorOpen] = useState(false);
   const [editorBody, setEditorBody] = useState("");
@@ -402,6 +406,25 @@ export function WritePage() {
   const isPublished = Boolean(savedPost?.published_at);
   const memoryLink = savedPost?.memory_link || null;
   const inCollection = Boolean(form.collection_id);
+  // 接着写：草稿固定在原帖所在的位置，一串帖子的阅读范围取并集。
+  const continuation = savedPost?.continuation || null;
+  const continuationDraft = Boolean(continuation?.is_continuation && !isPublished);
+  const chainPosts = continuation?.chain_posts || [];
+  const inChain = chainPosts.length > 0;
+  const chainOpen = continuation?.chain_visibility === "login_only";
+  const chainVisibilityLocked = !inCollection && inChain && (isPublished || chainOpen);
+  const chainWidening = continuationDraft && !inCollection && inChain && !chainOpen && form.visibility === "login_only";
+  const chainWillBreak = Boolean(isPublished && continuation) && String(savedPost?.collection_id || "") !== form.collection_id;
+  const canChangeChainVisibility = isPublished && inChain && !inCollection;
+  const publishChainNotice = chainWillBreak
+    ? "换到别的位置后，这篇会和这一串断开。"
+    : chainWidening
+      ? <>发布后，下面的内容也会变成所有映墨成员可读：<ul>{chainPosts.map((item) => <li key={item.id}>《{continuationLabel(item)}》</li>)}</ul></>
+      : continuationDraft && chainVisibilityLocked
+        ? "这一串已经是所有映墨成员可读，接着写的内容也一样。想只给自己看，可以单独写一篇。"
+        : canChangeChainVisibility
+          ? "这一串的阅读范围要一起改，可以在文稿信息里操作。"
+          : null;
   const title = form.post_type === "article" ? "文章" : "随记";
   const inlineMediaIds = useMemo(
     () => mediaIdsInMarkdown(bodyEditorOpen ? editorBody : form.body),
@@ -765,6 +788,7 @@ export function WritePage() {
       const post = await saveDraftSnapshot(snapshot);
       const publishPayload = { expected_version: post.edit_version };
       if (form.post_type === "article") publishPayload.slug = form.slug.trim();
+      if (chainWidening) publishPayload.confirm_widen_chain = true;
       let published;
       for (let attempt = 0; attempt < 4; attempt += 1) {
         try {
@@ -812,6 +836,52 @@ export function WritePage() {
     } catch (detachError) {
       setError(detachError.message);
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const abandonContinuationDraft = async () => {
+    const currentPost = savedPostRef.current;
+    if (!currentPost) return;
+    const destination = continuation?.source?.canonical || "/me/posts";
+    setBusy(true);
+    setError("");
+    // 先挡住排队中的自动保存和离线副本，否则删除后它们还会写回来。
+    routeReadyRef.current = false;
+    editorGenerationRef.current += 1;
+    offlinePendingFormRef.current = null;
+    try {
+      await saveQueueRef.current.catch(() => undefined);
+      await api.delete(`/posts/${currentPost.id}`);
+      removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+      navigate(destination, { replace: true });
+    } catch (abandonError) {
+      routeReadyRef.current = true;
+      setError(abandonError.message);
+      setContinuationAbandonOpen(false);
+      setBusy(false);
+    }
+  };
+
+  const changeChainVisibility = async () => {
+    const currentPost = savedPostRef.current;
+    if (!currentPost || !chainVisibilityTarget) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await api.post(`/posts/${currentPost.id}/continuation-chain/visibility`, { visibility: chainVisibilityTarget });
+      if (draftFingerprint(draftPayloadFromForm(form)) === lastSavedFingerprintRef.current) {
+        lastSavedFingerprintRef.current = draftFingerprint(draftPayloadFromForm({ ...form, visibility: result.data.visibility }));
+      }
+      savedPostRef.current = result.data;
+      setSavedPost(result.data);
+      setForm((current) => ({ ...current, visibility: result.data.visibility }));
+      setMessage("这一串的阅读范围已经一起改好了。");
+    } catch (changeError) {
+      setError(changeError.message);
+    } finally {
+      setChainVisibilityTarget("");
       setBusy(false);
     }
   };
@@ -1064,6 +1134,7 @@ export function WritePage() {
         <span>{memoryLink.state === "invalidated" ? "原记录或参与范围已不可用；草稿仍已保留。" : "这是一则共同回忆补充，内容类型和合集范围已锁定。"}</span>
         <button className="text-button" type="button" disabled={busy} onClick={() => void detachMemoryDraft()}>转为独立私密草稿</button>
       </div> : null}
+      {continuation?.is_continuation ? <ContinuationEditorSource source={continuation.source} startedAt={savedPost?.published_at || savedPost?.created_at} busy={busy} onAbandon={continuationDraft ? () => setContinuationAbandonOpen(true) : null} /> : null}
       {!online ? <div className="inline-error editor-feedback" role="status">当前处于离线状态；修改会保存在此浏览器，联网后可继续保存到服务器。</div> : null}
       {offlineRecovery ? (
         <div className="inline-success editor-feedback offline-recovery" role="status">
@@ -1289,13 +1360,17 @@ export function WritePage() {
           <header><span></span><strong>合集与阅读范围</strong></header>
           <label>
             <span>合集</span>
-            <CustomSelect disabled={Boolean(memoryLink)} value={form.collection_id} onChange={(event) => { const value = event.target.value; setError(""); setMessage(""); setForm((current) => withCollection(current, value)); }}>
+            <CustomSelect disabled={Boolean(memoryLink) || continuationDraft} value={form.collection_id} onChange={(event) => { const value = event.target.value; setError(""); setMessage(""); setForm((current) => withCollection(current, value)); }}>
               <option value="">不加入合集</option>
               {collectionUnavailable ? <option value={form.collection_id}>原合集（当前不可访问）</option> : null}
               {collections.map((collection) => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
             </CustomSelect>
             {memoryLink
               ? <small>共同回忆补充沿用原记录的合集；解除关联后可修改。</small>
+              : continuationDraft
+              ? <small>接着写的内容固定和原帖在同一个地方。</small>
+              : chainWillBreak
+              ? <small className="field-error">换到别的位置后，这篇会和这一串断开。</small>
               : collectionUnavailable
               ? <small className="field-error">你已不在原合集中。仍可编辑，但发布前必须先移出。</small>
               : <small>可选择你创建或加入的合集。</small>}
@@ -1312,12 +1387,16 @@ export function WritePage() {
 
           <label>
             <span>阅读范围</span>
-            <CustomSelect disabled={inCollection} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
+            <CustomSelect disabled={inCollection || chainVisibilityLocked} value={inCollection ? "private" : form.visibility} onChange={set("visibility")}>
               <option value="private">{inCollection ? "仅合集成员" : "仅自己"}</option>
               <option value="login_only">所有映墨成员</option>
             </CustomSelect>
             {inCollection ? <small>此内容由当前合集成员阅读。</small> : null}
+            {canChangeChainVisibility ? <small>这一串共 {chainPosts.length + 1} 篇，阅读范围要一起改。</small> : null}
+            {continuationDraft && chainVisibilityLocked ? <small>这一串已经是所有映墨成员可读，接着写的内容也一样。</small> : null}
+            {chainWidening ? <small>发布时会请你确认：这一串都会变成所有映墨成员可读。</small> : null}
           </label>
+          {canChangeChainVisibility ? <button className="text-button continuation-chain-action" type="button" disabled={busy} onClick={() => setChainVisibilityTarget(form.visibility === "private" ? "login_only" : "private")}>这一串一起改成{form.visibility === "private" ? "所有映墨成员" : "仅自己"}</button> : null}
           </section>
 
           <section className="editor-sidebar-section editor-sidebar-tags">
@@ -1346,7 +1425,10 @@ export function WritePage() {
         collections={collections}
         folderChoices={folderChoices}
         initialTags={savedPost?.tags || []}
-        lockedCollection={Boolean(memoryLink)}
+        lockedCollection={Boolean(memoryLink) || continuationDraft}
+        lockedCollectionCopy={continuationDraft ? { heading: "接着写的内容固定和原帖在同一个地方。", footer: "这篇会发布到原帖所在的位置。" } : undefined}
+        visibilityLocked={chainVisibilityLocked}
+        chainNotice={publishChainNotice}
         busy={busy}
         error={error}
         unavailable={collectionUnavailable}
@@ -1403,6 +1485,32 @@ export function WritePage() {
         onConfirm={reloadServerDraft}
         onClose={() => setReloadConflictOpen(false)}
       />
+
+      <ConfirmDialog
+        open={continuationAbandonOpen}
+        title="放弃这篇？"
+        description="这份草稿会被删除，不能恢复；原帖不受影响。"
+        confirmLabel="放弃这篇"
+        danger
+        busy={busy}
+        onConfirm={abandonContinuationDraft}
+        onClose={() => { if (!busy) setContinuationAbandonOpen(false); }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(chainVisibilityTarget)}
+        title={`这一串都改成${chainVisibilityTarget === "private" ? "仅自己可读" : "所有映墨成员可读"}？`}
+        description="下面的内容会一起改变阅读范围。"
+        confirmLabel="一起修改"
+        busy={busy}
+        onConfirm={changeChainVisibility}
+        onClose={() => { if (!busy) setChainVisibilityTarget(""); }}
+      >
+        <ul className="continuation-chain-list">
+          <li>《{savedPost ? continuationLabel({ ...savedPost, content_excerpt: savedPost.summary || savedPost.body }) : ""}》</li>
+          {chainPosts.map((item) => <li key={item.id}>《{continuationLabel(item)}》</li>)}
+        </ul>
+      </ConfirmDialog>
     </main>
   );
 }

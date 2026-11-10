@@ -19,6 +19,7 @@ from .session import RefreshSession
 from .admin import AdminLog, FeaturedContent, SiteSetting
 from .account import AccountToken, AccountTokenPurpose
 from .memory import PostMemoryLink
+from .continuation import PostContinuation
 
 __all__ = [
     "User", "UserRole", "UserStatus",
@@ -31,7 +32,7 @@ __all__ = [
     "PostReaction", "REACTION_KINDS", "PostReadEvent", "PostRevision",
     "Notification", "RefreshSession",
     "AdminLog", "FeaturedContent", "SiteSetting",
-    "AccountToken", "AccountTokenPurpose", "PostMemoryLink",
+    "AccountToken", "AccountTokenPurpose", "PostMemoryLink", "PostContinuation",
     "SparkAccount", "SparkContact", "SparkJob", "SparkDelivery", "SparkWorkerState", "SparkLoginSession",
 ]
 

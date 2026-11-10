@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload, load_only, selectinload
 from app.access import is_collection_member, member_collection_ids
 from app.extensions import db
 from app.models import Media, MediaKind, Post, PostType, User
+from app.posts.continuations import continuation_previews
 from app.posts.service import current_article_slug, current_article_slugs
 
 
@@ -89,7 +90,7 @@ def note_visual_counts(posts):
     return {bound_id: count for bound_id, count in rows}
 
 
-def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None, member_ids=None, visual_counts=None):
+def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None, member_ids=None, visual_counts=None, continuations=None):
     data = post.to_dict(include_body=False)
     data["content_excerpt"] = (post.summary or post.body or "")[:BROWSE_EXCERPT_SOURCE_LIMIT]
     if post.post_type == PostType.ARTICLE.value:
@@ -121,6 +122,9 @@ def serialize_browse_post(post, *, actor_id=None, display_media=None, slugs=None
     # 列表缩略图只显示第一张；随记另给出图片总数（Live Photo 按一组计），前端据此标出“共几张”。
     if post.post_type == PostType.NOTE.value and visual_counts is not None:
         data["visual_count"] = visual_counts.get(post.id, 0)
+    if continuations is None:
+        continuations = continuation_previews([post], actor_id)
+    data["continues"] = continuations.get(post.id)
     return data
 
 
@@ -135,7 +139,8 @@ def serialize_browse_posts(posts, *, actor_id=None):
         member_collection_ids(actor_id, {post.collection for post in posts})
         if actor_id is not None else None
     )
+    continuations = continuation_previews(posts, actor_id)
     return [
-        serialize_browse_post(post, actor_id=actor_id, display_media=media, slugs=slugs, member_ids=member_ids, visual_counts=visual_counts)
+        serialize_browse_post(post, actor_id=actor_id, display_media=media, slugs=slugs, member_ids=member_ids, visual_counts=visual_counts, continuations=continuations)
         for post in posts
     ]

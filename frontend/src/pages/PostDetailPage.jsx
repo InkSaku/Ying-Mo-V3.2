@@ -20,6 +20,7 @@ import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
 import { CollectionPathTags } from "../components/CollectionPathTags";
+import { ContinuationKicker, ContinuationLater, ContinuationSource, ContinueWriteButton } from "../components/ContinuationViews";
 import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
 import "../styles/reading-editorial.css";
@@ -36,6 +37,7 @@ function ArticleHero({ post, preview = false, galleryItems = [], coverGalleryIte
   return (
     <header className={`post-detail-header article-detail-hero ${post.cover_media ? "has-cover" : "without-cover"}`}>
       <div className="article-detail-heading">
+        <ContinuationKicker post={post} />
         <p className="article-detail-kicker">{postTypeLabel(post.post_type)}{post.reading_minutes ? ` · 阅读约 ${post.reading_minutes} 分钟` : ""}</p>
         <h1 style={transitionId ? { viewTransitionName: "article-title" } : undefined}>{post.title || "未命名文章"}</h1>
         {post.summary ? <p className="lede">{post.summary}</p> : null}
@@ -139,6 +141,7 @@ export function PostDetailPage({ type }) {
           <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
         ) : null}
         <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
+        <ContinuationLater post={post} />
         <SharedMemorySection post={post} onPostChanged={state.reload} />
         <NoteExperience experience={post.experience} />
         <CommentsPanel key={post.id} postId={post.id} />
@@ -159,7 +162,11 @@ export function PostDetailPage({ type }) {
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
       ) : null}
 
-      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} />
+      <ContinuationSource post={post} />
+
+      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} extraAction={post.continuation?.can_continue ? <ContinueWriteButton postId={post.id} /> : null} />
+
+      <ContinuationLater post={post} />
 
       {post.post_type === "article" && (post.previous || post.next) ? (
         <nav className="article-nav" aria-label="相邻文章">

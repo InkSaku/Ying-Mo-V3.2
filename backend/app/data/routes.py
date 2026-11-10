@@ -13,7 +13,7 @@ from app.access import can_read_post, readable_post_predicate
 from app.extensions import db
 from app.models import (
     Collection, CollectionMember, Comment, CommentMention, CommentReaction,
-    ContentFavorite, Media, Notification, Post, PostMemoryLink, PostReaction,
+    ContentFavorite, Media, Notification, Post, PostContinuation, PostMemoryLink, PostReaction,
 )
 from app.collections.folders import folder_name_paths
 from app.posts.service import current_article_slug
@@ -96,6 +96,13 @@ def export_my_data():
         if can_read_post(actor.id, item.root_post, include_archived=True)
         and can_read_post(actor.id, item.contribution_post, include_archived=True)
     ]
+    continuations = db.session.scalars(
+        db.select(PostContinuation).join(Post, Post.id == PostContinuation.post_id).where(
+            PostContinuation.author_id == actor.id,
+            PostContinuation.broken_at.is_(None),
+            Post.deleted_at.is_(None),
+        ).order_by(PostContinuation.id.asc())
+    ).all()
 
     archive = SpooledTemporaryFile(max_size=8 * 1024 * 1024, mode="w+b")
     with ZipFile(archive, "w", compression=ZIP_DEFLATED) as bundle:
@@ -114,6 +121,7 @@ def export_my_data():
                 "notifications": len(notifications),
                 "media": len(media),
                 "memory_links": len(memory_links),
+                "continuations": len(continuations),
             },
         }
         bundle.writestr("manifest.json", _json_bytes(manifest))
@@ -141,6 +149,14 @@ def export_my_data():
             } for item in mentions],
         }))
         bundle.writestr("notifications.json", _json_bytes([item.to_dict() for item in notifications]))
+        bundle.writestr("continuations.json", _json_bytes({
+            "version": 1,
+            "items": [{
+                "post_id": item.post_id,
+                "source_post_id": item.source_post_id,
+                "created_at": item.created_at,
+            } for item in continuations],
+        }))
         bundle.writestr("memory_links.json", _json_bytes({
             "version": 1,
             "items": [{

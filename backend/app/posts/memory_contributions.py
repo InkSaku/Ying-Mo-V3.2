@@ -326,11 +326,12 @@ def _lock_attached_links(post_id):
     return links
 
 
-def lock_post_scope(post_id, target_collection_id=None):
+def lock_post_scope(post_id, target_collection_id=None, extra_post_ids=()):
     """按行锁协议锁定 Post 移动、删除或发布涉及的行，返回取锁后的 Post。
 
     顺序见 docs/backend/SHARED_MEMORY.md：Collection ID 升序（跨合集移动锁两边）
     → Post ID 升序 → 关系行。取锁前的读取只决定要锁哪些行，归属和状态必须用返回值判断。
+    接着写要一起改读者范围时，用 extra_post_ids 把这一串纳入同一个升序。
     """
     source_collection_id = db.session.scalar(db.select(Post.collection_id).where(Post.id == post_id))
     related = db.session.execute(
@@ -353,7 +354,7 @@ def lock_post_scope(post_id, target_collection_id=None):
     for collection_id in sorted(collection_ids - {None}):
         lock_collection(collection_id)
 
-    post_ids = {post_id}
+    post_ids = {post_id, *extra_post_ids}
     for row in related:
         post_ids.update((row.root_post_id, row.contribution_post_id))
     post = next((item for item in _lock_posts(post_ids) if item.id == post_id), None)

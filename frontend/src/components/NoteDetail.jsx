@@ -8,6 +8,7 @@ import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import { NoteSketch } from "./NoteSketch";
 import { CollectionPathTags } from "./CollectionPathTags";
+import { ContinuationSource, ContinueWriteButton } from "./ContinuationViews";
 
 function noteDateParts(value) {
   const date = new Date(value || "");
@@ -72,6 +73,8 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
         <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} galleryItems={galleryItems} />
 
         {post.external_video_url ? <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p> : null}
+
+        <ContinuationSource post={post} />
       </div>
 
       <footer className="note-detail-context">
@@ -84,7 +87,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
         </dl>
       </footer>
 
-      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} />
+      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} extraAction={post.continuation?.can_continue ? <ContinueWriteButton postId={post.id} /> : null} />
     </article>
   );
 }
