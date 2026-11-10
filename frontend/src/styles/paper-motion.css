@@ -28,3 +28,13 @@
 .media-lightbox-backdrop { animation: photo-room-in 200ms ease-out; }
 @keyframes photo-room-in { from { background-color: rgb(9 10 12 / 0); } }
 @media (prefers-reduced-motion: reduce) { .media-lightbox-backdrop { animation: none; } }
+/* 揉纸团：纸面与遮罩跟着墨边一起收拢，折痕叠在最上层，全部不接收指针。 */
+.paper-crumple { pointer-events: none; }
+.paper-crumple-paper,
+.paper-crumple-veil { position: absolute; inset: 0; }
+.paper-crumple-paper { z-index: -1; }
+.paper-crumple-veil { z-index: 1; opacity: 0; }
+.paper-crumple-creases { position: absolute; z-index: 2; top: 0; left: 0; overflow: visible; opacity: 0; fill: none; stroke: var(--text); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.paper-crumple-ball { position: absolute; z-index: 3; display: block; overflow: visible; color: var(--text); opacity: 0; transform-origin: center; pointer-events: none; }
+.paper-crumple-ball .paper-ball-paper { fill: var(--crumple-paper, var(--page)); }
+.paper-ball-art { display: block; color: var(--text); }

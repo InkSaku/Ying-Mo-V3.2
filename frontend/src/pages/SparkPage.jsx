@@ -13,6 +13,8 @@ import { SparkIcon } from "../components/SparkIcon";
 import { ErrorState, PageLoader } from "../components/States";
 import { sparkJobDuration, sparkJobPhase, sparkJobRecovery, sparkKindLabels, sparkMessages, sparkStatusLabels, sparkTime } from "../lib/spark";
 import "../styles/spark.css";
+import { RollingNumber } from "../components/RollingNumber";
+import { SparkSeal } from "../components/SparkSeal";
 
 const numericFields = [
   ["jitter_minutes", "时间浮动（分钟）", 0, 120],
@@ -23,6 +25,20 @@ const numericFields = [
   ["creator_max_scrolls", "采集最多滚动次数", 1, 200],
 ];
 const sourceLabels = { manual: "手动", daily: "每日计划", retry: "失败补发", weekly: "每周采集", auto_bind: "连接后同步" };
+
+// 好友的火花天数：同步后变化时滚动；今天确认送达的好友带一枚小印，页面开着时刚送达才盖下去。
+function SparkStreak({ days, delivered }) {
+  const [previous, setPrevious] = useState(delivered);
+  const [pressing, setPressing] = useState(false);
+  if (previous !== delivered) {
+    setPrevious(delivered);
+    setPressing(delivered);
+  }
+  return <span className="spark-streak">
+    {delivered ? <><SparkSeal className="is-mini" pressing={pressing} /><span className="sr-only">今天已续</span></> : null}
+    {days > 0 ? <><RollingNumber value={days} /> 天</> : "—"}
+  </span>;
+}
 
 export function SparkPage() {
   const { user } = useAuth();
@@ -268,8 +284,8 @@ function SparkWorkspace() {
                 selectionSequence.current = selectionSequence.current.filter((id) => id !== contact.id);
                 if (event.target.checked) selectionSequence.current.push(contact.id);
                 setSelection((current) => ({ ...current, [contact.id]: event.target.checked }));
-              }} /><span className="spark-contact-avatar" aria-hidden="true">{Array.from(contact.display_name)[0]}</span><span><strong>{contact.display_name}</strong><small>{contact.short_id ? `抖音号 ${contact.short_id} · ` : ""}{contact.missing_in_sync ? "本次同步未找到，请核对" : contact.ambiguous ? "同名身份待确认" : contact.has_conversation ? "已有聊天会话" : "尚无聊天会话"}</small></span>
-              <span className="spark-streak">{contact.streak_days > 0 ? `${contact.streak_days} 天` : "—"}</span>
+              }} /><span className="spark-contact-avatar" aria-hidden="true">{Array.from(contact.display_name)[0]}</span><span><strong>{contact.display_name}</strong><small>{contact.short_id ? `抖音号 ${contact.short_id} · ` : ""}{contact.renamed_from && !contact.missing_in_sync ? `原名 ${contact.renamed_from} · ` : ""}{contact.missing_in_sync ? "本次同步未找到，请核对" : contact.ambiguous ? "同名身份待确认" : contact.has_conversation ? "已有聊天会话" : "尚无聊天会话"}</small></span>
+              <SparkStreak days={contact.streak_days} delivered={Boolean(contact.delivered_today)} />
             </label>)}
             {data.contacts.length && !visibleContacts.length ? <p className="spark-empty">{contactFilter === "selected" && !selectedCount ? "还没有选中的好友，切换到“全部”开始选择。" : contactFilter === "review" && !reviewCount ? "目前没有需要核对的好友。" : "没有匹配的好友，试试其他名字或筛选条件。"}</p> : null}
           </div>

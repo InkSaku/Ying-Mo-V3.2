@@ -5,7 +5,8 @@ import { useAsyncData } from "../hooks/useAsyncData";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { TaxonomyNav } from "../components/TaxonomyNav";
 import { EmptyState, ErrorState, PageLoader } from "../components/States";
-import { summarizeTaxonomyItems, taxonomyTagProminence } from "../lib/taxonomy";
+import { summarizeTaxonomyItems } from "../lib/taxonomy";
+import { TagProse } from "../components/TagProse";
 import { TaxonomySketch } from "../components/TaxonomySketch";
 import "../styles/taxonomy-editorial.css";
 
@@ -92,18 +93,7 @@ export function TaxonomyIndexPage({ kind }) {
               ))}
             </ol>
           ) : (
-            <div className="taxonomy-tag-register">
-              {displayedItems.map((item) => (
-                <Link
-                  className={`taxonomy-tag-entry is-${taxonomyTagProminence(item, summary.maxCount)}`}
-                  key={item.id}
-                  to={`${config.path}/${item.slug}`}
-                >
-                  <strong>#{item.name}</strong>
-                  <span className="tabular">{item.visible_post_count || 0} 则</span>
-                </Link>
-              ))}
-            </div>
+            <TagProse items={displayedItems} maxCount={summary.maxCount} path={config.path} />
           )}
         </section>
       ) : (

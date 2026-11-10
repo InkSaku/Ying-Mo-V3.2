@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, PageLoader } from "../components/States";
 import {
   archiveApiPath,
   archiveRangeLabel,
+  archiveRulerAvailable,
   archiveSearchParams,
   groupArchiveFacets,
   groupArchiveItems,
@@ -17,6 +18,7 @@ import {
 import { clampPageToTotal } from "../lib/pagination";
 import { PostFilters } from "../components/PostFilters";
 import { ArchiveSketch } from "../components/ArchiveSketch";
+import { ArchiveTimeRuler } from "../components/ArchiveTimeRuler";
 import "../styles/archive-editorial.css";
 
 const PAGE_SIZE = 20;
@@ -96,8 +98,9 @@ export function ArchivePage() {
       </details>
 
       <div className="archive-layout">
-        <aside className="archive-facets" aria-label="归档年份与月份">
+        <aside className={`archive-facets${archiveRulerAvailable(groups) ? " has-time-ruler" : ""}`} aria-label="归档年份与月份">
           <header><h2>年份与月份</h2><p>选择年份和月份。</p></header>
+          <ArchiveTimeRuler groups={groups} year={year} month={month} total={archiveTotal} disabled={state.loading} onSelect={selectRange} />
           <div className="archive-year-list">
             <button
               className={!year ? "active" : ""}

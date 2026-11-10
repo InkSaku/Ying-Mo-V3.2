@@ -15,6 +15,12 @@
 .home-spark-entry-copy { display: grid; gap: 8px; min-width: 0; }
 .home-spark-entry-copy strong { color: var(--text); font-size: 24px; font-weight: 400; line-height: 1.4; letter-spacing: .04em; }
 .home-spark-entry-hint { color: var(--text-3); font-size: 13px; line-height: 1.75; }
+/* 当天进度：只有连接并选了好友才出现；数字用墨色，其余随说明文字。 */
+.home-spark-entry-status { color: var(--text-3); font-size: 13px; line-height: 1.75; font-variant-numeric: tabular-nums; }
+.home-spark-entry-status .rolling-number { color: var(--text); }
+/* 全部续上后，小印盖在门画右下角，像画上的落款。 */
+.home-spark-entry-art { position: relative; display: block; min-width: 0; }
+.home-spark-entry-art .spark-seal { position: absolute; right: -4px; bottom: 6%; }
 .home-spark-entry-action { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; color: var(--brand-link); font-size: 14px; white-space: nowrap; }
 .home-spark-entry-action svg { width: 24px; height: 16px; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -54,7 +60,9 @@
   .home-spark-entry { grid-template-columns: 80px minmax(0, 1fr) auto; gap: 16px; margin-bottom: 24px; padding-bottom: 12px; }
   .home-spark-entry-copy { gap: 4px; }
   .home-spark-entry-copy strong { font-size: 21px; }
-  .home-spark-entry-hint { font-size: 12px; }
+  .home-spark-entry-hint,
+  .home-spark-entry-status { font-size: 12px; }
+  .home-spark-entry-art .spark-seal { right: -6px; width: 22px; height: 33px; }
   .home-spark-entry-action { flex-direction: column; justify-content: center; gap: 4px; min-width: 44px; font-size: 12px; }
 }
 @media (max-width: 360px) {

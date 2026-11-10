@@ -1,0 +1,24 @@
+/* 续火花“已续”小印：深蓝只出现在这枚印上，盖下时由大到小落定并微微回弹。 */
+.spark-seal {
+  display: block;
+  width: 28px;
+  height: 42px;
+  overflow: visible;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+.spark-seal-ink { fill: var(--brand-link); }
+.spark-seal-frame { fill: none; stroke: var(--page); stroke-width: .9; opacity: .9; }
+.spark-seal text { fill: var(--page); font: 400 14px/1 var(--serif); text-anchor: middle; }
+.spark-seal-speck { fill: var(--page); }
+.spark-seal.is-pressing { animation: spark-seal-press 380ms cubic-bezier(.3, 1.35, .5, 1) 680ms both; }
+.spark-seal.is-mini { width: 18px; height: 27px; }
+.spark-seal.is-mini.is-pressing { animation-delay: 0ms; }
+@keyframes spark-seal-press {
+  0% { opacity: 0; transform: scale(1.8) rotate(-18deg); }
+  55% { opacity: 1; transform: scale(.9) rotate(-6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-seal.is-pressing { animation: none; }
+}

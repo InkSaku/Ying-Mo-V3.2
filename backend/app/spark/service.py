@@ -165,13 +165,16 @@ def validation_fingerprint(account):
     return _plan_fingerprint(account, targets)
 
 
-def sending_plan_fingerprint(account):
+def sending_plan_fingerprint(account, names=None):
     """The checked send behavior, excluding optional consumer profile enrichment.
 
     Consumer sends locate the existing conversation by display_name. Creator
     sends depend on creator identity/nickname, so those fields remain protected.
     None and False safety flags both mean the same thing to the executor.
+    ``names`` maps contact ids to their pre-sync names for renames that the
+    chat list proved by conversation identity.
     """
+    names = names or {}
     targets = []
     for contact in selected_contacts(account):
         profile = contact.profile or {}
@@ -179,7 +182,8 @@ def sending_plan_fingerprint(account):
         if not behavior["has_conversation"]:
             behavior.update({key: profile.get(key) for key in ("short_id", "user_id")})
             behavior["nickname"] = profile.get("nickname") or contact.display_name
-        targets.append({"id": contact.id, "name": contact.display_name,
+        name = names.get(contact.id, contact.display_name) if behavior["has_conversation"] else contact.display_name
+        targets.append({"id": contact.id, "name": name,
                         "order": contact.selected_order, "profile": behavior})
     return _plan_fingerprint(account, targets)
 
@@ -268,6 +272,26 @@ def queue_snapshot(now):
             "ready_count": job_counts.get("queued", 0) + login_counts.get("queued", 0)}
 
 
+def _delivered_today(user_id, today):
+    # 只有确认送达才算“已续”；发送中或结果不明都不盖章。
+    return set(db.session.scalars(db.select(SparkDelivery.display_name).where(
+        SparkDelivery.account_id == user_id, SparkDelivery.local_day == today,
+        SparkDelivery.status == "succeeded")))
+
+
+def summary(user_id):
+    """首页入口用的只读摘要：不创建账号行，未连接时只返回 bound=False。"""
+    account = db.session.scalar(db.select(SparkAccount).where(SparkAccount.user_id == user_id))
+    if account is None or not account.credential_ciphertext:
+        return {"bound": False}
+    today = local_now(now_utc()).date().isoformat()
+    delivered = _delivered_today(user_id, today)
+    chosen = selected_contacts(account)
+    return {"bound": True, "local_day": today, "selected": len(chosen),
+            "delivered_today": sum(c.display_name in delivered for c in chosen),
+            "longest_streak": max((int(c.profile.get("streak_days") or 0) for c in chosen), default=0)}
+
+
 def overview(account):
     now = now_utc()
     worker = db.session.get(SparkWorkerState, 1)
@@ -281,6 +305,7 @@ def overview(account):
     sent_names = set(db.session.scalars(db.select(SparkDelivery.display_name).where(
         SparkDelivery.account_id == account.user_id, SparkDelivery.local_day == today,
         SparkDelivery.status.in_(("checking", "sending", "succeeded", "unknown")))))
+    delivered_names = _delivered_today(account.user_id, today)
     cfg = config_for(account)
     from .login_session import latest_session
     login = latest_session(account)
@@ -319,7 +344,9 @@ def overview(account):
                                   "ambiguous_selected": [c.display_name for c in contacts if c.selected and c.profile.get("ambiguous")]},
             "credential_updated_at": isoformat_utc(account.credential_updated_at), "config": config_for(account),
             "next_run_at": isoformat_utc(account.next_run_at), "next_harvest_at": isoformat_utc(account.next_harvest_at),
-            "contacts_updated_at": isoformat_utc(account.contacts_updated_at), "contacts": [c.to_dict() for c in contacts],
+            "contacts_updated_at": isoformat_utc(account.contacts_updated_at),
+            "contacts": [{**c.to_dict(), "delivered_today": c.display_name in delivered_names} for c in contacts],
+            "local_day": today,
             "selected_count": sum(c.selected for c in contacts), "creator_sent_today": creator_count,
             "ledger_stats": stats, "pending_send": pending[:maximum],
             "jobs": [j.to_dict() for j in jobs], "timezone": "Asia/Shanghai",

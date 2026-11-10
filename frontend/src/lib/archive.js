@@ -67,6 +67,11 @@ export function groupArchiveFacets(facets = []) {
     }));
 }
 
+// 至少有两个月份有记录，时间标尺才有可比的刻度；否则手机继续用年份与月份按钮。
+export function archiveRulerAvailable(groups = []) {
+  return groups.reduce((sum, group) => sum + group.months.length, 0) >= 2;
+}
+
 export function groupArchiveItems(items = []) {
   const groups = [];
   for (const item of items) {

@@ -48,29 +48,108 @@ def assert_active(job_id):
     return job, account
 
 
+def identity_keys(account_id, item):
+    """Hashed conversation/peer identities; stable when the friend renames."""
+    keys = []
+    for prefix, field in (("c", "conversation_id"), ("u", "peer_id")):
+        value = str(item.get(field) or "").strip()
+        if value:
+            keys.append(hashlib.sha256(f"{account_id}:{prefix}:{value}".encode()).hexdigest()[:32])
+    return keys
+
+
 def merge_consumer(account, items):
-    contacts = {c.display_name: c for c in db.session.scalars(db.select(SparkContact).where(SparkContact.account_id == account.user_id))}
-    found = {str(item.get("name", "")).strip()[:191] for item in items[:500]}
-    for name, contact in contacts.items():
-        if contact.profile.get("has_conversation"):
-            contact.profile = {**contact.profile, "missing_in_sync": name not in found}
+    """Merge the chat list, following renames by conversation identity.
+
+    Returns {contact_id: previous_name} for identity-verified renames.
+    """
+    contacts = list(db.session.scalars(db.select(SparkContact).where(SparkContact.account_id == account.user_id)))
+    known = lambda c: set((c.profile or {}).get("identity_keys") or [])
+    by_name = {c.display_name: c for c in contacts}
+    by_key = {}
+    for contact in contacts:
+        for key in known(contact):
+            by_key.setdefault(key, contact)
+    entries, names = [], set()
     for item in items[:500]:
         name = str(item.get("name", "")).strip()[:191]
-        if not name:
-            continue
-        contact = contacts.get(name)
-        if not contact:
+        if name and name not in names:
+            names.add(name)
+            entries.append([None, name, item, identity_keys(account.user_id, item)])
+    claimed = {}
+    for entry in entries:
+        _, name, _, keys = entry
+        contact = next((by_key[k] for k in keys if k in by_key and by_key[k].id not in claimed), None)
+        if contact is None:
+            candidate = by_name.get(name)
+            # A same-name record bound to another conversation is a different person.
+            if candidate is not None and candidate.id not in claimed and (
+                    not keys or not known(candidate) or known(candidate) & set(keys)):
+                contact = candidate
+        if contact is not None:
+            claimed[contact.id] = name
+        entry[0] = contact
+
+    owner = {name: contact for contact, name, _, _ in entries}
+    renamed, changes, removed = {}, {}, set()
+    for contact in contacts:
+        target = claimed.get(contact.id)
+        if target is not None and target != contact.display_name:
+            renamed[contact.id] = contact.display_name
+            changes[contact] = target
+        elif target is None and contact.display_name in owner:
+            successor = owner[contact.display_name]
+            if successor is None and not known(contact):
+                # Unbound record of the same displayed name (e.g. manually added): adopt it.
+                owner_entry = next(e for e in entries if e[1] == contact.display_name)
+                owner_entry[0] = contact
+                claimed[contact.id] = contact.display_name
+            elif successor is not None and not known(contact):
+                # Same displayed name, now proven to be the renamed conversation: fold it in.
+                if contact.selected and not successor.selected:
+                    successor.selected, successor.selected_order = True, contact.selected_order
+                previous = successor.profile or {}
+                if not previous.get("short_id") and contact.profile.get("short_id"):
+                    successor.profile = {**previous, **{k: contact.profile[k] for k in
+                        ("short_id", "user_id", "nickname", "ambiguous") if k in contact.profile}}
+                if contact.last_sent_at and (not successor.last_sent_at or contact.last_sent_at > successor.last_sent_at):
+                    successor.last_sent_at = contact.last_sent_at
+                db.session.delete(contact)
+                removed.add(contact.id)
+            else:
+                # Another conversation previously used this name and is absent now.
+                changes[contact] = f"{contact.display_name[:170]}（旧会话 #{contact.id}）"
+    db.session.flush()
+    if changes:
+        # Two-step rename keeps the per-account unique name constraint valid for swaps.
+        for contact in changes:
+            contact.display_name = f"__spark_renaming_{contact.id}"
+        db.session.flush()
+        for contact, name in changes.items():
+            contact.display_name = name
+        db.session.flush()
+
+    for contact in contacts:
+        if contact.id not in claimed and contact.id not in removed and contact.profile.get("has_conversation"):
+            contact.profile = {**contact.profile, "missing_in_sync": True}
+    import re
+    for contact, name, item, keys in entries:
+        if contact is None:
             contact = SparkContact(account_id=account.user_id, display_name=name, profile={})
             db.session.add(contact)
-            contacts[name] = contact
-        import re
         streak = re.search(r"\d+", str(item.get("streak", "")))
-        profile = {**(contact.profile or {}), "has_conversation": True, "channel": "consumer", "missing_in_sync": False,
+        previous = contact.profile or {}
+        profile = {**previous, "has_conversation": True, "channel": "consumer", "missing_in_sync": False,
                    "streak_days": int(streak.group()) if streak else 0}
+        if keys:
+            profile["identity_keys"] = list(dict.fromkeys([*keys, *(previous.get("identity_keys") or [])]))[:4]
+        if contact.id in renamed:
+            profile.update(renamed_from=renamed[contact.id], renamed_on=local_now().date().isoformat())
         if profile.get("nickname") == name:
             profile["join_confidence"] = "high"
         contact.profile = profile
     account.contacts_updated_at = now_utc()
+    return renamed
 
 
 def merge_creator(account, mapping):
@@ -93,12 +172,19 @@ def merge_creator(account, mapping):
 
 
 def reserve_delivery(job, contact, channel):
-    key = hashlib.sha256(contact.display_name.replace("\u00a0", " ").strip().encode()).hexdigest()
-    existing = db.session.scalar(db.select(SparkDelivery).where(
+    recipient = lambda name: hashlib.sha256(name.replace("\u00a0", " ").strip().encode()).hexdigest()
+    key = recipient(contact.display_name)
+    keys = [key]
+    profile = contact.profile or {}
+    # A friend renamed earlier today keeps today's delivery recorded under the old name.
+    if profile.get("renamed_from") and profile.get("renamed_on") == job.local_day:
+        keys.append(recipient(profile["renamed_from"]))
+    rows = db.session.scalars(db.select(SparkDelivery).where(
         SparkDelivery.account_id == job.account_id, SparkDelivery.local_day == job.local_day,
-        SparkDelivery.recipient_key == key).with_for_update())
-    if existing and existing.status in ("checking", "sending", "succeeded", "unknown"):
+        SparkDelivery.recipient_key.in_(keys)).with_for_update()).all()
+    if any(row.status in ("checking", "sending", "succeeded", "unknown") for row in rows):
         return None
+    existing = next((row for row in rows if row.recipient_key == key), None)
     if existing is None:
         existing = SparkDelivery(account_id=job.account_id, local_day=job.local_day, recipient_key=key,
                                  display_name=contact.display_name, job_id=job.id, channel=channel, status="checking")
@@ -203,9 +289,10 @@ def execute_job(job_id, driver_factory=None, *, sleep=time.sleep):
                 if status == "succeeded":
                     was_validated = validation_ready(account)
                     checked_behavior = sending_plan_fingerprint(account)
-                    merge_consumer(account, data) if job.kind == "sync" else merge_creator(account, data)
+                    renamed = merge_consumer(account, data) if job.kind == "sync" else merge_creator(account, data) or {}
                     if was_validated:
-                        if checked_behavior == sending_plan_fingerprint(account):
+                        # A conversation-identity rename is the same checked recipient.
+                        if checked_behavior == sending_plan_fingerprint(account, names=renamed):
                             account.validation_fingerprint = validation_fingerprint(account)
                         else:
                             account.validation_fingerprint = account.validated_at = None

@@ -15,6 +15,7 @@ import { PersonalNav } from "../components/PersonalNav";
 import { ContinueWriteButton } from "../components/ContinuationViews";
 import { clampPageToTotal } from "../lib/pagination";
 import { invalidateHomeFeedCache } from "../lib/homeFeed";
+import { crumpleAway } from "../lib/paperCrumple";
 
 const PAGE_SIZE = 20;
 
@@ -115,6 +116,8 @@ export function MyPostsPage() {
       }
       invalidateHomeFeedCache(user.id, window.sessionStorage);
       setAction(null);
+      // 服务器确认删除后才揉纸，失败时这一行保持原样。
+      if (type === "delete") await crumpleAway(document.querySelector(`[data-post-row="${post.id}"]`), { collapse: true });
       if (type === "delete" && state.data?.length === 1 && page > 1) {
         updateParams({ page: page - 1 });
       } else {
@@ -191,7 +194,7 @@ export function MyPostsPage() {
       {pageNeedsClamp ? <div className="profile-refresh" role="status">正在返回有效页码…</div> : state.data?.length ? (
         <div className={`management-list${state.loading ? " is-refreshing" : ""}`}>
           {state.data.map((post) => (
-            <article className="post-management-row" key={post.id}>
+            <article className="post-management-row" key={post.id} data-post-row={post.id}>
               <div className="post-management-summary">
                 <div className="post-management-meta">
                   <span>{postTypeLabel(post.post_type)}</span>

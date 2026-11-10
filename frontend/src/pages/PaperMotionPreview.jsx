@@ -6,9 +6,70 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { usePaperDisclosure } from "../hooks/usePaperDisclosure";
 import { revealCollection, startCollectionOpening } from "../lib/collectionOpening";
 import { animatePhoto, cancelPhotoContinuity } from "../lib/photoContinuity";
+import { crumpleAway } from "../lib/paperCrumple";
+import { createPaperBallArt } from "../lib/paperBallArt";
 import coast from "../assets/home/coast.jpg";
 import train from "../assets/home/train.jpg";
 import "../styles/paper-motion-preview.css";
+
+function PaperBallIllustration({ actual = false }) {
+  const artRef = useRef(null);
+  useLayoutEffect(() => {
+    const art = createPaperBallArt();
+    artRef.current.append(art);
+    return () => art.remove();
+  }, []);
+  return <div ref={artRef} className={`paper-preview-crumple-art${actual ? " is-actual" : ""}`} aria-hidden="true" />;
+}
+
+function CrumplePreview() {
+  const [round, setRound] = useState(0);
+  const [state, setState] = useState("ready");
+  const sampleRef = useRef(null);
+  const slowFrame = useRef(0);
+  useLayoutEffect(() => () => cancelAnimationFrame(slowFrame.current), []);
+
+  const play = async (slow = false) => {
+    if (state === "playing") return;
+    setRound((value) => value + 1);
+    setState("playing");
+    await new Promise(requestAnimationFrame);
+    const sample = sampleRef.current;
+    if (slow) {
+      const slowDown = () => {
+        for (const animation of sample.getAnimations({ subtree: true })) {
+          if (animation.playbackRate !== .15) animation.updatePlaybackRate(.15);
+        }
+        slowFrame.current = requestAnimationFrame(slowDown);
+      };
+      slowFrame.current = requestAnimationFrame(slowDown);
+    }
+    try {
+      await crumpleAway(sample, { collapse: true });
+    } finally {
+      cancelAnimationFrame(slowFrame.current);
+      setState("done");
+    }
+  };
+
+  return <section className="paper-preview-row">
+    <div className="paper-preview-label"><h2>揉起一张纸</h2><p>折起的纸角，叠压的纸面，<br />墨线留在最深的折缝里。<br />这里只演示动作，不删除内容。</p>
+      <div className="paper-preview-crumple-controls"><button type="button" disabled={state === "playing"} onClick={() => play()}>揉起这张纸</button><button type="button" disabled={state === "playing"} onClick={() => play(true)}>慢放看看</button></div>
+      <p className="paper-preview-crumple-status" role="status">{state === "playing" ? "纸页正在收拢。" : state === "done" ? "纸页已收起，可以再放一张。" : "点击可重复体验。"}</p>
+    </div>
+    <div className="paper-preview-crumple-stage">
+      <div className="paper-preview-crumple-specimens">
+        <figure><PaperBallIllustration /><figcaption>墨线与纸面</figcaption></figure>
+        <figure><PaperBallIllustration actual /><figcaption>实际大小 · 64px</figcaption></figure>
+      </div>
+      <div className="paper-preview-crumple-sheet-stage">
+        <article key={round} ref={sampleRef} className="paper-preview-crumple-sheet" hidden={state === "done"}>
+          <small>示例草稿</small><h3>还没写完的一页</h3><p>把暂时不需要的这一页揉起来，<br />留一点位置，给下一个想法。</p>
+        </article>
+      </div>
+    </div>
+  </section>;
+}
 
 export function PaperMotionPreview() {
   usePageMeta("纸上动作预览");
@@ -57,7 +118,8 @@ export function PaperMotionPreview() {
   useLayoutEffect(() => () => cancelPhotoContinuity(), []);
   return <main ref={pageRef} className="paper-motion-preview">
     <header className="paper-preview-header"><Link to="/">映墨</Link><ThemeControl /></header>
-    <div className="paper-preview-intro"><h1>把动作，留在纸上。</h1><p>开一本书，拿起一张照片，写下一点今天。<br />这里使用示例内容，动作与实际页面共用。</p></div>
+    <div className="paper-preview-intro"><h1>把动作，留在纸上。</h1><p>开一本书，拿起一张照片，写下一点今天，揉起不再需要的一页。<br />这里使用示例内容，动作与实际页面共用。</p></div>
+    <CrumplePreview />
     <section className="paper-preview-row">
       <div className="paper-preview-label"><h2>打开这一册</h2><p>封面抬起，沿书脊掀开。<br />用在合集目录进入详情。</p>{bookOpen ? <button type="button" onClick={() => setBookOpen(false)}>放回书架</button> : null}</div>
       <div className="paper-preview-book-stage">

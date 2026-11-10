@@ -37,4 +37,19 @@
 .paper-preview-note textarea { display: block; width: 100%; min-height: 120px; margin: 8px 0; padding: 14px; resize: vertical; background: var(--surface); border: 1px solid var(--border); color: var(--text); font: inherit; }
 .paper-preview-note > p { font-size: 12px; color: var(--text-3); }
 .paper-preview-footer { display: flex; gap: 28px; flex-wrap: wrap; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; }
+.paper-preview-crumple-controls { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.paper-preview-crumple-controls button:disabled { color: var(--text-4); cursor: default; }
+.paper-preview-label .paper-preview-crumple-status { font-size: 12px; }
+.paper-preview-crumple-specimens { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 32px 56px; margin-bottom: 32px; }
+.paper-preview-crumple-specimens figure { display: grid; justify-items: center; gap: 12px; margin: 0; }
+.paper-preview-crumple-specimens figcaption { color: var(--text-3); font-size: 12px; }
+.paper-preview-crumple-art { width: 144px; height: 144px; color: var(--text); }
+.paper-preview-crumple-art.is-actual { width: 64px; height: 64px; }
+.paper-preview-crumple-art svg { display: block; width: 100%; height: 100%; }
+.paper-preview-crumple-art .paper-ball-paper { fill: var(--page); }
+.paper-preview-crumple-sheet-stage { min-height: 180px; }
+.paper-preview-crumple-sheet { position: relative; min-height: 164px; padding: 20px 24px; border-block: 1px solid var(--border); background: var(--surface); }
+.paper-preview-crumple-sheet small { color: var(--text-3); font-size: 11px; }
+.paper-preview-crumple-sheet h3 { margin: 8px 0; font-size: 21px; font-weight: 400; }
+.paper-preview-crumple-sheet p { margin: 0; color: var(--text-2); font-size: 14px; line-height: 1.8; }
 @media(max-width: 760px) { .paper-motion-preview { width: calc(100% - 40px); } .paper-preview-row { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 32px 0; } .paper-preview-intro { padding: 36px 0; } .paper-preview-open-book { grid-template-columns: minmax(0, 1fr); gap: 8px; } .paper-preview-book-cover { width: 230px; } .paper-preview-open-book h3 { margin-bottom: 12px; } .paper-preview-note-prompt { gap: 12px; flex-wrap: wrap; } .paper-preview-note-prompt span { font-size: 14px; } }

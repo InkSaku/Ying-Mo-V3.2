@@ -96,12 +96,13 @@ function turnRect(centre, angle, perspective) {
   };
 }
 
-export function startCollectionOpening(event, slug) {
+export function startCollectionOpening(event, slug, sourceCard = null) {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.currentTarget.target === "_blank") return;
   opening?.finish();
   if (!paperMotionAllowed()) return;
   // Ordinary cards and shelf cards outside the directory retain native navigation.
-  const card = event.currentTarget.closest(".collection-library-page .collection-card-shelf");
+  // 书架介绍卡会把自己那本书交进来，从介绍卡的位置翻开。
+  const card = sourceCard || event.currentTarget.closest(".collection-library-page .collection-card-shelf");
   const source = card?.querySelector(".collection-shelf-stage");
   const original = source?.querySelector(".collection-shelf-book");
   const rect = source?.getBoundingClientRect();

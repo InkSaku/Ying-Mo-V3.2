@@ -1,0 +1,26 @@
+/* 滚动数字：每一位是一条竖排 0–9 的纸条，窗口只露一格。
+   窗口里放一个看不见的同位数字撑出宽度和基线，纸条绝对定位后用 clip-path 裁切，数字才和旁边的文字对齐。 */
+.rolling-number {
+  --roll-h: 1.35em;
+  display: inline-flex;
+  line-height: var(--roll-h);
+  font-variant-numeric: tabular-nums;
+}
+.rolling-number-digits { display: inline-flex; }
+.rolling-digit { position: relative; display: inline-block; clip-path: inset(0); }
+.rolling-digit-ghost { visibility: hidden; }
+.rolling-digit-strip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--digit) * -1 * var(--roll-h)));
+  /* 高位稍晚落定，读起来像计数器一格格推过去。 */
+  transition: transform 560ms cubic-bezier(.2, .8, .2, 1) calc((var(--place) - 1) * 60ms);
+}
+.rolling-digit-strip > span { display: block; height: var(--roll-h); text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .rolling-digit-strip { transition: none; }
+}

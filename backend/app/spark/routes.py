@@ -13,7 +13,7 @@ from app.models.spark import now_utc
 from .login_interaction import require_preview, queue_interaction
 from .notifications import notify_send_result
 from .credentials import CredentialError, credential_cipher, validate_state
-from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, overview, reset_schedule, validate_config, require_plan_validation, validation_fingerprint
+from .service import SparkError, cancel_jobs, config_for, enqueue, get_account, overview, reset_schedule, summary, validate_config, require_plan_validation, validation_fingerprint
 from .login_session import bind_state, invalidate_sessions, start_session, owned_session, valid_session, confirm_session, finish
 
 bp = Blueprint("spark", __name__)
@@ -41,6 +41,12 @@ def member_endpoint(function):
 @member_endpoint
 def status(actor):
     return success_response(overview(get_account(actor.id)))
+
+
+@bp.get("/summary")
+@member_endpoint
+def status_summary(actor):
+    return success_response(summary(actor.id))
 
 
 @bp.put("/config")

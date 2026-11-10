@@ -45,6 +45,7 @@ import "../styles/writing-editorial.css";
 import { DismissibleDetails } from "../components/DismissibleDetails";
 import { COMPACT_MARKDOWN_ACTIONS, formatActionLabel } from "../lib/markdownToolbar";
 import { useModalDialog } from "../hooks/useModalDialog";
+import { crumpleAway } from "../lib/paperCrumple";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PREVIEW_DELAY = 220;
@@ -854,6 +855,9 @@ export function WritePage() {
       await saveQueueRef.current.catch(() => undefined);
       await api.delete(`/posts/${currentPost.id}`);
       removeOfflineDraft(window.localStorage, offlineKeyRef.current);
+      // 已经删掉了：先收起确认框，把这张纸揉成团丢开，再离开写作页。
+      setContinuationAbandonOpen(false);
+      await crumpleAway(document.querySelector(".editor-paper"));
       navigate(destination, { replace: true });
     } catch (abandonError) {
       routeReadyRef.current = true;

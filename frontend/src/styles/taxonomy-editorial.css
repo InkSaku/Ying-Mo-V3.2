@@ -141,22 +141,39 @@ html:not([data-theme="dark"]):has(.taxonomy-publication-page) {
 .taxonomy-register-action { overflow: hidden; width: 28px; color: var(--brand-link); font-size: 0; }
 .taxonomy-register-action::after { content: "→"; font-size: 18px; }
 
-.taxonomy-tag-register {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px 30px;
-  border: 0;
+/* 标签连成一段文字：每个词带自己的顿号，末尾句号；次数像脚注一样上标。
+   词是 inline-block，筛选时才能整体挪位，也不会在词中间断行。 */
+.taxonomy-tag-prose { position: relative; margin: 0; color: var(--text); line-height: 1.95; text-wrap: pretty; }
+.taxonomy-tag-item { display: inline-block; white-space: nowrap; }
+.taxonomy-tag-item::after { content: "、"; color: var(--text-3); }
+/* 句号由组件标在最后一个词上，筛选时淡出的副本不会抢走它。 */
+.taxonomy-tag-item.is-last::after { content: "。"; }
+.taxonomy-tag-item.is-prominent { font-size: 34px; }
+.taxonomy-tag-item.is-regular { font-size: 26px; }
+.taxonomy-tag-item.is-quiet { font-size: 20px; }
+.taxonomy-tag-item a { color: var(--text); text-decoration: none; text-decoration-thickness: 1.5px; text-underline-offset: .32em; transition: color .2s ease; }
+.taxonomy-tag-item sup { margin-left: 2px; color: var(--text-3); font: 11px/1 var(--mono); vertical-align: super; }
+/* 停在一个词上：其余词退成淡墨，这个词用深蓝底线标出。 */
+.taxonomy-tag-prose.has-active .taxonomy-tag-item:not(.is-active) a { color: color-mix(in srgb, var(--text) 32%, var(--page)); }
+.taxonomy-tag-item.is-active a { text-decoration-line: underline; text-decoration-color: var(--brand-link); }
+.taxonomy-tag-item a:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+.taxonomy-tag-preview { min-height: 132px; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--border); }
+.taxonomy-tag-preview-body { animation: taxonomy-tag-preview-in .26s cubic-bezier(.16, 1, .3, 1) both; }
+.taxonomy-tag-preview-head { display: flex; align-items: baseline; gap: 12px; color: var(--text-3); font-size: 12px; }
+.taxonomy-tag-preview-head strong { color: var(--text); font-size: 18px; font-weight: 400; }
+.taxonomy-tag-preview blockquote { display: -webkit-box; margin: 10px 0 12px; overflow: hidden; color: var(--text-2); font-size: 16px; line-height: 1.8; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.taxonomy-tag-preview footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; color: var(--text-3); font-size: 12px; }
+.taxonomy-tag-preview footer a { color: var(--brand-link); }
+.taxonomy-tag-preview-note { margin: 8px 0 0; color: var(--text-3); font-size: 13px; }
+@keyframes taxonomy-tag-preview-in { from { opacity: 0; transform: translateY(4px); } }
+/* 没有悬停的设备点词直接进标签页，不留预览区。 */
+@media (hover: none), (pointer: coarse) {
+  .taxonomy-tag-preview { display: none; }
 }
-.taxonomy-tag-entry {
-  min-height: 92px;
-  padding: 14px 0 16px;
-  border: 0;
+@media (prefers-reduced-motion: reduce) {
+  .taxonomy-tag-preview-body { animation: none; }
+  .taxonomy-tag-item a { transition: none; }
 }
-.taxonomy-tag-entry:nth-child(n + 4) { border-top: 1px solid var(--border); }
-.taxonomy-tag-entry strong { font-weight: 400; }
-.taxonomy-tag-entry.is-prominent strong { font-size: 25px; }
-.taxonomy-tag-entry.is-regular strong { font-size: 20px; }
-.taxonomy-tag-entry.is-quiet strong { font-size: 16px; }
-.taxonomy-tag-entry span { margin-top: 10px; font-size: 11px; }
 
 .taxonomy-detail-hero {
   margin-bottom: 60px;
@@ -225,8 +242,11 @@ html:not([data-theme="dark"]):has(.taxonomy-publication-page) {
   .taxonomy-register-action { display: none; }
   .taxonomy-category-copy strong { font-size: 21px; }
   .taxonomy-category-copy small { line-height: 1.7; }
-  .taxonomy-tag-register { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
-  .taxonomy-tag-entry:nth-child(n + 3) { border-top: 1px solid var(--border); }
+  .taxonomy-tag-prose { line-height: 1.85; }
+  .taxonomy-tag-item.is-prominent { font-size: 26px; }
+  .taxonomy-tag-item.is-regular { font-size: 21px; }
+  .taxonomy-tag-item.is-quiet { font-size: 17px; }
+  .taxonomy-tag-item a { display: inline-block; min-height: 44px; line-height: 44px; }
   .taxonomy-detail-hero { margin-bottom: 44px; padding-bottom: 28px; }
   .taxonomy-detail-hero .taxonomy-back { margin-bottom: 30px; }
   .taxonomy-reading-body { grid-template-columns: 1fr; gap: 20px; }

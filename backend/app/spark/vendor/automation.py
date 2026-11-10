@@ -224,21 +224,63 @@ def send_to_contact(page, name, msg_text, dry_run, before_send):
 
 # ── 联系人同步 ────────────────────────────────────────────────────────────
 
+# 会话标题会随好友改名变化；会话 ID 与对方 sec_uid 不变，读取自列表项的 React 属性。
+# 页面结构变化导致读不到标识时保持为空，同步退回按名字匹配。
 _EXTRACT_JS = """
     () => {
+        const identity = el => {
+            const key = Object.keys(el).find(k => k.startsWith('__reactFiber'));
+            let fiber = key ? el[key] : null;
+            let conversation = '', peer = '';
+            for (let depth = 0; fiber && depth < 16; depth++, fiber = fiber.return) {
+                const props = fiber.memoizedProps;
+                if (!props || typeof props !== 'object') continue;
+                try {
+                    if (!peer && props.conversation && typeof props.conversation === 'object')
+                        peer = String(props.conversation.toParticipantSecUserId || '');
+                    if (!conversation && props.virtualItem && typeof props.virtualItem === 'object')
+                        conversation = String(props.virtualItem.id || '');
+                } catch (e) {}
+                if (conversation && peer) break;
+            }
+            return { conversation_id: conversation, peer_id: peer };
+        };
         const out = [];
         const seen = new Set();
         document.querySelectorAll('.conversationConversationItemtitle').forEach(t => {
             const name = (t.textContent || '').trim();
-            if (!name || seen.has(name)) return;
-            seen.add(name);
+            if (!name) return;
+            const ids = identity(t);
+            const marker = [name, ids.conversation_id, ids.peer_id].join('\\u0000');
+            if (seen.has(marker)) return;
+            seen.add(marker);
             const wrap = t.parentElement;
             const s = wrap ? wrap.querySelector('.commonStreaknormalText') : null;
-            out.push({ name: name, streak: s ? (s.textContent || '').trim() : '' });
+            out.push({ name: name, streak: s ? (s.textContent || '').trim() : '', ...ids });
         });
         return out;
     }
 """
+
+
+def _merge_extracted(collected: list[dict]) -> list[dict]:
+    """按名字合并多轮滚动结果；同名不同会话时清空标识，交给发送时的同名保护。"""
+    merged: dict[str, dict] = {}
+    for item in collected:
+        entry = merged.setdefault(item["name"], {"name": item["name"], "streak": "", "conversation_id": "",
+                                                 "peer_id": "", "duplicate": False})
+        if item.get("streak") and not entry["streak"]:
+            entry["streak"] = item["streak"]
+        for field in ("conversation_id", "peer_id"):
+            value = item.get(field) or ""
+            if value and entry[field] and entry[field] != value:
+                entry["duplicate"] = True
+            elif value:
+                entry[field] = value
+    for entry in merged.values():
+        if entry["duplicate"]:
+            entry["conversation_id"] = entry["peer_id"] = ""
+    return list(merged.values())
 
 
 def _open_chat_page(page, *, raise_on_failure=False) -> bool:
@@ -325,7 +367,7 @@ def fetch_chat_contacts() -> dict:
             if not collected:
                 result.update(failure("CONTACTS_NOT_READY"))
                 return result
-            result["names"] = collected
+            result["names"] = _merge_extracted(collected)
             logger.info("已读取聊天列表联系人 %s 个", len(result["names"]))
     except Exception as e:
         result.update(browser_failure(e, stage))

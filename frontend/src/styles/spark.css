@@ -104,7 +104,7 @@
 .spark-contact .spark-contact-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 2px; color: var(--text-3); font-size: 13px; }
 .spark-contact strong { font-size: 15px; font-weight: 400; overflow-wrap: anywhere; }
 .spark-contact small { color: var(--text-3); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-.spark-streak { margin-left: auto; color: var(--brand-link); font: 12px var(--mono); white-space: nowrap; }
+.spark-streak { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--brand-link); font: 12px var(--mono); white-space: nowrap; }
 .spark-selection-footer { justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; }
 .spark-selection-footer > span { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0 6px; }
 .spark-selection-footer strong { color: var(--brand-link); font: 20px var(--mono); }

@@ -14,6 +14,7 @@ from app.collections.folders import (
 )
 from app.collections.service import add_member, delete_collection, replace_members, resolve_member_ids, transfer_creator
 from app.common.auth import current_user
+from app.common.time import isoformat_utc
 from app.common.pagination import pagination_meta, parse_pagination
 from app.common.responses import error_response, success_response
 from app.common.validation import SLUG_RE
@@ -63,6 +64,51 @@ def _timeline_filters(stmt):
     return stmt, {"year": year, "author": author, "post_type": post_type}
 
 
+SHELF_ROLES = {"", "created", "joined"}
+
+
+def _shelf_record_stats(collection_ids):
+    """书架介绍用的记录数与时间跨度，口径与合集详情一致：成员可读的已发布或已归档记录。"""
+    if not collection_ids:
+        return {}
+    record_time = case(
+        (Post.post_type == "note", func.coalesce(Post.occurred_at, Post.published_at)),
+        else_=Post.published_at,
+    )
+    rows = db.session.execute(
+        db.select(Post.collection_id, func.count(Post.id), func.min(record_time), func.max(record_time)).where(
+            Post.collection_id.in_(collection_ids),
+            Post.deleted_at.is_(None),
+            Post.moderation_status == "active",
+            Post.status.in_(("published", "archived")),
+        ).group_by(Post.collection_id)
+    ).all()
+    return {row[0]: (row[1], row[2], row[3]) for row in rows}
+
+
+def _shelf_filters(actor_id):
+    """筛选项按全部可进入的合集统计，不随当前筛选变化，切换时数字保持稳定。"""
+    collections = db.session.scalars(
+        db.select(Collection).options(
+            selectinload(Collection.member_links).selectinload(CollectionMember.user),
+            selectinload(Collection.creator),
+        ).where(collection_member_predicate(actor_id))
+    ).all()
+    created = sum(collection.creator_id == actor_id for collection in collections)
+    people = {}
+    for collection in collections:
+        users = {link.user for link in collection.member_links if link.user}
+        if collection.creator:
+            users.add(collection.creator)
+        for user in users:
+            if user.id == actor_id:
+                continue
+            entry = people.setdefault(user.id, {"username": user.username, "nickname": user.nickname or user.username, "count": 0})
+            entry["count"] += 1
+    members = sorted(people.values(), key=lambda entry: (-entry["count"], entry["nickname"]))
+    return {"all": len(collections), "created": created, "joined": len(collections) - created, "members": members}
+
+
 @bp.get("")
 @jwt_required(locations=["headers"])
 def list_collections():
@@ -73,17 +119,45 @@ def list_collections():
     if not args:
         return error_response("VALIDATION_ERROR", "分页参数不合法。", 422)
     page, size = args
-    stmt = db.select(Collection).options(selectinload(Collection.member_links)).where(collection_member_predicate(actor.id))
+    query = (request.args.get("q") or "").strip()[:80]
+    role = request.args.get("role") or ""
+    member = (request.args.get("member") or "").strip()[:64]
+    if role not in SHELF_ROLES:
+        return error_response("VALIDATION_ERROR", "role 不合法。", 422)
+    stmt = db.select(Collection).options(selectinload(Collection.member_links).selectinload(CollectionMember.user)).where(
+        collection_member_predicate(actor.id)
+    )
+    if query:
+        stmt = stmt.where(Collection.name.contains(query, autoescape=True) | Collection.description.contains(query, autoescape=True))
+    if role == "created":
+        stmt = stmt.where(Collection.creator_id == actor.id)
+    elif role == "joined":
+        stmt = stmt.where(Collection.creator_id != actor.id)
+    if member:
+        person = db.session.scalar(db.select(User.id).where(User.username == member))
+        # 只在自己可进入的合集里找这位成员；查无此人时返回空书架，不暴露对方是否存在。
+        stmt = stmt.where(
+            (Collection.creator_id == person)
+            | Collection.id.in_(db.select(CollectionMember.collection_id).where(CollectionMember.user_id == person))
+        ) if person else stmt.where(False)
     total = db.session.scalar(db.select(func.count()).select_from(stmt.order_by(None).subquery())) or 0
     rows = db.session.scalars(
         stmt.order_by(Collection.updated_at.desc(), Collection.id.desc()).offset((page - 1) * size).limit(size)
     ).all()
+    stats = _shelf_record_stats([collection.id for collection in rows])
     data = []
     for collection in rows:
         item = collection.to_dict()
         item["member_count"] = len(collection.member_links) + 1
+        item["members"] = [link.user.public_dict() for link in collection.member_links if link.user]
+        count, first, last = stats.get(collection.id, (0, None, None))
+        item["post_count"] = count
+        item["first_record_at"] = isoformat_utc(first)
+        item["last_record_at"] = isoformat_utc(last)
         data.append(item)
-    return success_response(data, meta=pagination_meta(page, size, total))
+    meta = pagination_meta(page, size, total)
+    meta["filters"] = _shelf_filters(actor.id)
+    return success_response(data, meta=meta)
 
 
 @bp.get("/<slug>")
