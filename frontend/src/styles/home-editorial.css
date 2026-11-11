@@ -133,6 +133,8 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
   .home-editorial-columns { display:flex; flex-direction:column; gap:44px; margin-top:28px; }
   .home-reading-column { width:100%; }
   .home-side-rail { width:100%; padding:26px 0 0; border-left:0; border-top:1px solid var(--border); }
+  /* 纸页落座以左下角先着桌。 */
+  .home-editorial .home-feed-stream > * { transform-origin:14% 100%; }
   /* 共同记录插页：夹在时间流第 6 条之后，侧栏不再重复。 */
   .home-editorial:has(.home-feed-collections) .home-side-rail .home-closing-collections { display:none; }
   .home-editorial .home-feed-collections { display:grid; grid-template-columns:104px minmax(0,1fr); grid-template-areas:"art title" "art body"; gap:4px 16px; align-items:start; padding:26px 0 24px; border-bottom:1px solid var(--border); }

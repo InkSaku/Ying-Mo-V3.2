@@ -22,6 +22,7 @@ import {
 import { FeedPost } from "./FeedPost";
 import { FeedMemoryInterlude } from "./FeedMemoryInterlude";
 import { HomeCollectionsInterlude } from "./HomeClosing";
+import { useFeedPaperSettle } from "../hooks/useFeedPaperSettle";
 
 const REFRESH_INTERVAL_MS = 60_000;
 // 手机“共同记录”插页夹在第 6 条之后；不足 6 条时排在已读到的最后一条之后。
@@ -322,6 +323,7 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
   const streamItems = featuredId ? feed.items.filter((post) => post.id !== featuredId) : feed.items;
   const memoryIndex = homeFeedMemoryInterludeIndex(streamItems.length, feed.memoryInterlude);
   const collectionsIndex = collections?.length && !loading ? Math.min(COLLECTIONS_INTERLUDE_AFTER, streamItems.length) : -1;
+  useFeedPaperSettle(sectionRef, `${streamItems.length}:${memoryIndex}:${collectionsIndex}`);
   let previousStreamDay = "";
   return (
     <section ref={sectionRef} className="home-feed" aria-labelledby="home-feed-title" aria-busy={loading || loadingMore || undefined} onClickCapture={(event) => {
