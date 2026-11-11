@@ -35,7 +35,7 @@ export function MyCommentsPage() {
   return (
     <main className="page-shell personal-page-shell" aria-busy={state.loading || pageNeedsClamp || undefined}>
       <PersonalNav />
-      <header className="page-heading">
+      <header className="page-heading has-phone-sketch">
         <InkPageSketch />
         <div><p className="section-kicker"></p><h1>我的评论</h1><p>查看你发表的评论。</p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 条</span>

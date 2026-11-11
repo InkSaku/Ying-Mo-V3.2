@@ -183,11 +183,15 @@ html:not([data-theme="dark"]):has(.search-page) {
   .search-page .search-collection-grid,
   .search-page .search-filtered-members .search-member-list { grid-template-columns: 1fr; }
 }
-/* The search box is the first thing on a phone. */
+/* Phones: the small lens drawing sits beside the title, and the search box is still the first task. */
 @media (max-width: 767px) {
-  .search-opening-sketch,
+  .search-opening-sketch > p:empty,
   .search-page .search-hero-copy p:empty { display: none; }
   .search-page { padding-top: 8px; }
-  .search-page .search-hero { gap: 8px; padding: 8px 0 24px; }
+  .search-page .search-hero { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy art" "form form"; align-items: end; gap: 8px 12px; padding: 8px 0 24px; }
+  .search-page .search-hero-copy { grid-area: copy; padding-bottom: 10px; }
+  .search-opening-sketch { grid-area: art; width: 112px; justify-self: end; }
+  .search-page .search-hero-form { grid-area: form; }
   .search-page .search-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+  .search-page .search-start-grid article { grid-template-columns: minmax(0, 1fr); }
 }

@@ -3,9 +3,9 @@
 .collection-share-compact-label { display: none; }
 
 @media (max-width: 767px) {
+  /* 工作页（设置、设备、合集管理等）在手机上不放开场线稿；内容页用 .has-phone-sketch 把缩小线稿放回标题右侧。 */
   :root .app-frame .page-heading > .ink-page-sketch,
-  :root .app-frame .memory-hero > .ink-page-sketch,
-  :root .profile-copy > .ink-profile-signature { display: none; }
+  :root .app-frame .memory-hero > .ink-page-sketch { display: none; }
   :root .app-frame .page-heading {
     display: flex;
     flex-wrap: wrap;
@@ -15,6 +15,12 @@
     padding-bottom: 24px;
   }
   :root .app-frame .page-heading > div:first-of-type { flex: 1 1 100%; min-width: 0; }
+  :root .app-frame .page-heading.has-phone-sketch { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+  :root .app-frame .page-heading.has-phone-sketch > div:first-of-type { grid-column: 1; grid-row: 1; }
+  :root .app-frame .page-heading.has-phone-sketch > .ink-page-sketch { display: block; grid-column: 2; grid-row: 1; width: 104px; margin: 0 -4px 0 0; }
+  :root .app-frame .page-heading.has-phone-sketch > :not(.ink-page-sketch, div:first-of-type) { grid-column: 1 / -1; justify-self: start; }
+  /* 空状态自带插画时，一屏只留这一幅墨团。 */
+  :root .app-frame main:has(.empty-state > .ink-sketch) .page-heading.has-phone-sketch > .ink-page-sketch { display: none; }
   :root .app-frame .page-heading h1 { font-size: 30px; line-height: 1.35; overflow-wrap: anywhere; }
   :root .app-frame .page-heading p { font-size: 14px; line-height: 1.75; }
   :root .personal-page-shell { padding-top: 20px; }
@@ -93,9 +99,19 @@
   :root .personal-overview-page .profile-hero > div:last-child { grid-column: 2; grid-row: 1; }
   :root .personal-overview-page .profile-hero h1 { font-size: 26px; line-height: 1.4; }
   :root .personal-overview-page .profile-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  :root .personal-overview-page .personal-entry { padding-block: 20px; }
-  :root .personal-overview-page .personal-entry-art { display: none; }
-  :root .personal-overview-page .personal-entry-copy { padding-top: 12px; }
+  /* 个人空间入口：两列无框小图，线稿在上，标题与数量在下；不重复“01 / 内容”眉题，不画格线。 */
+  :root .personal-overview-page .personal-entry-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 20px; margin-top: 4px; }
+  :root .personal-overview-page .personal-entry,
+  :root .personal-overview-page .personal-entry:is(:hover, :focus-visible) { padding: 0; border: 0; }
+  :root .personal-overview-page .personal-entry-art { display: flex; order: 0; justify-content: flex-start; align-items: flex-end; width: 100%; height: 78px; margin: 0 0 12px; }
+  :root .personal-overview-page .personal-entry-art > svg { max-width: 118px; max-height: 100%; margin: 0; }
+  :root .personal-overview-page .personal-entry-copy { order: 1; margin: 0; padding: 0; }
+  :root .personal-overview-page .personal-entry-copy h2 { margin: 0; font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+  :root .personal-overview-page .personal-entry-arrow { display: none; }
+  :root .personal-overview-page .personal-entry-meta { order: 2; justify-content: flex-start; margin-top: 2px; }
+  :root .personal-overview-page .personal-entry-meta > span:first-child { display: none; }
+  :root .personal-overview-page .personal-entry-count,
+  :root .personal-overview-page .personal-entry-count .tabular { font-size: 12px; }
   :root .personal-page-shell .collection-library-hero { gap: 12px; margin-bottom: 24px; padding-bottom: 24px; }
   :root .personal-page-shell .collection-library-copy h1 { font-size: 30px; line-height: 1.35; }
   :root .personal-page-shell .collection-library-index { display: flex; flex-direction: row; align-items: center; gap: 12px; margin: 0; padding: 12px 0 0; border-left: 0; }
@@ -127,7 +143,6 @@
   :root .taxonomy-reading-summary dl { margin-bottom: 12px; }
   :root .note-reading-page .note-detail-header { padding-bottom: 24px; }
   :root .note-reading-page .note-detail-opening { margin-top: 12px; gap: 16px; }
-  :root .note-detail-margin .notes-opening-sketch { display: none; }
   :root .note-detail-margin { padding-bottom: 12px; }
   :root .note-reading-page .note-detail-date strong { font-size: 44px; }
 

@@ -21,7 +21,7 @@ export function YearReviewPage() {
   const maxMonthTotal = Math.max(1, ...data.months.map((item) => item.total));
   return <main className="page-shell personal-page-shell year-review-page" aria-busy={state.loading || undefined}>
     <PersonalNav />
-    <header className="page-heading">
+    <header className="page-heading has-phone-sketch">
         <InkPageSketch /><div><p className="section-kicker"></p><h1>{year} 年度回顾</h1><p>回看你这一年的记录。</p></div><CustomSelect aria-label="回顾年份" value={year} onChange={(event) => setYear(Number(event.target.value))}>{years.map((item) => <option key={item} value={item}>{item}</option>)}</CustomSelect></header>
     <section className="year-review-stats" aria-label="年度统计">
       {[['记录', data.summary.total], ["文章", data.summary.articles], ["随记", data.summary.notes], ['影像', data.summary.media], ['活跃月份', data.summary.active_months], ['地点', data.summary.locations]].map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}

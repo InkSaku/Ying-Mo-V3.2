@@ -821,3 +821,12 @@ html:not([data-theme="dark"]):has(.collection-memory-page) {
   .collection-memory-page .collection-media-caption strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 14px; line-height: 1.5; }
   .collection-memory-page .collection-media-caption small { justify-content: flex-start; gap: 0 8px; }
 }
+
+/* 手机首屏少一些框：只有“添加记录”保持墨色实底；“管理合集”退成文字按钮，
+   “新建目录／写文章／写随记”是一条以细竖线分隔的三等分文字工具行，热区仍为 44px。 */
+@media (max-width: 767px) {
+  .collection-memory-page .collection-volume-copy .collection-hero-actions .btn-secondary { flex: 0 0 auto; padding-inline: 2px 12px; border-color: transparent; background: transparent; color: var(--brand-link); box-shadow: none; }
+  .collection-memory-page .collection-folder-actions { gap: 0; }
+  .collection-memory-page .collection-folder-actions .btn { border: 0; border-radius: 0; background: transparent; color: var(--brand-link); box-shadow: none; }
+  .collection-memory-page .collection-folder-actions .btn + .btn { border-left: 1px solid var(--border); }
+}

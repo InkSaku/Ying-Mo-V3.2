@@ -832,18 +832,21 @@ html:not([data-theme="dark"]):has(.browse-page-article) {
   .articles-drawn-opening { width: 220px; justify-self: end; padding-top: 40px; }
   .articles-drawn-opening > p { font-size: 21px; }
 }
-/* Phones reach the first article right after a one-line page title. */
+/* Phones: page title on the left, the small drawn opening and handwritten line on the right, the first article still in the first screen. */
 @media (max-width: 767px) {
   .browse-page-article { padding-top: 8px; }
-  .browse-page-article .browse-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; padding: 8px 0 12px; }
+  .browse-page-article .browse-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy art" "note note"; align-items: end; gap: 0 12px; padding: 8px 0 12px; }
+  .browse-page-article .browse-hero-copy { grid-area: copy; padding-bottom: 10px; }
   .browse-page-article .browse-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+  .articles-drawn-opening { grid-area: art; position: relative; width: 136px; padding-top: 30px; justify-self: end; }
+  .articles-drawn-opening > p { left: auto; right: 6px; font-size: 15px; line-height: 1.25; text-align: right; white-space: nowrap; }
+  .articles-drawn-opening > p span { margin-left: 0; }
   .browse-page-article .browse-hero-copy > p,
-  .articles-drawn-opening,
   .browse-page-article .articles-hero-note > strong,
   .browse-page-article .articles-hero-note > a,
   .articles-hero-note-latest,
   .article-magazine-opening-label { display: none; }
-  .browse-page-article .articles-hero-note { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0; border: 0; }
+  .browse-page-article .articles-hero-note { grid-area: note; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0; border: 0; }
   .browse-page-article .articles-hero-note > p { margin: 0; line-height: 1.6; }
   .browse-page-article .articles-hero-note > nav { margin: 0; padding: 0; border: 0; }
   .browse-page-article .articles-hero-note > nav a { min-height: 44px; display: inline-flex; align-items: center; }

@@ -158,7 +158,7 @@ export function MyPostsPage() {
   return (
     <main className="page-shell personal-page-shell" aria-busy={state.loading || pageNeedsClamp || actionBusy || undefined}>
       <PersonalNav />
-      <header className="page-heading">
+      <header className="page-heading has-phone-sketch">
         <InkPageSketch />
         <div>
           <p className="section-kicker"></p>

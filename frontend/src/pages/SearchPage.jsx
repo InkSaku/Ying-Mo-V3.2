@@ -369,11 +369,10 @@ export function SearchPage() {
             <h2 id="search-start-heading">搜索范围</h2>
           </div>
           <div className="search-start-grid">
-            <article><span></span><h3>内容</h3><p>标题、摘要或正文中的关键词</p></article>
-            <article><span></span><h3>合集</h3><p>合集名称</p></article>
-            <article><span></span><h3>成员</h3><p>昵称或用户名</p></article>
+            <article><h3>内容</h3><p>标题、摘要或正文中的关键词</p></article>
+            <article><h3>合集</h3><p>合集名称</p></article>
+            <article><h3>成员</h3><p>昵称或用户名</p></article>
           </div>
-          <p className="search-privacy-note"><span aria-hidden="true">◉</span> </p>
         </section>
       ) : null}
       {q && state.loading ? <div className="search-loading" role="status">正在搜索“{q}”…</div> : null}

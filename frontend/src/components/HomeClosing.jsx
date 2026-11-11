@@ -1,7 +1,12 @@
 import { Link } from "react-router-dom";
 import { ProtectedImage } from "./ProtectedImage";
+import { InkSketch } from "./InkSketch";
 import { homeFeedExcerpt } from "../lib/homeFeed";
 import { postHref } from "../lib/format";
+
+function CollectionIndex({ collections }) {
+  return <div className="home-collection-index">{collections.slice(0, 2).map((collection) => <article key={collection.id}><h3><Link to={`/collections/${collection.slug}`}>{collection.name}<span aria-hidden="true"> →</span></Link></h3>{collection.description ? <p>{collection.description}</p> : null}</article>)}</div>;
+}
 
 export function HomeClosing({ memory, collections, collectionsReady }) {
   const post = memory?.items?.[0];
@@ -16,9 +21,24 @@ export function HomeClosing({ memory, collections, collectionsReady }) {
       </section>
       <section className="home-closing-collections" aria-labelledby="home-closing-collections-title">
         <header><h2 id="home-closing-collections-title">共同记录</h2></header>
-        {collections.length ? <div className="home-collection-index">{collections.slice(0, 2).map((collection) => <article key={collection.id}><h3><Link to={`/collections/${collection.slug}`}>{collection.name}<span aria-hidden="true"> →</span></Link></h3>{collection.description ? <p>{collection.description}</p> : null}</article>)}</div> : <p className="home-closing-empty">{collectionsReady ? "你创建或加入的合集。" : ""}</p>}
+        {collections.length ? <CollectionIndex collections={collections} /> : <p className="home-closing-empty">{collectionsReady ? "你创建或加入的合集。" : ""}</p>}
         <Link to="/collections">查看合集 →</Link>
       </section>
     </div>
+  );
+}
+
+/* 手机侧栏排在无限加载的时间流之后，几乎翻不到；“共同记录”改为夹在时间流里的一页插页。桌面仍用侧栏，这里由样式隐藏。 */
+export function HomeCollectionsInterlude({ collections }) {
+  if (!collections?.length) return null;
+  return (
+    <section className="home-feed-collections" aria-labelledby="home-feed-collections-title">
+      <InkSketch variant="volumes" className="home-feed-collections-art" />
+      <h2 id="home-feed-collections-title">共同记录<span> · 你参与的合集</span></h2>
+      <div className="home-feed-collections-body">
+        <CollectionIndex collections={collections} />
+        <Link to="/collections">查看合集 →</Link>
+      </div>
+    </section>
   );
 }

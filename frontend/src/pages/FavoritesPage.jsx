@@ -103,7 +103,7 @@ export function FavoritesPage() {
     <main className="page-shell personal-page-shell" aria-busy={state.loading || Boolean(busyId) || undefined}>
       <PersonalNav />
       {undoNotice}
-      <header className="page-heading">
+      <header className="page-heading has-phone-sketch">
         <InkPageSketch />
         <div><p className="section-kicker"></p><h1>收藏</h1><p></p></div>
         <span className="personal-page-total tabular">共 {pagination.total || 0} 篇</span>

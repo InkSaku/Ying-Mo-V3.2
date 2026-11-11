@@ -59,7 +59,7 @@ export function MePage() {
             <InkSketch variant={sketch} className="personal-entry-art" />
             <div className="personal-entry-copy">
               <h2>{title}<span className="personal-entry-arrow" aria-hidden="true">↗</span></h2>
-              <p>{description}</p>
+              {description ? <p>{description}</p> : null}
             </div>
           </Link>
         ))}

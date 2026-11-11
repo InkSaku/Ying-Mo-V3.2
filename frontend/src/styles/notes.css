@@ -135,17 +135,18 @@ html:not([data-theme="dark"]):has(.browse-page-note) {
   .browse-page-note .note-journal-entries .post-card-journal .post-card-context { margin-top: 0; }
   .browse-page-note .note-journal-entries .note-card-date strong { font-size: 30px; }
 }
-/* Phones reach the first note right after a one-line page title. */
+/* Phones: page title on the left, the paper-plane sketch and handwritten line on the right, the first note still in the first screen. */
 @media (max-width: 767px) {
   .browse-page-note { padding-top: 8px; }
-  .browse-page-note .browse-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; padding: 8px 0 12px; }
-  .browse-page-note .browse-hero-copy { width: 100%; }
+  .browse-page-note .browse-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy art" "index index"; align-items: end; gap: 0 12px; padding: 8px 0 12px; }
+  .browse-page-note .browse-hero-copy { grid-area: copy; width: auto; padding-bottom: 10px; }
   .browse-page-note .browse-hero-copy h1 { margin: 0; font-size: 30px; line-height: 1.3; }
+  .notes-opening-sketch { grid-area: art; width: 118px; padding: 0; justify-self: end; }
+  .notes-opening-sketch > p { margin: 0 0 -2px; font-size: 15px; text-align: right; white-space: nowrap; }
   .browse-page-note .browse-hero-copy > p,
-  .notes-opening-sketch,
   .browse-page-note .browse-hero-jump,
   .browse-page-note .post-filters-heading > small { display: none; }
-  .browse-page-note .browse-hero-index { width: 100%; display: flex; align-items: center; gap: 4px; padding: 0; border: 0; }
+  .browse-page-note .browse-hero-index { grid-area: index; width: 100%; display: flex; align-items: center; gap: 4px; padding: 0; border: 0; }
   .browse-page-note .browse-hero-index > .tabular { display: inline; margin: 0; font: inherit; font-size: 13px; color: var(--text-2); }
   .browse-page-note .browse-hero-index > div { display: block; }
   .browse-page-note .browse-hero-index strong { color: var(--text-2); font-size: 13px; }

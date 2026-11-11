@@ -111,7 +111,7 @@ export function HomePage() {
               ))}
             </div>
           </div>
-          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} featuredId={pins.length ? null : feature?.id} hideEmptyState={welcome.show} />
+          <HomeFeed key={`${user.id}:${type}`} userId={user.id} type={type} newPost={publishedPost} onSnapshot={receiveSnapshot} featuredId={pins.length ? null : feature?.id} hideEmptyState={welcome.show} collections={welcome.show ? null : collections} />
         </section>
         {/* 新成员还没有往年记录和合集，侧栏只会是两段空状态，先不显示。 */}
         {welcome.show ? null : <aside className="home-side-rail" aria-label="回望与共同记录">

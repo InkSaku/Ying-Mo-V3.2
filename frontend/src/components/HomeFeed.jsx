@@ -21,8 +21,11 @@ import {
 } from "../lib/homeFeed";
 import { FeedPost } from "./FeedPost";
 import { FeedMemoryInterlude } from "./FeedMemoryInterlude";
+import { HomeCollectionsInterlude } from "./HomeClosing";
 
 const REFRESH_INTERVAL_MS = 60_000;
+// 手机“共同记录”插页夹在第 6 条之后；不足 6 条时排在已读到的最后一条之后。
+const COLLECTIONS_INTERLUDE_AFTER = 6;
 
 function emptyFeed() {
   return { items: [], nextCursor: "", hasMore: true, memoryInterlude: null, pins: null };
@@ -49,7 +52,7 @@ function MemoryInterludeRow({ memory }) {
   );
 }
 
-export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null, hideEmptyState = false }) {
+export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null, hideEmptyState = false, collections = null }) {
   const cachedRef = useRef(readHomeFeedCache(userId, type));
   const initialRef = useRef(cachedRef.current || emptyFeed());
   const [feed, setFeed] = useState(initialRef.current);
@@ -318,6 +321,7 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
   // 首页开篇已经主推的那条不在下方时间流里再出现一次；数据和分页游标保持不变。
   const streamItems = featuredId ? feed.items.filter((post) => post.id !== featuredId) : feed.items;
   const memoryIndex = homeFeedMemoryInterludeIndex(streamItems.length, feed.memoryInterlude);
+  const collectionsIndex = collections?.length && !loading ? Math.min(COLLECTIONS_INTERLUDE_AFTER, streamItems.length) : -1;
   let previousStreamDay = "";
   return (
     <section ref={sectionRef} className="home-feed" aria-labelledby="home-feed-title" aria-busy={loading || loadingMore || undefined} onClickCapture={(event) => {
@@ -334,12 +338,14 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
             <Fragment key={post.id}>
               <FeedEntry post={post} showDay={showDay} />
               {index + 1 === memoryIndex ? <MemoryInterludeRow memory={feed.memoryInterlude} /> : null}
+              {index + 1 === collectionsIndex ? <HomeCollectionsInterlude collections={collections} /> : null}
             </Fragment>
           );
         })}
       </div> : null}
 
       {!streamItems.length && memoryIndex === 0 ? <FeedMemoryInterlude memory={feed.memoryInterlude} /> : null}
+      {!streamItems.length && collectionsIndex === 0 ? <HomeCollectionsInterlude collections={collections} /> : null}
 
       {/* 新成员的“第一封信”已经说明下一步，这里不再重复一条空状态。 */}
       {!loading && !streamItems.length && !error && !hideEmptyState ? <div className="home-feed-empty"><h3>{feed.pins?.items?.length || feed.items.length ? "暂无其他记录" : "暂无记录"}</h3><p>发布第一则随记，或邀请朋友一起记录生活。</p></div> : null}
