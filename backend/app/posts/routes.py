@@ -31,6 +31,7 @@ from app.posts.revisions import (
 )
 from app.posts.related import related_articles
 from app.posts.note_experience import note_experience
+from app.posts.links import discard_post_links, link_preview, mentions_of, sync_post_links
 from app.posts.continuations import (
     break_links_for_post, chain_post_ids, continuation_detail, continuation_management,
     create_continuation_draft, discard_draft_link, guard_continuation_patch, posts_in_chains,
@@ -238,6 +239,10 @@ def _detail(post,actor):
     data["previous"]=None; data["next"]=None; data["related"]=[]; data["experience"]=None
     data["memory"] = memory_summary(post, actor.id)
     data["continuation"] = continuation_detail(post, actor.id)
+    # 已经在“后来”里的续写不再重复列进“提到这篇的”。
+    data["mentions"] = mentions_of(
+        post, actor.id, exclude_ids={item["id"] for item in data["continuation"]["later"]},
+    )
     if post.post_type==PostType.ARTICLE.value and post.published_at is not None:
         base=(
             db.select(Post).where(
@@ -301,6 +306,7 @@ def _apply_patch(post, actor, data):
         if data["body"] is not None and not isinstance(data["body"], str):
             raise DomainError("VALIDATION_ERROR", "body 必须是字符串或 null。", 422)
         post.body = data["body"]
+        sync_post_links(post)
 
     if "content_format" in data:
         if data["content_format"] not in {"markdown", "plain"}:
@@ -624,6 +630,22 @@ def detach_memory_contribution(post_id):
     return success_response(_serialize(detached, actor_id=actor.id, management=True))
 
 
+@bp.get("/link-preview")
+@jwt_required(locations=["headers"])
+def get_link_preview():
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    path = request.args.get("path") or ""
+    if len(path) > 300:
+        return error_response("VALIDATION_ERROR", "path 不合法。", 422)
+    preview = link_preview(path, actor.id)
+    # 不存在和无权阅读用同一个回应，不让链接泄露帖子是否存在。
+    if preview is None:
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    return success_response(preview)
+
+
 @bp.post("/<int:post_id>/continuations")
 @jwt_required(locations=["headers"])
 def create_continuation(post_id):
@@ -938,6 +960,7 @@ def delete_post(post_id):
     invalidate_links_for_post(post.id, "post_deleted")
     if not post.was_published:
         discard_draft_link(post.id)
+        discard_post_links(post.id)
         db.session.delete(post)
     else:
         post.deleted_at = utcnow()

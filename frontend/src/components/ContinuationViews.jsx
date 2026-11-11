@@ -78,6 +78,27 @@ export function ContinuationLater({ post }) {
   </section>;
 }
 
+// 正文里链接到这篇的记录：和“后来”同一套细线目录，多一句提到它时的原话。
+export function MentionedBy({ post }) {
+  const titleId = useId();
+  const items = post.mentions;
+  if (!items?.length) return null;
+  return <section className="continuation-later post-mentions" aria-labelledby={titleId}>
+    <h2 id={titleId}>提到这篇的</h2>
+    <ol>{items.map((item) => {
+      const author = item.author?.nickname && item.author.nickname !== post.author?.nickname ? `${item.author.nickname} · ` : "";
+      return <li key={item.id}>
+        <Link to={item.canonical}>
+          <small>{continuationAfterLabel(post.published_at, item.published_at) || formatDate(item.published_at)}</small>
+          {/* 无标题随记的开头就是那句话，直接用原话，不再重复一遍。 */}
+          <span>{item.title || !item.context ? <><b>{continuationLabel(item)}</b>{item.context ? <q>{item.context}</q> : null}</> : <b>{item.context}</b>}</span>
+          <small>{author}{postTypeLabel(item.post_type)}</small>
+        </Link>
+      </li>;
+    })}</ol>
+  </section>;
+}
+
 // 目录保持连续目录行，来源只多一行小字；读不到来源时不占位。
 export function ContinuationCardLine({ post }) {
   const source = post.continues;

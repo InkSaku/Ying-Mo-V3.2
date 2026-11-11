@@ -97,6 +97,8 @@ def restore_revision_snapshot(post, revision, actor):
     warnings = []
     for field in ("title", "summary", "body", "content_format", "location", "mood", "external_video_url"):
         setattr(post, field, snapshot.get(field))
+    from app.posts.links import sync_post_links
+    sync_post_links(post)
     occurred_at = snapshot.get("occurred_at")
     post.occurred_at = parse_iso_datetime(occurred_at) if occurred_at else None
 

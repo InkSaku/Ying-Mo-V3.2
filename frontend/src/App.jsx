@@ -63,6 +63,8 @@ const LoginTurnPreview = import.meta.env.DEV
 const ThemeInkPreview = import.meta.env.DEV
   ? lazyNamed(() => import("./pages/ThemeInkPreview"), "ThemeInkPreview") : null;
 
+const InkPassagePreview = import.meta.env.DEV
+  ? lazyNamed(() => import("./pages/InkPassagePreview"), "InkPassagePreview") : null;
 const PaperMotionPreview = import.meta.env.DEV
   ? lazyNamed(() => import("./pages/PaperMotionPreview"), "PaperMotionPreview") : null;
 
@@ -84,6 +86,7 @@ export function App() {
       {import.meta.env.DEV ? <Route path="/dev/theme-ink" element={<ThemeInkPreview />} /> : null}
 
       {import.meta.env.DEV ? <Route path="/dev/paper-motion" element={<PaperMotionPreview />} /> : null}
+      {import.meta.env.DEV ? <Route path="/dev/ink-passage" element={<InkPassagePreview />} /> : null}
 
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/home" element={<HomePage />} />

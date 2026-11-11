@@ -23,6 +23,10 @@
 .continuation-later small { color: var(--text-3); font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
 .continuation-later span { font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; }
 
+.post-mentions { margin-top: 36px; }
+.post-mentions b { display: block; font-weight: 400; }
+.post-mentions q { display: -webkit-box; margin-top: 2px; overflow: hidden; color: var(--text-3); font-size: 13px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 2; quotes: "“" "”"; }
+
 .continue-write-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 4px 14px 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-control, 2px); background: transparent; color: var(--brand-link); font: 14px var(--serif); cursor: pointer; touch-action: manipulation; }
 .continue-write-button:hover { border-color: var(--brand-link); }
 .continue-write-button:disabled { opacity: .55; cursor: default; }

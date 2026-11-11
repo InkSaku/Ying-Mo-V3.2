@@ -39,7 +39,9 @@ export function continuationAfterLabel(from, to) {
 // 随记可以没有标题，这时用正文开头当名字。
 export function continuationLabel(post) {
   if (post?.title) return post.title;
-  const text = excerpt(post);
+  // 名字里只留链接文字，不露出网址。
+  const source = String(post?.content_excerpt || post?.summary || post?.body || "").replace(/\[([^\]\n]*)\]\([^)\s]*\)/g, "$1");
+  const text = excerpt({ content_excerpt: source });
   if (!text) return `一则${postTypeLabel(post?.post_type)}`;
   return text.length > LABEL_LIMIT ? `${text.slice(0, LABEL_LIMIT)}…` : text;
 }

@@ -11,6 +11,7 @@ import { ProtectedMarkdown } from "../components/ProtectedMarkdown";
 import { PostMediaGallery } from "../components/PostMediaGallery";
 import { InteractionBar } from "../components/InteractionBar";
 import { ArticleReadingLayout } from "../components/ArticleReadingLayout";
+import { ArticleInkEnding } from "../components/ArticleInkEnding";
 import { PostCard } from "../components/PostCard";
 import { installVisibleReadTracker } from "../lib/readingStats";
 import { logicalMediaFromRaw, readingOrderGallery } from "../lib/mediaGallery";
@@ -20,7 +21,8 @@ import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
 import { CollectionPathTags } from "../components/CollectionPathTags";
-import { ContinuationKicker, ContinuationLater, ContinuationSource, ContinueWriteButton } from "../components/ContinuationViews";
+import { ContinuationKicker, ContinuationLater, ContinuationSource, ContinueWriteButton, MentionedBy } from "../components/ContinuationViews";
+import { InternalLinkPreview } from "../components/InternalLinkPreview";
 import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
 import "../styles/reading-editorial.css";
@@ -136,12 +138,14 @@ export function PostDetailPage({ type }) {
 
   if (post.post_type === "note") {
     return (
-      <main className="page-shell reading-page note-reading-page">
+      <main className="page-shell reading-page note-reading-page" data-link-preview-scope>
+        <InternalLinkPreview />
         {location.state?.fromHomeFeed ? (
           <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
         ) : null}
         <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
         <ContinuationLater post={post} />
+        <MentionedBy post={post} />
         <SharedMemorySection post={post} onPostChanged={state.reload} />
         <NoteExperience experience={post.experience} />
         <CommentsPanel key={post.id} postId={post.id} />
@@ -158,6 +162,8 @@ export function PostDetailPage({ type }) {
 
       <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} galleryItems={galleryItems} />
 
+      {post.post_type === "article" ? <ArticleInkEnding key={post.id} title={post.title} /> : null}
+
       {post.external_video_url ? (
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
       ) : null}
@@ -167,6 +173,8 @@ export function PostDetailPage({ type }) {
       <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} extraAction={post.continuation?.can_continue ? <ContinueWriteButton postId={post.id} /> : null} />
 
       <ContinuationLater post={post} />
+
+      <MentionedBy post={post} />
 
       {post.post_type === "article" && (post.previous || post.next) ? (
         <nav className="article-nav" aria-label="相邻文章">
@@ -187,7 +195,8 @@ export function PostDetailPage({ type }) {
   );
 
   return (
-    <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools article-reading-page" : ""}`}>
+    <main className={`page-shell reading-page ${post.post_type === "article" ? "reading-page-with-tools article-reading-page" : ""}`} data-link-preview-scope>
+      <InternalLinkPreview />
       {location.state?.fromHomeFeed ? (
         <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
       ) : null}

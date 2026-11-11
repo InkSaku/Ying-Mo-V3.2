@@ -27,6 +27,7 @@ import { CollectionSharePill } from "../components/CollectionSharePill";
 import { CollectionFolderContents, CollectionFolderTree } from "../components/CollectionFolderView";
 import { useCollectionFolderMoves } from "../hooks/useCollectionFolderMoves";
 import { buildFolderIndex } from "../lib/collectionFolders";
+import { CollectionStampAlbum } from "../components/CollectionStampAlbum";
 import "../styles/collection-detail-editorial.css";
 
 function MemoryFilters({ data, memory: appliedMemory, onChange, media = false }) {
@@ -111,6 +112,7 @@ function MediaAccordionRow({ row, offset, items, pagination }) {
 
 function MediaWallView({ slug, memory, onChange }) {
   const { hydrateGallery } = useMediaLightbox();
+  const narrow = useNarrowScreen();
   const path = collectionMemoryApiPath(slug, memory, 24);
   const state = useAsyncData(() => api.get(path), [path], { keepPrevious: slug });
   const pagination = state.meta?.pagination || {};
@@ -138,15 +140,16 @@ function MediaWallView({ slug, memory, onChange }) {
   if (state.loading && !state.data) return <PageLoader label="正在整理共同影像" />;
   if (state.error) return <ErrorState error={state.error} onRetry={state.reload} />;
   const items = state.data?.items || [];
+  const galleryPagination = { page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || items.length, totalPages: pagination.total_pages || 1, loadPage };
   const rowCount = Math.ceil(items.length / 5);
   const rows = Array.from({ length: rowCount }, (_, index) => {
     const offset = Math.floor(index * items.length / rowCount);
     return { offset, items: items.slice(offset, Math.floor((index + 1) * items.length / rowCount)) };
   });
   return <section className={`collection-memory-view${state.loading ? " is-refreshing" : ""}`} aria-labelledby="collection-media-heading" aria-busy={state.loading || undefined}>
-    <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p></p></div></div>
+    <div className="collection-memory-heading"><div><h2 id="collection-media-heading">共同影像</h2><p>{narrow && pagination.total ? `${pagination.total} 枚，点开一枚盖上那天的邮戳。` : ""}</p></div></div>
     <MemoryFilters data={state.data} memory={memory} onChange={onChange} media />
-    {items.length ? <div className={`collection-media-wall${items.length > 2 ? " has-accordion" : ""}`}>{rows.map((row) => <MediaAccordionRow key={`${path}:${row.items.map((item) => item.id).join(",")}`} row={row.items} offset={row.offset} items={items} pagination={{ page: pagination.page || memory.page, pageSize: pagination.page_size || 24, total: pagination.total || items.length, totalPages: pagination.total_pages || 1, loadPage }} />)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
+    {items.length ? narrow ? <CollectionStampAlbum key={path} items={items} pagination={galleryPagination} /> : <div className={`collection-media-wall${items.length > 2 ? " has-accordion" : ""}`}>{rows.map((row) => <MediaAccordionRow key={`${path}:${row.items.map((item) => item.id).join(",")}`} row={row.items} offset={row.offset} items={items} pagination={galleryPagination} />)}</div> : <EmptyState title="这里还没有可展示的共同影像" description="为合集中的记录添加图片或 Live Photo 后，它们会出现在这里。" />}
     <Pagination page={pagination.page || 1} totalPages={pagination.total_pages || 0} onChange={(page) => onChange({ ...memory, page })} />
   </section>;
 }

@@ -75,7 +75,7 @@ def _canonical(post):
     return f"/notes/{post.id}"
 
 
-def _post_reference(post):
+def post_reference(post):
     return {
         "id": post.id,
         "post_type": post.post_type,
@@ -86,13 +86,13 @@ def _post_reference(post):
     }
 
 
-def _source_view(source, actor_id):
+def post_preview(source, actor_id):
     """失去读取权限或原帖已删除时不返回任何标题、作者或内容。"""
     if source is None or actor_id is None or not can_read_post(actor_id, source, include_archived=True):
         return {"state": "unavailable"}
     return {
         "state": "available",
-        **_post_reference(source),
+        **post_reference(source),
         "author": {"nickname": source.author.nickname} if source.author else None,
     }
 
@@ -106,7 +106,7 @@ def continuation_previews(posts, actor_id):
         PostContinuation.post_id.in_(ids),
         PostContinuation.broken_at.is_(None),
     )).all()
-    return {link.post_id: _source_view(link.source_post, actor_id) for link in links}
+    return {link.post_id: post_preview(link.source_post, actor_id) for link in links}
 
 
 def _later_posts(post, actor_id):
@@ -142,8 +142,8 @@ def can_continue(post, actor_id):
 def continuation_detail(post, actor_id):
     link = _active_link(post.id)
     return {
-        "source": _source_view(link.source_post, actor_id) if link else None,
-        "later": [_post_reference(item) for item in _later_posts(post, actor_id)],
+        "source": post_preview(link.source_post, actor_id) if link else None,
+        "later": [post_reference(item) for item in _later_posts(post, actor_id)],
         "can_continue": can_continue(post, actor_id),
     }
 
@@ -156,11 +156,11 @@ def continuation_management(post):
         return None
     return {
         "is_continuation": link is not None,
-        "source": _source_view(link.source_post, post.author_id) if link else None,
+        "source": post_preview(link.source_post, post.author_id) if link else None,
         "chain_visibility": (
             PostVisibility.LOGIN_ONLY.value if _open_to_all(members) else PostVisibility.PRIVATE.value
         ),
-        "chain_posts": [{**_post_reference(item), "visibility": item.visibility} for item in members],
+        "chain_posts": [{**post_reference(item), "visibility": item.visibility} for item in members],
     }
 
 

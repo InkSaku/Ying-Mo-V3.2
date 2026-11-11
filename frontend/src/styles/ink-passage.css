@@ -1,0 +1,36 @@
+/* 文字化墨点：欢迎页转场与文章读完 */
+.ink-passage-canvas { position: fixed; left: 0; top: 0; z-index: 1000; display: block; pointer-events: auto; }
+
+.article-ink-ending { position: relative; margin: 56px auto 8px; text-align: center; }
+.article-ink-ending-stage { display: grid; place-items: center; min-height: 128px; }
+.article-ink-ending-stage > * { grid-area: 1 / 1; }
+.article-ink-ending-line {
+  max-width: 18em; margin: 0; padding: 0 8px;
+  color: var(--ink-secondary, var(--text)); font-family: var(--serif); font-size: 19px; line-height: 1.7; letter-spacing: .06em;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.article-ink-ending-art { width: 132px; opacity: 0; transition: opacity 360ms ease-out; }
+.article-ink-ending-mark { margin: 10px 0 0; color: var(--muted); font-size: 11px; letter-spacing: .5em; text-indent: .5em; }
+.article-ink-ending-canvas { position: absolute; left: 0; top: -72px; width: 100%; height: calc(100% + 96px); pointer-events: none; }
+
+.article-ink-ending[data-phase="playing"] .article-ink-ending-line,
+.article-ink-ending[data-phase="done"] .article-ink-ending-line { visibility: hidden; }
+.article-ink-ending[data-phase="done"] .article-ink-ending-art { opacity: 1; }
+
+@media (max-width: 640px) {
+  .article-ink-ending { margin-top: 40px; }
+  .article-ink-ending-line { font-size: 17px; }
+  .article-ink-ending-art { width: 112px; }
+  .article-ink-ending-stage { min-height: 108px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .article-ink-ending-art { transition: none; }
+}
+@media print {
+  .article-ink-ending { display: none; }
+}
+
+/* 开发预览 /dev/ink-passage */
+.ink-preview-controls { position: fixed; right: 16px; bottom: 16px; z-index: 1001; display: flex; gap: 8px; }
+.ink-preview-controls button { min-height: 36px; padding: 0 12px; border: 1px solid var(--line, #deded5); background: var(--page); color: var(--text); font-size: 13px; }
+.ink-preview-ending { padding-top: 48px; }

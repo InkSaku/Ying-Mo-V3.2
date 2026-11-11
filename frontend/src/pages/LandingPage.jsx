@@ -6,8 +6,10 @@ import { InkSketch } from "../components/InkSketch";
 import { useAuth } from "../contexts/AuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { playLoginPageTurn, prepareLoginPageTurn } from "../lib/loginPageTurn";
+import { playWelcomeInk } from "../lib/inkPassage";
 import "../styles/login.css";
 import "../styles/landing.css";
+import "../styles/ink-passage.css";
 
 const details = [
   { title: "写下来", copy: "用文章与随记，保存文字、照片和 Live Photo。" },
@@ -60,11 +62,18 @@ export function LandingPage() {
     return () => cancelAnimationFrame(frame);
   }, [status, navigate, navigationType]);
 
-  return <WelcomeSheet paperRef={paperRef} checking={status === "loading"} />;
+  // The words of the welcome sheet turn to ink and gather into the login reader.
+  const enterWithInk = (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    void import("./LoginPage").catch(() => {});
+    if (playWelcomeInk(paperRef.current, () => navigate("/login"))) event.preventDefault();
+  };
+
+  return <WelcomeSheet paperRef={paperRef} checking={status === "loading"} onEnter={enterWithInk} />;
 }
 
 // Shared with the development replay; this sheet never checks authentication.
-export function WelcomeSheet({ paperRef, checking = false }) {
+export function WelcomeSheet({ paperRef, checking = false, onEnter }) {
   return (
     <main ref={paperRef} className="login-paper landing-paper">
       {checking ? <span className="sr-only" role="status">正在确认登录状态。</span> : null}
@@ -72,7 +81,7 @@ export function WelcomeSheet({ paperRef, checking = false }) {
         <Link to="/" className="login-wordmark" aria-label="映墨欢迎页"><InkBrandMark />映墨 <span>YING MO</span></Link>
         <nav className="landing-nav" aria-label="公开导航">
           <Link to="/about">关于映墨</Link>
-          <Link to="/login">登录 <EntryArrow small /></Link>
+          <Link to="/login" onClick={onEnter}>登录 <EntryArrow small /></Link>
         </nav>
       </header>
 
@@ -81,7 +90,7 @@ export function WelcomeSheet({ paperRef, checking = false }) {
           <h1 id="landing-title"><span>把今天，</span><span>轻轻放进时间里。</span></h1>
           <p className="landing-lead">写字、存照片，<br />也和朋友一起记录生活。</p>
           <div className="landing-actions" aria-label="进入映墨">
-            <Link className="landing-primary" to="/login"><span>进入映墨</span><EntryArrow /></Link>
+            <Link className="landing-primary" to="/login" onClick={onEnter}><span>进入映墨</span><EntryArrow /></Link>
           </div>
           <p className="landing-join"><span>有邀请码？</span><Link to="/register">加入我们</Link></p>
         </div>

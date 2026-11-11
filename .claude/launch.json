@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "/Users/hannn/Desktop/Ying-Mo-V3.2/backend/.venv/bin/python",
+      "runtimeArgs": ["run.py"],
+      "cwd": "/Users/hannn/Desktop/Ying-Mo-V3.2/backend",
+      "port": 8000
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/hannn/Desktop/Ying-Mo-V3.2/frontend"],
+      "port": 5173
+    }
+  ]
+}
