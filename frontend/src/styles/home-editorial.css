@@ -133,8 +133,6 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
   .home-editorial-columns { display:flex; flex-direction:column; gap:44px; margin-top:28px; }
   .home-reading-column { width:100%; }
   .home-side-rail { width:100%; padding:26px 0 0; border-left:0; border-top:1px solid var(--border); }
-  /* 纸页落座以左下角先着桌。 */
-  .home-editorial .home-feed-stream > * { transform-origin:14% 100%; }
   /* 共同记录插页：夹在时间流第 6 条之后，侧栏不再重复。 */
   .home-editorial:has(.home-feed-collections) .home-side-rail .home-closing-collections { display:none; }
   .home-editorial .home-feed-collections { display:grid; grid-template-columns:104px minmax(0,1fr); grid-template-areas:"art title" "art body"; gap:4px 16px; align-items:start; padding:26px 0 24px; border-bottom:1px solid var(--border); }
@@ -165,6 +163,25 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
 }
 @media print { .home-editorial .home-feed-toolbar { position:static; } }
 
+/* 手机时间流“纸页落座”：动效绑定滚动位置而不是时间。记录从底部导航上沿露出时还是一张略低、略斜、偏淡的纸，
+   手指往上推多少它就升起摆正多少，越过导航上方约 180px 落定；手指停它就停，往回拉又退回去。
+   以左下角先着桌。用浏览器原生滚动时间线在合成线程运行；不支持的浏览器、减少动态和打印时保持静止。 */
+@keyframes home-paper-settle {
+  from { opacity:.25; transform:translateY(64px) rotate(-3deg) scale(.95); }
+  to { opacity:1; transform:none; }
+}
+@supports (animation-timeline: view()) {
+  @media screen and (max-width:767px) and (prefers-reduced-motion:no-preference) {
+    .home-editorial .home-feed-stream > :is(.home-feed-entry, .home-feed-interlude-row, .home-feed-collections) {
+      transform-origin:14% 100%;
+      animation:home-paper-settle linear both;
+      animation-timing-function:cubic-bezier(.3, .55, .4, 1);
+      animation-timeline:view(block 0px calc(var(--mobile-nav-h) + var(--safe-area-bottom)));
+      animation-range:entry 0% entry calc(100% + 180px);
+    }
+  }
+}
+
 /* 新成员“第一封信”：占开篇位置，信纸式排版，一条墨线分开问候与三件小事，不做卡片和阴影。 */
 .welcome-letter { position: relative; display: grid; gap: 10px; padding: 4px 0 8px; }
 .welcome-letter-art { position: absolute; top: 0; right: 0; width: 88px; color: var(--text); pointer-events: none; }
@@ -193,3 +210,51 @@ html[data-theme="dark"] .home-margin-object-art { filter:invert(.9) hue-rotate(1
   .welcome-letter-steps li { grid-template-columns: 24px minmax(0, 1fr); }
   .welcome-letter-steps li > :last-child { grid-column: 2; margin-top: 0; justify-self: start; }
 }
+
+/* 手机时间流“拿起来”：按住浮起、横向拖动收藏或回应。只在手机宽度和触屏上启用；拖动时纸面借用浮层阴影，松手即收回。 */
+.home-feed-swipe-hint { display:none; }
+.home-editorial { --feed-lift-shadow:rgba(36, 37, 32, .16); }
+html[data-theme="dark"] .home-editorial { --feed-lift-shadow:rgba(0, 0, 0, .5); }
+@media (max-width:767px) and (pointer:coarse) {
+  .home-feed-swipe-hint { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:8px 0 0; color:var(--text-3); font-size:13px; line-height:1.7; }
+  .home-feed-swipe-hint .text-button { flex:none; min-width:44px; min-height:44px; color:var(--brand-link); font-size:13px; }
+  .home-editorial .home-feed-stream > .home-feed-entry { position:relative; touch-action:pan-y; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  .home-editorial .home-feed-stream > .home-feed-entry > .home-feed-entry-content { position:relative; z-index:1; }
+  .home-editorial .home-feed-entry.is-swipe-active > .home-feed-entry-content { background:var(--page); transition:box-shadow 160ms ease, background-color 160ms ease; }
+  .home-editorial .home-feed-entry.is-swipe-lifted > .home-feed-entry-content { background:var(--surface); box-shadow:0 0 0 12px var(--surface), 0 18px 30px 10px var(--feed-lift-shadow); }
+  /* 拿起来时不显示全站的链接按压变淡，纸面保持原样。 */
+  html:root .app-frame main .home-feed-entry.is-swipe-active :is(a[href], button):active { opacity:1; }
+  .feed-swipe-under { position:absolute; left:0; right:0; z-index:0; display:flex; align-items:center; justify-content:space-between; padding:0 2px; color:var(--brand-link); pointer-events:none; }
+  .feed-swipe-cue { display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; transition:transform 140ms ease; }
+  .feed-swipe-cue b { font-weight:400; }
+  .feed-swipe-cue svg { width:22px; height:22px; flex:none; }
+  .feed-swipe-cue.is-favorite { opacity:var(--favorite-cue, .45); }
+  .feed-swipe-cue.is-react { opacity:var(--react-cue, .45); }
+  .feed-swipe-star-fill { opacity:0; transition:opacity 140ms ease; }
+  .feed-swipe-under.is-favorited .feed-swipe-star-fill,
+  .feed-swipe-under.is-armed[data-side="favorite"] .feed-swipe-star-fill { opacity:1; }
+  .feed-swipe-under.is-armed[data-side="favorite"] .is-favorite,
+  .feed-swipe-under.is-armed[data-side="react"] .is-react { transform:scale(1.08); }
+  .feed-swipe-under.is-armed b { font-weight:500; }
+  .feed-swipe-stamp { position:absolute; right:0; z-index:2; width:26px; height:26px; color:var(--brand-link); pointer-events:none; animation:feed-swipe-stamp 1100ms cubic-bezier(.2, .8, .2, 1) both; }
+  .feed-swipe-stamp svg { display:block; width:100%; height:100%; }
+}
+@keyframes feed-swipe-stamp {
+  0% { opacity:0; transform:scale(1.7) rotate(-14deg); }
+  24% { opacity:1; transform:scale(.9) rotate(4deg); }
+  40% { transform:scale(1) rotate(0); }
+  78% { opacity:1; }
+  100% { opacity:0; }
+}
+@media (prefers-reduced-motion:reduce) { .feed-swipe-stamp { display:none; } }
+
+/* 回应面板：六种回应排成两行，已选的以靛蓝线框标出，再点一次取消。 */
+.feed-reaction-target { margin:0 0 14px; color:var(--text-3); font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+.feed-reaction-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.feed-reaction-choice { display:grid; justify-items:center; align-content:center; gap:2px; min-height:76px; padding:10px 4px; border:1px solid var(--border); border-radius:var(--radius-control, 2px); background:transparent; color:var(--text); font:inherit; cursor:pointer; }
+.feed-reaction-choice > span { font-size:24px; line-height:1.25; }
+.feed-reaction-choice b { font-size:13px; font-weight:400; }
+.feed-reaction-choice small { color:var(--text-3); font-size:11px; }
+.feed-reaction-choice.is-selected { border-color:var(--brand-link); box-shadow:inset 0 0 0 1px var(--brand-link); color:var(--brand-link); }
+.feed-reaction-choice:focus-visible { outline:2px solid var(--brand-link); outline-offset:2px; }
+.feed-reaction-note { margin:12px 0 0; color:var(--text-3); font-size:12px; }

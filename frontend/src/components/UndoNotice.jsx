@@ -4,7 +4,7 @@ export function UndoNotice({ message, busy, error, onUndo, onClose, label = "收
   if (!message) return null;
   return createPortal(<aside className="undo-notice" aria-label={label}>
     <div><p role="status">{message}</p>{error ? <p className="inline-error" role="alert">{error}</p> : null}</div>
-    <button className="text-button" type="button" disabled={busy} onClick={onUndo}>{busy ? "处理中…" : "撤销"}</button>
+    {onUndo ? <button className="text-button" type="button" disabled={busy} onClick={onUndo}>{busy ? "处理中…" : "撤销"}</button> : null}
     <button className="text-button undo-notice-close" type="button" disabled={busy} aria-label={closeLabel} onClick={onClose}>关闭</button>
   </aside>, document.body);
 }

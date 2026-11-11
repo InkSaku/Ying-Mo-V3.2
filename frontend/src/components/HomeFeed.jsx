@@ -22,7 +22,7 @@ import {
 import { FeedPost } from "./FeedPost";
 import { FeedMemoryInterlude } from "./FeedMemoryInterlude";
 import { HomeCollectionsInterlude } from "./HomeClosing";
-import { useFeedPaperSettle } from "../hooks/useFeedPaperSettle";
+import { FeedSwipeActions, FeedSwipeHint } from "./FeedSwipeActions";
 
 const REFRESH_INTERVAL_MS = 60_000;
 // 手机“共同记录”插页夹在第 6 条之后；不足 6 条时排在已读到的最后一条之后。
@@ -323,7 +323,6 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
   const streamItems = featuredId ? feed.items.filter((post) => post.id !== featuredId) : feed.items;
   const memoryIndex = homeFeedMemoryInterludeIndex(streamItems.length, feed.memoryInterlude);
   const collectionsIndex = collections?.length && !loading ? Math.min(COLLECTIONS_INTERLUDE_AFTER, streamItems.length) : -1;
-  useFeedPaperSettle(sectionRef, `${streamItems.length}:${memoryIndex}:${collectionsIndex}`);
   let previousStreamDay = "";
   return (
     <section ref={sectionRef} className="home-feed" aria-labelledby="home-feed-title" aria-busy={loading || loadingMore || undefined} onClickCapture={(event) => {
@@ -331,6 +330,7 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
     }}>
       {loading && !feed.items.length ? <div className="home-feed-loading" role="status"><span /><span /><span /><p className="sr-only">正在读取时间流</p></div> : null}
 
+      {streamItems.length ? <FeedSwipeHint /> : null}
       {streamItems.length ? <div className="home-feed-stream">
         {streamItems.map((post, index) => {
           const dayKey = post._feedFresh ? `fresh-${post.id}` : homeFeedDayKey(post.semantic_time || post.published_at);
@@ -357,6 +357,7 @@ export function HomeFeed({ userId, type, newPost, onSnapshot, featuredId = null,
       {loadingMore ? <p className="home-feed-more" role="status">正在加载更早的记录…...</p> : null}
       {!loading && !loadingMore && feed.hasMore && typeof IntersectionObserver === "undefined" ? <button className="btn btn-secondary home-feed-more-button" type="button" onClick={() => void load({ cursor: feed.nextCursor, append: true })}>继续阅读</button> : null}
       {!loading && !loadingMore && !feed.hasMore && streamItems.length ? <p className="home-feed-end">已显示全部记录。</p> : null}
+      <FeedSwipeActions rootRef={sectionRef} posts={feed.items} />
     </section>
   );
 }
