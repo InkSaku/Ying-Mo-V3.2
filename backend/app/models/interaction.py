@@ -50,6 +50,8 @@ class Comment(db.Model):
     reply_to_comment_id = db.Column(db.Integer, db.ForeignKey("comments.id", ondelete="SET NULL"), nullable=True, index=True)
     reply_to_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     client_request_id = db.Column(db.String(36), nullable=True)
+    # 作者发送前选了“不附卡片”：评论里的站内帖子链接只显示为可点击的链接。
+    link_card_hidden = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     status = db.Column(db.String(20), nullable=False, default="active", server_default="active")
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)

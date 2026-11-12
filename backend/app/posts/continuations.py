@@ -5,7 +5,7 @@
 """
 from datetime import datetime, timezone
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 
 from app.access import can_read_post, is_collection_member, readable_post_predicate
 from app.common.time import isoformat_utc
@@ -261,7 +261,13 @@ def _set_visibility(post, visibility):
 
 
 def _chain_label(post):
-    return {"id": post.id, "post_type": post.post_type, "title": post.title}
+    # 无标题随记用正文开头当名字，确认清单里要带上摘录。
+    return {
+        "id": post.id,
+        "post_type": post.post_type,
+        "title": post.title,
+        "content_excerpt": (post.summary or post.body or "")[:EXCERPT_LIMIT],
+    }
 
 
 def prepare_continuation_publish(post, *, confirm_widen=False):
@@ -319,3 +325,138 @@ def break_links_for_post(post_id, reason):
 
 def discard_draft_link(post_id):
     db.session.execute(db.delete(PostContinuation).where(PostContinuation.post_id == post_id))
+
+
+# ---- 接上已有的：两篇都已发布，事后把它们接成一串 ----
+
+CANDIDATE_DIRECTIONS = ("earlier", "later")
+
+
+def _moment(post):
+    """发布时间统一成 UTC 再比较，同一时刻按 ID 分先后，两篇总能排出先后、不会接成环。"""
+    value = post.published_at
+    if value is not None and value.tzinfo is not None:
+        value = value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value, post.id
+
+
+def _published_posts(ids):
+    if not ids:
+        return []
+    return db.session.scalars(
+        db.select(Post).where(
+            Post.id.in_(ids),
+            Post.deleted_at.is_(None),
+            Post.status.in_(READABLE_STATES),
+        ).order_by(Post.id.asc())
+    ).all()
+
+
+def link_candidates(post, actor_id, direction, query, page, size):
+    """本人在同一个地方、还不在这一串里的已发布帖子，按发布时间由近到远。
+
+    earlier 是更早发布的，这篇接着它写；later 是更晚发布的，它接着这篇写。
+    """
+    place = (
+        Post.collection_id.is_(None) if post.collection_id is None
+        else Post.collection_id == post.collection_id
+    )
+    before = or_(
+        Post.published_at < post.published_at,
+        and_(Post.published_at == post.published_at, Post.id < post.id),
+    )
+    stmt = db.select(Post).where(
+        Post.author_id == actor_id,
+        readable_post_predicate(actor_id, include_archived=True),
+        place,
+        Post.published_at.is_not(None),
+        Post.id.not_in(chain_post_ids(post.id)),
+        before if direction == "earlier" else ~before,
+    )
+    if query:
+        stmt = stmt.where(or_(
+            Post.title.contains(query, autoescape=True),
+            Post.body.contains(query, autoescape=True),
+        ))
+    total = db.session.scalar(db.select(db.func.count()).select_from(stmt.order_by(None).subquery())) or 0
+    order = (
+        (Post.published_at.desc(), Post.id.desc()) if direction == "earlier"
+        else (Post.published_at.asc(), Post.id.asc())
+    )
+    rows = db.session.scalars(stmt.order_by(*order).offset((page - 1) * size).limit(size)).all()
+
+    # 晚发的那篇如果已经接着别的帖子写，就不能再接这篇；写明它接着哪一篇。
+    taken = {}
+    if direction == "later" and rows:
+        links = db.session.scalars(db.select(PostContinuation).where(
+            PostContinuation.post_id.in_([row.id for row in rows]),
+            PostContinuation.broken_at.is_(None),
+        )).all()
+        taken = {link.post_id: post_preview(link.source_post, actor_id) for link in links}
+    items = [{
+        **post_reference(row),
+        "visibility": row.visibility if row.collection_id is None else None,
+        "continues": taken.get(row.id),
+    } for row in rows]
+    return items, total
+
+
+def link_existing(post, target, actor_id, *, confirm_widen=False):
+    """按发布时间定方向，早的是来源；调用方已按 ID 升序锁住两串帖子。"""
+    if not can_continue(post, actor_id):
+        raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if target is None or target.id == post.id or not can_continue(target, actor_id):
+        raise DomainError("RESOURCE_NOT_FOUND", "要接上的帖子不存在。", 404)
+    if post.published_at is None or target.published_at is None:
+        raise DomainError("VALIDATION_ERROR", "只能接上已经发布过的帖子。", 422)
+    if target.collection_id != post.collection_id:
+        raise DomainError(
+            "CONTINUATION_SCOPE_MISMATCH",
+            "只能接上同一个地方的帖子：都在同一个合集里，或都不在合集里。",
+            409,
+        )
+    chain = chain_post_ids(post.id)
+    if target.id in chain:
+        raise DomainError("CONTINUATION_ALREADY_CHAINED", "这两篇已经在同一串里。", 409)
+
+    later, earlier = (post, target) if _moment(target) < _moment(post) else (target, post)
+    if _active_link(later.id) is not None:
+        message = (
+            "这篇已经接着别的记录写。要换一篇，先取消接续。" if later is post
+            else "那篇已经接着别的记录写，每篇只能接一篇。"
+        )
+        raise DomainError("CONTINUATION_SOURCE_TAKEN", message, 409)
+
+    if post.collection_id is None:
+        members = _published_posts(chain | chain_post_ids(target.id))
+        if _open_to_all(members):
+            narrow = [item for item in members if item.visibility != PostVisibility.LOGIN_ONLY.value]
+            if narrow and confirm_widen is not True:
+                raise DomainError(
+                    "CONTINUATION_WIDEN_CONFIRM",
+                    "接上后这一串都会变成所有映墨成员可读，请确认后再接上。",
+                    409,
+                    details={"posts": [_chain_label(item) for item in narrow]},
+                )
+            for item in narrow:
+                _set_visibility(item, PostVisibility.LOGIN_ONLY.value)
+
+    # 换合集断开的旧关系仍占着唯一位置；它只是历史，接上新的来源时清掉。
+    db.session.execute(db.delete(PostContinuation).where(
+        PostContinuation.post_id == later.id,
+        PostContinuation.broken_at.is_not(None),
+    ))
+    db.session.add(PostContinuation(post_id=later.id, source_post_id=earlier.id, author_id=actor_id))
+    db.session.flush()
+    return later, earlier
+
+
+def unlink_source(post, actor_id):
+    """取消接续：删掉这篇和上一篇的关系，两边各自成串；已经放大的阅读范围不缩回。"""
+    if not can_continue(post, actor_id):
+        raise DomainError("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    link = _active_link(post.id)
+    if link is None:
+        raise DomainError("CONTINUATION_NOT_LINKED", "这篇没有接着别的记录写。", 409)
+    db.session.delete(link)
+    db.session.flush()

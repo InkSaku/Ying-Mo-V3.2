@@ -307,6 +307,160 @@ class MathExtension(Extension):
         md.inlinePatterns.register(MathInlineProcessor(INLINE_MATH_RE.pattern), "ym_math_inline", 174)
 
 
+LIST_ITEM_RE = re.compile(r"^( *)([-*+]|\d{1,9}[.)])( +|$)")
+THEMATIC_BREAK_RE = re.compile(r"^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
+NESTED_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+NON_LAZY_BLOCK_RE = re.compile(r"^ *(?:#{1,6}(?:[ \t]|$)|>|`{3,}|~{3,}|\|)")
+FENCE_LANGUAGE_RE = re.compile(r"[-\w+.]+")
+
+
+class ListIndentPreprocessor(Preprocessor):
+    """Translate CommonMark list structure into Python-Markdown's block model.
+
+    The editor (and Jupyter) indent list content to the parent's content column:
+    two spaces under ``- ``, three under ``1. ``. Python-Markdown nests only at
+    multiples of four and appends every non-marker line of a block to the
+    current item verbatim, so the same source would flatten nested lists, let a
+    second paragraph swallow the next item and show fences in items as inline code.
+
+    Lines are re-indented so each level detabs back to its CommonMark-relative
+    indent: markers sit at ``4 * depth``; content sharing a block with its item
+    at ``4 * depth`` and content after a blank line at ``4 * (depth + 1)``, plus
+    the indent relative to the item's content column. A blank line is inserted
+    where Python-Markdown could not start the item inside the current block (after
+    non-list text, at a shallower level than the block began, or when the list
+    type changes), and fenced code inside an item is stashed as a code block. Top-level fences and ``$$`` blocks
+    are stashed before this runs and pass through untouched.
+    """
+
+    def _stash_fence(self, fence, closed=True):
+        base = fence["base"]
+        lines = fence["lines"]
+        if not closed:
+            while lines and not lines[-1].strip():
+                lines = lines[:-1]
+        code = "\n".join(line[min(len(line) - len(line.lstrip(" ")), base):] for line in lines)
+        if lines:
+            code += "\n"
+        language = f' class="language-{fence["language"]}"' if fence["language"] else ""
+        return self.md.htmlStash.store(f"<pre><code{language}>{html_lib.escape(code, quote=False)}</code></pre>")
+
+    def run(self, lines):
+        output = []
+        stack = []  # open list items, innermost last: (source content column, depth, list type)
+        fence = None
+        previous_blank = True
+        block_depth = None  # depth of the item that started the current block, if any
+        paragraph_open = False
+
+        def content_column(owner):
+            return 4 * owner[1] + (0 if block_depth is not None else 4)
+
+        def containing_depth(indent):
+            depth = len(stack)
+            while depth and indent < stack[depth - 1][0]:
+                depth -= 1
+            return depth
+
+        def closes(stripped, indent):
+            base = fence["owner"][0] if fence["owner"] else 0
+            marker = fence["marker"]
+            return bool(stripped) and indent - base <= 3 and set(stripped) == {marker[0]} and len(stripped) >= len(marker)
+
+        for line in lines:
+            stripped = line.strip()
+            indent = len(line) - len(line.lstrip(" "))
+
+            if fence is not None:
+                if fence["owner"] is None:
+                    output.append(line)
+                    if closes(stripped, indent):
+                        fence = None
+                    continue
+                ended_with_item = bool(stripped) and indent < fence["owner"][0]
+                if ended_with_item or closes(stripped, indent):
+                    output.append(" " * fence["column"] + self._stash_fence(fence, closed=not ended_with_item))
+                    fence = None
+                    if not ended_with_item:
+                        continue
+                else:
+                    fence["lines"].append(line)
+                    continue
+
+            if not stripped:
+                output.append(line)
+                previous_blank = True
+                paragraph_open = False
+                continue
+
+            item = LIST_ITEM_RE.match(line)
+            if item and not THEMATIC_BREAK_RE.match(line):
+                depth = containing_depth(indent)
+                marker = item.group(2)
+                empty = not item.group(3)
+                # A new list may interrupt a paragraph only with a bullet or "1.",
+                # and only when the item is not empty (CommonMark).
+                restricted = paragraph_open and depth == len(stack) and (
+                    empty or (marker[-1] in ".)" and int(marker[:-1]) != 1)
+                )
+                if (depth or indent <= 3) and not restricted:
+                    list_type = "ol" if marker[-1] in ".)" else "ul"
+                    continues_block = block_depth is not None and depth >= block_depth and not (
+                        depth < len(stack) and stack[depth][2] != list_type
+                    )
+                    del stack[depth:]
+                    if not previous_blank and not continues_block:
+                        output.append("")
+                        previous_blank = True
+                    if previous_blank:
+                        block_depth = depth
+                    spacing = len(item.group(3))
+                    stack.append((indent + len(marker) + (spacing if 0 < spacing <= 4 else 1), depth, list_type))
+                    output.append(" " * (4 * depth) + line[indent:])
+                    previous_blank = False
+                    paragraph_open = not empty
+                    continue
+
+            if previous_blank:
+                block_depth = None
+            if stack and indent < stack[-1][0] and paragraph_open and not NON_LAZY_BLOCK_RE.match(line):
+                # Lazy continuation of the innermost open paragraph.
+                output.append(" " * content_column(stack[-1]) + line.lstrip(" "))
+                previous_blank = False
+                continue
+
+            del stack[containing_depth(indent):]
+            owner = stack[-1] if stack else None
+            relative = indent - (owner[0] if owner else 0)
+            column = content_column(owner) + max(relative, 0) if owner else 0
+            opening = NESTED_FENCE_RE.match(line.lstrip(" ")) if relative <= 3 else None
+            previous_blank = False
+            if opening:
+                info = stripped[len(opening.group(1)):].strip()
+                language = info.split()[0] if info else ""
+                fence = {
+                    "marker": opening.group(1), "owner": owner, "column": column, "base": indent,
+                    "language": language if FENCE_LANGUAGE_RE.fullmatch(language) else "", "lines": [],
+                }
+                paragraph_open = False
+                if owner is None:
+                    output.append(line)
+                continue
+            output.append(line if owner is None else " " * column + line.lstrip(" "))
+            paragraph_open = not NON_LAZY_BLOCK_RE.match(line)
+
+        if fence is not None and fence["owner"] is not None:
+            output.append(" " * fence["column"] + self._stash_fence(fence, closed=False))
+        return output
+
+
+class ListIndentExtension(Extension):
+    def extendMarkdown(self, md):
+        # After fenced code (25) and math blocks (24, 26) are stashed, before raw
+        # HTML blocks (20) and block parsing.
+        md.preprocessors.register(ListIndentPreprocessor(md), "ym_list_indent", 22)
+
+
 ALLOWED_TAGS = {
     "a", "blockquote", "br", "code", "del", "div", "em", "h1", "h2", "h3", "h4", "h5", "h6",
     "hr", "img", "li", "ol", "p", "pre", "span", "strong", "sup", "table", "tbody", "td",
@@ -377,7 +531,8 @@ def render_safe_markdown_document(value):
         return {"html": "", "outline": []}
     renderer = markdown.Markdown(
         extensions=[
-            InternalMediaExtension(), MathExtension(), HeadingAnchorExtension(), "fenced_code", "tables", "sane_lists", "footnotes", "toc",
+            InternalMediaExtension(), MathExtension(), HeadingAnchorExtension(), ListIndentExtension(),
+            "fenced_code", "tables", "sane_lists", "footnotes", "toc",
         ],
         extension_configs={
             "footnotes": {"BACKLINK_TITLE": "返回正文中的脚注 {}"},

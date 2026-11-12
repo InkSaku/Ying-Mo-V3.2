@@ -1,0 +1,58 @@
+/* 暖纸选择层：正文“链接”和“接上已有的”共用。 */
+/* 顶边固定，切换分栏、加载候选或选中时只有下边伸缩，弹窗不上下跳。 */
+.content-link-dialog {
+  --content-link-top: clamp(16px, 10vh, 96px);
+  width: min(540px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--content-link-top) - 16px);
+  margin: var(--content-link-top) auto auto;
+  padding: 24px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-overlay, 6px);
+  background: var(--surface);
+  color: var(--text-2);
+  font: 14px/1.65 var(--serif);
+  box-shadow: 0 18px 64px rgb(20 20 19 / 22%);
+}
+.content-link-dialog[open] { display: flex; flex-direction: column; }
+/* 滚动区两侧留出焦点框的位置，免得左右两边被裁掉。 */
+.content-link-body { min-height: 0; overflow-y: auto; margin-inline: -6px; padding-inline: 6px; }
+.content-link-dialog header, .content-link-dialog footer { flex-shrink: 0; }
+/* 固定用浅色主题的墨色：深色主题下仍是压暗，不会罩上一层发白的雾。 */
+.content-link-dialog::backdrop { background: rgb(36 37 32 / 44%); }
+.content-link-dialog header, .content-link-dialog footer, .content-link-dialog footer > div,
+.content-link-modes, .content-link-pagination { display: flex; align-items: center; gap: 12px; }
+.content-link-dialog header, .content-link-dialog footer { justify-content: space-between; }
+.content-link-dialog h2 { margin: 0; color: var(--text); font-size: 24px; font-weight: 400; }
+.content-link-dialog header button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--text-2); font-size: 24px; cursor: pointer; }
+.content-link-body > p { margin: 8px 0 16px; }
+.content-link-modes { margin-bottom: 16px; gap: 24px; flex-wrap: wrap; }
+.content-link-modes button, .content-link-pagination button { min-height: 44px; padding: 8px 0; color: var(--text-2); background: transparent; border: 0; font: inherit; cursor: pointer; }
+.content-link-modes button { border-bottom: 1px solid transparent; }
+.content-link-modes button[aria-pressed="true"] { border-bottom-color: var(--brand-link); color: var(--brand-link); }
+.content-link-field { display: grid; gap: 4px; margin-top: 16px; }
+.content-link-field input { width: 100%; min-width: 0; min-height: 44px; padding: 8px 0; border: 0; border-bottom: 1px solid var(--border-strong); border-radius: 0; background: transparent; color: var(--text); font: inherit; caret-color: var(--brand-link); }
+.content-link-field input::placeholder { color: var(--text-3); opacity: 1; }
+.content-link-results { margin-top: 16px; max-height: min(320px, 32dvh); overflow-y: auto; }
+.content-link-status { margin: 0 0 8px; color: var(--text-3); font-size: 12px; }
+.content-link-result { display: grid; gap: 4px; width: 100%; min-height: 64px; padding: 12px 8px; text-align: left; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.content-link-result strong { font-weight: 400; font-size: 16px; }
+.content-link-result span { color: var(--text-3); font-size: 12px; }
+.content-link-result:hover, .content-link-result[aria-pressed="true"] { background: var(--surface-2); }
+.content-link-result[aria-pressed="true"] strong { color: var(--brand-link); text-decoration: underline; text-underline-offset: 4px; }
+.content-link-pagination { justify-content: flex-end; font-size: 12px; }
+.content-link-dialog .content-link-selection { margin-top: 16px; color: var(--brand-link); overflow-wrap: anywhere; }
+.content-link-dialog .content-link-note { margin-top: 16px; font-size: 12px; color: var(--text-3); }
+.content-link-dialog footer { flex-wrap: wrap; margin-top: 24px; }
+.content-link-dialog footer > div { margin-left: auto; }
+.content-link-dialog button:disabled { opacity: .45; cursor: default; }
+.content-link-dialog :is(button, input):focus-visible { outline: 2px solid var(--brand-link); outline-offset: 3px; }
+/* 底线输入框聚焦时把底线加深成 2px 靛蓝，不再套外框；内边距少 1px，高度不变。 */
+.content-link-dialog .content-link-field input:focus-visible { outline: none; padding-bottom: 7px; border-bottom: 2px solid var(--brand-link); }
+/* 候选列表自己也会滚动，焦点框画在行内侧。 */
+.content-link-dialog .content-link-result:focus-visible { outline-offset: -2px; }
+@media (max-width: 767px) {
+  .content-link-dialog { --content-link-top: max(16px, var(--safe-area-top, 0px)); padding: 16px; }
+  .content-link-dialog footer { gap: 8px; }
+  .content-link-dialog footer .btn { min-height: 44px; padding-inline: 12px; }
+}

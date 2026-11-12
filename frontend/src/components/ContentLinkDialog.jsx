@@ -2,6 +2,7 @@ import { lockPageScroll } from "../lib/dialog";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../lib/api";
 import { internalLinkPath, validLinkHref } from "../lib/contentLinks";
+import "../styles/content-link-dialog.css";
 
 export function ContentLinkDialog({ draft, excludePostId, onApply, onRemove, onClose }) {
   const dialogRef = useRef(null);

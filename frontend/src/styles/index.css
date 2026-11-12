@@ -7,6 +7,14 @@
   --western-serif: "Noto Serif SC Variable", serif;
   --mono: "JetBrains Mono Variable", "Noto Serif SC Variable", monospace;
 
+  /* 代码字体：读者可在阅读设置里切换，只影响代码块与行内代码。 */
+  --code-font-jetbrains: var(--mono);
+  --code-font-fira: "Fira Code Variable", "Noto Serif SC Variable", monospace;
+  --code-font-cascadia: "Cascadia Code Variable", "Noto Serif SC Variable", monospace;
+  --code-font-source: "Source Code Pro Variable", "Noto Serif SC Variable", monospace;
+  --code-font-system: ui-monospace, "SF Mono", Menlo, Consolas, "Droid Sans Mono", "Noto Serif SC Variable", monospace;
+  --code-font: var(--code-font-jetbrains);
+
   --page: #f5f4ed;
   --surface: #faf9f5;
   --surface-2: #e8e6dc;
@@ -62,6 +70,11 @@
   --color-surface: var(--surface);
   --color-text-muted: var(--text-4);
 }
+
+:root[data-code-font="fira"] { --code-font: var(--code-font-fira); }
+:root[data-code-font="cascadia"] { --code-font: var(--code-font-cascadia); }
+:root[data-code-font="source"] { --code-font: var(--code-font-source); }
+:root[data-code-font="system"] { --code-font: var(--code-font-system); }
 
 /* Immersive, ACL-backed media memories. */
 .media-lightbox-trigger {
@@ -3317,17 +3330,20 @@ input[aria-invalid="true"] {
 
 .prose code,
 .code-block {
-  font-family: var(--mono);
+  font-family: var(--code-font);
   font-size: 12px;
+  font-variant-ligatures: none;
 }
 
 .prose pre code {
-  font-family: var(--western-serif);
+  font-family: inherit;
   font-size: 1em;
 }
 
 .prose pre,
 .code-block {
+  font-family: var(--code-font);
+  font-variant-ligatures: none;
   overflow: auto;
   padding: 14px;
   border: 1px solid var(--border);
@@ -3336,6 +3352,9 @@ input[aria-invalid="true"] {
   color: var(--text);
   line-height: 1.55;
 }
+
+/* 等宽字形比正文宋体显大，代码块略小于正文，长行也少一些横向滚动。 */
+.prose pre { font-size: .84em; }
 
 .prose .highlighted-code-block {
   position: relative;

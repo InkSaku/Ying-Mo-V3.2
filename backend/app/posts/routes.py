@@ -33,9 +33,10 @@ from app.posts.related import related_articles
 from app.posts.note_experience import note_experience
 from app.posts.links import discard_post_links, link_preview, mentions_of, sync_post_links
 from app.posts.continuations import (
-    break_links_for_post, chain_post_ids, continuation_detail, continuation_management,
-    create_continuation_draft, discard_draft_link, guard_continuation_patch, posts_in_chains,
-    prepare_continuation_publish, set_chain_visibility,
+    CANDIDATE_DIRECTIONS, break_links_for_post, can_continue, chain_post_ids, continuation_detail,
+    continuation_management, create_continuation_draft, discard_draft_link, guard_continuation_patch,
+    link_candidates, link_existing, posts_in_chains, prepare_continuation_publish, set_chain_visibility,
+    unlink_source,
 )
 from app.posts.memory_contributions import (
     create_contribution_draft, detach_memory_link, ensure_memory_scope_update,
@@ -684,6 +685,83 @@ def update_continuation_chain_visibility(post_id):
         db.session.rollback()
         return _handle_domain(error)
     return success_response(_serialize(post, actor_id=actor.id, management=True))
+
+
+@bp.get("/<int:post_id>/continuation-candidates")
+@jwt_required(locations=["headers"])
+def list_continuation_candidates(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    args = parse_pagination(default_size=8, max_size=20)
+    direction = request.args.get("direction") or "earlier"
+    query = (request.args.get("q") or "").strip()
+    if not args or direction not in CANDIDATE_DIRECTIONS or len(query) > 100:
+        return error_response("VALIDATION_ERROR", "查询或分页参数不合法。", 422)
+    post = db.session.get(Post, post_id)
+    if not can_continue(post, actor.id):
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    page, size = args
+    items, total = link_candidates(post, actor.id, direction, query, page, size)
+    return success_response(items, meta=pagination_meta(page, size, total))
+
+
+@bp.post("/<int:post_id>/continuation-links")
+@jwt_required(locations=["headers"])
+def link_existing_continuation(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    data = request.get_json(silent=True)
+    target_id = data.get("target_post_id") if isinstance(data, dict) else None
+    if (
+        not isinstance(data, dict)
+        or not set(data) <= {"target_post_id", "confirm_widen_chain"}
+        or not isinstance(target_id, int) or isinstance(target_id, bool)
+        or not 1 <= target_id <= 9223372036854775807
+        or not isinstance(data.get("confirm_widen_chain", False), bool)
+    ):
+        return error_response("VALIDATION_ERROR", "请求仅接受 target_post_id 和 confirm_widen_chain。", 422)
+    # 两串可能合成一串、一起放大，按 ID 升序锁住两串的全部帖子。
+    planned = chain_post_ids(post_id) | chain_post_ids(target_id)
+    post = lock_post_scope(post_id, extra_post_ids=planned)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        db.session.rollback()
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    if (chain_post_ids(post_id) | chain_post_ids(target_id)) - planned:
+        # 取锁前后这一串又接上了别的帖子，新加入的行没有锁住；全局处理器会返回 409。
+        raise StaleDataError(f"Continuation chain of post {post_id} changed while acquiring locks.")
+    try:
+        link_existing(
+            post, db.session.get(Post, target_id), actor.id,
+            confirm_widen=data.get("confirm_widen_chain", False),
+        )
+        db.session.commit()
+    except (DomainError, IntegrityError) as error:
+        db.session.rollback()
+        if isinstance(error, IntegrityError):
+            return error_response("DUPLICATE_RESOURCE", "这篇刚刚接上了别的记录，请刷新后再试。", 409)
+        return _handle_domain(error)
+    return success_response(continuation_detail(post, actor.id))
+
+
+@bp.delete("/<int:post_id>/continuation-link")
+@jwt_required(locations=["headers"])
+def unlink_continuation(post_id):
+    actor = current_user()
+    if actor is None:
+        return error_response("ACCOUNT_RESTRICTED", "当前账号无法继续使用。", 403)
+    post = lock_post_scope(post_id)
+    if post is None or post.author_id != actor.id or post.deleted_at is not None:
+        db.session.rollback()
+        return error_response("RESOURCE_NOT_FOUND", "Post 不存在。", 404)
+    try:
+        unlink_source(post, actor.id)
+        db.session.commit()
+    except DomainError as error:
+        db.session.rollback()
+        return _handle_domain(error)
+    return success_response(continuation_detail(post, actor.id))
 
 
 @bp.get("/slug/<slug>")

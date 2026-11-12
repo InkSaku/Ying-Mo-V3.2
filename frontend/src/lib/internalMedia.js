@@ -45,15 +45,20 @@ function lineBreakAfter(value) {
   return "\n\n";
 }
 
-export function insertMediaPlaceholder(value, mediaId, start, end = start) {
+// 以独立段落插入一段 Markdown（图片占位符、导入的笔记等），前后自动补空行。
+export function insertMarkdownBlock(value, block, start, end = start) {
   const source = String(value || "");
   const safeStart = Math.max(0, Math.min(Number.isInteger(start) ? start : source.length, source.length));
   const safeEnd = Math.max(safeStart, Math.min(Number.isInteger(end) ? end : safeStart, source.length));
   const before = source.slice(0, safeStart);
   const after = source.slice(safeEnd);
-  const insertion = `${lineBreakBefore(before)}${mediaPlaceholder(mediaId)}${lineBreakAfter(after)}`;
+  const insertion = `${lineBreakBefore(before)}${block}${lineBreakAfter(after)}`;
   return {
     value: `${before}${insertion}${after}`,
     cursor: before.length + insertion.length,
   };
+}
+
+export function insertMediaPlaceholder(value, mediaId, start, end = start) {
+  return insertMarkdownBlock(value, mediaPlaceholder(mediaId), start, end);
 }

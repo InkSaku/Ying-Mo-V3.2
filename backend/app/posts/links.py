@@ -155,12 +155,79 @@ def mentions_of(post, actor_id, *, exclude_ids=()):
 
 
 def link_preview(path, actor_id):
-    """悬停预览：只接受站内文章或随记路径，读不到和不存在都返回 None。"""
-    from app.posts.continuations import post_preview
-
+    """悬停预览与评论卡片预览：只接受站内文章或随记路径，读不到和不存在都返回 None。"""
     key = link_key(path) if isinstance(path, str) and path.startswith("/") else None
     if key is None:
         return None
     post_id = _resolve({key}).get(key)
-    preview = post_preview(db.session.get(Post, post_id) if post_id else None, actor_id)
-    return preview if preview["state"] == "available" else None
+    post = db.session.get(Post, post_id) if post_id else None
+    return post_cards([post], actor_id).get(post_id) if post is not None else None
+
+
+def post_cards(posts, actor_id):
+    """站内帖子卡片：只为当前读者能读的帖子给出标题、摘录、作者、首图和图片数。"""
+    from app.access import can_read_post
+    from app.posts.browsing import first_display_media, note_visual_counts
+    from app.posts.continuations import post_preview
+
+    readable = [
+        post for post in {post.id: post for post in posts if post is not None}.values()
+        if actor_id is not None and can_read_post(actor_id, post, include_archived=True)
+    ]
+    if not readable:
+        return {}
+    first_media = first_display_media(readable)
+    counts = note_visual_counts(readable)
+    cards = {}
+    for post in readable:
+        cover = post.cover_media
+        media = cover if cover and cover.status == "active" and cover.deleted_at is None else first_media.get(post.id)
+        cards[post.id] = {
+            **post_preview(post, actor_id),
+            "display_media": media.to_dict() if media else None,
+            "visual_count": counts.get(post.id, 0) if post.post_type == PostType.NOTE.value else None,
+        }
+    return cards
+
+
+# 评论是纯文本：网址只取 ASCII 字符，紧跟的中文和中文标点不算进链接。
+COMMENT_LINK_RE = re.compile(
+    r"https?://[A-Za-z0-9.\-]+(?::\d+)?(?:/[A-Za-z0-9\-._~/%?#=&+]*)?"
+    r"|(?<![A-Za-z0-9_/.])/(?:articles|notes)/[A-Za-z0-9\-_/]+"
+)
+
+
+def first_comment_link(body):
+    """评论里的第一个站内文章或随记链接，返回 (正文里的那段文字, 链接键)。"""
+    for match in COMMENT_LINK_RE.finditer(body or ""):
+        token = match.group(0).rstrip(TRAILING_PUNCTUATION)
+        key = link_key(token)
+        if key:
+            return token, key
+    return None, None
+
+
+def comment_link_cards(comments, actor_id):
+    """每条 active 评论最多一张卡片，按当前读者现取；读不到、不存在都只给 unavailable。
+
+    指向被评论帖子本身的链接、作者选了“不附卡片”的评论都不出卡片。
+    """
+    found = {}
+    for comment in comments:
+        if comment.status != "active" or getattr(comment, "link_card_hidden", False):
+            continue
+        token, key = first_comment_link(comment.body)
+        if key:
+            found[comment.id] = (comment.post_id, token, key)
+    if not found:
+        return {}
+    resolved = _resolve({key for _, _, key in found.values()})
+    posts = db.session.scalars(db.select(Post).where(Post.id.in_(set(resolved.values())))).all() if resolved else []
+    cards = post_cards(posts, actor_id)
+    result = {}
+    for comment_id, (commented_post_id, token, key) in found.items():
+        post_id = resolved.get(key)
+        if post_id == commented_post_id:
+            continue
+        result[comment_id] = {"href": token, **cards.get(post_id, {"state": "unavailable"})}
+    return result

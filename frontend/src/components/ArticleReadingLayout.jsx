@@ -7,13 +7,15 @@ import { FavoriteButton, FavoriteLink } from "./FavoriteControl";
 import "../styles/archive-cat.css";
 import { MobileSheet } from "./MobileSheet";
 import { useNarrowScreen } from "../hooks/useNarrowScreen";
+import { CODE_FONTS, readCodeFont, saveCodeFont } from "../lib/codeFont";
 
-function ReadingSettings({ fontSize, onChangeFontSize, onSetFontSize, onResetFontSize }) {
+function ReadingSettings({ fontSize, onChangeFontSize, onSetFontSize, onResetFontSize, codeFont, onChangeCodeFont }) {
   const menuRef = useRef(null);
   const narrow = useNarrowScreen();
   const [sheetOpen, setSheetOpen] = useState(false);
   const inputId = useId();
   const hintId = useId();
+  const codeFontName = useId();
   const [fontDraft, setFontDraft] = useState(null);
   const { resolved, setMode } = useTheme();
 
@@ -48,6 +50,17 @@ function ReadingSettings({ fontSize, onChangeFontSize, onSetFontSize, onResetFon
           <p id={hintId}>16–24px，留空用默认</p>
         </div>
         <button type="button" onClick={() => { setFontDraft(null); onResetFontSize(); }}>恢复默认字号</button>
+        <fieldset className="article-reading-code-font">
+          <legend>代码字体</legend>
+          <div className="article-reading-code-font-options">
+            {CODE_FONTS.map((font) => (
+              <label key={font.id}>
+                <input type="radio" name={codeFontName} value={font.id} checked={codeFont === font.id} onChange={() => onChangeCodeFont(font.id)} />
+                <span style={{ fontFamily: `var(--code-font-${font.id})` }}>{font.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <button type="button" onClick={(event) => {
           const box = event.currentTarget.getBoundingClientRect();
           setMode(resolved === "dark" ? "light" : "dark", { origin: { x: box.x + box.width / 2, y: box.y + box.height / 2 } });
@@ -91,6 +104,11 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
       return Number.isInteger(value) && value >= 16 && value <= 24 ? value : null;
     } catch { return null; }
   });
+  const [codeFont, setCodeFont] = useState(readCodeFont);
+  const changeCodeFont = (id) => {
+    saveCodeFont(id);
+    setCodeFont(id);
+  };
   const panels = useReadingPanels(showToc);
   const [activeId, setActiveId] = useState(normalizedOutline[0]?.id || "");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -190,7 +208,7 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
       <div className="article-reading-navigation">
         {navigation}
         <div className="article-reading-compact-tools">
-          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} />
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} codeFont={codeFont} onChangeCodeFont={changeCodeFont} />
         </div>
       </div>
       <div ref={panels.layoutRef} style={{ ...panels.style, ...(fontSize !== null ? { "--reading-font-size": `${fontSize}px` } : {}) }} className={`article-reading-layout ${showToc ? "has-toc" : ""} ${panels.resizable ? "is-resizable" : ""} ${panels.dragging ? "is-resizing" : ""}`}>
@@ -240,7 +258,7 @@ export function ArticleReadingLayout({ outline, children, opening, navigation, f
             <strong>{progress}%</strong>
             <span>已读</span>
           </div>
-          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} />
+          <ReadingSettings fontSize={fontSize} onChangeFontSize={changeFontSize} onSetFontSize={applyFontSize} onResetFontSize={() => setFontSize(null)} codeFont={codeFont} onChangeCodeFont={changeCodeFont} />
           <FavoriteButton key={favorite?.postId ?? "pending"} rail favorited={favorite?.favorited} ready={favorite?.ready} busy={favorite?.busy} celebration={favorite?.celebration} onToggle={favorite?.toggleFavorite} />
           {favorite?.ready && favorite.favorited ? <FavoriteLink rail /> : null}
           {favorite?.error ? <p className="article-reading-tool-error" role="alert">{favorite.error}</p> : null}

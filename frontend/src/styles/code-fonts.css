@@ -1,0 +1,4 @@
+/* 可选代码字体的 @font-face 声明。只有读者选中某款字体（或打开阅读设置看到预览）时，浏览器才会下载对应字形文件。 */
+@import "@fontsource-variable/fira-code/wght.css";
+@import "@fontsource-variable/cascadia-code/wght.css";
+@import "@fontsource-variable/source-code-pro/wght.css";

@@ -82,6 +82,15 @@
 .article-reading-font-size-controls input::-webkit-inner-spin-button, .article-reading-font-size-controls input::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
 .article-reading-settings .article-reading-settings-panel .article-reading-font-size-controls > button { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
 .article-reading-font-size > p { margin: 0; color: var(--text-3); font-size: 11px; line-height: 1.7; }
+.article-reading-code-font { min-width: 0; margin: 12px 0 0; padding: 0; border: 0; }
+.article-reading-code-font > legend { margin-bottom: 4px; padding: 0; color: var(--text-2); font-size: 12px; }
+.article-reading-code-font-options { display: grid; min-width: 0; }
+.article-reading-code-font-options label { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 32px; color: var(--text-3); cursor: pointer; }
+.article-reading-code-font-options input { flex: 0 0 14px; width: 14px; height: 14px; min-width: 14px; min-height: 14px; margin: 0; padding: 0; accent-color: var(--brand-link); cursor: pointer; }
+.article-reading-code-font-options input:focus { outline: none; }
+.article-reading-code-font-options input:focus-visible { outline: 2px solid var(--brand-link); outline-offset: 2px; }
+.article-reading-code-font-options span { min-width: 0; font-size: 12px; line-height: 1.4; font-variant-ligatures: none; overflow-wrap: anywhere; }
+.article-reading-code-font-options label:has(input:checked) { color: var(--brand-link); }
 
 @media (max-width: 1359px) {
   .article-reading-navigation { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
@@ -96,6 +105,9 @@
   .article-reading-compact-tools .article-reading-settings-panel button { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--brand-link); font: 14px var(--serif); cursor: pointer; }
   .article-reading-compact-tools .article-reading-settings-panel > button { display: block; width: 100%; text-align: left; }
   .article-reading-compact-tools .article-reading-settings-panel button:disabled { opacity: .45; cursor: default; }
+  .article-reading-compact-tools .article-reading-code-font { margin-top: 8px; }
+  .article-reading-compact-tools .article-reading-code-font-options label { min-height: 44px; }
+  .article-reading-compact-tools .article-reading-code-font-options span { font-size: 14px; }
 }
 
 .article-reading-page .interaction-region { margin-top: 56px; }

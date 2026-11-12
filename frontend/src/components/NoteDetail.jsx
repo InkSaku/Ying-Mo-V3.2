@@ -8,7 +8,7 @@ import { ProtectedImage } from "./ProtectedImage";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import { NoteSketch } from "./NoteSketch";
 import { CollectionPathTags } from "./CollectionPathTags";
-import { ContinuationSource, ContinueWriteButton } from "./ContinuationViews";
+import { ContinuationActions, ContinuationSource } from "./ContinuationViews";
 
 function noteDateParts(value) {
   const date = new Date(value || "");
@@ -20,7 +20,7 @@ function noteDateParts(value) {
   };
 }
 
-export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
+export function NoteDetail({ post, galleryItems, coverGalleryItem, onContinuationChange }) {
   const date = noteDateParts(post.semantic_time);
   const renderedBody = post.rendered_html ? (
     <ProtectedMarkdown html={post.rendered_html} media={post.bound_media} galleryItems={galleryItems} />
@@ -87,7 +87,7 @@ export function NoteDetail({ post, galleryItems, coverGalleryItem }) {
         </dl>
       </footer>
 
-      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} extraAction={post.continuation?.can_continue ? <ContinueWriteButton postId={post.id} /> : null} />
+      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} extraAction={<ContinuationActions post={post} onContinuationChange={onContinuationChange} />} />
     </article>
   );
 }

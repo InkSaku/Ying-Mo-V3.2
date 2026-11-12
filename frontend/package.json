@@ -12,8 +12,11 @@
     "verify:bundle": "node scripts/verify-build.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/cascadia-code": "5.3.0",
+    "@fontsource-variable/fira-code": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@fontsource-variable/noto-serif-sc": "5.3.0",
+    "@fontsource-variable/source-code-pro": "5.3.1",
     "@tiptap/core": "3.31.4",
     "@tiptap/extension-code-block": "3.31.4",
     "@tiptap/extension-heading": "3.31.4",

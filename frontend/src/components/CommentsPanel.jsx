@@ -10,8 +10,11 @@ import {
   replaceOptimisticComment,
 } from "../lib/commentOptimistic";
 import { formatDate } from "../lib/format";
+import { commentLinks, firstPostLink, postLinkPath } from "../lib/commentLinks";
+import { internalLinkPath } from "../lib/contentLinks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pagination } from "./Pagination";
+import { PostLinkCard } from "./PostLinkCard";
 import { ProtectedImage } from "./ProtectedImage";
 import { ReactionPicker } from "./ReactionPicker";
 import { EmptyState, ErrorState } from "./States";
@@ -46,23 +49,49 @@ function excerpt(value, limit = 100) {
     : `${Array.from(text).slice(0, limit).join("")}…`;
 }
 
-function CommentBody({ comment }) {
-  const mentions = new Map((comment.mentions || []).map((user) => [user.username, user]));
-  const body = comment.body || "";
+function mentionParts(text, mentions, offset) {
   const parts = [];
   const pattern = /@([a-z0-9_-]{3,32})/gi;
   let cursor = 0;
   let match;
-  while ((match = pattern.exec(body)) !== null) {
-    if (match.index > cursor) parts.push(body.slice(cursor, match.index));
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > cursor) parts.push(text.slice(cursor, match.index));
     const user = mentions.get(match[1].toLowerCase());
     parts.push(user
-      ? <Link key={`${match.index}-${user.id}`} className="comment-mention" to={`/users/${user.username}`}>@{user.username}</Link>
+      ? <Link key={`${offset + match.index}-${user.id}`} className="comment-mention" to={`/users/${user.username}`}>@{user.username}</Link>
       : match[0]);
     cursor = pattern.lastIndex;
   }
-  if (cursor < body.length) parts.push(body.slice(cursor));
-  return <p>{parts}</p>;
+  if (cursor < text.length) parts.push(text.slice(cursor));
+  return parts;
+}
+
+// 评论正文：@成员与链接都可点击；第一个站内帖子链接另出一张卡片，
+// 它在评论末尾时不再重复显示网址。
+function CommentBody({ comment }) {
+  const mentions = new Map((comment.mentions || []).map((user) => [user.username, user]));
+  const active = comment.status === "active";
+  const body = comment.body || "";
+  const card = active ? comment.link_card : null;
+  const links = active ? commentLinks(body) : [];
+  const cardLink = card ? links.find((link) => link.href === card.href) : null;
+  const visible = cardLink && !body.slice(cardLink.end).trim() ? body.slice(0, cardLink.start).trimEnd() : body;
+  const parts = [];
+  let cursor = 0;
+  for (const link of links) {
+    if (link.end > visible.length) break;
+    if (link.start > cursor) parts.push(...mentionParts(visible.slice(cursor, link.start), mentions, cursor));
+    const path = internalLinkPath(link.href);
+    parts.push(path
+      ? <Link key={`link-${link.start}`} className="comment-link" to={path}>{link.href}</Link>
+      : <a key={`link-${link.start}`} className="comment-link" href={link.href} target="_blank" rel="noopener noreferrer nofollow">{link.href}</a>);
+    cursor = link.end;
+  }
+  if (cursor < visible.length) parts.push(...mentionParts(visible.slice(cursor), mentions, cursor));
+  return <>
+    {visible ? <p>{parts}</p> : null}
+    {card ? <PostLinkCard card={card} /> : null}
+  </>;
 }
 
 function CommentAvatar({ member, current = false }) {
@@ -93,6 +122,9 @@ export function CommentsPanel({ postId }) {
   const [body, setBody] = useState(initialDraft.current?.body || "");
   const [replyTo, setReplyTo] = useState(initialDraft.current?.replyTo || null);
   const [selectedMentions, setSelectedMentions] = useState(initialDraft.current?.mentions || []);
+  // 选了“不附卡片”的那条链接；换了链接就自动恢复卡片。
+  const [hiddenCardPath, setHiddenCardPath] = useState(initialDraft.current?.hiddenCardPath || null);
+  const [linkPreview, setLinkPreview] = useState(null);
   const [mentionCandidates, setMentionCandidates] = useState([]);
   const [state, setState] = useState({ loading: true, error: null, pagination: null });
   const [submitting, setSubmitting] = useState(Boolean(initialSend.current));
@@ -104,11 +136,35 @@ export function CommentsPanel({ postId }) {
   const [focusedComment, setFocusedComment] = useState(null);
   useLayoutEffect(() => {
     if (submitting) return;
-    if (body || replyTo) rememberSessionValue(commentDrafts, draftKey, { body, replyTo, mentions: selectedMentions });
+    if (body || replyTo) rememberSessionValue(commentDrafts, draftKey, { body, replyTo, mentions: selectedMentions, hiddenCardPath });
     else commentDrafts.delete(draftKey);
-  }, [body, replyTo, selectedMentions, submitting, draftKey]);
+  }, [body, replyTo, selectedMentions, hiddenCardPath, submitting, draftKey]);
 
   const activeMentionQuery = mentionQuery(body);
+  const draftLink = firstPostLink(body);
+  const draftLinkPath = draftLink ? postLinkPath(draftLink.href) : null;
+  const previewCard = linkPreview && linkPreview.path === draftLinkPath && linkPreview.card?.id !== postId ? linkPreview.card : null;
+  const cardHidden = Boolean(draftLinkPath) && hiddenCardPath === draftLinkPath;
+
+  // 发送前预览：和别人看到的是同一张卡片；读不到或不存在都显示同一行占位。
+  useEffect(() => {
+    if (!draftLinkPath || submitting) return undefined;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void api.get(`/posts/link-preview?path=${encodeURIComponent(draftLinkPath)}`)
+        .then((result) => {
+          if (active) setLinkPreview({ path: draftLinkPath, card: result.data });
+        })
+        .catch((error) => {
+          if (!active) return;
+          setLinkPreview(error.code === "RESOURCE_NOT_FOUND" ? { path: draftLinkPath, card: { state: "unavailable" } } : null);
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [draftLinkPath, submitting]);
 
   useEffect(() => {
     let frame;
@@ -161,6 +217,7 @@ export function CommentsPanel({ postId }) {
         setBody(send.draft.body);
         setReplyTo(send.draft.replyTo);
         setSelectedMentions(send.draft.mentions);
+        setHiddenCardPath(send.draft.hiddenCardPath || null);
         setMessage("");
         setActionError(`发送失败：${error.message} 草稿已恢复。`);
       } else if (result) {
@@ -259,11 +316,12 @@ export function CommentsPanel({ postId }) {
       } : null,
       mentions: selectedMentions,
       reactions: null,
+      link_card: draftLink && previewCard && !cardHidden ? { href: draftLink.href, ...previewCard } : null,
       can_delete: false,
       created_at: new Date().toISOString(),
       optimistic: true,
     };
-    const draft = { body, replyTo, mentions: selectedMentions };
+    const draft = { body, replyTo, mentions: selectedMentions, hiddenCardPath };
     const wasReply = Boolean(replyTo);
     setItems((current) => insertOptimisticComment(current, optimistic));
     if (!wasReply) {
@@ -277,6 +335,7 @@ export function CommentsPanel({ postId }) {
     setBody("");
     setReplyTo(null);
     setSelectedMentions([]);
+    setHiddenCardPath(null);
     setMentionCandidates([]);
     setSubmitting(true);
     setActionError("");
@@ -287,6 +346,7 @@ export function CommentsPanel({ postId }) {
         body: content,
         client_request_id: idempotencyKey,
         mention_user_ids: selectedMentions.map((item) => item.id),
+        ...(cardHidden ? { hide_link_card: true } : {}),
         ...(replyTo ? { reply_to_comment_id: replyTo.id } : {}),
       }));
       if (outcome.cancelled) return;
@@ -319,6 +379,7 @@ export function CommentsPanel({ postId }) {
       setBody(draft.body);
       setReplyTo(draft.replyTo);
       setSelectedMentions(draft.mentions);
+      setHiddenCardPath(draft.hiddenCardPath);
       setMessage("");
       setActionError(`发送失败：${error.message} 草稿已恢复。`);
     } finally {
@@ -480,6 +541,14 @@ export function CommentsPanel({ postId }) {
             </div>
           ) : null}
         </div>
+        {previewCard && !submitting ? (cardHidden ? (
+          <p className="comment-card-preview-hidden">这条评论只显示链接，不附卡片。<button className="text-button" type="button" onClick={() => setHiddenCardPath(null)}>附上卡片</button></p>
+        ) : (
+          <div className="comment-card-preview">
+            <PostLinkCard card={previewCard} linked={false} />
+            <button className="text-button" type="button" onClick={() => setHiddenCardPath(draftLinkPath)}>不附卡片</button>
+          </div>
+        )) : null}
         <div className="comment-compose-footer">
           <span className="meta-text comment-compose-context">{replyTo ? `回复 ${replyTo.author?.nickname || "成员"}` : "输入 @ 提及成员"}</span>
           <div>

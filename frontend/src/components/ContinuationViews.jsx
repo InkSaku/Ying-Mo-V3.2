@@ -1,9 +1,11 @@
-import { useId, useState } from "react";
+import { Suspense, lazy, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { continuationAfterLabel, continuationGapLabel, continuationLabel } from "../lib/continuations";
 import { excerpt, formatDate, postTypeLabel } from "../lib/format";
 import "../styles/continuation.css";
+
+const ContinuationLinkDialog = lazy(() => import("./ContinuationLinkDialog").then((module) => ({ default: module.ContinuationLinkDialog })));
 
 function PenGlyph() {
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="m4 20 1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1Z" /><path d="m14.5 6.5 3 3M13 20h7" /></svg>;
@@ -34,6 +36,26 @@ export function ContinueWriteButton({ postId, className = "continue-write-button
     </button>
     {error ? <span className="continue-write-error" role="alert">{error}</span> : null}
   </>;
+}
+
+// 只有作者看得到：新写一篇接着它，或者把已经写好的接上来。
+export function ContinuationActions({ post, onContinuationChange }) {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState("");
+  const triggerRef = useRef(null);
+  if (!post.continuation?.can_continue) return null;
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+  return <div className="continuation-actions">
+    <ContinueWriteButton postId={post.id} />
+    <button ref={triggerRef} className="text-button continuation-link-trigger" type="button" aria-haspopup="dialog" onClick={() => { setStatus(""); setOpen(true); }}>接上已有的</button>
+    <p className="continuation-actions-status" role="status">{status}</p>
+    {open ? <Suspense fallback={null}>
+      <ContinuationLinkDialog post={post} onChange={onContinuationChange} onDone={(message) => { setStatus(message); close(); }} onClose={close} />
+    </Suspense> : null}
+  </div>;
 }
 
 export function ContinuationKicker({ post }) {
@@ -81,7 +103,9 @@ export function ContinuationLater({ post }) {
 // 正文里链接到这篇的记录：和“后来”同一套细线目录，多一句提到它时的原话。
 export function MentionedBy({ post }) {
   const titleId = useId();
-  const items = post.mentions;
+  // 刚刚接上的续写已经在“后来”里，不再重复列出。
+  const later = new Set((post.continuation?.later || []).map((item) => item.id));
+  const items = post.mentions?.filter((item) => !later.has(item.id));
   if (!items?.length) return null;
   return <section className="continuation-later post-mentions" aria-labelledby={titleId}>
     <h2 id={titleId}>提到这篇的</h2>

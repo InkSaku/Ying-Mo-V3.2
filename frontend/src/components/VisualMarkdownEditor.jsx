@@ -12,6 +12,7 @@ import {
 import { api } from "../lib/api";
 import { ProtectedMarkdown } from "./ProtectedMarkdown";
 import "../styles/rich-markdown.css";
+import "../styles/content-link-dialog.css";
 import { manageableMediaRows } from "../lib/postMedia";
 import { escapeLinkText, sourceLinkSelection } from "../lib/contentLinks";
 

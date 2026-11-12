@@ -17,6 +17,7 @@ from app.models import (
     CollectionMember, Comment, CommentMention, CommentReaction, Post, User, UserStatus,
 )
 from app.notifications.service import add_post_notification
+from app.posts.links import comment_link_cards
 
 bp = Blueprint("comments", __name__)
 
@@ -25,7 +26,7 @@ def utcnow():
     return datetime.now(timezone.utc)
 
 
-def _comment_dict(comment, actor_id, *, quotes=None, mentions=None, reactions=None):
+def _comment_dict(comment, actor_id, *, quotes=None, mentions=None, reactions=None, link_cards=None):
     quoted=(quotes or {}).get(comment.reply_to_comment_id)
     data={
         "id": comment.id,
@@ -47,6 +48,8 @@ def _comment_dict(comment, actor_id, *, quotes=None, mentions=None, reactions=No
         ),
         "mentions": [link.user.public_dict() for link in (mentions or {}).get(comment.id,[]) if link.user],
         "reactions": (reactions or {}).get(comment.id),
+        # 评论里第一个站内帖子链接的卡片，按当前读者现取。
+        "link_card": (link_cards or {}).get(comment.id),
         "can_delete": comment.author_id == actor_id,
         "created_at": isoformat_utc(comment.created_at),
     }
@@ -68,13 +71,14 @@ def _comment_maps(comments, actor_id):
     reactions=reaction_summaries(
         CommentReaction,CommentReaction.comment_id,comment_ids,actor_id=actor_id,
     )
-    return quotes,mentions,reactions
+    link_cards=comment_link_cards(comments,actor_id)
+    return quotes,mentions,reactions,link_cards
 
 
 def _single_comment_dict(comment, actor_id):
-    quotes,mentions,reactions=_comment_maps([comment],actor_id)
+    quotes,mentions,reactions,link_cards=_comment_maps([comment],actor_id)
     return _comment_dict(
-        comment,actor_id,quotes=quotes,mentions=mentions,reactions=reactions,
+        comment,actor_id,quotes=quotes,mentions=mentions,reactions=reactions,link_cards=link_cards,
     )
 
 
@@ -148,15 +152,15 @@ def list_comments():
     for reply in all_replies:
         replies_by_root[reply.parent_id].append(reply)
     visible_comments=[item for root in roots for item in [root,*replies_by_root[root.id]]]
-    quotes,mentions,reactions=_comment_maps(visible_comments,actor.id)
+    quotes,mentions,reactions,link_cards=_comment_maps(visible_comments,actor.id)
     items=[]
     for root in roots:
         replies=replies_by_root[root.id]
         if root.status == "deleted" and not replies:
             continue
-        data=_comment_dict(root,actor.id,quotes=quotes,mentions=mentions,reactions=reactions)
+        data=_comment_dict(root,actor.id,quotes=quotes,mentions=mentions,reactions=reactions,link_cards=link_cards)
         data["replies"]=[_comment_dict(
-            x,actor.id,quotes=quotes,mentions=mentions,reactions=reactions,
+            x,actor.id,quotes=quotes,mentions=mentions,reactions=reactions,link_cards=link_cards,
         ) for x in replies]
         items.append(data)
     return success_response(items,meta=pagination_meta(page,size,total))
@@ -241,6 +245,9 @@ def create_comment():
     mention_ids=_parse_mention_ids(data)
     if mention_ids is None:
         return error_response("VALIDATION_ERROR","mention_user_ids 必须是不重复的成员 ID 列表，最多 10 人。",422)
+    hide_link_card=data.get("hide_link_card",False)
+    if not isinstance(hide_link_card,bool):
+        return error_response("VALIDATION_ERROR","hide_link_card 必须是布尔值。",422)
 
     if client_request_id:
         existing=db.session.scalar(db.select(Comment).where(
@@ -279,6 +286,7 @@ def create_comment():
         reply_to_comment_id=replied.id if replied else None,
         reply_to_user_id=replied.author_id if replied else None,
         client_request_id=client_request_id,
+        link_card_hidden=hide_link_card,
     )
     db.session.add(comment)
     try:

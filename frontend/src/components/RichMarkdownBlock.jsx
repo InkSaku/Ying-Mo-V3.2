@@ -66,11 +66,15 @@ export default forwardRef(function RichMarkdownBlock({ value, onChange, onSelect
     let cancelled = false;
     // React node views flush their portals synchronously. Apply external source
     // changes after this lifecycle, preserving uploads as separate undo steps.
+    // The history markers are marked preventUpdate as well: on a freshly mounted
+    // editor the first transaction lets plugins (e.g. the trailing paragraph)
+    // append doc changes, and emitting those would send the stale document back
+    // to the parent and overwrite the external value being applied here.
     queueMicrotask(() => {
       if (cancelled || editor.isDestroyed) return;
-      editor.view.dispatch(closeHistory(editor.state.tr));
+      editor.view.dispatch(closeHistory(editor.state.tr).setMeta("preventUpdate", true));
       editor.commands.setContent(value, { contentType: "markdown", emitUpdate: false });
-      editor.view.dispatch(closeHistory(editor.state.tr));
+      editor.view.dispatch(closeHistory(editor.state.tr).setMeta("preventUpdate", true));
       emittedRef.current = value;
       if (pendingSelectionRef.current) {
         const [start, end] = pendingSelectionRef.current;

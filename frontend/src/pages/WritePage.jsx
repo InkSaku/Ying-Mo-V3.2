@@ -33,10 +33,12 @@ import {
   settleSavedFolder,
 } from "../lib/draftAutosave";
 import {
+  insertMarkdownBlock,
   insertMediaPlaceholder,
   mediaIdsInMarkdown,
   removeMediaPlaceholders,
 } from "../lib/internalMedia";
+import { MAX_NOTEBOOK_BYTES, NOTEBOOK_ACCEPT, convertNotebook, fillNotebookImages, isNotebookFile, notebookImageFile } from "../lib/notebookImport";
 import { applyMarkdownShortcut, markdownActionForKeyEvent } from "../lib/markdownToolbar";
 import {
   offlineDraftKey, readOfflineDraft, removeOfflineDraft, writeOfflineDraft,
@@ -211,6 +213,7 @@ export function WritePage() {
     onClose: () => setPublicationOpen(false),
     initialFocus: () => publicationPanelRef.current?.querySelector("button[aria-label='关闭文稿信息']") });
   const inlineImageInputRef = useRef(null);
+  const notebookInputRef = useRef(null);
   const editorUploadAbortRef = useRef(null);
   const editorUploadRetryRef = useRef(null);
   const editorBodyRef = useRef("");
@@ -1101,7 +1104,120 @@ export function WritePage() {
     if (!files.length) return;
     event.preventDefault();
     setInlineDraggingImage(false);
+    const notebook = files.find(isNotebookFile);
+    if (notebook) {
+      void importNotebook(notebook);
+      return;
+    }
     void uploadInlineImages(files);
+  };
+
+  // .ipynb 在浏览器内转换为 Markdown；图表等输出图片上传为本文图片。整篇笔记总是接在正文末尾，
+  // 不插到光标处：编辑器未聚焦时光标停在第一段开头，插入会把原有标题或段落截断。
+  const importNotebook = async (file) => {
+    if (!file || editorUploading) return;
+    setError("");
+    setMessage("");
+    if (file.size > MAX_NOTEBOOK_BYTES) {
+      setError("Notebook 文件超过 40 MB，暂时无法导入。可以先清除部分运行结果再试。");
+      return;
+    }
+    let converted;
+    try {
+      converted = convertNotebook(await file.text(), { fileName: file.name, liftTitle: !formRef.current.title.trim() });
+    } catch (importError) {
+      setError(`无法导入「${file.name}」：${importError.message}`);
+      return;
+    }
+    if (!converted.markdown.trim()) {
+      setError(`「${file.name}」里没有可导入的内容。`);
+      return;
+    }
+
+    const { images } = converted;
+    const mediaIds = [];
+    let cancelled = false;
+    if (images.length) {
+      const controller = new AbortController();
+      editorUploadAbortRef.current = controller;
+      editorUploadRetryRef.current = null;
+      setEditorUploading(true);
+      try {
+        const manager = mediaManagerRef.current;
+        if (!manager?.uploadImageFile) throw new Error("图片上传组件尚未准备好，请稍后重试。");
+        const currentPost = await persistDraft(false);
+        if (!currentPost) throw new Error("草稿保存失败，尚未导入 Notebook。");
+        for (let index = 0; index < images.length && !controller.signal.aborted; index += 1) {
+          const progress = { currentFile: index + 1, totalFiles: images.length, fileName: file.name };
+          setEditorUploadState({ status: "optimizing", stage: "正在导入 Notebook 图片", percent: 0, ...progress });
+          try {
+            const imageFile = await notebookImageFile(images[index]);
+            const uploaded = await manager.uploadImageFile(imageFile, {
+              insertIntoBody: false,
+              rethrow: true,
+              postOverride: currentPost,
+              signal: controller.signal,
+              onStage: (stage) => setEditorUploadState({ status: "optimizing", stage, percent: 0, ...progress }),
+              onProgress: ({ percent }) => setEditorUploadState({ status: "uploading", stage: "正在导入 Notebook 图片", percent, ...progress }),
+            });
+            mediaIds[index] = uploaded?.id || null;
+          } catch {
+            mediaIds[index] = null;
+          }
+        }
+        cancelled = controller.signal.aborted;
+      } catch (prepareError) {
+        setError(prepareError.message);
+        return;
+      } finally {
+        editorUploadAbortRef.current = null;
+        setEditorUploadState(null);
+        setEditorUploading(false);
+      }
+    }
+
+    const markdown = fillNotebookImages(converted.markdown, images, mediaIds);
+    const source = String(payloadRef.current.body || "").replace(/\s+$/, "");
+    const next = insertMarkdownBlock(source, markdown, source.length);
+    const latest = formRef.current;
+    const liftedTitle = converted.title && !latest.title.trim() ? converted.title : "";
+    const nextForm = {
+      ...(liftedTitle ? updateTitleAndSlug(latest, liftedTitle, Boolean(savedPostRef.current?.published_at)) : latest),
+      body: next.value,
+    };
+    const snapshot = draftPayloadFromForm(nextForm);
+    payloadRef.current = snapshot;
+    setForm(nextForm);
+
+    const imported = mediaIds.filter(Boolean).length;
+    const failed = images.length - imported;
+    const summary = `已将「${file.name}」${source ? "接在正文末尾" : "导入正文"}：${[
+      `${converted.stats.cells} 个单元格`,
+      imported ? `${imported} 张图片` : "",
+    ].filter(Boolean).join("、")}`;
+    const notes = [
+      liftedTitle ? "已用笔记标题填写文章标题" : "",
+      failed ? `${failed} 张图片${cancelled ? "因取消" : ""}未能导入，已在正文中标注` : "",
+    ].filter(Boolean).join("；");
+    const report = `${summary}。${notes ? `${notes}。` : ""}`;
+    if (!imported) {
+      setMessage(report);
+      return;
+    }
+    try {
+      await saveDraftSnapshot(snapshot);
+      setMessage(`${report}已保存。`);
+    } catch (saveError) {
+      setError(saveError.code === "EDIT_CONFLICT"
+        ? "Notebook 已导入，但正文尚未保存；请先处理版本冲突。"
+        : `Notebook 已导入，但正文保存失败：${saveError.message}`);
+    }
+  };
+
+  const importNotebookFromPicker = async (event) => {
+    const file = event.target.files?.[0];
+    if (notebookInputRef.current) notebookInputRef.current.value = "";
+    await importNotebook(file);
   };
 
   if (loading) return <PageLoader label="正在读取草稿" />;
@@ -1257,8 +1373,33 @@ export function WritePage() {
                       {MARKDOWN_SHORTCUTS.filter((item) => COMMON_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className={`markdown-shortcut-button${COMPACT_MARKDOWN_ACTIONS.has(item.action) ? "" : " editor-secondary-format"}`} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={() => applyMarkdownFormat(item.action)}><FormatToolGlyph action={item.action} label={item.label} /></button>)}
                       <DismissibleDetails className="editor-more-formats">
                         <summary>更多 <span aria-hidden="true">⌄</span></summary>
-                        <div>{MARKDOWN_SHORTCUTS.filter((item) => !COMPACT_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className={COMMON_MARKDOWN_ACTIONS.has(item.action) ? "editor-mobile-format" : undefined} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{formatActionLabel(item)}</button>)}</div>
+                        <div>
+                          {MARKDOWN_SHORTCUTS.filter((item) => !COMPACT_MARKDOWN_ACTIONS.has(item.action)).map((item) => <button key={item.action} className={COMMON_MARKDOWN_ACTIONS.has(item.action) ? "editor-mobile-format" : undefined} type="button" title={item.hint} aria-label={`${item.label}：${item.hint}`} onMouseDown={(event) => event.preventDefault()} onClick={(event) => { applyMarkdownFormat(item.action); event.currentTarget.closest("details").open = false; }}>{formatActionLabel(item)}</button>)}
+                          <button
+                            className="editor-more-import"
+                            type="button"
+                            disabled={editorUploading}
+                            title="把 Jupyter Notebook 的笔记、代码与运行结果转换为正文"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={(event) => {
+                              event.currentTarget.closest("details").open = false;
+                              notebookInputRef.current?.click();
+                            }}
+                          >
+                            导入 Notebook <small>.ipynb</small>
+                          </button>
+                        </div>
                       </DismissibleDetails>
+                      <input
+                        ref={notebookInputRef}
+                        className="editor-inline-file-input"
+                        type="file"
+                        accept={NOTEBOOK_ACCEPT}
+                        disabled={editorUploading}
+                        tabIndex="-1"
+                        aria-hidden="true"
+                        onChange={(event) => { void importNotebookFromPicker(event); }}
+                      />
                       <input
                         ref={inlineImageInputRef}
                         className="editor-inline-file-input"
@@ -1277,7 +1418,7 @@ export function WritePage() {
                 </button>}
               />
               <div className="editor-inline-drop-hint" aria-hidden={!inlineDraggingImage}>松开即可上传并插入到当前位置</div>
-              <small id="editor-body-help" className="editor-body-help">可以粘贴或拖入图片；点选图片后可删除、剪切或复制，按 Enter 在下方继续写。</small>
+              <small id="editor-body-help" className="editor-body-help">可以粘贴或拖入图片，也可以拖入 .ipynb 笔记导入；点选图片后可删除、剪切或复制，按 Enter 在下方继续写。</small>
             </section>
 
             {form.post_type === "note" ? (

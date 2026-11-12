@@ -59,3 +59,21 @@
   .continuation-later { margin-top: 32px; }
   .continuation-later li a { grid-template-columns: 64px minmax(0, 1fr) auto; }
 }
+
+/* 接上已有的：“接着写”旁的靛蓝文字按钮，选择层沿用正文链接的暖纸选择层。 */
+.continuation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.continuation-link-trigger { min-height: 44px; padding-inline: 2px; color: var(--brand-link); font-size: 14px; }
+.continuation-link-trigger:hover { text-decoration: underline; text-underline-offset: 3px; }
+.continuation-actions-status { flex-basis: 100%; margin: 0; color: var(--brand-link); font-size: 13px; line-height: 1.7; }
+.continuation-actions-status:empty { display: none; }
+.continuation-link-dialog .continuation-link-notice { margin: 0 0 12px; color: var(--brand-link); font-size: 13px; }
+.continuation-link-dialog .continuation-link-notice:empty { margin: 0; }
+.continuation-link-current { display: grid; justify-items: start; gap: 6px; margin-top: 4px; padding: 2px 0 2px 14px; border-left: 2px solid var(--brand-link); }
+.continuation-link-current p { margin: 0; color: var(--text); font-size: 15px; line-height: 1.75; }
+.continuation-link-current .text-button { min-height: 44px; padding-inline: 0; color: var(--brand-link); font-size: 14px; }
+.continuation-link-current small { color: var(--text-3); font-size: 12px; line-height: 1.7; }
+.continuation-link-dialog .content-link-result:disabled { opacity: 1; cursor: default; }
+.continuation-link-dialog .content-link-result:disabled strong { color: var(--text-3); }
+.continuation-link-dialog .content-link-result:disabled:hover { background: transparent; }
+.continuation-link-dialog .content-link-result .continuation-link-taken { color: var(--text-3); }
+.continuation-link-dialog .publish-chain-notice { margin-top: 16px; font-size: 13px; }

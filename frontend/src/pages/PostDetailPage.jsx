@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAsyncData } from "../hooks/useAsyncData";
@@ -21,7 +21,7 @@ import { NoteDetail } from "../components/NoteDetail";
 import { NoteExperience } from "../components/NoteExperience";
 import { SharedMemorySection } from "../components/SharedMemorySection";
 import { CollectionPathTags } from "../components/CollectionPathTags";
-import { ContinuationKicker, ContinuationLater, ContinuationSource, ContinueWriteButton, MentionedBy } from "../components/ContinuationViews";
+import { ContinuationActions, ContinuationKicker, ContinuationLater, ContinuationSource, MentionedBy } from "../components/ContinuationViews";
 import { InternalLinkPreview } from "../components/InternalLinkPreview";
 import { navigateWithArticleTransition } from "../lib/articleBrowseTransition";
 import "../styles/shared-memory.css";
@@ -93,8 +93,15 @@ export function PostDetailPage({ type }) {
       transitionId ? `.browse-page-article [data-article-id="${transitionId}"]` : ".browse-page-article"
     ) : null;
   const state = useAsyncData(() => api.get(path), [path]);
-  const post = state.data?.redirect ? null : state.data;
-  const galleryItems = useMemo(() => readingOrderGallery(logicalMediaFromRaw(post?.bound_media, post), post), [post]);
+  const loaded = state.data?.redirect ? null : state.data;
+  // 接上已有的、取消接续之后只换掉来源与“后来”，不重新读取整篇。
+  const [continuationOverride, setContinuationOverride] = useState(null);
+  const post = useMemo(() => (
+    loaded && continuationOverride?.postId === loaded.id ? { ...loaded, continuation: continuationOverride.value } : loaded
+  ), [loaded, continuationOverride]);
+  const loadedId = loaded?.id;
+  const changeContinuation = useCallback((value) => setContinuationOverride({ postId: loadedId, value }), [loadedId]);
+  const galleryItems = useMemo(() => readingOrderGallery(logicalMediaFromRaw(loaded?.bound_media, loaded), loaded), [loaded]);
   const { hydrateGallery } = useMediaLightbox();
   const postId = post?.id;
   const [articleFavorite, setArticleFavorite] = useState(null);
@@ -143,7 +150,7 @@ export function PostDetailPage({ type }) {
         {location.state?.fromHomeFeed ? (
           <button className="home-feed-back text-button" type="button" onClick={() => navigate(-1)}>返回首页</button>
         ) : null}
-        <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} />
+        <NoteDetail post={post} galleryItems={galleryItems} coverGalleryItem={coverGalleryItem} onContinuationChange={changeContinuation} />
         <ContinuationLater post={post} />
         <MentionedBy post={post} />
         <SharedMemorySection post={post} onPostChanged={state.reload} />
@@ -162,7 +169,7 @@ export function PostDetailPage({ type }) {
 
       <PostMediaGallery media={post.bound_media} coverMediaId={post.cover_media_id} body={post.body} galleryItems={galleryItems} />
 
-      {post.post_type === "article" ? <ArticleInkEnding key={post.id} title={post.title} /> : null}
+      {post.post_type === "article" ? <ArticleInkEnding key={`ending-${post.id}`} title={post.title} /> : null}
 
       {post.external_video_url ? (
         <p className="external-link"><a href={post.external_video_url} target="_blank" rel="noreferrer">打开外部视频</a></p>
@@ -170,7 +177,7 @@ export function PostDetailPage({ type }) {
 
       <ContinuationSource post={post} />
 
-      <InteractionBar key={post.id} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} extraAction={post.continuation?.can_continue ? <ContinueWriteButton postId={post.id} /> : null} />
+      <InteractionBar key={`interactions-${post.id}`} postId={post.id} initialState={post.interactions} onFavoriteState={setArticleFavorite} extraAction={<ContinuationActions post={post} onContinuationChange={changeContinuation} />} />
 
       <ContinuationLater post={post} />
 

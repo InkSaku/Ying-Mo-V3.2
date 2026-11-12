@@ -21,4 +21,9 @@
 .mobile-sheet .article-reading-settings-panel button { min-height: 44px; padding: 8px; border: 0; background: transparent; color: var(--brand-link); text-align: left; font: 16px var(--serif); }
 .mobile-sheet .article-reading-font-size-controls button { padding: 0; white-space: nowrap; text-align: center; }
 .mobile-sheet .article-reading-font-size p { margin: 0; font-size: 12px; color: var(--text-3); }
+.mobile-sheet .article-reading-code-font { margin: 0; }
+.mobile-sheet .article-reading-code-font > legend { margin-bottom: 4px; font-size: 14px; }
+.mobile-sheet .article-reading-code-font-options label { gap: 12px; min-height: 44px; }
+.mobile-sheet .article-reading-code-font-options input { flex-basis: 18px; width: 18px; height: 18px; min-width: 18px; min-height: 18px; }
+.mobile-sheet .article-reading-code-font-options span { font-size: 16px; }
 :root[data-mobile-keyboard="open"] .mobile-sheet-backdrop { top: var(--mobile-viewport-top); bottom: auto; height: var(--mobile-viewport-height); }
